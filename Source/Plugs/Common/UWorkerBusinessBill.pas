@@ -1075,67 +1075,6 @@ begin
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
     gDBConnManager.WorkerExec(FDBConn, nStr);
 
-    //--------------------------------------------------------------------------
-    nP   := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
-    nStr := 'Select L_ID,L_ZhiKa,L_Value,L_OutFact From %s ' +
-          'Where L_ID in (%s)';
-    nStr := Format(nStr, [sTable_Bill, nP]);
-
-    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
-    if RecordCount > 0 then
-    begin
-      nTVal:=0.0;
-      //xxxxxx
-
-      First;
-      while not Eof do
-      begin
-        nBill := FieldByname('L_ID').AsString;
-        nHasOut := FieldByName('L_OutFact').AsString <> '';
-        //已出厂
-
-        if nHasOut then
-        begin
-          nIdx  := FListA.IndexOf(nBill);
-          if nIdx>=0 then
-            FListA.Delete(nIdx);
-
-          nZK  := FieldByName('L_ZhiKa').AsString;
-          nVal := FieldByName('L_Value').AsFloat;
-
-          nTVal := nTVal + nVal;
-          //已出厂发货量
-
-          nStr := 'Update %s Set B_HasDone=B_HasDone+(%.2f),' +
-                  'B_Freeze=B_Freeze-(%.2f) Where B_ID=''%s''';
-          nStr := Format(nStr, [sTable_Order, nVal, nVal, nZK]);
-
-          gDBConnManager.WorkerExec(FDBConn, nStr);
-          //释放发货量
-        end;
-
-        Next;
-      end;
-
-      if FListA.Count < 1 then
-      begin
-        nStr := 'Delete From %s Where R_ID=%s';
-        nStr := Format(nStr, [sTable_ZTTrucks, nRID]);
-        gDBConnManager.WorkerExec(FDBConn, nStr);
-      end else
-      begin
-        nBill := FListA[0];
-        nStr := 'Update %s Set T_Bill=''%s'',T_Value=T_Value-(%.2f),' +
-                'T_HKBills=''%s'' Where R_ID=%s';
-        nStr := Format(nStr, [sTable_ZTTrucks, nBill, nTVal,
-                CombinStr(FListA, '.'), nRID]);
-        //xxxxx
-
-        gDBConnManager.WorkerExec(FDBConn, nStr);
-        //更新合单信息
-      end;
-    end;
-    
     FDBConn.FConn.CommitTrans;
     Result := True;
   except

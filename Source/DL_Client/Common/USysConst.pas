@@ -98,6 +98,7 @@ const
   cFI_FormJiShuQi       = $1036;                     //计数管理
 
   cFI_FormZTLine        = $1040;                     //装车线
+  cFI_FormDisPound      = $1041;                     //磅站调度
 
   cFI_FormProvider      = $1051;                     //供应商
   cFI_FormMaterails     = $1052;                     //原材料
@@ -264,7 +265,7 @@ begin
   AddMenuModuleItem('MAIN_D06', cFI_FrameBill);
 
   AddMenuModuleItem('MAIN_E01', cFI_FramePoundManual);
-  AddMenuModuleItem('MAIN_E02', cFI_FramePoundAuto);
+  AddMenuModuleItem('MAIN_E02', cFI_FormDisPound, mtForm);
   AddMenuModuleItem('MAIN_E03', cFI_FramePoundQuery);
 
   AddMenuModuleItem('MAIN_F01', cFI_FormLadDai, mtForm);

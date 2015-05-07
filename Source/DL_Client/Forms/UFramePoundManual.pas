@@ -187,15 +187,54 @@ end;
 
 //Desc: 载入通道
 procedure TfFramePoundManual.LoadPoundItems;
-var nIdx: Integer;
+var nStr: string;
+    nList: TStrings;
+    nIdx,nInt: Integer;
     nT: PPTTunnelItem;
 begin
+  nList := nil;
+
   with gPoundTunnelManager do
-  begin
+  try
+    nList := TStringList.Create;
+    nStr := 'Select D_Value,D_Memo From %s Where D_Name=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_DispatchPound]);
+
+    with FDM.QuerySQL(nStr) do
+    if RecordCount > 0 then
+    begin
+      First;
+
+      while not Eof do
+      begin
+        nList.Add(Fields[0].AsString + ':' + Fields[1].AsString);
+        //JS01:6C-71-D9-56-9C-60
+        Next;
+      end;
+    end;
+
     for nIdx:=0 to Tunnels.Count - 1 do
     begin
       nT := Tunnels[nIdx];
       //tunnel
+      nStr := '';
+      
+      for nInt:=nList.Count - 1 downto 0 do
+      begin
+        nStr := nT.FID + ':';
+        if Pos(nStr, nList[nInt]) < 1 then Continue;
+
+        nStr := nList[nInt];
+        System.Delete(nStr, 1, Pos(':', nStr));
+
+        if CompareText(nStr, gSysParam.FLocalMAC) = 0 then
+             nStr := ''
+        else nStr := sFlag_No;
+        Break;
+      end;
+
+      if nStr = sFlag_No then Continue;
+      //不在本机加载
       
       with TfFrameManualPoundItem.Create(Self) do
       begin
@@ -217,6 +256,8 @@ begin
 
     if Tunnels.Count>0 then gPoundCardReader.StartCardReader;
     //通道不为0，启动读卡线程
+  finally
+    nList.Free;
   end;
 end;
 

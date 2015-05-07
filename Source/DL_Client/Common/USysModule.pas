@@ -21,7 +21,8 @@ uses
   UFormZTLine, UFramePoundQuery, UFormRFIDCard, UFrameBatcode, UFormBatcode,
   UFormChangeTunnel, UFrameDeduct, UFormDeduct, UFormGetNCStock{$IFDEF MicroMsg},
   UFormWeiXinAccount, UFrameWeiXinAccount, UFormWeiXinSendlog, UFrameWeiXinSendlog
-  , UFormCustomer, UFrameCustomer{$ENDIF}, UFrameMine, UFormMine, UFormGetMine;
+  , UFormCustomer, UFrameCustomer{$ENDIF}, UFrameMine, UFormMine, UFormGetMine,
+  UFormPoundDispatch;
 
 procedure InitSystemObject;
 procedure RunSystemObject;

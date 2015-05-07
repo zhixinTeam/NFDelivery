@@ -148,6 +148,7 @@ ResourceString
   sFlag_PrintBill     = 'PrintStockBill';            //需打印订单
   sFlag_NFStock       = 'NoFaHuoStock';              //现场无需发货
   sFlag_ViaBillCard   = 'ViaBillCard';               //直接制卡
+  sFlag_DispatchPound = 'PoundDispatch';             //磅站调度
   
   sFlag_PoundIfDai    = 'PoundIFDai';                //袋装是否过磅
   sFlag_PoundWuCha    = 'PoundWuCha';                //过磅误差分组
