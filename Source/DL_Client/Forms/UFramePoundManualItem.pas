@@ -73,6 +73,7 @@ type
     Timer2: TTimer;
     CheckLock: TcxCheckBox;
     CheckZD: TcxCheckBox;
+    CheckSound: TcxCheckBox;
     procedure Timer1Timer(Sender: TObject);
     procedure N1Click(Sender: TObject);
     procedure N3Click(Sender: TObject);
@@ -137,6 +138,8 @@ type
     //保存称重
     procedure PlayVoice(const nStrtext: string);
     //播发语音
+    procedure PlaySoundWhenCardArrived;
+    //播放声音
     procedure CollapsePanel(const nCollapse: Boolean; const nAuto: Boolean = True);
     //折叠面板
   public
@@ -164,7 +167,7 @@ implementation
 uses
   ULibFun, UAdjustForm, UFormBase, UMgrTruckProbe, UMgrRemoteVoice, UDataModule,
   UFormWait, USysBusiness, UBase64, USysConst, USysDB, UPoundCardReader,
-  UMgrVoiceNet, IniFiles;
+  UMgrVoiceNet, IniFiles, UMgrSndPlay;
 
 const
   cFlag_ON    = 10;
@@ -605,7 +608,7 @@ end;
 procedure TfFrameManualPoundItem.CheckZDClick(Sender: TObject);
 var nIni: TIniFile;
 begin
-  if not CheckZD.Focused then Exit;
+  if not (CheckZD.Focused or CheckSound.Focused) then Exit;
   //只处理用户动作
 
   nIni := TIniFile.Create(gPath + sFormConfig);
@@ -613,6 +616,10 @@ begin
     if CheckZD.Checked then
          nIni.WriteString(Name, 'AutoCollapse', 'Y')
     else nIni.WriteString(Name, 'AutoCollapse', 'N');
+
+    if CheckSound.Checked then
+         nIni.WriteString(Name, 'PlaySound', 'Y')
+    else nIni.WriteString(Name, 'PlaySound', 'N');
   finally
     nIni.Free;
   end;
@@ -624,7 +631,9 @@ var nIni: TIniFile;
 begin
   nIni := TIniFile.Create(gPath + sFormConfig);
   try
+    CheckSound.Checked := nIni.ReadString(Name, 'PlaySound', 'Y') = 'Y';
     CheckZD.Checked := nIni.ReadString(Name, 'AutoCollapse', 'N') = 'Y';
+    
     if nCollapse and CheckZD.Checked then
       CollapsePanel(True);
     //折叠面板
@@ -1520,6 +1529,13 @@ begin
   end;
 end;
 
+procedure TfFrameManualPoundItem.PlaySoundWhenCardArrived;
+begin
+  if CheckSound.Checked and (Height = FTitleHeight) then
+    gSoundPlayManager.PlaySound(gPath + 'sound.wav');
+  //xxxxx
+end;
+
 function TfFrameManualPoundItem.ReDrawReadCardButton: Boolean;
 var
   nRect: TRect;
@@ -1528,6 +1544,8 @@ begin
   Result := False;
   if not BtnReadCard.Enabled then Exit;
 
+  PlaySoundWhenCardArrived;
+  //播放声音
   CollapsePanel(False, False);
   //展开面板
 

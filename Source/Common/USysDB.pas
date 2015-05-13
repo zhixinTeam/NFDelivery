@@ -509,7 +509,8 @@ ResourceString
        'P_MType varChar(10), P_LimValue $Float,' +
        'P_PValue $Float, P_PDate DateTime, P_PMan varChar(32), ' +
        'P_MValue $Float, P_MDate DateTime, P_MMan varChar(32), ' +
-       'P_FactID varChar(32), P_PStation varChar(10), P_MStation varChar(10),' +
+       'P_FactID varChar(32), P_Origin varChar(80),' +
+       'P_PStation varChar(10), P_MStation varChar(10),' +
        'P_Direction varChar(10), P_PModel varChar(10), P_Status Char(1),' +
        'P_Valid Char(1), P_PrintNum Integer Default 1,' +
        'P_DelMan varChar(32), P_DelDate DateTime)';
@@ -529,6 +530,7 @@ ResourceString
    *.P_PValue,P_PDate,P_PMan: 皮重
    *.P_MValue,P_MDate,P_MMan: 毛重
    *.P_FactID: 工厂编号
+   *.P_Origin: 来源,产地
    *.P_PStation,P_MStation: 称重磅站
    *.P_Direction: 物料流向(进,出)
    *.P_PModel: 过磅模式(标准,配对等)

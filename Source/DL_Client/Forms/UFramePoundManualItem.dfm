@@ -671,7 +671,17 @@ inherited fFrameManualPoundItem: TfFrameManualPoundItem
     TabOrder = 29
     Transparent = True
     OnClick = CheckZDClick
-    Width = 85
+    Width = 80
+  end
+  object CheckSound: TcxCheckBox
+    Left = 85
+    Top = 2
+    Caption = #25773#25918#22768#38899
+    ParentFont = False
+    TabOrder = 30
+    Transparent = True
+    OnClick = CheckZDClick
+    Width = 80
   end
   object Timer1: TTimer
     OnTimer = Timer1Timer

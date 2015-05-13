@@ -1122,8 +1122,9 @@ begin
   FDR.AddParamItem(nParam);
 
   FDR.Dataset1.DataSet := FDM.SqlTemp;
-  FDR.ShowReport;
-  Result := FDR.PrintSuccess;
+  //FDR.ShowReport;
+  //Result := FDR.PrintSuccess;
+  Result := FDR.PrintReport;
 
   if Result  then
   begin

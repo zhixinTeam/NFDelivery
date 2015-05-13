@@ -1019,6 +1019,7 @@ begin
       end;  
 
       FFactory    := FieldByName('P_FactID').AsString;
+      FOrigin     := FieldByName('P_Origin').AsString;
       FPModel     := FieldByName('P_PModel').AsString;
       FPType      := FieldByName('P_Type').AsString;
       FPoundID    := FieldByName('P_ID').AsString;
@@ -1110,6 +1111,7 @@ begin
               SF('P_PDate', sField_SQLServer_Now, sfVal),
               SF('P_PMan', FIn.FBase.FFrom.FUser),
               SF('P_FactID', FFactory),
+              SF('P_Origin', FOrigin),
               SF('P_PStation', nMData.FStation),
               SF('P_Direction', '进厂'),
               SF('P_PModel', FPModel),
@@ -1213,7 +1215,8 @@ begin
                   SF('P_MValue', FMData.FValue, sfVal),
                   SF('P_MDate', DateTime2Str(FMData.FDate)),
                   SF('P_MMan', FMData.FOperator),
-                  SF('P_MStation', FMData.FStation)
+                  SF('P_MStation', FMData.FStation),
+                  SF('P_Origin', FOrigin)
                   ], sTable_PoundLog, SF('P_ID', FPoundID), False);
           //称重时,由于皮重大,交换皮毛重数据
         end else
@@ -1222,7 +1225,8 @@ begin
                   SF('P_MValue', FMData.FValue, sfVal),
                   SF('P_MDate', sField_SQLServer_Now, sfVal),
                   SF('P_MMan', FIn.FBase.FFrom.FUser),
-                  SF('P_MStation', FMData.FStation)
+                  SF('P_MStation', FMData.FStation),
+                  SF('P_Origin', FOrigin)
                   ], sTable_PoundLog, SF('P_ID', FPoundID), False);
           //xxxxx
         end;
