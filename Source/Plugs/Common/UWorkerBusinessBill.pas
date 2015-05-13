@@ -946,7 +946,7 @@ end;
 function TWorkerBusinessBills.DeleteBill(var nData: string): Boolean;
 var nIdx: Integer;
     nHasOut: Boolean;
-    nVal, nTVal: Double;
+    nVal: Double;
     nStr,nP,nRID,nBill,nZK: string;
 begin
   Result := False;

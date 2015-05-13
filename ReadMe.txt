@@ -1,10 +1,10 @@
-Ä¿Â¼ËµÃ÷:
+ï»¿ç›®å½•è¯´æ˜Ž:
  
-*.Backup: ÏîÄ¿±¸·Ý
-*.Bin: Éú³É×îÖÕ¿É·¢²¼µÄ¶þ½øÖÆÎÄ¼þ
-*.Dcu: Delphi±àÒëµÄ¶þ½øÖÆÁ¬½ÓÎÄ¼þ
-*.Document: ËµÃ÷ÎÄµµ
-*.Resource: ÏîÄ¿×ÊÔ´
-*.Source: ÏîÄ¿´úÂë
-*.Temp: ¹¦ÄÜÁÙÊ±²âÊÔ
-*.Vcls: ËùÐèÈý·½¿Ø¼þ
+*.Backup: é¡¹ç›®å¤‡ä»½
+*.Bin: ç”Ÿæˆæœ€ç»ˆå¯å‘å¸ƒçš„äºŒè¿›åˆ¶æ–‡ä»¶
+*.Dcu: Delphiç¼–è¯‘çš„äºŒè¿›åˆ¶è¿žæŽ¥æ–‡ä»¶
+*.Document: è¯´æ˜Žæ–‡æ¡£
+*.Resource: é¡¹ç›®èµ„æº
+*.Source: é¡¹ç›®ä»£ç 
+*.Temp: åŠŸèƒ½ä¸´æ—¶æµ‹è¯•
+*.Vcls: æ‰€éœ€ä¸‰æ–¹æŽ§ä»¶
