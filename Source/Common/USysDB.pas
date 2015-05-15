@@ -142,6 +142,10 @@ ResourceString
   sFlag_AttentionCust = 'C';                         //客户类型
   sFlag_AttentionAdmin= 'G';                         //管理员类型
 
+  sFlag_BatchInUse    = 'Y';                         //批次号有效
+  sFlag_BatchOutUse   = 'N';                         //批次号已封存
+  sFlag_BatchDel      = 'D';                         //批次号已删除
+
   sFlag_SysParam      = 'SysParam';                  //系统参数
   sFlag_EnableBakdb   = 'Uses_BackDB';               //备用库
   sFlag_ValidDate     = 'SysValidDate';              //有效期
@@ -188,6 +192,9 @@ ResourceString
   sFlag_NoSanQueue    = 'NoSanQueue';                //散装禁用队列
   sFlag_DelayQueue    = 'DelayQueue';                //延迟排队(厂内)
   sFlag_PoundQueue    = 'PoundQueue';                //延迟排队(厂内依据过皮时间)
+  sFlag_BatchAuto     = 'Batch_Auto';                //自动生成批次号
+  sFlag_BatchBrand    = 'Batch_Brand';               //批次区分品牌
+  sFlag_BatchValid    = 'Batch_Valid';               //启用批次管理
 
   sFlag_BusGroup      = 'BusFunction';               //业务编码组
   sFlag_BillNo        = 'Bus_Bill';                  //交货单号
@@ -228,6 +235,7 @@ ResourceString
   sTable_Batcode      = 'S_Batcode';                 //批次号
   sTable_Deduct       = 'S_PoundDeduct';             //过磅暗扣
   sTable_Mine         = 'S_Mine';                    //矿点表
+  sTable_BatcodeDoc   = 'S_BatcodeDoc';              //批次号
 
   sTable_Provider     = 'P_Provider';                //客户表
   sTable_Materails    = 'P_Materails';               //物料表
@@ -694,6 +702,32 @@ ResourceString
    *.B_LastDate: 上次基数更新时间
   -----------------------------------------------------------------------------}
 
+  sSQL_NewBatcodeDoc = 'Create Table $Table(R_ID $Inc, D_ID varChar(32),' +
+       'D_Stock varChar(32),D_Name varChar(80), D_Brand varChar(32), ' +
+       'D_Plan $Float, D_Sent $Float, D_Rund $Float, D_Init $Float, D_Warn $Float, ' +
+       'D_Man varChar(32), D_Date DateTime, D_DelMan varChar(32), D_DelDate DateTime, ' +
+       'D_UseDate DateTime, D_LastDate DateTime, D_Valid char(1))';
+  {-----------------------------------------------------------------------------
+   批次编码表: Batcode
+   *.R_ID: 编号
+   *.D_ID: 批次号
+   *.D_Stock: 物料号
+   *.D_Name: 物料名
+   *.D_Brand: 水泥品牌
+   *.D_Plan: 计划总量
+   *.D_Sent: 已发量
+   *.D_Rund: 退货量
+   *.D_Init: 初始量
+   *.D_Warn: 预警量
+   *.D_Man:  操作人
+   *.D_Date: 生成时间
+   *.D_DelMan: 删除人
+   *.D_DelDate: 删除时间
+   *.D_UseDate: 启用时间
+   *.D_LastDate: 终止时间
+   *.D_Valid: 是否启用(N、封存;Y、启用；D、删除)
+  -----------------------------------------------------------------------------}
+
   sSQL_NewDeduct = 'Create Table $Table(R_ID $Inc, D_Stock varChar(32),' +
        'D_Name varChar(80), D_CusID varChar(32), D_CusName varChar(80),' +
        'D_Value $Float, D_Type Char(1), D_Valid Char(1))';
@@ -841,6 +875,7 @@ begin
   AddSysTableItem(sTable_ZTLines, sSQL_NewZTLines);
   AddSysTableItem(sTable_ZTTrucks, sSQL_NewZTTrucks);
   AddSysTableItem(sTable_Batcode, sSQL_NewBatcode);
+  AddSysTableItem(sTable_BatcodeDoc, sSQL_NewBatcodeDoc);
   AddSysTableItem(sTable_Deduct, sSQL_NewDeduct);
   AddSysTableItem(sTable_Mine, sSQL_NewMine);
 

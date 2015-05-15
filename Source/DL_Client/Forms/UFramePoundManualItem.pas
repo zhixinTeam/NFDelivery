@@ -520,7 +520,7 @@ begin
     end; //供应验证车辆是否进厂
   end;
 
-  if GetTruckPValue(nPItem, nTruck) then
+  if (FUIData.FNextStatus<>sFlag_TruckBFM) and GetTruckPValue(nPItem, nTruck) then
   begin
     if nPItem.FPreUse then
     begin
@@ -565,6 +565,8 @@ begin
 
     FStockNo    := nOrder.FStockID;
     FStockName  := nOrder.FStockName;
+    FOrigin     := nOrder.FStockArea;
+
     FValue      := nOrder.FValue;
     FSelected   := True;
   end;
@@ -1309,7 +1311,6 @@ var nStr: string;
     nIdx: Integer;
     nDec,nVal: Double;
 begin
-  Exit; //MIT矫正数据，此处无需矫正
   FDM.ADOConn.BeginTrans;
   try
     nVal := nBillValue;

@@ -30,6 +30,7 @@ const
   cFI_FrameDeduct       = $0017;                     //暗扣规则
   cFI_FrameBatch        = $0018;                     //批次管理
   cFI_FrameMine         = $0019;                     //矿点档案
+  cFI_FrameBatchQuery   = $0016;                     //批次管理
 
   cFI_FrameReqSale      = $0020;                     //销售申请
   cFI_FrameReqProvide   = $0021;                     //采购申请
@@ -79,6 +80,7 @@ const
   cFI_FormDeduct        = $1017;                     //暗扣规则
   cFI_FormBatch         = $1018;                     //批次管理
   cFI_FormMine          = $1019;                     //矿点档案
+  cFI_FormBatchEdit     = $1016;                     //批次管理
 
   cFI_FormMakeBill      = $1020;                     //开交货单
   cFI_FormGetOrder      = $1021;                     //获取订单
@@ -259,6 +261,7 @@ begin
   AddMenuModuleItem('MAIN_B07', cFI_FrameReqProvide);
   AddMenuModuleItem('MAIN_B08', cFI_FrameReqSale);
   AddMenuModuleItem('MAIN_B09', cFI_FrameReqDispatch);
+  AddMenuModuleItem('MAIN_B11', cFI_FrameBatchQuery);
 
   AddMenuModuleItem('MAIN_D02', cFI_FrameMakeCard);
   AddMenuModuleItem('MAIN_D03', cFI_FormMakeBill, mtForm);

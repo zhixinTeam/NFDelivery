@@ -15,12 +15,12 @@ inherited fFormBill: TfFormBill
       Left = 263
       Top = 338
       Caption = #24320#21333
-      TabOrder = 7
+      TabOrder = 8
     end
     inherited BtnExit: TButton
       Left = 333
       Top = 338
-      TabOrder = 8
+      TabOrder = 9
     end
     object ListInfo: TcxMCListBox [2]
       Left = 23
@@ -46,7 +46,7 @@ inherited fFormBill: TfFormBill
       Top = 281
       ParentFont = False
       Properties.MaxLength = 15
-      TabOrder = 5
+      TabOrder = 6
       OnKeyPress = EditLadingKeyPress
       Width = 115
     end
@@ -69,7 +69,7 @@ inherited fFormBill: TfFormBill
       Top = 256
       ParentFont = False
       Properties.MaxLength = 100
-      TabOrder = 4
+      TabOrder = 5
       Width = 120
     end
     object EditType: TcxComboBox [6]
@@ -91,7 +91,7 @@ inherited fFormBill: TfFormBill
       Left = 265
       Top = 281
       ParentFont = False
-      TabOrder = 6
+      TabOrder = 7
       OnKeyPress = EditLadingKeyPress
       Width = 121
     end
@@ -106,9 +106,16 @@ inherited fFormBill: TfFormBill
         'Z=Z'#12289#32440#34955
         'T=T'#12289#28034#33180#34955
         'R=R'#12289#26089#24378#22411)
-      TabOrder = 3
+      TabOrder = 4
       OnKeyPress = EditLadingKeyPress
       Width = 110
+    end
+    object EditBrand: TcxTextEdit [9]
+      Left = 265
+      Top = 231
+      ParentFont = False
+      TabOrder = 3
+      Width = 121
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup
@@ -131,12 +138,23 @@ inherited fFormBill: TfFormBill
               Control = EditLading
               ControlOptions.ShowBorder = False
             end
-            object dxLayout1Item6: TdxLayoutItem
-              AutoAligns = [aaVertical]
-              AlignHorz = ahClient
-              Caption = #25552#36135#36890#36947':'
-              Control = EditType
-              ControlOptions.ShowBorder = False
+            object dxLayout1Group7: TdxLayoutGroup
+              ShowCaption = False
+              Hidden = True
+              LayoutDirection = ldHorizontal
+              ShowBorder = False
+              object dxLayout1Item6: TdxLayoutItem
+                AutoAligns = [aaVertical]
+                AlignHorz = ahClient
+                Caption = #25552#36135#36890#36947':'
+                Control = EditType
+                ControlOptions.ShowBorder = False
+              end
+              object dxLayout1Item8: TdxLayoutItem
+                Caption = #21697#29260':'
+                Control = EditBrand
+                ControlOptions.ShowBorder = False
+              end
             end
           end
           object dxLayout1Group2: TdxLayoutGroup

@@ -34,6 +34,9 @@ type
     EditPack: TcxComboBox;
     dxLayout1Group2: TdxLayoutGroup;
     dxLayout1Group5: TdxLayoutGroup;
+    EditBrand: TcxTextEdit;
+    dxLayout1Item8: TdxLayoutItem;
+    dxLayout1Group7: TdxLayoutGroup;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure BtnOKClick(Sender: TObject);
@@ -209,9 +212,12 @@ begin
   LoadOrderInfo(FOrder, ListInfo);
   ActiveControl := EditTruck;
 
+  EditBrand.Text:=FOrder.FStockBrand;
+  EditBrand.Properties.ReadOnly := EditBrand.Text<>'';
+
   EditFQ.Text := FOrder.FBatchCode;
   if EditFQ.Text = '' then
-    EditFQ.Text := GetStockBatcode(FOrder.FStockID);
+    EditFQ.Text := GetStockBatcode(FOrder.FStockID, FOrder.FStockBrand);
   //xxxxx
 
   EditTruck.Text := FOrder.FTruck;
@@ -281,9 +287,10 @@ begin
       Values['Lading'] := GetCtrlData(EditLading);
       Values['IsVIP'] := GetCtrlData(EditType);
       Values['Pack'] := GetCtrlData(EditPack);
-      Values['Seal'] := EditFQ.Text;
       Values['BuDan'] := FBuDanFlag;
-
+      Values['Seal'] := EditFQ.Text;
+      Values['Brand'] := EditBrand.Text;
+      
       Values['CusID'] := FOrder.FCusID;
       Values['CusName'] := FOrder.FCusName;
     end;

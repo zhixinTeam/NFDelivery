@@ -36,6 +36,7 @@ const
   cBC_GetStockBatcode         = $0014;   //获取物料批次
   cBC_GetTruckPoundData       = $0015;   //获取车辆称重数据
   cBC_SaveTruckPoundData      = $0016;   //保存车辆称重数据
+  cBC_SaveStockBatcode        = $0017;   //保存物料批次
 
   cBC_GetOrderFHValue         = $0018;   //获取订单发货量
   cBC_GetOrderGYValue         = $0019;   //获取订单供应量

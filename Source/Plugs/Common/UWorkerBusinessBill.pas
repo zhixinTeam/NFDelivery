@@ -664,6 +664,26 @@ begin
       if FOrderItems[nIdx].FKDValue <= 0 then Continue;
       //无开单量
 
+      if FOrderItems[nIdx].FStockType = sFlag_Dai then
+      begin
+        FListC.Clear;
+        FListC.Values['Batch'] := FListA.Values['Seal'];
+        FListC.Values['Brand'] := FListA.Values['Brand'];
+        FListC.Values['Value'] := FloatToStr(FOrderItems[nIdx].FKDValue);
+
+        if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
+            FOrderItems[nIdx].FStockID, FListC.Text, @nOut) then
+        raise Exception.Create(nOut.FData);
+        //获取新的批次
+
+        FListA.Values['Seal'] := nOut.FData;
+        FListC.Values['Batch'] := nOut.FData;
+        if not TWorkerBusinessCommander.CallMe(cBC_SaveStockBatcode,
+            FListC.Text, sFlag_Yes, @nOut) then
+        raise Exception.Create(nOut.FData);
+      end;
+      //如果是袋装，则更新批次信息
+
       FListC.Clear;
       FListC.Values['Group'] :=sFlag_BusGroup;
       FListC.Values['Object'] := sFlag_BillNo;
@@ -1070,6 +1090,28 @@ begin
             MI('$Now', sField_SQLServer_Now),
             MI('$BI', sTable_Bill), MI('$ID', FIn.FData)]);
     gDBConnManager.WorkerExec(FDBConn, nStr);
+
+    nStr := 'Select L_Type,L_MValue,L_Seal,L_Value,D_Brand from $BL bl ' +
+            'Left join $BC bc on bl.L_Seal=bc.D_ID ' +
+            'Where L_ID=''$ID''';
+    nStr := MacroValue(nStr, [MI('$BL', sTable_Bill),
+            MI('$BC', sTable_BatcodeDoc),MI('$ID', FIn.FData)]);
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    if RecordCount>0 then
+    begin
+      FListC.Clear;
+      FListC.Values['Brand'] := FieldByName('D_Brand').AsString;
+      FListC.Values['Batch'] := FieldByName('L_Seal').AsString;
+
+      nStr := FieldByName('L_Type').AsString;
+      if (nStr=sFlag_San) and (FieldByName('L_Value').AsFloat<=0) then
+           FListC.Values['Value'] := '0.00'
+      else FListC.Values['Value'] := FieldByName('L_Value').AsString;
+
+      if not TWorkerBusinessCommander.CallMe(cBC_SaveStockBatcode,
+            FListC.Text, sFlag_No, @FOut) then
+        raise Exception.Create(FOut.FData);
+    end;
 
     nStr := 'Delete From %s Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
@@ -1696,7 +1738,38 @@ begin
 
       if FType = sFlag_San then
            nVal:=FMData.FValue-FPData.FValue
-      else nVal:=FValue;    
+      else nVal:=FValue;
+
+      if FType = sFlag_San then
+      begin
+        nStr := 'Select L_Seal,L_Value,D_Brand from $BL bl ' +
+              'Left join $BC bc on bl.L_Seal=bc.D_ID ' +
+              'Where L_ID=''$ID''';
+        nStr := MacroValue(nStr, [MI('$BL', sTable_Bill),
+                MI('$BC', sTable_BatcodeDoc),MI('$ID', nBills[nInt].FID)]);
+        with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+        if RecordCount>0 then
+        begin
+          FListC.Clear;
+          FListC.Values['Brand'] := FieldByName('D_Brand').AsString;
+          FListC.Values['Batch'] := FieldByName('L_Seal').AsString;
+          FListC.Values['Value'] := FloatToStr(nVal);
+
+          
+          if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
+              FOrderItems[nIdx].FStockID, FListC.Text, @nOut) then
+          raise Exception.Create(nOut.FData);
+
+          nSQL := MakeSQLByStr([SF('L_Seal', nOut.FData)
+              ], sTable_Bill, SF('L_ID', FID), False);
+          FListA.Add(nSQL);
+
+          FListC.Values['Batch'] := nOut.FData;
+          if not TWorkerBusinessCommander.CallMe(cBC_SaveStockBatcode,
+              FListC.Text, sFlag_Yes, @nOut) then
+          raise Exception.Create(nOut.FData);
+        end;
+      end;  
 
       nSQL := MakeSQLByStr([SF('L_Value', nVal, sfVal),
               SF('L_Status', sFlag_TruckBFM),

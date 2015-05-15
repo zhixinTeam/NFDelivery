@@ -109,10 +109,13 @@ begin
     gVoiceHelper.LoadConfig(gPath + 'Voice.xml');
     gVoiceHelper.StartVoice;
 
-    if not Assigned(gNetVoiceHelper) then
-      gNetVoiceHelper := TNetVoiceManager.Create;
-    gNetVoiceHelper.LoadConfig(gPath + 'NetVoice.xml');
-    gNetVoiceHelper.StartVoice;
+    if FileExists(gPath + 'NetVoice.xml') then
+    begin
+      if not Assigned(gNetVoiceHelper) then
+        gNetVoiceHelper := TNetVoiceManager.Create;
+      gNetVoiceHelper.LoadConfig(gPath + 'NetVoice.xml');
+      gNetVoiceHelper.StartVoice;
+    end;
   end;
 
   if not Assigned(gPoundCardReader) then
@@ -132,7 +135,9 @@ begin
   if gSysParam.FVoiceUser < 1 then
   begin
     gVoiceHelper.StopVoice;
-    gNetVoiceHelper.StopVoice;
+
+    if Assigned(gNetVoiceHelper) then
+      gNetVoiceHelper.StopVoice;
   end;
   //xxxxx
 

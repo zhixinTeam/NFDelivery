@@ -18,6 +18,8 @@ type
     FOrderID: string;       //订单编号
     FStockID: string;       //物料编号
     FStockName: string;     //物料名称
+    FStockBrand: string;    //水泥品牌
+
     FSaleMan: string;       //业务员
     FTruck: string;         //车牌号码
     FBatchCode: string;     //批次号
@@ -251,6 +253,7 @@ begin
           FStockID := nStr;
           FStockName := FieldByName('invname').AsString;
           FSaleMan := FieldByName('VBILLTYPE').AsString;
+          FStockBrand:= FieldByName('vdef5').AsString;
 
           FTruck := FieldByName('cvehicle').AsString;
           FBatchCode := FieldByName('vbatchcode').AsString;
@@ -427,8 +430,12 @@ begin
       begin
         FCusID := GetCtrlData(EditName);
         FCusName := EditName.Text;
+
         FStockID := FItems[nInt].FStockID;
         FStockName := FItems[nInt].FStockName;
+        FStockArea := FItems[nInt].FAreaName;
+        FStockBrand:= FItems[nInt].FStockBrand;
+
         FSaleMan := FItems[nInt].FSaleMan;
         FValue := FItems[nInt].FValue;
       end;

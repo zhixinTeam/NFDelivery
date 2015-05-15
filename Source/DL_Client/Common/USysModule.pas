@@ -22,7 +22,7 @@ uses
   UFormChangeTunnel, UFrameDeduct, UFormDeduct, UFormGetNCStock{$IFDEF MicroMsg},
   UFormWeiXinAccount, UFrameWeiXinAccount, UFormWeiXinSendlog, UFrameWeiXinSendlog
   , UFormCustomer, UFrameCustomer{$ENDIF}, UFrameMine, UFormMine, UFormGetMine,
-  UFormPoundDispatch;
+  UFormPoundDispatch, UFrameBatcodeQuery, UFormBatcodeEdit;
 
 procedure InitSystemObject;
 procedure RunSystemObject;
@@ -123,7 +123,6 @@ begin
 
       if nStr = sFlag_PTruckPWuCha then
         gSysParam.FPoundTruck := Fields[0].AsFloat;
-
 
       Next;
     end;

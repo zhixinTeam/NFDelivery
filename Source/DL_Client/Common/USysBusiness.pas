@@ -55,6 +55,10 @@ type
     FSaleMan: string;     //业务员
     FStockID: string;     //物料号
     FStockName: string;   //物料名
+
+    FStockBrand: string;  //物料品牌
+    FStockArea : string;  //产地，矿点
+
     FTruck: string;       //车牌号
     FBatchCode: string;   //批次号
     FOrders: string;      //订单号(可多张)
@@ -71,7 +75,8 @@ function GetSysValidDate: Integer;
 function GetSerialNo(const nGroup,nObject: string;
  nUseDate: Boolean = True): string;
 //获取串行编号
-function GetStockBatcode(const nStock: string): string;
+function GetStockBatcode(const nStock: string;
+  const nBrand: string=''; const nValue: Double=0; const nBatch: string=''): string;
 //获取批次号
 function GetLadingStockItems(var nItems: TDynamicStockItemArray): Boolean;
 //可用品种列表
@@ -323,14 +328,27 @@ begin
 end;
 
 //Date: 2015-01-16
-//Parm: 物料号
-//Desc: 生产nStock的物料号
-function GetStockBatcode(const nStock: string): string;
+//Parm: 物料号;品牌名;开单量;原始批次
+//Desc: 生产nStock的批次号
+function GetStockBatcode(const nStock: string;
+ const nBrand: string=''; const nValue: Double=0; const nBatch: string=''): string;
 var nOut: TWorkerBusinessCommand;
+    nList: TStrings;
 begin
-  if CallBusinessCommand(cBC_GetStockBatcode, nStock, '', @nOut, False) then
-       Result := nOut.FData
-  else Result := '';
+  nList := TStringList.Create;
+
+  try
+    nList.Clear;
+    nList.Values['Batch'] := nBatch;
+    nList.Values['Brand'] := nBrand;
+    nList.Values['Value'] := FloatToStr(nValue);
+
+    if CallBusinessCommand(cBC_GetStockBatcode, nStock, nList.Text, @nOut, False) then
+         Result := nOut.FData
+    else Result := '';
+  finally
+    nList.Free;
+  end;
 end;
 
 //Desc: 获取系统有效期
@@ -613,8 +631,12 @@ begin
       Values['CusID']     := FCusID;
       Values['CusName']   := FCusName;
       Values['SaleMan']   := FSaleMan;
+
       Values['StockID']   := FStockID;
       Values['StockName'] := FStockName;
+      Values['StockArea'] := FStockArea;
+      Values['StockBrand']:= FStockBrand;
+
       Values['Truck']     := FTruck;
       Values['BatchCode'] := FBatchCode;
       Values['Orders']    := PackerEncodeStr(FOrders);
@@ -644,8 +666,12 @@ begin
       FCusID := Values['CusID'];
       FCusName := Values['CusName'];
       FSaleMan := Values['SaleMan'];
+
       FStockID := Values['StockID'];
       FStockName := Values['StockName'];
+      FStockArea := Values['StockArea'];
+      FStockBrand:= Values['StockBrand'];
+
       FTruck := Values['Truck'];
       FBatchCode := Values['BatchCode'];
       FOrders := PackerDecodeStr(Values['Orders']);
