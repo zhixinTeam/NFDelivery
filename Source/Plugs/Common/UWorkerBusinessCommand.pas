@@ -807,6 +807,12 @@ begin
   gDBConnManager.WorkerExec(FDBConn, nStr);
   //超过预警则封存批次号
 
+  nStr := 'Update %s Set D_LastDate=null Where D_Valid=''%s'' ' +
+          'And D_LastDate is not NULL';
+  nStr := Format(nStr, [sTable_BatcodeDoc, sFlag_BatchInUse]);
+  gDBConnManager.WorkerExec(FDBConn, nStr);
+  //启用状态的批次号，去掉终止时间
+
   Result := True;
 end;
 

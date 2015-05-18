@@ -1443,7 +1443,7 @@ end;
 //Desc: 保存指定岗位提交的交货单列表
 function TWorkerBusinessBills.SavePostBillItems(var nData: string): Boolean;
 var nStr,nSQL,nTmp: string;
-    f,m,nVal,nMVal: Double;
+    f,m,nVal,nMVal,nTotal: Double;
     i,nIdx,nInt: Integer;
     nBills: TLadingBillItems;
     nOut: TWorkerBusinessCommand;
@@ -1725,6 +1725,7 @@ begin
       end;
     end;
 
+    nTotal := 0;
     for nIdx:=Low(nBills) to High(nBills) do
     with nBills[nIdx] do
     begin
@@ -1740,36 +1741,8 @@ begin
            nVal:=FMData.FValue-FPData.FValue
       else nVal:=FValue;
 
-      if FType = sFlag_San then
-      begin
-        nStr := 'Select L_Seal,L_Value,D_Brand from $BL bl ' +
-              'Left join $BC bc on bl.L_Seal=bc.D_ID ' +
-              'Where L_ID=''$ID''';
-        nStr := MacroValue(nStr, [MI('$BL', sTable_Bill),
-                MI('$BC', sTable_BatcodeDoc),MI('$ID', nBills[nInt].FID)]);
-        with gDBConnManager.WorkerQuery(FDBConn, nStr) do
-        if RecordCount>0 then
-        begin
-          FListC.Clear;
-          FListC.Values['Brand'] := FieldByName('D_Brand').AsString;
-          FListC.Values['Batch'] := FieldByName('L_Seal').AsString;
-          FListC.Values['Value'] := FloatToStr(nVal);
-
-          
-          if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
-              FOrderItems[nIdx].FStockID, FListC.Text, @nOut) then
-          raise Exception.Create(nOut.FData);
-
-          nSQL := MakeSQLByStr([SF('L_Seal', nOut.FData)
-              ], sTable_Bill, SF('L_ID', FID), False);
-          FListA.Add(nSQL);
-
-          FListC.Values['Batch'] := nOut.FData;
-          if not TWorkerBusinessCommander.CallMe(cBC_SaveStockBatcode,
-              FListC.Text, sFlag_Yes, @nOut) then
-          raise Exception.Create(nOut.FData);
-        end;
-      end;  
+      nTotal := nTotal + nVal;
+      //发货总量
 
       nSQL := MakeSQLByStr([SF('L_Value', nVal, sfVal),
               SF('L_Status', sFlag_TruckBFM),
@@ -1952,6 +1925,43 @@ begin
   //----------------------------------------------------------------------------
   FDBConn.FConn.BeginTrans;
   try
+    if (FIn.FExtParam=sFlag_TruckBFM) and (nBills[nInt].FType=sFlag_San) then
+    begin
+      nStr := 'Select L_Seal,L_Value,D_Brand from $BL bl ' +
+            'Left join $BC bc on bl.L_Seal=bc.D_ID ' +
+            'Where L_ID=''$ID''';
+      nStr := MacroValue(nStr, [MI('$BL', sTable_Bill),
+              MI('$BC', sTable_BatcodeDoc),MI('$ID', nBills[nInt].FID)]);
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+      if RecordCount>0 then
+      begin
+        FListC.Clear;
+        FListC.Values['Brand'] := FieldByName('D_Brand').AsString;
+        FListC.Values['Batch'] := FieldByName('L_Seal').AsString;
+        FListC.Values['Value'] := FloatToStr(nTotal);
+      end;
+
+      if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
+          nBills[nInt].FStockNo, FListC.Text, @nOut) then
+      raise Exception.Create(nOut.FData);
+
+      for nIdx:=Low(nBills) to High(nBills) do
+      with nBills[nIdx] do
+      begin
+        if nBills[nInt].FPModel = sFlag_PoundCC then Continue;
+        //出厂模式,不更新状态
+
+        nSQL := MakeSQLByStr([SF('L_Seal', nOut.FData)
+                ], sTable_Bill, SF('L_ID', FID), False);
+        FListA.Add(nSQL);
+      end;
+
+      FListC.Values['Batch'] := nOut.FData;
+      if not TWorkerBusinessCommander.CallMe(cBC_SaveStockBatcode,
+          FListC.Text, sFlag_Yes, @nOut) then
+      raise Exception.Create(nOut.FData);
+    end;
+
     for nIdx:=0 to FListA.Count - 1 do
       gDBConnManager.WorkerExec(FDBConn, FListA[nIdx]);
     //xxxxx
