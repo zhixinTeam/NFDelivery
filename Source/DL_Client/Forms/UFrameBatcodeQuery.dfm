@@ -58,11 +58,27 @@ inherited fFrameBatcodeQuery: TfFrameBatcodeQuery
       TabOrder = 3
       Width = 125
     end
+    object ckDel: TcxCheckBox [4]
+      Left = 211
+      Top = 36
+      Caption = #26597#35810#24050#21024#38500
+      ParentFont = False
+      TabOrder = 1
+      Transparent = True
+      OnClick = ckDelClick
+      Width = 121
+    end
     inherited dxGroup1: TdxLayoutGroup
       inherited GroupSearch1: TdxLayoutGroup
         object dxLayout1Item2: TdxLayoutItem
           Caption = #29289#26009#21517#31216':'
           Control = EditName
+          ControlOptions.ShowBorder = False
+        end
+        object dxLayout1Item5: TdxLayoutItem
+          Caption = 'cxCheckBox1'
+          ShowCaption = False
+          Control = ckDel
           ControlOptions.ShowBorder = False
         end
       end

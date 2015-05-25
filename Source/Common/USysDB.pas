@@ -416,7 +416,7 @@ ResourceString
        'L_OutFact DateTime, L_OutMan varChar(32),' +
        'L_Lading Char(1), L_IsVIP varChar(1), L_Seal varChar(100),' +
        'L_HYDan varChar(15), L_Man varChar(32), L_Date DateTime,' +
-       'L_DelMan varChar(8), L_DelDate DateTime)';
+       'L_DelMan varChar(32), L_DelDate DateTime)';
   {-----------------------------------------------------------------------------
    交货单表: Bill
    *.R_ID: 编号

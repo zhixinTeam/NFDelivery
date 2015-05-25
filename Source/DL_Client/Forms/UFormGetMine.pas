@@ -73,13 +73,15 @@ begin
     Caption := 'Ñ¡Ôñ¿óµã';
 
     EditMine.Text := nP.FParamA;
-    QueryMine(EditMine.Text);
+    if QueryMine(EditMine.Text) then
+    begin
+      nP.FCommand := cCmd_ModalResult;
+      nP.FParamA := ShowModal;
 
-    nP.FCommand := cCmd_ModalResult;
-    nP.FParamA := ShowModal;
+      if nP.FParamA = mrOK then
+        nP.FParamB := ListMine.Items[ListMine.ItemIndex].Caption;
+    end;  
 
-    if nP.FParamA = mrOK then
-      nP.FParamB := ListMine.Items[ListMine.ItemIndex].Caption;
     Free;
   end;
 end;
@@ -153,7 +155,7 @@ begin
 
       Next;
     end;
-  end;
+  end else Exit;
 
   Result := ListMine.Items.Count > 0;
   if Result then

@@ -137,7 +137,7 @@ procedure TfFormDeduct.EditStockPropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 var nP: TFormCommandParam;
 begin
-  nP.FParamA := '2';
+  nP.FParamA := '';
   CreateBaseFormItem(cFI_FormGetNCStock, '', @nP);
 
   if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then

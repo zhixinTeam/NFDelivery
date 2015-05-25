@@ -145,6 +145,12 @@ begin
     nHint := '请输入批次号';
   end else
 
+  if Sender = EditStock then
+  begin
+    Result := EditStock.ItemIndex >= 0;
+    nHint := '请选择品种';
+  end else
+
   if Sender = EditPlan then
   begin
     Result := IsNumber(EditPlan.Text, True);
@@ -188,10 +194,26 @@ begin
   end;
 
   if FRecordID = '' then
+  begin
+    nStr := 'Select D_ID from %s where D_ID=''%s''';
+    nStr := Format(nStr , [sTable_BatcodeDoc, Trim(EditBatch.Text)]);
+
+    with FDM.QuerySQL(nStr) do
+      if RecordCount > 0 then
+      begin
+        nStr := '批次号[%s]已存在';
+        nStr := Format(nStr , [Trim(EditBatch.Text)]);
+
+        ShowMsg(nStr, sHint);
+        Exit;
+      end;
+  end;
+  //判断批次号是否重复
+  if FRecordID = '' then
        nStr := ''
   else nStr := SF('R_ID', FRecordID, sfVal);
 
-  nStr := MakeSQLByStr([SF('D_ID', EditBatch.Text),
+  nStr := MakeSQLByStr([SF('D_ID', Trim(EditBatch.Text)),
           SF('D_Stock', GetCtrlData(EditStock)),
           SF('D_Name', EditName.Text),
           SF('D_Brand', EditBrand.Text),
@@ -221,9 +243,16 @@ end;
 
 procedure TfFormBatcodeEdit.EditStockPropertiesEditValueChanged(
   Sender: TObject);
+var nPos: Integer;
+    nStr: string;
 begin
   inherited;
-  //EditName.Text := GetCtrlData(EditStock);
+
+  nStr := Trim(EditStock.Text);
+  nPos := Pos('.', nStr);
+  Delete(nStr, 1, nPos);
+
+  EditName.Text := nStr;
 end;
 
 initialization

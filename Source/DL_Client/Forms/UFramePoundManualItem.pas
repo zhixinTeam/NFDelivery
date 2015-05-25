@@ -807,7 +807,8 @@ begin
     else FUIData.FMData.FValue := nVal;
   end else
   begin
-    if FInnerData.FPData.FValue > 0 then
+    if CheckLock.Checked then FUIData.FPData.FValue := nVal  //更新预置皮重
+    else if FInnerData.FPData.FValue > 0 then
     begin
       if nVal <= FInnerData.FPData.FValue then
       begin
@@ -1578,6 +1579,15 @@ begin
   inherited;
   if CheckLock.Checked then
   begin
+    with FInnerData.FMData do
+    begin
+      FValue := 0;
+      FStation := '';
+      FOperator := '';
+    end;
+    FUIData := FInnerData;
+    //删除毛重信息
+
     RadioPD.Enabled := False;
     RadioLS.Checked := True;
   end

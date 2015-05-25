@@ -14,7 +14,7 @@ uses
   cxMaskEdit, cxButtonEdit, cxTextEdit, ADODB, cxLabel, UBitmapPanel,
   cxSplitter, cxGridLevel, cxClasses, cxGridCustomView,
   cxGridCustomTableView, cxGridTableView, cxGridDBTableView, cxGrid,
-  ComCtrls, ToolWin, UFormCtrl;
+  ComCtrls, ToolWin, UFormCtrl, cxCheckBox;
 
 type
   TfFrameBatcodeQuery = class(TfFrameNormal)
@@ -26,11 +26,14 @@ type
     dxLayout1Item4: TdxLayoutItem;
     cxTextEdit3: TcxTextEdit;
     dxLayout1Item3: TdxLayoutItem;
+    ckDel: TcxCheckBox;
+    dxLayout1Item5: TdxLayoutItem;
     procedure EditNamePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnAddClick(Sender: TObject);
     procedure BtnEditClick(Sender: TObject);
     procedure BtnDelClick(Sender: TObject);
+    procedure ckDelClick(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -56,7 +59,8 @@ function TfFrameBatcodeQuery.InitFormDataSQL(const nWhere: string): string;
 begin
   Result := 'Select * From ' + sTable_BatcodeDoc;
   if nWhere <> '' then
-    Result := Result + ' Where (' + nWhere + ')';
+        Result := Result + ' Where (' + nWhere + ')'
+  else  Result := Result + ' Where (D_Valid <> ''D'')';
   Result := Result + ' Order By D_ID';
 end;
 
@@ -123,6 +127,16 @@ begin
     FWhere := Format('D_Name Like ''%%%s%%''', [EditName.Text]);
     InitFormData(FWhere);
   end;
+end;
+
+procedure TfFrameBatcodeQuery.ckDelClick(Sender: TObject);
+var nStr :string;
+begin
+  inherited;
+  nStr := '';
+  if ckDel.Checked then nStr := Format('D_Valid=''%s''', [sFlag_BatchDel]);
+
+  InitFormData(nStr)
 end;
 
 initialization
