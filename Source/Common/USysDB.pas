@@ -481,7 +481,7 @@ ResourceString
        'T_PValue $Float Default 0, T_PTime Integer Default 0,' +
        'T_PlateColor varChar(12),T_Type varChar(12), T_LastTime DateTime, ' +
        'T_Card varChar(32), T_CardUse Char(1), T_NoVerify Char(1),' +
-       'T_Valid Char(1), T_VIPTruck Char(1))';
+       'T_Valid Char(1), T_VIPTruck Char(1), T_HasGPS Char(1))';
   {-----------------------------------------------------------------------------
    车辆信息:Truck
    *.R_ID: 记录号
@@ -505,6 +505,7 @@ ResourceString
    *.T_NoVerify: 不校验时间
    *.T_Valid: 是否有效
    *.T_VIPTruck:是否VIP
+   *.T_HasGPS:安装GPS(Y/N)
 
    有效平均皮重算法:
    T_PValue = (T_PValue * T_PTime + 新皮重) / (T_PTime + 1) 

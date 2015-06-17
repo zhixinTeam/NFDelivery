@@ -30,6 +30,11 @@ type
     dxLayout1Item6: TdxLayoutItem;
     CheckUserP: TcxCheckBox;
     CheckVip: TcxCheckBox;
+    dxLayout1Item8: TdxLayoutItem;
+    dxLayout1Group2: TdxLayoutGroup;
+    CheckGPS: TcxCheckBox;
+    dxLayout1Item10: TdxLayoutItem;
+    dxLayout1Group4: TdxLayoutGroup;
     procedure BtnOKClick(Sender: TObject);
   protected
     { Protected declarations }
@@ -112,12 +117,13 @@ begin
     CheckUserP.Checked := FieldByName('T_PrePUse').AsString = sFlag_Yes;
 
     CheckVip.Checked   := FieldByName('T_VIPTruck').AsString = sFlag_TypeVIP;
+    CheckGPS.Checked   := FieldByName('T_HasGPS').AsString = sFlag_Yes;
   end;
 end;
 
 //Desc: ±£´æ
 procedure TfFormTruck.BtnOKClick(Sender: TObject);
-var nStr,nTruck,nU,nV,nP,nVip: string;
+var nStr,nTruck,nU,nV,nP,nVip,nGps: string;
 begin
   nTruck := UpperCase(Trim(EditTruck.Text));
   if nTruck = '' then
@@ -143,6 +149,10 @@ begin
        nVip:=sFlag_TypeVIP
   else nVip:=sFlag_TypeCommon;
 
+  if CheckGPS.Checked then
+       nGps := sFlag_Yes
+  else nGps := sFlag_No;
+
   if FTruckID = '' then
        nStr := ''
   else nStr := SF('R_ID', FTruckID, sfVal);
@@ -154,6 +164,7 @@ begin
           SF('T_Valid', nV),
           SF('T_PrePUse', nP),
           SF('T_VIPTruck', nVip),
+          SF('T_HasGPS', nGps),
           SF('T_LastTime', sField_SQLServer_Now, sfVal)
           ], sTable_Truck, nStr, FTruckID = '');
   FDM.ExecuteSQL(nStr);

@@ -174,18 +174,19 @@ begin
       begin
         Caption := FieldByName('custcode').AsString;
         SubItems.Add(FieldByName('custname').AsString);
+        SubItems.Add('');
       end
       else if FQueryType = '2' then
       begin
         Caption := FieldByName('custcode').AsString;
         SubItems.Add(FieldByName('custname').AsString);
-
         SubItems.Add(FieldByName('vdef10').AsString)
       end
       else
       begin
         Caption := FieldByName('invcode').AsString;
         SubItems.Add(FieldByName('invname').AsString);
+        SubItems.Add('');
       end;
 
       ImageIndex := cItemIconIndex;

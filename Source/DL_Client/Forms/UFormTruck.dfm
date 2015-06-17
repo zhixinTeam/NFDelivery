@@ -12,12 +12,12 @@ inherited fFormTruck: TfFormTruck
     inherited BtnOK: TButton
       Left = 229
       Top = 237
-      TabOrder = 6
+      TabOrder = 8
     end
     inherited BtnExit: TButton
       Left = 299
       Top = 237
-      TabOrder = 7
+      TabOrder = 9
     end
     object EditTruck: TcxTextEdit [2]
       Left = 81
@@ -56,9 +56,9 @@ inherited fFormTruck: TfFormTruck
       Top = 204
       Caption = #39564#35777#36710#36742#24050#21040#20572#36710#22330'.'
       ParentFont = False
-      TabOrder = 5
+      TabOrder = 6
       Transparent = True
-      Width = 100
+      Width = 165
     end
     object CheckUserP: TcxCheckBox [7]
       Left = 23
@@ -67,7 +67,25 @@ inherited fFormTruck: TfFormTruck
       ParentFont = False
       TabOrder = 4
       Transparent = True
-      Width = 310
+      Width = 165
+    end
+    object CheckVip: TcxCheckBox [8]
+      Left = 193
+      Top = 178
+      Caption = 'VIP'#36710#36742
+      ParentFont = False
+      TabOrder = 5
+      Transparent = True
+      Width = 100
+    end
+    object CheckGPS: TcxCheckBox [9]
+      Left = 193
+      Top = 204
+      Caption = #24050#23433#35013'GPS'
+      ParentFont = False
+      TabOrder = 7
+      Transparent = True
+      Width = 100
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup
@@ -106,27 +124,42 @@ inherited fFormTruck: TfFormTruck
           Control = CheckValid
           ControlOptions.ShowBorder = False
         end
-        object dxLayout1Item6: TdxLayoutItem
+        object dxLayout1Group2: TdxLayoutGroup
           ShowCaption = False
-          Control = CheckUserP
-          ControlOptions.ShowBorder = False
+          Hidden = True
+          LayoutDirection = ldHorizontal
+          ShowBorder = False
+          object dxLayout1Item6: TdxLayoutItem
+            ShowCaption = False
+            Control = CheckUserP
+            ControlOptions.ShowBorder = False
+          end
+          object dxLayout1Item8: TdxLayoutItem
+            Caption = 'cxCheckBox1'
+            ShowCaption = False
+            Control = CheckVip
+            ControlOptions.ShowBorder = False
+          end
         end
-        object dxLayout1Item7: TdxLayoutItem
-          Caption = 'cxCheckBox2'
+        object dxLayout1Group4: TdxLayoutGroup
           ShowCaption = False
-          Control = CheckVerify
-          ControlOptions.ShowBorder = False
+          Hidden = True
+          LayoutDirection = ldHorizontal
+          ShowBorder = False
+          object dxLayout1Item7: TdxLayoutItem
+            Caption = 'cxCheckBox2'
+            ShowCaption = False
+            Control = CheckVerify
+            ControlOptions.ShowBorder = False
+          end
+          object dxLayout1Item10: TdxLayoutItem
+            Caption = 'cxCheckBox1'
+            ShowCaption = False
+            Control = CheckGPS
+            ControlOptions.ShowBorder = False
+          end
         end
       end
     end
-  end
-  object CheckVip: TcxCheckBox
-    Left = 24
-    Top = 240
-    Caption = 'VIP'#36710#36742
-    ParentFont = False
-    TabOrder = 1
-    Transparent = True
-    Width = 121
   end
 end
