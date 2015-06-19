@@ -175,6 +175,11 @@ ResourceString
   sFlag_OrderInFact   = 'OrderInFact';               //工厂可发货订单
   sFlag_FactoryItem   = 'FactoryItem';               //工厂信息项
 
+  sFlag_InWHouse      = 'Warehouse';                 //库存可发(收)货订单
+  sFlag_InWHID        = 'WarehouseID';               //仓库可发(收)货订单
+  sFlag_InFact        = 'Factory';                   //工厂可发(收)货订单
+  sFlag_InDepot       = 'Depot';                     //库存编号
+
   sFlag_CustomerItem  = 'CustomerItem';              //客户信息项
   sFlag_ProviderItem  = 'ProviderItem';              //供应商信息项
   sFlag_MaterailsItem = 'MaterailsItem';             //原材料信息项   
@@ -195,6 +200,7 @@ ResourceString
   sFlag_BatchAuto     = 'Batch_Auto';                //自动生成批次号
   sFlag_BatchBrand    = 'Batch_Brand';               //批次区分品牌
   sFlag_BatchValid    = 'Batch_Valid';               //启用批次管理
+  sFlag_PoundBaseValue= 'PoundBaseValue';            //磅房跳动基数
 
   sFlag_BusGroup      = 'BusFunction';               //业务编码组
   sFlag_BillNo        = 'Bus_Bill';                  //交货单号

@@ -170,7 +170,7 @@ begin
   FDM.ExecuteSQL(nStr);
 
   ModalResult := mrOk;
-  ShowMsg('提货单保存成功', sHint);
+  ShowMsg('车辆信息保存成功', sHint);
 end;
 
 initialization

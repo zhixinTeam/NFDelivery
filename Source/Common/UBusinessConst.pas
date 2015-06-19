@@ -78,6 +78,7 @@ const
 
   cBC_GetTruckPValue          = $0091;   //获取车辆预置皮重
   cBC_SaveTruckPValue         = $0092;   //保存车辆预置皮重
+  cBC_GetPoundBaseValue       = $0093;   //获取地磅表头跳动基数
 type
   PWorkerQueryFieldData = ^TWorkerQueryFieldData;
   TWorkerQueryFieldData = record

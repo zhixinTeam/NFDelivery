@@ -318,7 +318,8 @@ begin
     EditPValue.Text := Format('%.2f', [FPData.FValue]);
     EditZValue.Text := Format('%.2f', [FValue]);
 
-    if (FValue > 0) and (FMData.FValue > 0) and (FPData.FValue > 0) then
+    if (not nProvide) and
+       (FValue > 0) and (FMData.FValue > 0) and (FPData.FValue > 0) then
     begin
       nVal := FMData.FValue - FPData.FValue;
       EditJValue.Text := Format('%.2f', [nVal]);

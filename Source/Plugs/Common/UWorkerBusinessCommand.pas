@@ -102,6 +102,7 @@ type
     function GetWeixinReport(var nData: string): Boolean;
     //获取微信报表
     {$ENDIF}
+    function GetPoundBaseValue(var nData: string): Boolean;
   public
     constructor Create; override;
     destructor destroy; override;
@@ -114,6 +115,7 @@ type
     //local call
   end;
 
+function FormatValue(const nSrcValue, nWCValue: Extended): Extended;
 implementation
 
 class function TBusWorkerQueryField.FunctionName: string;
@@ -342,6 +344,7 @@ begin
    cBC_SaveTruckPoundData  : Result := SaveTruckPoundData(nData);
    cBC_GetTruckPValue      : Result := GetTruckPValue(nData);
    cBC_SaveTruckPValue     : Result := SaveTruckPValue(nData);
+   cBC_GetPoundBaseValue   : Result := GetPoundBaseValue(nData);
 
 
    {$IFDEF MicroMsg}
@@ -746,14 +749,12 @@ begin
       end;
     end;
 
-  if nUBatcode <> sFlag_Yes then
+  if (nUBatcode <> sFlag_Yes) or (nUBatchAuto = sFlag_Yes) then
   begin
     FOut.FData := '';
     Result := True;
     Exit;
   end;
-
-  if nUBatchAuto = sFlag_Yes then  Exit;
   //自动获取批次号，无需更新
 
   FListA.Clear;
@@ -820,10 +821,13 @@ end;
 //Parm: 查询类型[FIn.FData];查询条件[FIn.FExtParam]
 //Desc: 依据查询条件,构建指定类型订单的SQL查询语句
 function TWorkerBusinessCommander.GetSQLQueryOrder(var nData: string): Boolean;
-var nStr,nCorp,nType: string;
+var nStr,nType,nPB,nFactNum: string;
+    nCorp,nWHGroup,nWHID:string;
 begin
   Result := False;
-  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  FListA.Text := DecodeBase64(FIn.FExtParam);
+
+  nStr := 'Select D_Value,D_Memo,D_ParamB From %s Where D_Name=''%s''';
   nStr := Format(nStr, [sTable_SysDict, sFlag_OrderInFact]);
 
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
@@ -834,8 +838,30 @@ begin
       Exit;
     end;
 
-    nCorp := Fields[0].AsString;
-    //公司列表
+    First;
+    nFactNum := UpperCase(FListA.Values['FactoryID']);
+    while not Eof do
+    begin
+      nStr := Fields[1].AsString;
+      nPB  := UpperCase(Fields[2].AsString);
+
+      if (nFactNum = '') or (nPB = nFactNum) then
+      begin
+        if (nStr = sFlag_InFact) then
+          nCorp := Fields[0].AsString;
+        //xxxxx
+
+        if nStr = sFlag_InWHouse then
+          nWHGroup := Fields[0].AsString;
+        //xxxxx
+
+        if nStr = sFlag_InWHID then
+          nWHID := Fields[0].AsString;
+        //xxxxx
+      end;
+
+      Next;
+    end;
   end;
 
   if FIn.FData = '101' then           //销售订单
@@ -876,8 +902,8 @@ begin
   //xxxxx
 
   Result := True;
-  FListA.Text := DecodeBase64(FIn.FExtParam);
-  
+  //xxxxx
+
   nStr := FListA.Values['BillCode'];
   if nStr <> '' then
   begin
@@ -905,11 +931,39 @@ begin
     //拼接以下条件
   end;
 
-  if Pos('10', FIn.FData) = 1 then
+  if Pos('10', FIn.FData) = 1 then   //销售控制发货工厂和库存组织
   begin
+    nStr := AdjustListStrFormat(nWHGroup, '''', True, ',');
+    if nStr<>'' then
+      FOut.FData := FOut.FData + '(t2.pk_callbody_from In (' + nStr + ')) And ';
+    //库存组织控制
+
+    nStr := AdjustListStrFormat(nWHID, '''', True, ',');
+    if nStr<>'' then
+      FOut.FData := FOut.FData + '(t2.pk_warehouse_from In (' + nStr + ')) And ';
+    //仓库发货控制
+
     nStr := AdjustListStrFormat(nCorp, '''', True, ',');
-    FOut.FData := FOut.FData + '(t2.pk_corp_from In (' + nStr + ')) And ';
+    if nStr<>'' then
+      FOut.FData := FOut.FData + '(t2.pk_corp_from In (' + nStr + ')) And ';
     //销售控制发货工厂
+  end else
+  if Pos('20', FIn.FData) = 1 then //采购控制收货工厂和库存组织
+  begin
+    nStr := AdjustListStrFormat(nWHGroup, '''', True, ',');
+    if nStr<>'' then
+      FOut.FData := FOut.FData + '(t2.pk_callbody_main In (' + nStr + ')) And ';
+    //库存组织控制
+
+    nStr := AdjustListStrFormat(nWHID, '''', True, ',');
+    if nStr<>'' then
+      FOut.FData := FOut.FData + '(t2.pk_warehouse_main In (' + nStr + ')) And ';
+    //仓库收货控制
+
+    nStr := AdjustListStrFormat(nCorp, '''', True, ',');
+    if nStr<>'' then
+      FOut.FData := FOut.FData + '(t2.pk_corp_main In (' + nStr + ')) And ';
+    //控制收货工厂
   end;
 
   FOut.FData := FOut.FData + ' (' + nType + ')';
@@ -1280,7 +1334,7 @@ end;
 //Desc: 获取指定车牌号的称皮数据(使用配对模式,未称重)
 function TWorkerBusinessCommander.SaveTruckPoundData(var nData: string): Boolean;
 var nStr,nSQL: string;
-    nVal,nNet: Double;
+    nVal,nNet,nBaseValue: Double;
     nProvide: Boolean;
     nTItem: TPreTruckPItem;
     nPound: TLadingBillItems;
@@ -1290,6 +1344,10 @@ begin
   Result := False;
   AnalyseBillItems(FIn.FData, nPound);
   //解析数据
+
+  CallMe(cBC_GetPoundBaseValue, '', '' , @nOut);
+  nBaseValue := StrToFloat(nOut.FData);
+  //获取地磅跳动基数
 
   with nPound[0] do
   begin
@@ -1308,6 +1366,10 @@ begin
         nPData := FPData;
       end;
     end else nMData := FPData;
+
+    nMData.FValue := FormatValue(nMData.FValue*1000, nBaseValue) / 1000;
+    nPData.FValue := FormatValue(nPData.FValue*1000, nBaseValue) / 1000;
+    //矫正保存数据
 
     if FPoundID = '' then
     begin
@@ -1416,10 +1478,18 @@ begin
 
         if (nVal > 0) and (nNet > nVal) then
         begin
+          nVal := Float2Float(nVal, cPrecision, False);
+          //将暗扣量扣减为2位小数;
+
           nMData.FValue := (FMData.FValue*1000 - nVal*1000) / 1000;
           if FMData.FValue > FPData.FValue then
                FMData.FValue := (FMData.FValue*1000 - nVal*1000) / 1000
           else FPData.FValue := (FPData.FValue*1000 - nVal*1000) / 1000;
+
+          nMData.FValue := FormatValue(nMData.FValue*1000, nBaseValue) / 1000;
+          FMData.FValue := FormatValue(FMData.FValue*1000, nBaseValue) / 1000;
+          FPData.FValue := FormatValue(FPData.FValue*1000, nBaseValue) / 1000;
+          //再次矫正数据
         end;
       end;
 
@@ -2343,6 +2413,45 @@ begin
   Result := True;
 end;
 {$ENDIF}
+//------------------------------------------------------------------------------
+//Date: 2015/6/18
+//Parm: 
+//Desc: 获取磅表跳动基数
+function TWorkerBusinessCommander.GetPoundBaseValue(var nData: string): Boolean;
+var nStr: string;
+    nWCValue: Double;
+begin
+  nWCValue := 0;
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_PoundBaseValue]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    nWCValue := Fields[0].AsFloat;
+  end;
+
+  FOut.FData := FloatToStr(nWCValue * 1000 / 1000);
+  Result := True;
+end;
+
+//------------------------------------------------------------------------------
+//Date: 2015/6/18
+//Parm: 原始数据，数据跳动范围
+//Desc: 格式化数据
+function FormatValue(const nSrcValue, nWCValue: Extended): Extended;
+begin
+  if nWCValue = 0 then
+  begin
+    Result := nSrcValue;
+    Exit;
+  end;
+
+  Result := Trunc(nSrcValue) div 100 * 100;
+  Result := Result + Trunc(nSrcValue) mod 100
+            div Trunc(nWCValue) * Trunc(nWCValue);
+  //xxxxx          
+end;
 
 initialization
   gBusinessWorkerManager.RegisteWorker(TBusWorkerQueryField, sPlug_ModuleBus);

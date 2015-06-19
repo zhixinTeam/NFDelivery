@@ -56,6 +56,8 @@ type
     function SetVipTruck(nTruck: String): Boolean;
     //VIP车道设置
     function GetStockPackStyle(const nStockID: string): string;
+    function VerifyTruckGPS(const nTruck: String=''): Boolean;
+    //车辆是否安装GPS
   public
     { Public declarations }
     class function CreateForm(const nPopedom: string = '';
@@ -272,6 +274,13 @@ begin
   if not IsDataValid then Exit;
   //check valid
 
+  if not VerifyTruckGPS then
+  begin
+    ModalResult := mrCancel;
+    Exit;
+  end;
+  //Query Truck GPS
+
   nList := TStringList.Create;
   try
     LoadSysDictItem(sFlag_PrintBill, nList);
@@ -347,7 +356,55 @@ begin
      Result := Fields[0].AsString;
 
   if Result = '' then Result := 'C';
-end;  
+end;
+
+function TfFormBill.VerifyTruckGPS(const nTruck: String=''): Boolean;
+var nStr, nTmp: string;
+    nUseGPS: Boolean;
+begin
+  Result := False;
+
+  nUseGPS := False;
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, 'UseGPS']);
+  //xxxxx
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+  begin
+    nUseGPS := Fields[0].AsString=sFlag_Yes;
+  end;
+
+  if not nUseGPS then
+  begin
+    Result := True;
+    Exit;
+  end;   
+
+  if nTruck <> '' then
+       nTmp := Trim(nTruck)
+  else nTmp := Trim(EditTruck.Text);
+  //xxxxx
+
+  nStr := 'Select T_HasGPS From %s Where T_Truck=''%s''';
+  nStr := Format(nStr, [sTable_Truck, nTmp]);
+  //xxxxx
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+  begin
+    Result := Fields[0].AsString=sFlag_Yes;
+  end;
+
+  if not Result then
+  begin
+    nStr := '车辆[ %s ]未安装GPS,是否继续开单';
+    nStr := Format(nStr, [nTmp]);
+    //xxxxx
+
+    Result := QueryDlg(nStr, sWarn);
+  end;  
+end;
 
 initialization
   gControlManager.RegCtrl(TfFormBill, TfFormBill.FormID);
