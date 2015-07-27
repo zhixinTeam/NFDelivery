@@ -1778,6 +1778,17 @@ begin
       FListA.Add(nSQL);
       //没有称毛重的过磅记录的皮重,等于本次的毛重
     end;
+
+    nSQL := 'Select P_ID From %s Where P_Bill=''%s'' And P_MValue Is Null';
+    nSQL := Format(nSQL, [sTable_PoundLog, nBills[nInt].FID]);
+    //未称毛重记录
+
+    with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+    if RecordCount > 0 then
+    begin
+      FOut.FData := Fields[0].AsString;
+    end;
+    //返回榜单号,用于拍照绑定
   end else
 
   //----------------------------------------------------------------------------

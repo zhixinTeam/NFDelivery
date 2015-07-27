@@ -123,7 +123,7 @@ end;
 
 //Desc: 保存
 procedure TfFormTruck.BtnOKClick(Sender: TObject);
-var nStr,nTruck,nU,nV,nP,nVip,nGps: string;
+var nStr,nTruck,nU,nV,nP,nVip,nGps,nEvent: string;
 begin
   nTruck := UpperCase(Trim(EditTruck.Text));
   if nTruck = '' then
@@ -168,6 +168,13 @@ begin
           SF('T_LastTime', sField_SQLServer_Now, sfVal)
           ], sTable_Truck, nStr, FTruckID = '');
   FDM.ExecuteSQL(nStr);
+
+  if FTruckID='' then
+        nEvent := '添加[ %s ]档案信息.'
+  else  nEvent := '修改[ %s ]档案信息.';
+  nEvent := Format(nEvent, [nTruck]);
+  FDM.WriteSysLog(sFlag_CommonItem, nTruck, nEvent);
+
 
   ModalResult := mrOk;
   ShowMsg('车辆信息保存成功', sHint);

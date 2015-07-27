@@ -101,6 +101,7 @@ object fFormLogin: TfFormLogin
       Top = 20
       Width = 141
       Height = 20
+      AutoComplete = False
       BevelKind = bkTile
       ItemHeight = 12
       TabOrder = 0

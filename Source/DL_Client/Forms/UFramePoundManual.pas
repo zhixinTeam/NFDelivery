@@ -240,7 +240,8 @@ begin
 
       if nStr = sFlag_No then Continue;
       //不在本机加载
-      
+
+      if not nT.FAutoWeight then
       with TfFrameManualPoundItem.Create(Self) do
       begin
         Name := 'fFrameManualPoundItem' + IntToStr(nIdx);

@@ -1068,9 +1068,9 @@ begin
     FPreTruckP := FPreTruckPFlag;
     //True, π”√‘§÷√∆§÷ÿ
 
-    if FNextStatus = sFlag_TruckBFP then
-         FPData.FStation := FPoundTunnel.FID
-    else FMData.FStation := FPoundTunnel.FID;
+    if FNextStatus = sFlag_TruckBFM then
+         FMData.FStation := FPoundTunnel.FID
+    else FPData.FStation := FPoundTunnel.FID;
   end;
 
   Result := SaveTruckPoundItem(FPoundTunnel, FBillItems, nPoundID);

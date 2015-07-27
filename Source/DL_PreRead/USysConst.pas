@@ -9,9 +9,15 @@ interface
 uses
   Windows, Classes, SysUtils, UBusinessPacker, UBusinessWorker, UBusinessConst,
   UClientWorker, UMITPacker, UWaitItem, ULibFun, UMultiJS, USysDB, USysLoger,
-  UMgrChannel, UChannelChooser, U02NReader, UMgrLEDDisp,UDataModule;
-
+  UMgrChannel, UChannelChooser, U02NReader, UMgrLEDDisp,UDataModule, IniFiles;
+{$DEFINE DEBUG}
 type
+  TStockMap = record
+    FStockType   : string;
+    FStockContext: string;
+  end;
+  TStockMaps = array of TStockMap;
+
   TSysParam = record
     FUserID     : string;                            //用户标识
     FUserName   : string;                            //当前用户
@@ -27,6 +33,9 @@ type
 
     FNoDaiQueue : Boolean;     //袋装禁用队列
     FNoSanQueue : Boolean;     //散装禁用队列
+
+    FStockFlag  : Boolean;
+    FStockMaps  : TStockMaps;
   end;
   //系统参数
 
@@ -325,15 +334,24 @@ end;
 
 function GetStockType(nBill: string):string;
 var nStr: string;
+    nInt: Integer;
 begin
   Result := '普通';
+
   nStr := 'Select L_PackStyle From %s Where L_ID=''%s''';
   nStr := Format(nStr, [sTable_Bill, nBill]);
 
   with FDM.SQLQuery(nStr, FDM.SQLQuery1) do
   if RecordCount > 0 then
-  begin
     nStr := Trim(Fields[0].AsString);
+
+  if gSysParam.FStockFlag then
+  begin
+    for nInt:=Low(gSysParam.FStockMaps) to High(gSysParam.FStockMaps) do
+    if CompareText(nStr, gSysParam.FStockMaps[nInt].FStockType)=0 then
+      Result := gSysParam.FStockMaps[nInt].FStockContext;
+  end else
+  begin
     if nStr = 'Z' then Result := '纸袋';
     if nStr = 'R' then Result := '早强';
   end;
@@ -384,7 +402,8 @@ begin
   with FDM.SQLQuery(nStr, FDM.SQLQuery1) do
   if RecordCount>0 then nBillGroupID := Fields[0].AsString;
 
-  if (nLineGroupID = nBillGroupID) then Exit;
+  if (nLineGroupID <> '') and (nBillGroupID <> '') and
+    (nLineGroupID = nBillGroupID) then Exit;
 
   Result := False;
 end;
@@ -510,8 +529,13 @@ end;
 
 //现场读头有新卡号
 procedure WhenReaderCardIn(nHost: TReaderHost; nCard: TReaderCard);
-var nTxt: string;
+var nTxt, nStrLog: string;
 begin
+  {$IFDEF DEBUG}
+  nStrLog := '读卡信息: 车道编号[%s]，卡号[%s]';
+  nStrLog := Format(nStrLog, [nHost.FTunnel, nCard.FCard]);
+  WriteLog(nStrLog);
+  {$ENDIF}
   if (nHost.FType = rtKeep) and nHost.FPrepare then
   begin
     nTxt := PrepareShowInfo(nCard.FCard, nHost.FTunnel);

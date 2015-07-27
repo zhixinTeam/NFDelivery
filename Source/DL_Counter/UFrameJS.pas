@@ -83,8 +83,7 @@ begin
     if Assigned(Sender) then
     begin
       {$IFDEF USE_MIT}
-      if StopJS(FTunnel.FID) then
-        SaveCountResult(True);
+      StopJS(FTunnel.FID);
       {$ELSE}
       gMultiJSManager.DelJS(FTunnel.FID);
       if not BtnStart.Enabled then

@@ -57,14 +57,18 @@ type
     Timer_ReadCard: TTimer;
     TimerDelay: TTimer;
     MemoLog: TZnTransMemo;
+    Timer_SaveFail: TTimer;
+    ckCloseAll: TCheckBox;
     procedure Timer1Timer(Sender: TObject);
     procedure Timer2Timer(Sender: TObject);
     procedure Timer_ReadCardTimer(Sender: TObject);
     procedure TimerDelayTimer(Sender: TObject);
+    procedure Timer_SaveFailTimer(Sender: TObject);
+    procedure ckCloseAllClick(Sender: TObject);
   private
     { Private declarations }
-    FIsWeighting: Boolean;
-    //称重标识
+    FIsWeighting, FIsSaving: Boolean;
+    //称重标识,保存标识
     FPoundTunnel: PPTTunnelItem;
     //磅站通道
     FLastGS,FLastBT,FLastBQ: Int64;
@@ -75,9 +79,12 @@ type
     FLastCardDone: Int64;
     FLastCard: string;
     //上次卡号
+    FListA: TStrings;
     FSampleIndex: Integer;
     FValueSamples: array of Double;
     //数据采样
+    FEmptyPoundInit: Int64;
+    //空磅计时
     procedure SetUIData(const nReset: Boolean; const nOnlyData: Boolean = False);
     //界面数据
     procedure SetImageStatus(const nImage: TImage; const nOff: Boolean);
@@ -97,6 +104,8 @@ type
     //保存称重
     procedure WriteLog(nEvent: string);
     //记录日志
+    procedure PlayVoice(const nStrtext: string);
+    //播放语音
   public
     { Public declarations }
     class function FrameID: integer; override;
@@ -105,6 +114,7 @@ type
     //子类继承
     property PoundTunnel: PPTTunnelItem read FPoundTunnel write SetTunnel;
     //属性相关
+    property Additional: TStrings read FListA write FListA;
   end;
 
 implementation
@@ -112,7 +122,8 @@ implementation
 {$R *.dfm}
 
 uses
-  ULibFun, UFormBase, UMgrTruckProbe, UMgrRemoteVoice, UDataModule, USysBusiness,
+  ULibFun, UFormBase, {$IFDEF HR1847}UKRTruckProber,{$ELSE}UMgrTruckProbe,{$ENDIF}
+  UMgrRemoteVoice, UMgrVoiceNet, UDataModule, USysBusiness,
   USysLoger, USysConst, USysDB;
 
 const
@@ -129,12 +140,16 @@ begin
   inherited;
   FPoundTunnel := nil;
   FIsWeighting := False;
+  
+  FEmptyPoundInit := 0;
+  FListA := TStringList.Create;
 end;
 
 procedure TfFrameAutoPoundItem.OnDestroyFrame;
 begin
   gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
   //关闭表头端口
+  FListA.Free;
   inherited;
 end;
 
@@ -200,7 +215,11 @@ begin
 
   Timer2.Tag := 0;
   Timer2.Enabled := False;
+  {$IFDEF HR1847}
+  gKRMgrProber.TunnelOC(FPoundTunnel.FID,False);
+  {$ELSE}
   gProberManager.TunnelOC(FPoundTunnel.FID,False);
+  {$ENDIF}
 end;
 
 //Desc: 设置通道
@@ -236,7 +255,10 @@ begin
     EditValue.Text := '0.00';
     EditBill.Properties.Items.Clear;
 
+    FIsSaving    := False;
     FIsWeighting := False;
+    FEmptyPoundInit := 0;
+    
     gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
     //关闭表头端口
   end;
@@ -368,7 +390,7 @@ begin
 
     nStr := '车辆 %s 不能过磅,应该去 %s ';
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
-    gVoiceHelper.PlayVoice(nStr);
+    PlayVoice(nStr);
   end;
 
   if nInt = 0 then
@@ -419,7 +441,7 @@ procedure TfFrameAutoPoundItem.Timer_ReadCardTimer(Sender: TObject);
 var nStr,nCard: string;
     nLast: Int64;
 begin
-  if gSysParam.FIsManual then Exit;
+  //if gSysParam.FIsManual then Exit;
   Timer_ReadCard.Tag := Timer_ReadCard.Tag + 1;
   if Timer_ReadCard.Tag < 5 then Exit;
 
@@ -436,13 +458,13 @@ begin
     //新卡时重置
 
     nLast := Trunc((GetTickCount - FLastCardDone) / 1000);
-    if nLast < FPoundTunnel.FCardInterval * 1000 then
+    if nLast < FPoundTunnel.FCardInterval then
     begin
       nStr := '磁卡[ %s ]需等待 %d 秒后才能过磅';
       nStr := Format(nStr, [nCard, FPoundTunnel.FCardInterval - nLast]);
-      
+
       WriteLog(nStr);
-      gVoiceHelper.PlayVoice(nStr);
+      //PlayVoice(nStr);
 
       nStr := Format('磅站[ %s.%s ]: ',[FPoundTunnel.FID,
               FPoundTunnel.FName]) + nStr;
@@ -469,6 +491,7 @@ end;
 //Desc: 保存销售
 function TfFrameAutoPoundItem.SavePoundSale: Boolean;
 var nStr: string;
+    nVal,nNet: Double;
 begin
   Result := False;
   //init
@@ -496,6 +519,60 @@ begin
       WriteLog('皮重应小于毛重');
       Exit;
     end;
+
+    if FBillItems[0].FType = sFlag_San then
+    begin
+      nStr := '散装车辆[%s]不允许在此过磅';
+      nStr := Format(nStr, [FBillItems[0].FTruck]);
+      PlayVoice(nStr);
+      WriteLog(nStr);
+      Exit;
+    end;
+
+//    nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
+//    //净重
+//    nVal := nNet * 1000 - FInnerData.FValue * 1000;
+//    //与开票量误差(公斤)
+//
+//    with gSysParam,FBillItems[0] do
+//    begin
+//      if FDaiPercent and (FType = sFlag_Dai) then
+//      begin
+//        if nVal > 0 then
+//             FPoundDaiZ := Float2Float(FInnerData.FValue * FPoundDaiZ_1 * 1000,
+//                                       cPrecision, False)
+//        else FPoundDaiF := Float2Float(FInnerData.FValue * FPoundDaiF_1 * 1000,
+//                                       cPrecision, False);
+//      end;
+//
+//      if ((FType = sFlag_Dai) and (
+//          ((nVal > 0) and (FPoundDaiZ > 0) and (nVal > FPoundDaiZ)) or
+//          ((nVal < 0) and (FPoundDaiF > 0) and (-nVal > FPoundDaiF)))) then
+//      begin
+//        nStr := '车辆[%s]实际装车量误差较大，请通知司机点验包数';
+//        nStr := Format(nStr, [FTruck]);
+//        PlayVoice(nStr);
+//
+//        nStr := '车辆[ %s ]实际装车量误差较大,详情如下:' + #13#10#13#10 +
+//                '※.开单量: %.2f吨' + #13#10 +
+//                '※.装车量: %.2f吨' + #13#10 +
+//                '※.误差量: %.2f公斤';
+//
+//        if FDaiWCStop then
+//        begin
+//          nStr := nStr + #13#10#13#10 + '请通知司机点验包数.';
+//          nStr := Format(nStr, [FTruck, FInnerData.FValue, nNet, nVal]);
+//
+//          ShowDlg(nStr, sHint);
+//          Exit;
+//        end else
+//        begin
+//          nStr := nStr + #13#10#13#10 + '是否继续保存?';
+//          nStr := Format(nStr, [FTruck, FInnerData.FValue, nNet, nVal]);
+//          if not QueryDlg(nStr, sAsk) then Exit;
+//        end;
+//      end;
+//    end;
   end;
 
   with FBillItems[0] do
@@ -528,6 +605,9 @@ end;
 procedure TfFrameAutoPoundItem.OnPoundDataEvent(const nValue: Double);
 begin
   try
+    if FIsSaving then Exit;
+    //正在保存。。。
+
     OnPoundData(nValue);
   except
     on E: Exception do
@@ -541,36 +621,51 @@ end;
 
 //Desc: 处理表头数据
 procedure TfFrameAutoPoundItem.OnPoundData(const nValue: Double);
-var nVal: Double;
 begin
   FLastBT := GetTickCount;
   EditValue.Text := Format('%.2f', [nValue]);
 
   if not FIsWeighting then Exit;
   //不在称重中
-  if gSysParam.FIsManual then Exit;
+  // gSysParam.FIsManual then Exit;
   //手动时无效
+
+  if nValue < 0.02 then //空磅
+  begin
+    if FEmptyPoundInit = 0 then
+      FEmptyPoundInit := GetTickCount;
+    if GetTickCount - FEmptyPoundInit < 10 * 1000 then Exit;
+    //延迟重置
+
+    FEmptyPoundInit := 0;
+    Timer_SaveFail.Enabled := True;
+    Exit;
+  end else FEmptyPoundInit := 0;
 
   if FBillItems[0].FNextStatus = sFlag_TruckBFP then
        FUIData.FPData.FValue := nValue
   else FUIData.FMData.FValue := nValue;
 
   SetUIData(False);
-  AddSample(nVal);
+  AddSample(nValue);
   if not IsValidSamaple then Exit;
   //样本验证不通过
-
+  {$IFDEF HR1847}
+  if not gKRMgrProber.IsTunnelOK(FPoundTunnel.FID) then
+  {$ELSE}
   if not gProberManager.IsTunnelOK(FPoundTunnel.FID) then
+  {$ENDIF}
   begin
-    gVoiceHelper.PlayVoice('车辆未停到位,请移动车辆.');
+    PlayVoice('车辆未停到位,请移动车辆.');
     Exit;
   end;
 
+  FIsSaving := True;
   if SavePoundSale then
   begin
     FIsWeighting := False;
     TimerDelay.Enabled := True;
-  end else SetUIData(True);
+  end else Timer_SaveFail.Enabled := True;
 end;
 
 procedure TfFrameAutoPoundItem.TimerDelayTimer(Sender: TObject);
@@ -580,11 +675,15 @@ begin
     FLastCardDone := GetTickCount;
     WriteLog(Format('对车辆[ %s ]称重完毕.', [FUIData.FTruck]));
 
-    gVoiceHelper.PlayVoice(#9 + FUIData.FTruck);
+    PlayVoice(#9 + FUIData.FTruck);
     //播放语音
       
     Timer2.Enabled := True;
+    {$IFDEF HR1847}
+    gKRMgrProber.TunnelOC(FPoundTunnel.FID, True);
+    {$ELSE}
     gProberManager.TunnelOC(FPoundTunnel.FID, True);
+    {$ENDIF}
     //开红绿灯
     gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
     //关闭表头
@@ -641,6 +740,52 @@ begin
   end;
 
   Result := True;
+end;
+
+procedure TfFrameAutoPoundItem.PlayVoice(const nStrtext: string);
+begin
+  if UpperCase(Additional.Values['Voice'])='NET' then
+       gNetVoiceHelper.PlayVoice(nStrtext, FPoundTunnel.FID, 'pound')
+  else gVoiceHelper.PlayVoice(nStrtext);
+end;
+
+procedure TfFrameAutoPoundItem.Timer_SaveFailTimer(Sender: TObject);
+begin
+  inherited;
+  try
+    Timer_SaveFail.Enabled := False;
+    FLastCardDone := GetTickCount;
+
+    gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
+    //关闭表头
+    SetUIData(True);
+  except
+    on E: Exception do
+    begin
+      WriteSysLog(Format('磅站[ %s.%s ]: %s', [FPoundTunnel.FID,
+                                               FPoundTunnel.FName, E.Message]));
+      //loged
+    end;
+  end;
+end;
+
+procedure TfFrameAutoPoundItem.ckCloseAllClick(Sender: TObject);
+var nP: TWinControl;
+begin
+  nP := Parent;
+
+  if ckCloseAll.Checked then
+  while Assigned(nP) do
+  begin
+    if (nP is TBaseFrame) and
+       (TBaseFrame(nP).FrameID = cFI_FramePoundAuto) then
+    begin
+      TBaseFrame(nP).Close();
+      Exit;
+    end;
+
+    nP := nP.Parent;
+  end;
 end;
 
 end.

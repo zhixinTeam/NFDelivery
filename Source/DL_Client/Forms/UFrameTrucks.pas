@@ -105,18 +105,23 @@ end;
 
 //Desc: 删除
 procedure TfFrameTrucks.BtnDelClick(Sender: TObject);
-var nStr: string;
+var nStr,nTruck,nEvent: string;
 begin
   if cxView1.DataController.GetSelectedCount > 0 then
   begin
-    nStr := SQLQuery.FieldByName('T_Truck').AsString;
-    nStr := Format('确定要删除车辆[ %s ]吗?', [nStr]);
+    nTruck := SQLQuery.FieldByName('T_Truck').AsString;
+    nStr   := Format('确定要删除车辆[ %s ]吗?', [nTruck]);
     if not QueryDlg(nStr, sAsk) then Exit;
 
     nStr := 'Delete From %s Where R_ID=%s';
     nStr := Format(nStr, [sTable_Truck, SQLQuery.FieldByName('R_ID').AsString]);
 
     FDM.ExecuteSQL(nStr);
+
+    nEvent := '删除[ %s ]档案信息.';
+    nEvent := Format(nEvent, [nTruck]);
+    FDM.WriteSysLog(sFlag_CommonItem, nTruck, nEvent);
+
     InitFormData(FWhere);
   end;
 end;

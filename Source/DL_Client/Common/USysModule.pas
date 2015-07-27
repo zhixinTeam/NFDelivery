@@ -22,7 +22,8 @@ uses
   UFormChangeTunnel, UFrameDeduct, UFormDeduct, UFormGetNCStock{$IFDEF MicroMsg},
   UFormWeiXinAccount, UFrameWeiXinAccount, UFormWeiXinSendlog, UFrameWeiXinSendlog
   , UFormCustomer, UFrameCustomer{$ENDIF}, UFrameMine, UFormMine, UFormGetMine,
-  UFormPoundDispatch, UFrameBatcodeQuery, UFormBatcodeEdit;
+  UFormPoundDispatch, UFrameBatcodeQuery, UFormBatcodeEdit, UFramePoundAuto,
+  UFrameQueryProvideDetail, UFrameQueryDiapatchDetail;
 
 procedure InitSystemObject;
 procedure RunSystemObject;

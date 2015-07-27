@@ -109,6 +109,9 @@ begin
     Result := Result + ' Where (' + FJBWhere + ')';
   end;
 
+  if not gPopedomManager.HasPopedom('MAIN_L06', sPopedom_ViewDai) then
+    Result := Result + ' And ( L_Type=''' + sFlag_San + ''')';
+
   Result := MacroValue(Result, [MI('$Bill', sTable_Bill),
             MI('$S', Date2Str(FStart)), MI('$End', Date2Str(FEnd + 1))]);
   //xxxxx

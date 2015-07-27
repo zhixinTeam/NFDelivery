@@ -79,7 +79,7 @@ implementation
 {$R *.dfm}
 uses
   ShellAPI, ULibFun, UMgrControl, UDataModule, USysBusiness, UFormDateFilter,
-  UFormWait, USysConst, USysDB;
+  UFormWait, USysConst, USysDB, USysPopedom;
 
 class function TfFramePoundQuery.FrameID: integer;
 begin
@@ -118,6 +118,9 @@ begin
   begin
     Result := Result + ' Where (' + FJBWhere + ')';
   end;
+
+  if not gPopedomManager.HasPopedom('MAIN_E03', sPopedom_ViewDai) then
+    Result := Result + ' And ( P_MType=''' + sFlag_San + ''')';
 
   if Check1.Checked then
        Result := MacroValue(Result, [MI('$PL', sTable_PoundBak)])

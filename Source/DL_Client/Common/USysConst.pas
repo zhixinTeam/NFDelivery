@@ -55,6 +55,9 @@ const
   cFI_FrameSaleDetailQuery = $0054;                  //发货明细
   cFI_FrameZhiKaDetail  = $0055;                     //纸卡明细
   cFI_FrameDispatchQuery = $0056;                    //调度查询
+
+  cFI_FrameProvideDetailQuery = $0057;                  //供应明细
+  cFI_FrameDiapatchDetailQuery = $0058;                  //调度明细
   
   cFI_FrameProvider     = $0102;                     //供应
   cFI_FrameProvideLog   = $0105;                     //供应日志
@@ -270,6 +273,7 @@ begin
   AddMenuModuleItem('MAIN_E01', cFI_FramePoundManual);
   AddMenuModuleItem('MAIN_E02', cFI_FormDisPound, mtForm);
   AddMenuModuleItem('MAIN_E03', cFI_FramePoundQuery);
+  AddMenuModuleItem('MAIN_E05', cFI_FramePoundAuto);
 
   AddMenuModuleItem('MAIN_F01', cFI_FormLadDai, mtForm);
   AddMenuModuleItem('MAIN_F03', cFI_FrameZhanTaiQuery);
@@ -285,7 +289,9 @@ begin
   AddMenuModuleItem('MAIN_L06', cFI_FrameSaleDetailQuery);
   AddMenuModuleItem('MAIN_L07', cFI_FrameSaleTotalQuery);
   AddMenuModuleItem('MAIN_L08', cFI_FrameZhiKaDetail);
-  
+  AddMenuModuleItem('MAIN_L10', cFI_FrameProvideDetailQuery);
+  AddMenuModuleItem('MAIN_L11', cFI_FrameDiapatchDetailQuery);
+
   AddMenuModuleItem('MAIN_H01', cFI_FormTruckIn, mtForm);
   AddMenuModuleItem('MAIN_H02', cFI_FormTruckOut, mtForm);
   AddMenuModuleItem('MAIN_H03', cFI_FrameTruckQuery);

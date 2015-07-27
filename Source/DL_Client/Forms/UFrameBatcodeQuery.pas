@@ -80,9 +80,17 @@ end;
 //Desc: 修改
 procedure TfFrameBatcodeQuery.BtnEditClick(Sender: TObject);
 var nP: TFormCommandParam;
+    nStr : string;
 begin
   if cxView1.DataController.GetSelectedCount > 0 then
   begin
+    if SQLQuery.FieldByName('D_Valid').AsString = sFlag_BatchDel then
+    begin
+      nStr := '禁止修改已删除批次号';
+      ShowMsg(nStr, sHint);
+      Exit;
+    end;  
+
     nP.FCommand := cCmd_EditData;
     nP.FParamA := SQLQuery.FieldByName('R_ID').AsString;
     CreateBaseFormItem(cFI_FormBatchEdit, '', @nP);

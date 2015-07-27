@@ -449,7 +449,8 @@ end;
 //Parm: 交货单[FIn.FData];通道号[FIn.FExtParam]
 //Desc: 在指定通道上喷码
 function THardwareCommander.PrintCode(var nData: string): Boolean;
-var nStr,nBill,nCode: string;
+var nPrefixLen, nIDLen: Integer;
+    nStr,nBill,nCode: string;
     nUseDate: Boolean;
 begin
   Result := True;
@@ -470,13 +471,31 @@ begin
    if RecordCount>0 then nUseDate := Fields[0].AsString = sFlag_Yes;
   //xxxxx
 
+  nStr := 'Select B_Prefix,B_IDLen From %s ' +
+          'Where B_Group=''%s'' And B_Object=''%s''';
+  nStr := Format(nStr, [sTable_SerialBase,sFlag_BusGroup, sFlag_BillNo]);
+  //xxxxx
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+   if RecordCount>0 then
+   begin
+     nPrefixLen := Length(Fields[0].AsString);
+     nIDLen     := Fields[1].AsInteger;
+   end else begin
+     nPrefixLen := -1;
+     nIDLen     := -1;
+   end;
+  //xxxxx
+
   if Pos('@', FIn.FData) = 1 then
-  begin 
+  begin
     nCode := Copy(FIn.FData, 2, Length(FIn.FData) - 1);
     //固定喷码
   end else
   begin
-    nStr := 'Select L_ID,L_Seal,L_CusCode From %s Where L_ID=''%s'''; 
+    if (nPrefixLen<0) or (nIDLen<0) then Exit;
+    //无提货单配置
+
+    nStr := 'Select L_ID,L_Seal,L_CusCode From %s Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
 
     with gDBConnManager.WorkerQuery(FDBConn, nStr) do
@@ -498,7 +517,7 @@ begin
         nStr  := FieldByName('L_CusCode').AsString;
         nCode := FillString(nStr, 2, ' ');
 
-        nCode := nCode + Copy(nBill, Length(nBill) - 2, 3);
+        nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6);
         nCode := nCode + '  ';
 
         nStr  := FieldByName('L_Seal').AsString;
@@ -507,7 +526,7 @@ begin
       begin
         //protocol: yymmdd(开单时间) + 批次号 + 客户代码(区域码) + 交货单号(末3位);
         nBill := FieldByName('L_ID').AsString;
-        nCode := Copy(nBill, 3, 6);
+        nCode := Copy(nBill, nPrefixLen + 1, 6);
 
         nStr  := FieldByName('L_Seal').AsString;
         nCode := nCode + FillString(nStr, 6, '0');
@@ -515,7 +534,7 @@ begin
         nStr  := FieldByName('L_CusCode').AsString;
         nCode := nCode + FillString(nStr, 2, ' ');
 
-        nCode := nCode + Copy(nBill, Length(nBill) - 2, 3);
+        nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6);
       end;
     end;
   end;

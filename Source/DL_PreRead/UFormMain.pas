@@ -102,6 +102,10 @@ end;
 procedure TfFormMain.FormCreate(Sender: TObject);
 var nIni: TIniFile;
     nReg: TRegistry;
+
+    nMap: string;
+    nInt: Integer;
+    nList: TStrings;
 begin
   gPath := ExtractFilePath(Application.ExeName);
   InitGlobalVariant(gPath, gPath+sConfig, gPath+sForm, gPath+sDB);
@@ -121,10 +125,26 @@ begin
 
   nIni := nil;
   nReg := nil;
+  nList:= nil;
   try
+    nList:= TStringList.Create;
     nIni := TIniFile.Create(gPath + 'Config.ini');
     EditPort.Text := nIni.ReadString('Config', 'Port', '8000');
     Timer1.Enabled := nIni.ReadBool('Config', 'Enabled', False);
+
+    gSysParam.FStockFlag := nIni.ReadString('STOCKTYPE', 'FromIni', '0')='1';
+    nMap := nIni.ReadString('STOCKTYPE', 'StockList', '');
+    if SplitStr(nMap,nList,0,',',False) then
+    begin
+      SetLength(gSysParam.FStockMaps, nList.Count);
+
+      for nInt:=0 to nList.Count-1 do
+      with gSysParam.FStockMaps[nInt] do
+      begin
+        FStockType := nList[nInt];
+        FStockContext := nIni.ReadString('STOCKTYPE', FStockType, '');
+      end;
+    end;  
 
     nReg := TRegistry.Create;
     nReg.RootKey := HKEY_CURRENT_USER;
@@ -133,7 +153,8 @@ begin
     CheckAuto.Checked := nReg.ValueExists(sAutoStartKey);
   finally
     nIni.Free;
-    nReg.Free;
+    nReg.Free; 
+    nList.Free;
   end;
 
   FSyncLock := TCriticalSection.Create;
@@ -175,6 +196,7 @@ begin
 
   FSyncLock.Free;
   //lock
+  SetLength(gSysParam.FStockMaps, 0);
 
   FreeSystemObject;
 end;

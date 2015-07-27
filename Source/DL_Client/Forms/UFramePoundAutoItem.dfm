@@ -593,6 +593,15 @@ inherited fFrameAutoPoundItem: TfFrameAutoPoundItem
     ScrollBars = ssVertical
     TabOrder = 24
   end
+  object ckCloseAll: TCheckBox
+    Left = 24
+    Top = 8
+    Width = 145
+    Height = 17
+    Caption = #20851#38381#25152#26377#36890#36947
+    TabOrder = 25
+    OnClick = ckCloseAllClick
+  end
   object Timer1: TTimer
     OnTimer = Timer1Timer
     Left = 420
@@ -614,6 +623,12 @@ inherited fFrameAutoPoundItem: TfFrameAutoPoundItem
     Interval = 100
     OnTimer = TimerDelayTimer
     Left = 480
+    Top = 256
+  end
+  object Timer_SaveFail: TTimer
+    Enabled = False
+    OnTimer = Timer_SaveFailTimer
+    Left = 560
     Top = 256
   end
 end

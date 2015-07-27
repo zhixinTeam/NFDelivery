@@ -993,7 +993,7 @@ begin
     Exit;
   end;
 
-  if nHost.FETimeOut then
+  if nHost.FETimeOut and (not nCard.FOldOne) then
   begin
     gERelayManager.LineClose(nHost.FTunnel);
     Sleep(100);

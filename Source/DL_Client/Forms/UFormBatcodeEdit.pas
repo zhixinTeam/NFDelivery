@@ -195,8 +195,10 @@ begin
 
   if FRecordID = '' then
   begin
-    nStr := 'Select D_ID from %s where D_ID=''%s''';
-    nStr := Format(nStr , [sTable_BatcodeDoc, Trim(EditBatch.Text)]);
+    nStr := 'Select D_ID from %s where D_ID=''%s'' and D_Valid<>''%s''';
+    nStr := Format(nStr , [sTable_BatcodeDoc,
+            Trim(EditBatch.Text), sFlag_BatchDel]);
+    //xxxxx
 
     with FDM.QuerySQL(nStr) do
       if RecordCount > 0 then
