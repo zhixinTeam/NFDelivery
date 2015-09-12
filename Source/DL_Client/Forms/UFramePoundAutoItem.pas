@@ -491,7 +491,7 @@ end;
 //Desc: ±£´æÏúÊÛ
 function TfFrameAutoPoundItem.SavePoundSale: Boolean;
 var nStr: string;
-    nVal,nNet: Double;
+//    nVal,nNet: Double;
 begin
   Result := False;
   //init

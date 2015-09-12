@@ -132,6 +132,9 @@ type
     FSelected   : Boolean;         //选中状态
     FLocked     : Boolean;         //锁定状态，更新预置皮重
     FPreTruckP  : Boolean;         //预置皮重；
+
+    FNCChanged  : Boolean;         //NC可用量变化
+    FChangeValue: Double;          //NC 减少
   end;
 
   TLadingBillItems = array of TLadingBillItem;
@@ -256,6 +259,7 @@ begin
 
         FLocked     := Values['Locked'] = sFlag_Yes;
         FPreTruckP  := Values['PreTruckP'] = sFlag_Yes;
+        FNCChanged  := Values['NCChanged'] = sFlag_Yes;
 
         with FPData do
         begin
@@ -290,6 +294,11 @@ begin
         if (nStr <> '') and IsNumber(nStr, True) then
              FPrice := StrToFloat(nStr)
         else FPrice := 0;
+
+        nStr := Trim(Values['NCChangeValue']);
+        if (nStr <> '') and IsNumber(nStr, True) then
+             FChangeValue := StrToFloat(nStr)
+        else FChangeValue := 0;
       end;
 
       Inc(nInt);
@@ -374,6 +383,12 @@ begin
         if FPreTruckP then
              Values['PreTruckP'] := sFlag_Yes
         else Values['PreTruckP'] := sFlag_No;
+
+        if FNCChanged then
+             Values['NCChanged'] := sFlag_Yes
+        else Values['NCChanged'] := sFlag_No;
+
+        Values['NCChangeValue']  := FloatToStr(FChangeValue);
       end;
 
       nListA.Add(PackerEncodeStr(nListB.Text));

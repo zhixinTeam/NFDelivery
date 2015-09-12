@@ -972,7 +972,8 @@ begin
   nStr := FListA.Values['QueryAll'];
   if nStr = '' then
   begin
-    FOut.FData := FOut.FData + ' And (crowstatus=0 And VBILLSTATUS=1 And t1.dr=0)';
+    FOut.FData := FOut.FData + ' And (crowstatus=0 And VBILLSTATUS=1 ' +
+                  'And t1.dr=0 And t2.dr=0)';
     //当前有效单据
   end;
 
@@ -1184,34 +1185,39 @@ begin
     gDBConnManager.ReleaseConnection(nWorker);
   end;
 
-  nStr := 'Select B_ID,B_Freeze From %s Where B_ID In (%s)';
-  nStr := Format(nStr, [sTable_Order, nID]);
-  //冻结量
-
-  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
-  if RecordCount > 0 then
+  if FIn.FExtParam <> sFlag_No then
   begin
-    First;
+    FListB.Values['QueryFreeze'] := sFlag_Yes;
 
-    while not Eof do
+    nStr := 'Select B_ID,B_Freeze From %s Where B_ID In (%s)';
+    nStr := Format(nStr, [sTable_Order, nID]);
+    //冻结量
+
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    if RecordCount > 0 then
     begin
-      nOrder := FieldByName('B_ID').AsString;
-      nStr := FListB.Values[nOrder];
+      First;
 
-      if not IsNumber(nStr, True) then
-        nStr := '0';
-      nVal := StrToFloat(nStr);
-      //取已发货量
+      while not Eof do
+      begin
+        nOrder := FieldByName('B_ID').AsString;
+        nStr := FListB.Values[nOrder];
 
-      nVal := nVal + FieldByName('B_Freeze').AsFloat;
-      //已发货数=已发货量 + 冻结量
+        if not IsNumber(nStr, True) then
+          nStr := '0';
+        nVal := StrToFloat(nStr);
+        //取已发货量
 
-      FListB.Values[nOrder] := FloatToStr(nVal);
-      //订单已发量
+        nVal := nVal + FieldByName('B_Freeze').AsFloat;
+        //已发货数=已发货量 + 冻结量
 
-      Next;
+        FListB.Values[nOrder] := FloatToStr(nVal);
+        //订单已发量
+
+        Next;
+      end;
     end;
-  end;
+  end else FListB.Values['QueryFreeze'] := sFlag_No;
 
   FOut.FData := PackerEncodeStr(FListB.Text);
   Result := True;
@@ -2044,7 +2050,8 @@ begin
               SF('nweighmodel', '1', sfVal),
 
               SF('pk_bsmodel', '0001ZA1000000001SIJ7'),
-              SF('pk_corp', FieldByName('pk_corp').AsString),
+              MakeField(nDS, 'pk_corp_main', 1, 'pk_corp'),
+              //SF('pk_corp', FieldByName('pk_corp').AsString),
 
               SF('pk_cumandoc', FieldByName('pk_cumandoc').AsString),
               SF('pk_invbasdoc', FieldByName('pk_invbasdoc').AsString),

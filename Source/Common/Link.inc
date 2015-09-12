@@ -63,4 +63,6 @@
   //状态栏显示
   {$DEFINE MicroMsg}
   //微信支持
+  {$DEFINE NCChanged}
+  //过磅时校验NC开票量
 {$ENDIF}

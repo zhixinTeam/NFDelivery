@@ -398,7 +398,7 @@ end;
 procedure TfFrameManualPoundItem.LoadBillItems(const nCard: string;
  nUpdateUI: Boolean);
 var nStr,nHint: string;
-    nIdx,nInt: Integer;
+    nIdx,nInt{$IFDEF NCChanged},nJdx{$ENDIF}: Integer;
     nBills: TLadingBillItems;
 begin
   if nCard = '' then
@@ -450,6 +450,69 @@ begin
     Exit;
   end;
 
+  {$IFDEF NCChanged}
+  FListA.Clear;
+  for nIdx:=Low(nBills) to High(nBills) do
+  if nBills[nIdx].FSelected then
+    FListA.Add(nBills[nIdx].FZhiKa);
+  nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
+
+  FListB.Clear;
+  FListB.Values['MeamKeys'] := nStr;
+
+  nStr := EncodeBase64(FListB.Text);
+  nStr := GetQueryOrderSQL('103', nStr);
+  if nStr = '' then
+  begin
+    nHint := '获取订单查询语句失败';
+    nHint := '该车辆当前不能过磅,详情如下: ' + #13#10#13#10 + nHint;
+    ShowDlg(nHint, sHint);
+    Exit;
+  end;
+
+  with FDM.QueryTemp(nStr, True) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nStr := StringReplace(FListA.Text, #13#10, ',', [rfReplaceAll]);
+      nStr := Format('订单[ %s ]信息已丢失.', [nStr]);
+
+      ShowDlg(nStr, sHint);
+      Exit;
+    end;
+
+    SetLength(FOrderItems, RecordCount);
+    nJdx := 0;
+    First;
+
+    while not Eof do
+    begin
+      with FOrderItems[nJdx] do
+      begin
+        FOrder := FieldByName('pk_meambill').AsString;
+        FMaxValue := FieldByName('NPLANNUM').AsFloat;
+        FKDValue := 0;
+      end;
+      
+      Inc(nJdx);
+      Next;
+    end;
+  end;
+
+  if not GetOrderFHValue(FListA, False) then Exit;
+  //获取已发货量
+
+  for nJdx:=Low(FOrderItems) to High(FOrderItems) do
+  with FOrderItems[nJdx] do
+  begin
+    nStr := FListA.Values[FOrder];
+    if not IsNumber(nStr, True) then Continue;
+
+    FMaxValue := FMaxValue - Float2Float(StrToFloat(nStr), cPrecision, False);
+    //可用量 = 计划量 - 已发量
+  end;
+  {$ENDIF}
+
   EditBill.Properties.Items.Clear;
   SetLength(FBillItems, nInt);
   nInt := 0;
@@ -461,7 +524,32 @@ begin
     begin
       FPoundID := '';
       //该标记有特殊用途
-      
+
+      FNCChanged   := False;
+      FChangeValue := 0;
+      //默认无变化
+
+      {$IFDEF NCChanged}
+      if FListA.Values['QueryFreeze'] = sFlag_No then
+      for nJdx:=Low(FOrderItems) to High(FOrderItems) do
+      with FOrderItems[nJdx] do
+      begin
+        if FOrder = FZhiKa then
+        begin
+          if FValue>FMaxValue then
+          begin
+            FNCChanged   := True;
+            FChangeValue := FValue-FMaxValue;
+
+            FValue := FMaxValue;    
+          end;
+
+          Break;
+        end;
+      end;
+      //如果可用量变小，则更新开票量
+      {$ENDIF}
+
       if nInt = 0 then
            FInnerData := nBills[nIdx]
       else FInnerData.FValue := FInnerData.FValue + FValue;
@@ -1172,6 +1260,9 @@ begin
   begin
     if nBillValue <= 0 then Break;
     //已开单完毕
+
+    if FOrderItems[nIdx].FMaxValue<=0 then Continue;
+    //NC可用量不能为负
     
     nDec := FOrderItems[nIdx].FMaxValue;
     if nDec >= nBillValue then
@@ -1313,6 +1404,7 @@ var nStr: string;
     nIdx: Integer;
     nDec,nVal: Double;
 begin
+  Exit;
   FDM.ADOConn.BeginTrans;
   try
     nVal := nBillValue;

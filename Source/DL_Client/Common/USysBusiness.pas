@@ -96,7 +96,8 @@ function BuildOrderInfo(const nItem: TOrderItemInfo): string;
 procedure AnalyzeOrderInfo(const nOrder: string; var nItem: TOrderItemInfo);
 procedure LoadOrderInfo(const nOrder: TOrderItemInfo; const nList: TcxMCListBox);
 //处理订单信息
-function GetOrderFHValue(const nOrders: TStrings): Boolean;
+function GetOrderFHValue(const nOrders: TStrings;
+  const nQueryFreeze: Boolean=True): Boolean;
 //获取订单发货量
 function GetOrderGYValue(const nOrders: TStrings): Boolean;
 //获取订单已供应量
@@ -149,6 +150,8 @@ function PrintBillReport(nBill: string; const nAsk: Boolean): Boolean;
 //打印提货单
 function PrintPoundReport(const nPound: string; nAsk: Boolean): Boolean;
 //打印榜单
+function PrintSalePoundReport(const nPound: string; nAsk: Boolean): Boolean;
+//打印销售磅单
 
 //保存电子标签
 function SetTruckRFIDCard(nTruck: string; var nRFIDCard: string;
@@ -706,11 +709,17 @@ end;
 //Date: 2014-12-24
 //Parm: 订单列表
 //Desc: 获取指定的发货量
-function GetOrderFHValue(const nOrders: TStrings): Boolean;
+function GetOrderFHValue(const nOrders: TStrings;
+  const nQueryFreeze: Boolean=True): Boolean;
 var nOut: TWorkerBusinessCommand;
+    nFlag: string;
 begin
+  if nQueryFreeze then
+       nFlag := sFlag_Yes
+  else nFlag := sFlag_No;
+
   Result := CallBusinessCommand(cBC_GetOrderFHValue,
-             EncodeBase64(nOrders.Text), '', @nOut);
+             EncodeBase64(nOrders.Text), nFlag, @nOut);
   //xxxxx
 
   if Result then
@@ -1159,6 +1168,61 @@ begin
     FDM.ExecuteSQL(nStr);
   end;
 end;
+
+//Date: 2015-8-6
+//Parm: 过磅单号;是否询问
+//Desc: 打印销售nPound过磅记录
+function PrintSalePoundReport(const nPound: string; nAsk: Boolean): Boolean;
+var nStr: string;
+    nParam: TReportParamItem;
+begin
+  Result := False;
+
+  if nAsk then
+  begin
+    nStr := '是否要打印过磅单?';
+    if not QueryDlg(nStr, sAsk) then Exit;
+  end;
+
+  nStr := 'Select * From %s sp ' +
+          'left join %s sbill on sp.P_Bill=sbill.L_ID ' + //
+          'Where P_ID=''%s''';
+  nStr := Format(nStr, [sTable_PoundLog, sTable_Bill, nPound]);
+
+  if FDM.QueryTemp(nStr).RecordCount < 1 then
+  begin
+    nStr := '称重记录[ %s ] 已无效!!';
+    nStr := Format(nStr, [nPound]);
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nStr := gPath + sReportDir + 'SalePound.fr3';
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nStr := '无法正确加载报表文件';
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nParam.FName := 'UserName';
+  nParam.FValue := gSysParam.FUserID;
+  FDR.AddParamItem(nParam);
+
+  nParam.FName := 'Company';
+  nParam.FValue := gSysParam.FHintText;
+  FDR.AddParamItem(nParam);
+
+  FDR.Dataset1.DataSet := FDM.SqlTemp;
+  FDR.ShowReport;
+  Result := FDR.PrintSuccess;
+
+  if Result  then
+  begin
+    nStr := 'Update %s Set P_PrintNum=P_PrintNum+1 Where P_ID=''%s''';
+    nStr := Format(nStr, [sTable_PoundLog, nPound]);
+    FDM.ExecuteSQL(nStr);
+  end;
+end;
+
 //Date: 2015/1/18
 //Parm: 车牌号；电子标签；是否启用；旧电子标签
 //Desc: 读标签是否成功；新的电子标签

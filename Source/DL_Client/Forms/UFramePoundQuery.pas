@@ -214,7 +214,9 @@ begin
     end;
 
     nStr := SQLQuery.FieldByName('P_ID').AsString;
-    PrintPoundReport(nStr, False);
+    if SQLQuery.FieldByName('P_Type').AsString=sFlag_Sale then
+         PrintSalePoundReport(nStr, False)
+    else PrintPoundReport(nStr, False);
   end
 end;
 

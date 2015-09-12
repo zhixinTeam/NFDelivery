@@ -646,7 +646,7 @@ end;
 //Date: 2014-09-15
 //Desc: 保存交货单
 function TWorkerBusinessBills.SaveBills(var nData: string): Boolean;
-var nStr,nSQL: string;
+var nStr,nSQL,nBill: string;
     nIdx,nInt: Integer;
     nOut: TWorkerBusinessCommand;
 begin
@@ -740,6 +740,48 @@ begin
                 SF('L_LadeMan', FIn.FBase.FFrom.FUser),
                 SF('L_Card', FListA.Values['Card'])
                 ], sTable_Bill, SF('L_ID', nOut.FData), False);
+        gDBConnManager.WorkerExec(FDBConn, nStr);
+
+        nBill := nOut.FData;
+        //保存订单
+
+        FListC.Clear;
+        FListC.Values['Group'] := sFlag_BusGroup;
+        FListC.Values['Object'] := sFlag_PoundID;
+
+        if not TWorkerBusinessCommander.CallMe(cBC_GetSerialNO,
+            FListC.Text, sFlag_Yes, @nOut) then
+          raise Exception.Create(nOut.FData);
+        //xxxxx
+
+        nStr := FListA.Values['PValue'];
+        if not IsNumber(nStr, True) then
+          nStr := '0';
+
+        nStr := MakeSQLByStr([
+                SF('P_ID', nOut.FData),
+                SF('P_Type', sFlag_Sale),
+                SF('P_Bill', nBill),
+
+                SF('P_Truck', FListA.Values['Truck']),
+                SF('P_CusID', FOrderItems[nIdx].FCusID),
+                SF('P_CusName', FOrderItems[nIdx].FCusName),
+                SF('P_MID', FOrderItems[nIdx].FStockID),
+                SF('P_MName', FOrderItems[nIdx].FStockName),
+                SF('P_MType', FOrderItems[nIdx].FStockType),
+                SF('P_LimValue', FOrderItems[nIdx].FKDValue, sfVal),
+
+                SF('P_PValue', nStr, sfVal),
+                SF('P_PDate', sField_SQLServer_Now, sfVal),
+                SF('P_PMan', FIn.FBase.FFrom.FUser),
+                SF('P_PStation', 'SZBDBF'),
+
+                SF('P_Direction', '出厂'),
+                SF('P_PModel', sFlag_PoundPD),
+                SF('P_Status', sFlag_TruckBFP),
+                SF('P_Valid', sFlag_Yes),
+                SF('P_PrintNum', 1, sfVal)
+                ], sTable_PoundLog, '', True);
         gDBConnManager.WorkerExec(FDBConn, nStr);
       end else
 
@@ -1443,7 +1485,7 @@ end;
 //Desc: 保存指定岗位提交的交货单列表
 function TWorkerBusinessBills.SavePostBillItems(var nData: string): Boolean;
 var nStr,nSQL,nTmp: string;
-    f,m,nVal,nMVal,nTotal: Double;
+    f,m,nVal,nMVal,nTotal,nDec,nNet: Double;
     i,nIdx,nInt: Integer;
     nBills: TLadingBillItems;
     nOut: TWorkerBusinessCommand;
@@ -1672,6 +1714,48 @@ begin
       nData := Format(nData, [PostTypeToStr(FIn.FExtParam)]);
       Exit;
     end;
+
+    if nBills[nInt].FType = sFlag_San then
+    begin
+      for nIdx:=Low(nBills) to High(nBills) do
+      with nBills[nIdx] do
+      begin
+        if not FNCChanged then Continue;
+
+        nSQL := 'Update %s Set B_Freeze=B_Freeze-%.2f Where B_ID=''%s''';
+        nSQL := Format(nSQL, [sTable_Order, FChangeValue, FZhiKa]);
+        FListA.Add(nSQL);
+      end;
+      //NC可用量减少
+
+      nNet := nMVal - nBills[nInt].FPData.FValue;
+
+      nVal := 0;
+      for nIdx:=Low(nBills) to High(nBills) do
+        nVal := nBills[nIdx].FValue + nVal;
+      //开票量
+
+      nVal := nVal - nNet;
+      //调整量
+
+      if nVal>0 then
+      for nIdx:=Low(nBills) to High(nBills) do
+      with nBills[nIdx] do
+      begin
+        if FValue > nVal then
+             nDec := nVal
+        else nDec := FValue;
+
+        if nDec <= 0 then Continue;
+        //已处理完
+        nVal := nVal - nDec;
+
+        nSQL := 'Update %s Set B_Freeze=B_Freeze-%.2f Where B_ID=''%s''';
+        nSQL := Format(nSQL, [sTable_Order, nDec, FZhiKa]);
+        FListA.Add(nSQL);
+      end;
+    end;
+    //AjustSanValue;
   
     nVal := 0;
     for nIdx:=Low(nBills) to High(nBills) do
