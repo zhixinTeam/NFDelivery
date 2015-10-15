@@ -105,7 +105,8 @@ begin
       nStr := nIni.ReadString(Name, nStr, '');
       if nStr = '' then Exit;
 
-      Edit_User.Items.Add(nStr);
+      if Edit_User.Items.IndexOf(nStr)<0 then
+        Edit_User.Items.Add(nStr);
       Inc(nIdx);
     end;
   finally

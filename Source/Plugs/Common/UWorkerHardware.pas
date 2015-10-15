@@ -449,8 +449,8 @@ end;
 //Parm: 交货单[FIn.FData];通道号[FIn.FExtParam]
 //Desc: 在指定通道上喷码
 function THardwareCommander.PrintCode(var nData: string): Boolean;
-var nPrefixLen, nIDLen: Integer;
-    nStr,nBill,nCode: string;
+var nStr,nBill,nCode,nArea,nCusCode,nSeal: string;
+    nPrefixLen, nIDLen: Integer;
     nUseDate: Boolean;
 begin
   Result := True;
@@ -495,7 +495,7 @@ begin
     if (nPrefixLen<0) or (nIDLen<0) then Exit;
     //无提货单配置
 
-    nStr := 'Select L_ID,L_Seal,L_CusCode From %s Where L_ID=''%s''';
+    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area From %s Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
 
     with gDBConnManager.WorkerQuery(FDBConn, nStr) do
@@ -508,32 +508,38 @@ begin
         FErrDesc := Format('交货单[ %s ]已无效.', [FIn.FData]); Exit;
       end;
 
+      nCode     := '';
+      nBill     := FieldByName('L_ID').AsString;
+      nArea     := FieldByName('L_Area').AsString;
+      nSeal     := FieldByName('L_Seal').AsString;
+      nCusCode  := FieldByName('L_CusCode').AsString;
+      //xxxxx
+
       if nUseDate then
       begin
-        //protocol: 客户代码(区域码) + 交货单号(末3位) + 批次号;
-        nBill := FieldByName('L_ID').AsString;
-        //xxxxx
+        //protocol: 汉字喷码+客户代码(区域码) + 交货单号(末3位) + 批次号;
+        {$IFDEF PrintChinese}
+        if nArea <> '' then
+        begin
+          nStr := 'Select B_PrintCode From %s Where B_Source=''%s'' and ' +
+                  'B_Valid=''%s''';
+          nStr := Format(nStr, [sTable_ChineseBase, nArea, sFlag_Yes]);
+          //xxxxx
 
-        nStr  := FieldByName('L_CusCode').AsString;
-        nCode := FillString(nStr, 2, ' ');
+          with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+          if RecordCount>0 then  nCode := nCode + Fields[0].AsString;
+        end;
+        {$ENDIF}
 
-        nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6);
-        nCode := nCode + '  ';
-
-        nStr  := FieldByName('L_Seal').AsString;
-        nCode := nCode + FillString(nStr, 6, '0');
+        nCode := nCode + FillString(nCusCode, 2, ' ');
+        nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6)+ '  ';
+        nCode := nCode + FillString(nSeal, 6, '0');
       end else
       begin
         //protocol: yymmdd(开单时间) + 批次号 + 客户代码(区域码) + 交货单号(末3位);
-        nBill := FieldByName('L_ID').AsString;
-        nCode := Copy(nBill, nPrefixLen + 1, 6);
-
-        nStr  := FieldByName('L_Seal').AsString;
-        nCode := nCode + FillString(nStr, 6, '0');
-
-        nStr  := FieldByName('L_CusCode').AsString;
-        nCode := nCode + FillString(nStr, 2, ' ');
-
+        nCode := nCode + Copy(nBill, nPrefixLen + 1, 6);
+        nCode := nCode + FillString(nSeal, 6, '0');
+        nCode := nCode + FillString(nCusCode, 2, ' ');
         nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6);
       end;
     end;

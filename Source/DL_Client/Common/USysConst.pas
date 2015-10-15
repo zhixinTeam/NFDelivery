@@ -58,6 +58,9 @@ const
 
   cFI_FrameProvideDetailQuery = $0057;                  //供应明细
   cFI_FrameDiapatchDetailQuery = $0058;                  //调度明细
+
+  cFI_FrameChineseBase  = $0062;                     //汉字喷码
+  cFI_FrameChineseDict  = $0063;                     //喷码字典
   
   cFI_FrameProvider     = $0102;                     //供应
   cFI_FrameProvideLog   = $0105;                     //供应日志
@@ -109,6 +112,9 @@ const
   cFI_FormMaterails     = $1052;                     //原材料
 
   cFI_FormChangeTunnel  = $1061;                     //定道装车
+  cFI_FormChineseBase   = $1062;                     //汉字喷码
+  cFI_FormChineseDict   = $1063;                     //喷码字典
+
   cFI_FormWXAccount     = $1091;                     //微信账户
   cFI_FormWXSendlog     = $1092;                     //微信日志
 
@@ -265,6 +271,8 @@ begin
   AddMenuModuleItem('MAIN_B08', cFI_FrameReqSale);
   AddMenuModuleItem('MAIN_B09', cFI_FrameReqDispatch);
   AddMenuModuleItem('MAIN_B11', cFI_FrameBatchQuery);
+  AddMenuModuleItem('MAIN_B12', cFI_FrameChineseBase);
+  AddMenuModuleItem('MAIN_B13', cFI_FrameChineseDict);
 
   AddMenuModuleItem('MAIN_D02', cFI_FrameMakeCard);
   AddMenuModuleItem('MAIN_D03', cFI_FormMakeBill, mtForm);

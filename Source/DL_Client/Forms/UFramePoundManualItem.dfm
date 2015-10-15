@@ -710,4 +710,11 @@ inherited fFrameManualPoundItem: TfFrameManualPoundItem
     Left = 626
     Top = 258
   end
+  object Timer_Savefail: TTimer
+    Enabled = False
+    Interval = 100
+    OnTimer = Timer_SavefailTimer
+    Left = 712
+    Top = 256
+  end
 end

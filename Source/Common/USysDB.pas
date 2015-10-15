@@ -175,6 +175,7 @@ ResourceString
   sFlag_LadingItem    = 'LadingItem';                //提货方式信息项
   sFlag_OrderInFact   = 'OrderInFact';               //工厂可发货订单
   sFlag_FactoryItem   = 'FactoryItem';               //工厂信息项
+  sFlag_DuctTimeItem  = 'DuctTimeItem';              //暗扣时间段项
 
   sFlag_InWHouse      = 'Warehouse';                 //库存可发(收)货订单
   sFlag_InWHID        = 'WarehouseID';               //仓库可发(收)货订单
@@ -209,6 +210,7 @@ ResourceString
   sFlag_WeiXin        = 'Bus_WeiXin';                //微信映射编号
   sFlag_ForceHint     = 'Bus_HintMsg';               //强制提示
   sFlag_Customer      = 'Bus_Customer';              //客户编号
+  sFlag_DuctTime      = 'Bus_DuctTime';              //暗扣时间段编号
   
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
@@ -228,9 +230,6 @@ ResourceString
   sTable_WorkePC      = 'Sys_WorkePC';               //验证授权
 
   sTable_Order        = 'S_Order';                   //销售订单
-  sTable_WeixinLog    = 'Sys_WeixinLog';             //微信日志
-  sTable_WeixinMatch  = 'Sys_WeixinMatch';           //账号匹配
-  sTable_WeixinTemp   = 'Sys_WeixinTemplate';        //信息模板
   sTable_Card         = 'S_Card';                    //销售磁卡
   sTable_Bill         = 'S_Bill';                    //提货单
   sTable_BillBak      = 'S_BillBak';                 //已删交货单
@@ -250,7 +249,13 @@ ResourceString
   sTable_PoundBak     = 'Sys_PoundBak';              //过磅作废
   sTable_Picture      = 'Sys_Picture';               //存放图片
 
+  sTable_ChineseBase  = 'Sys_ChineseBase';           //汉字喷码表
+  sTable_ChineseDict  = 'Sys_ChineseDict';           //汉字编码字典
+
   sTable_Customer     = 'S_Customer';                //客户信息
+  sTable_WeixinLog    = 'Sys_WeixinLog';             //微信日志
+  sTable_WeixinMatch  = 'Sys_WeixinMatch';           //账号匹配
+  sTable_WeixinTemp   = 'Sys_WeixinTemplate';        //信息模板
 
   {*新建表*}
   sSQL_NewSysDict = 'Create Table $Table(D_ID $Inc, D_Name varChar(15),' +
@@ -757,7 +762,7 @@ ResourceString
        'M_CusID varChar(32), M_CusName varChar(80), M_Area varChar(80), ' +
        'M_Valid Char(1))';
   {-----------------------------------------------------------------------------
-   矿点信息:Truck
+   矿点信息:Mine
    *.R_ID: 记录号
    *.M_Mine: 矿点名称
    *.M_PY: 矿点拼音
@@ -769,6 +774,36 @@ ResourceString
    *.M_CusName: 客户名称
    *.M_Area: 区域名
    *.M_Valid: 是否有效(Y/N)
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewChineseBase = 'Create Table $Table(R_ID $Inc, B_Name varChar(15), ' +
+       'B_PY varChar(15), B_Source varChar(50), B_Value varChar(15), ' +
+       'B_PrintCode varChar(50), B_Valid Char(1), B_Memo varChar(50))';
+  {-----------------------------------------------------------------------------
+   汉字喷码信息:ChineseBase
+   *.R_ID: 记录号
+   *.B_Name: 名称
+   *.B_PY: 拼音
+   *.B_Source：喷码来源
+   *.B_Value：喷码内容
+   *.B_PrintCode：喷码值
+   *.B_Valid：是否有效(Y/N)
+   *.B_Memo：备注
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewChineseDict = 'Create Table $Table(R_ID $Inc, D_Name varChar(15), ' +
+       'D_PY varChar(15), D_Prefix varChar(32), D_Code varChar(15), ' +
+       'D_Value varChar(32), D_Valid Char(1), D_Memo varChar(50))';
+  {-----------------------------------------------------------------------------
+   汉字喷码字典信息:NewChineseDict
+   *.R_ID: 记录号
+   *.D_Name: 汉字
+   *.D_PY: 拼音
+   *.D_Prefix：喷码前缀
+   *.D_Code：喷码编号
+   *.D_Value：喷码值
+   *.D_Valid：是否有效(Y/N)
+   *.D_Memo：备注
   -----------------------------------------------------------------------------}
 
 //------------------------------------------------------------------------------
@@ -872,9 +907,6 @@ begin
   AddSysTableItem(sTable_Order, sSQL_NewOrder);
   AddSysTableItem(sTable_Customer, sSQL_NewCustomer);
 
-  AddSysTableItem(sTable_WeixinLog, sSQL_NewWXLog);
-  AddSysTableItem(sTable_WeixinMatch, sSQL_NewWXMatch);
-  AddSysTableItem(sTable_WeixinTemp, sSQL_NewWXTemplate);
   AddSysTableItem(sTable_Card, sSQL_NewCard);
   AddSysTableItem(sTable_Bill, sSQL_NewBill);
   AddSysTableItem(sTable_BillBak, sSQL_NewBill);
@@ -892,6 +924,12 @@ begin
   AddSysTableItem(sTable_Picture, sSQL_NewPicture);
   AddSysTableItem(sTable_Provider, ssql_NewProvider);
   AddSysTableItem(sTable_Materails, sSQL_NewMaterails);
+
+  AddSysTableItem(sTable_WeixinLog, sSQL_NewWXLog);
+  AddSysTableItem(sTable_WeixinMatch, sSQL_NewWXMatch);
+  AddSysTableItem(sTable_WeixinTemp, sSQL_NewWXTemplate);
+  AddSysTableItem(sTable_ChineseBase, sSQL_NewChineseBase);
+  AddSysTableItem(sTable_ChineseDict, sSQL_NewChineseDict);
 end;
 
 //Desc: 清理系统表

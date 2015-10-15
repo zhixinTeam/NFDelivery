@@ -62,6 +62,8 @@ type
     //获取服务器时间
     function GetSerailID(var nData: string): Boolean;
     //获取串号
+    function VerifyTruckNO(var nData: string): Boolean;
+    //验证车牌是否有效
     function IsSystemExpired(var nData: string): Boolean;
     //系统是否已过期
     function SaveTruck(var nData: string): Boolean;
@@ -103,6 +105,8 @@ type
     //获取微信报表
     {$ENDIF}
     function GetPoundBaseValue(var nData: string): Boolean;
+    function IsDeDuctValid:Boolean;
+    //使用暗扣规则
   public
     constructor Create; override;
     destructor destroy; override;
@@ -328,6 +332,8 @@ begin
    cBC_ServerNow           : Result := GetServerNow(nData);
    cBC_GetSerialNO         : Result := GetSerailID(nData);
    cBC_IsSystemExpired     : Result := IsSystemExpired(nData);
+   cBC_IsTruckValid        : Result := VerifyTruckNO(nData);
+
    cBC_SaveTruckInfo       : Result := SaveTruck(nData);
    cBC_GetStockBatcode     : Result := GetStockBatcode(nData);
    cBC_SaveStockBatcode    : Result := SaveStockBatcode(nData);
@@ -500,6 +506,94 @@ begin
   end;
 end;
 
+//Date: 2014-09-16
+//Parm: 车牌号;
+//Desc: 验证nTruck是否有效
+function TWorkerBusinessCommander.VerifyTruckNO(var nData: string): Boolean;
+var nIdx: Integer;
+    nStr, nTruck: string;
+    nWStr: WideString;
+begin
+  Result := False;
+  nTruck := FIn.FData;
+  //init
+
+  nIdx := Length(nTruck);
+  if (nIdx < 3) or (nIdx > 10) then
+  begin
+    nData := '有效的车牌号长度为3-10.';
+    Exit;
+  end;
+
+  nWStr := LowerCase(nTruck);
+  //lower
+
+  for nIdx:=1 to Length(nWStr) do
+  begin
+    case Ord(nWStr[nIdx]) of
+     Ord('-'): Continue;
+     Ord('0')..Ord('9'): Continue;
+     Ord('a')..Ord('z'): Continue;
+    end;
+
+    if nIdx > 1 then
+    begin
+      nData := Format('车牌号[ %s ]无效.', [nTruck]);
+      Exit;
+    end;
+  end;
+
+  nStr := 'Select T_Valid From %s Where T_Truck=''%s''';
+  nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  if FieldByName('T_Valid').AsString = sFlag_No then
+  begin
+    nData := '车辆[ %s ]已被管理员列入黑名单.';
+    nData := Format(nData, [nTruck]);
+    Exit;
+  end;
+
+  Result := True;
+end;
+
+//------------------------------------------------------------------------------
+//Date: 2015/9/15
+//Parm:
+//Desc: 是否使用暗扣
+function TWorkerBusinessCommander.IsDeDuctValid:Boolean;
+var nStr, nStrTime: string;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := True;
+  //init
+
+  nStr := 'Select Top 1 D_Memo From $DB Where D_Name=''$PM''';
+  nStr := MacroValue(nStr, [MI('$DB', sTable_SysDict),
+          MI('$PM', sFlag_DuctTimeItem)]);
+  //xxxxx
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    if RecordCount<1 then Exit;
+  //无需通过时间段进行扣吨限制
+
+  if CallMe(cBC_ServerNow, '', '', @nOut) then
+        nStrTime := Time2Str(Str2DateTime(nOut.FData))
+  else  nStrTime := Time2Str(Now);
+
+  nStr := 'Select D_Memo From $DB Where D_Value<=''$NT'' and D_ParamB>=''$NT'''+
+          ' and D_Name=''$PM''';
+  nStr := MacroValue(nStr, [MI('$DB', sTable_SysDict), MI('$NT', nStrTime),
+          MI('$PM', sFlag_DuctTimeItem)]);
+  //xxxxx
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    if RecordCount<1 then Result:=False;
+  //不满足扣吨时间段，不允许扣吨
+end;
+
+
 //Date: 2014-10-02
 //Parm: 车牌号[FIn.FData];
 //Desc: 保存车辆到sTable_Truck表
@@ -508,7 +602,7 @@ var nStr: string;
 begin
   Result := True;
   FIn.FData := UpperCase(FIn.FData);
-  
+
   nStr := 'Select Count(*) From %s Where T_Truck=''%s''';
   nStr := Format(nStr, [sTable_Truck, FIn.FData]);
   //xxxxx
@@ -888,7 +982,7 @@ begin
   FOut.FData := 'select ' +
      'pk_meambill_b as pk_meambill,VBILLCODE,VBILLTYPE,COPERATOR,user_name,' +  //订单表头
      'TMAKETIME,NPLANNUM,cvehicle,vbatchcode,unitname,areaclname,t1.vdef10,' +  //订单表体(t1.vdef10:矿点)
-     't1.vdef5,t1.pk_cumandoc,custcode,cmnecode,custname,t_cd.def30,' +         //客商信息(t1.vdef5:品牌)
+     't1.vdef2,t1.vdef5,t1.pk_cumandoc,custcode,cmnecode,custname,t_cd.def30,'+ //客商信息(t1.vdef5:品牌;t1.vdef2:区域流向)
      'invcode,invname,invtype ' +                                               //物料
      'from meam_bill t1 ' +
      '  left join sm_user t_su on t_su.cuserid=t1.coperator ' +
@@ -1357,6 +1451,10 @@ begin
 
   with nPound[0] do
   begin
+    if not CallMe(cBC_IsTruckValid, FTruck, '', @nOut) then
+      raise Exception.Create(nOut.FData);
+    //xxxxx
+
     nProvide := (FID <> '') and (FID = FZhiKa);
     //是否供应
 
@@ -1446,6 +1544,7 @@ begin
               'Where D_Stock=''%s'' And D_Valid=''%s''';
       nStr := Format(nStr, [sTable_Deduct, FStockNo, sFlag_Yes]);
 
+      if IsDeDuctValid then                         //首先验证是否允许暗扣
       with gDBConnManager.WorkerQuery(FDBConn, nStr) do
       if RecordCount > 0 then
       begin
@@ -1547,10 +1646,10 @@ begin
       except
         on nErr: Exception do
         begin
-          nSQL := 'Update %s Set P_MValue=Null Where P_ID=''%s''';
+          nSQL := 'Update %s Set P_PValue=P_MValue,P_MValue=Null Where P_ID=''%s''';
           nSQL := Format(nSQL, [sTable_PoundLog, FPoundID]);
           gDBConnManager.WorkerExec(FDBConn, nSQL);
-          
+
           nData := nErr.Message;
           Exit;
         end;

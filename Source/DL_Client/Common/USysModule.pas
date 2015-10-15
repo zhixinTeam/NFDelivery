@@ -19,11 +19,18 @@ uses
   UFormLadingSan, UFormLadingDai, UFrameBillCard, UFormCard, UFramePoundManual,
   UFrameTruckQuery, UFrameQueryDiapatch, UFrameQuerySaleDetail, UFrameZTDispatch,
   UFormZTLine, UFramePoundQuery, UFormRFIDCard, UFrameBatcode, UFormBatcode,
-  UFormChangeTunnel, UFrameDeduct, UFormDeduct, UFormGetNCStock{$IFDEF MicroMsg},
-  UFormWeiXinAccount, UFrameWeiXinAccount, UFormWeiXinSendlog, UFrameWeiXinSendlog
-  , UFormCustomer, UFrameCustomer{$ENDIF}, UFrameMine, UFormMine, UFormGetMine,
-  UFormPoundDispatch, UFrameBatcodeQuery, UFormBatcodeEdit, UFramePoundAuto,
-  UFrameQueryProvideDetail, UFrameQueryDiapatchDetail;
+  UFormChangeTunnel, UFrameDeduct, UFormDeduct, UFormGetNCStock, UFrameMine,
+  UFormMine, UFormGetMine, UFormPoundDispatch, UFrameBatcodeQuery,
+  UFormBatcodeEdit, UFramePoundAuto, UFrameQueryProvideDetail,
+  UFrameQueryDiapatchDetail
+  {$IFDEF MicroMsg},
+  UFormWeiXinAccount, UFrameWeiXinAccount,
+  UFormWeiXinSendlog, UFrameWeiXinSendlog,
+  UFormCustomer, UFrameCustomer
+  {$ENDIF}
+  {$IFDEF PrintChinese},
+  UFrameChineseBase, UFormChineseBase, UFrameChineseDict ,UFormChineseDict
+  {$ENDIF};
 
 procedure InitSystemObject;
 procedure RunSystemObject;

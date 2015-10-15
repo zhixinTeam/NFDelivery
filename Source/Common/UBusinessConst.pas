@@ -24,6 +24,7 @@ const
   cBC_GetSerialNO             = $0001;   //获取串行编号
   cBC_ServerNow               = $0002;   //服务器当前时间
   cBC_IsSystemExpired         = $0003;   //系统是否已过期
+  cBC_IsTruckValid            = $0004;   //车牌是否有效
 
   cBC_GetSQLQueryOrder        = $0006;   //查询订单语句
   cBC_GetSQLQueryCustomer     = $0007;   //查询客户语句

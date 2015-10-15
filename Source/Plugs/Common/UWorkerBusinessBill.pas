@@ -42,6 +42,7 @@ type
     FCusID: string;         //客户号
     FCusName: string;       //客户名
     FCusCode: string;       //客户代码
+    FAreaTo: string;        //区域流向
     FStockID: string;       //品种号
     FStockName: string;     //品种名
     FStockType: string;     //类型
@@ -223,43 +224,6 @@ begin
   end;
 end;
 
-//Date: 2014-09-16
-//Parm: 车牌号;
-//Desc: 验证nTruck是否有效
-class function TWorkerBusinessBills.VerifyTruckNO(nTruck: string;
-  var nData: string): Boolean;
-var nIdx: Integer;
-    nWStr: WideString;
-begin
-  Result := False;
-  nIdx := Length(nTruck);
-  if (nIdx < 3) or (nIdx > 10) then
-  begin
-    nData := '有效的车牌号长度为3-10.';
-    Exit;
-  end;
-
-  nWStr := LowerCase(nTruck);
-  //lower
-  
-  for nIdx:=1 to Length(nWStr) do
-  begin
-    case Ord(nWStr[nIdx]) of
-     Ord('-'): Continue;
-     Ord('0')..Ord('9'): Continue;
-     Ord('a')..Ord('z'): Continue;
-    end;
-
-    if nIdx > 1 then
-    begin
-      nData := Format('车牌号[ %s ]无效.', [nTruck]);
-      Exit;
-    end;
-  end;
-
-  Result := True;
-end;
-
 //Date: 2014-10-07
 //Desc: 允许散装多单
 function TWorkerBusinessBills.AllowedSanMultiBill: Boolean;
@@ -370,6 +334,18 @@ begin
       nOrders[j] := nItem;
     end;
   //冒泡排序
+end;
+
+
+//Date: 2014-09-16
+//Parm: 车牌号;
+//Desc: 验证nTruck是否有效
+class function TWorkerBusinessBills.VerifyTruckNO(nTruck: string;
+  var nData: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := TWorkerBusinessCommander.CallMe(cBC_IsTruckValid, nTruck, '', @nOut);
+  if not Result then nData := nOut.FData;
 end;
 
 //Date: 2014-09-15
@@ -564,6 +540,9 @@ begin
           FSaleID := '001';
           FSaleName := FieldByName('VBILLTYPE').AsString;
 
+          FAreaTo := FieldByName('vdef2').AsString;
+          //区域流向
+
           nIdx := GetStockInfo(FStockID);
           if nIdx < 0 then
           begin
@@ -705,6 +684,7 @@ begin
               SF('L_CusCode', FOrderItems[nIdx].FCusCode),
               SF('L_SaleID', FOrderItems[nIdx].FSaleID),
               SF('L_SaleMan', FOrderItems[nIdx].FSaleName),
+              SF('L_Area', FOrderItems[nIdx].FAreaTo),
 
               SF('L_Type', FOrderItems[nIdx].FStockType),
               SF('L_StockNo', FOrderItems[nIdx].FStockID),

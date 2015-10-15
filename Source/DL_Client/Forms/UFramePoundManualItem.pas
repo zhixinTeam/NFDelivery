@@ -74,6 +74,7 @@ type
     CheckLock: TcxCheckBox;
     CheckZD: TcxCheckBox;
     CheckSound: TcxCheckBox;
+    Timer_Savefail: TTimer;
     procedure Timer1Timer(Sender: TObject);
     procedure N1Click(Sender: TObject);
     procedure N3Click(Sender: TObject);
@@ -92,6 +93,7 @@ type
     procedure CheckLockClick(Sender: TObject);
     procedure HintLabelClick(Sender: TObject);
     procedure CheckZDClick(Sender: TObject);
+    procedure Timer_SavefailTimer(Sender: TObject);
   private
     { Private declarations }
     FPoundTunnel: PPTTunnelItem;
@@ -887,7 +889,14 @@ var nVal: Double;
 begin
   if not IsNumber(EditValue.Text, True) then Exit;
   nVal := StrToFloat(EditValue.Text);
-  if nVal <= 0 then Exit;
+  if FloatRelation(nVal, FPoundTunnel.FPort.FMinValue, rtLE, 1000) then Exit;
+  //读数小于过磅最低值时,退出
+
+  if not gProberManager.IsTunnelOK(FPoundTunnel.FID) then
+  begin
+    ShowMsg('车辆未站稳,请稍后', sHint);
+    Exit;
+  end;
 
   if Length(FBillItems) > 0 then
   begin
@@ -1617,7 +1626,7 @@ begin
       if CheckZD.Checked then
         CollapsePanel(True, False);
       ShowMsg('称重保存完毕', sHint);
-    end;
+    end else Timer_Savefail.Enabled := True;
   finally
     BtnSave.Enabled := not nBool;
     CloseWaitForm;
@@ -1696,6 +1705,20 @@ begin
   if UpperCase(Additional.Values['Voice'])='NET' then
        gNetVoiceHelper.PlayVoice(nStrtext, FPoundTunnel.FID, 'pound')
   else gVoiceHelper.PlayVoice(nStrtext);
+end;
+
+procedure TfFrameManualPoundItem.Timer_SavefailTimer(Sender: TObject);
+begin
+  inherited;
+  try
+    Timer_SaveFail.Enabled := False;
+
+    gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
+    //关闭表头
+    SetUIData(True);
+  except
+    raise;
+  end;
 end;
 
 end.

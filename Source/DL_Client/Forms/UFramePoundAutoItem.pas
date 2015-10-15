@@ -630,7 +630,8 @@ begin
   // gSysParam.FIsManual then Exit;
   //手动时无效
 
-  if nValue < 0.02 then //空磅
+  if (nValue < 0.02) or
+    FloatRelation(nValue, FPoundTunnel.FPort.FMinValue, rtLE, 1000) then //空磅
   begin
     if FEmptyPoundInit = 0 then
       FEmptyPoundInit := GetTickCount;

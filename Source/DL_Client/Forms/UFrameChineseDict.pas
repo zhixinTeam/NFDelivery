@@ -1,23 +1,23 @@
 {*******************************************************************************
-  作者: dmzn@163.com 2015-01-22
-  描述: 暗扣规则管理
+  作者: fendou116688@163.com 2015/10/9
+  描述: 汉字编码字典管理
 *******************************************************************************}
-unit UFrameDeduct;
+unit UFrameChineseDict;
 
 interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   UFrameNormal, cxGraphics, cxControls, cxLookAndFeels,
-  cxLookAndFeelPainters, cxStyles, cxCustomData, cxFilter, cxData,
-  cxDataStorage, cxEdit, DB, cxDBData, cxContainer, dxLayoutControl,
-  cxMaskEdit, cxButtonEdit, cxTextEdit, ADODB, cxLabel, UBitmapPanel,
-  cxSplitter, cxGridLevel, cxClasses, cxGridCustomView,
-  cxGridCustomTableView, cxGridTableView, cxGridDBTableView, cxGrid,
-  ComCtrls, ToolWin, Menus;
+  cxLookAndFeelPainters, cxStyles, dxSkinsCore, dxSkinsDefaultPainters,
+  cxCustomData, cxFilter, cxData, cxDataStorage, cxEdit, DB, cxDBData,
+  cxContainer, dxLayoutControl, cxMaskEdit, cxButtonEdit, cxTextEdit,
+  ADODB, cxLabel, UBitmapPanel, cxSplitter, cxGridLevel, cxClasses,
+  cxGridCustomView, cxGridCustomTableView, cxGridTableView,
+  cxGridDBTableView, cxGrid, ComCtrls, ToolWin, Menus;
 
 type
-  TfFrameDeduct = class(TfFrameNormal)
+  TfFrameChineseDict = class(TfFrameNormal)
     cxTextEdit1: TcxTextEdit;
     dxLayout1Item1: TdxLayoutItem;
     EditName: TcxButtonEdit;
@@ -26,16 +26,11 @@ type
     dxLayout1Item4: TdxLayoutItem;
     cxTextEdit3: TcxTextEdit;
     dxLayout1Item3: TdxLayoutItem;
-    cxTextEdit4: TcxTextEdit;
-    dxLayout1Item5: TdxLayoutItem;
-    PMenu1: TPopupMenu;
-    N1: TMenuItem;
+    procedure EditNamePropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
     procedure BtnAddClick(Sender: TObject);
     procedure BtnEditClick(Sender: TObject);
     procedure BtnDelClick(Sender: TObject);
-    procedure EditNamePropertiesButtonClick(Sender: TObject;
-      AButtonIndex: Integer);
-    procedure N1Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -50,28 +45,27 @@ implementation
 
 {$R *.dfm}
 uses
-  ULibFun, UMgrControl, USysConst, USysDB, UFormBase, UDataModule,
-  UFormTimeFilter;
+  ULibFun, UMgrControl, USysBusiness, USysConst, USysDB, UDataModule, UFormBase;
 
-class function TfFrameDeduct.FrameID: integer;
+class function TfFrameChineseDict.FrameID: integer;
 begin
-  Result := cFI_FrameDeduct;
+  Result := cFI_FrameChineseDict;
 end;
 
-function TfFrameDeduct.InitFormDataSQL(const nWhere: string): string;
+function TfFrameChineseDict.InitFormDataSQL(const nWhere: string): string;
 begin
-  Result := 'Select * From ' + sTable_Deduct;
+  Result := 'Select * From ' + sTable_ChineseDict;
   if nWhere <> '' then
     Result := Result + ' Where (' + nWhere + ')';
-  //xxxxx
+  Result := Result + ' Order By D_PY';
 end;
 
 //Desc: 添加
-procedure TfFrameDeduct.BtnAddClick(Sender: TObject);
+procedure TfFrameChineseDict.BtnAddClick(Sender: TObject);
 var nP: TFormCommandParam;
 begin
   nP.FCommand := cCmd_AddData;
-  CreateBaseFormItem(cFI_FormDeduct, '', @nP);
+  CreateBaseFormItem(cFI_FormChineseDict, '', @nP);
 
   if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
   begin
@@ -80,14 +74,14 @@ begin
 end;
 
 //Desc: 修改
-procedure TfFrameDeduct.BtnEditClick(Sender: TObject);
+procedure TfFrameChineseDict.BtnEditClick(Sender: TObject);
 var nP: TFormCommandParam;
 begin
   if cxView1.DataController.GetSelectedCount > 0 then
   begin
     nP.FCommand := cCmd_EditData;
     nP.FParamA := SQLQuery.FieldByName('R_ID').AsString;
-    CreateBaseFormItem(cFI_FormDeduct, '', @nP);
+    CreateBaseFormItem(cFI_FormChineseDict, '', @nP);
 
     if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
     begin
@@ -97,17 +91,19 @@ begin
 end;
 
 //Desc: 删除
-procedure TfFrameDeduct.BtnDelClick(Sender: TObject);
+procedure TfFrameChineseDict.BtnDelClick(Sender: TObject);
 var nStr: string;
 begin
   if cxView1.DataController.GetSelectedCount > 0 then
   begin
     nStr := SQLQuery.FieldByName('D_Name').AsString;
-    nStr := Format('确定要删除物料[ %s ]的规则吗?', [nStr]);
+    nStr := Format('确定要删除字典[ %s ]吗?', [nStr]);
     if not QueryDlg(nStr, sAsk) then Exit;
 
     nStr := 'Delete From %s Where R_ID=%s';
-    nStr := Format(nStr, [sTable_Deduct, SQLQuery.FieldByName('R_ID').AsString]);
+    nStr := Format(nStr, [sTable_ChineseDict,
+            SQLQuery.FieldByName('R_ID').AsString]);
+    //xxxxx
 
     FDM.ExecuteSQL(nStr);
     InitFormData(FWhere);
@@ -115,7 +111,7 @@ begin
 end;
 
 //Desc: 查询
-procedure TfFrameDeduct.EditNamePropertiesButtonClick(Sender: TObject;
+procedure TfFrameChineseDict.EditNamePropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 begin
   if Sender = EditName then
@@ -123,22 +119,12 @@ begin
     EditName.Text := Trim(EditName.Text);
     if EditName.Text = '' then Exit;
 
-    FWhere := Format('D_Name Like ''%%%s%%''', [EditName.Text]);
+    FWhere := Format('D_Name Like ''%%%s%%'' or D_PY Like ''%%%s%%''',
+              [EditName.Text, EditName.Text]);
     InitFormData(FWhere);
   end;
 end;
 
-//------------------------------------------------------------------------------
-//Date: 2015/9/15
-//Parm: 
-//Desc: 设置暗扣有效时间段
-procedure TfFrameDeduct.N1Click(Sender: TObject);
-begin
-  inherited;
-  //xxxxx
-  ShowTimeFilterForm;
-end;
-
 initialization
-  gControlManager.RegCtrl(TfFrameDeduct, TfFrameDeduct.FrameID);
+  gControlManager.RegCtrl(TfFrameChineseDict, TfFrameChineseDict.FrameID);
 end.

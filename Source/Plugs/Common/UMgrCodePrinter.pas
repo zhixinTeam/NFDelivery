@@ -23,6 +23,7 @@ type
     FTunnel : string;            //通道
 
     FDriver : string;            //驱动
+    FVersoin: Integer;           //版本
     FEnable : Boolean;           //启用
     FOnline : Boolean;           //在线
     FLastOn : Int64;             //上次在线
@@ -40,7 +41,7 @@ type
     FFlagLock: Boolean;
     //锁定标记
     function PrintCode(const nCode: string;
-     var nHint: string): Boolean; virtual; abstract;
+     var nHint: string; const nVersion: Integer=0): Boolean; virtual; abstract;
     //打印编码
   public
     constructor Create;
@@ -524,6 +525,7 @@ begin
 
           FTunnel := nNode.NodeByName('tunnel').ValueAsString;
           FDriver := nNode.NodeByName('driver').ValueAsString;
+          FVersoin:= StrToIntDef(nNode.NodeByName('driver').AttributeByName['Version'],0);
           FEnable := nNode.NodeByName('enable').ValueAsInteger = 1;
 
           FOnline := False;
@@ -631,7 +633,7 @@ begin
     end;
 
     FPrinter := nPrinter;
-    Result := PrintCode(nCode, nHint);
+    Result := PrintCode(nCode, nHint, nPrinter.FVersoin);
   except
     on E:Exception do
     begin
@@ -685,7 +687,7 @@ type
   TPrinterZero = class(TCodePrinterBase)
   protected
     function PrintCode(const nCode: string;
-     var nHint: string): Boolean; override;
+     var nHint: string; const nVersion: Integer=0): Boolean; override;
   public
     class function DriverName: string; override;
   end;
@@ -697,7 +699,7 @@ end;
 
 //Desc: 打印编码
 function TPrinterZero.PrintCode(const nCode: string;
-  var nHint: string): Boolean;
+  var nHint: string; const nVersion: Integer=0): Boolean;
   var nData: string;
     nCrc: TByteWord;
     nBuf: TIdBytes;
@@ -738,7 +740,7 @@ type
   TPrinterJY = class(TCodePrinterBase)
   protected
     function PrintCode(const nCode: string;
-     var nHint: string): Boolean; override;
+     var nHint: string; const nVersion: Integer=0): Boolean; override;
   public
     class function DriverName: string; override;
   end;
@@ -749,7 +751,7 @@ begin
 end;
 
 function TPrinterJY.PrintCode(const nCode: string;
-  var nHint: string): Boolean;
+  var nHint: string; const nVersion: Integer=0): Boolean;
   var nData: string;
   nBuf: TIdBytes;
   nstr: string;
@@ -790,7 +792,7 @@ type
   TPrinterWSD = class(TCodePrinterBase)
   protected
     function PrintCode(const nCode: string;
-     var nHint: string): Boolean; override;
+     var nHint: string; const nVersion: Integer=0): Boolean; override;
   public
     class function DriverName: string; override;
   end;
@@ -801,7 +803,7 @@ begin
 end;
 
 function TPrinterWSD.PrintCode(const nCode: string;
-  var nHint: string): Boolean;
+  var nHint: string; const nVersion: Integer=0): Boolean;
   var nData: string;
   nBuf: TIdBytes;
   nstr: string;
@@ -842,7 +844,7 @@ type
   TPrinterSGB = class(TCodePrinterBase)
   protected
     function PrintCode(const nCode: string;
-     var nHint: string): Boolean; override;
+     var nHint: string; const nVersion: Integer=0): Boolean; override;
   public
     class function DriverName: string; override;
   end;
@@ -853,7 +855,7 @@ begin
 end;
 
 function TPrinterSGB.PrintCode(const nCode: string;
-  var nHint: string): Boolean;
+  var nHint: string; const nVersion: Integer=0): Boolean;
 var nData: string;
     //nBuf: TIdBytes;
 begin
@@ -861,7 +863,9 @@ begin
   //1B 41 len(start 38) channel(start 31) 40 37 datas 40 39 0D
   //1B 41 2C 22 channel(start 31) 0D;
   nData := Char($1B) + Char($41) + Char($29)+ Char(Length(nCode) + 38);
-  nData := nData + Char(2 + 31) + Char($40) + Char($37);
+  if nVersion=16 then                                        //16针打印机用@6
+       nData := nData + Char(2 + 31) + Char($40) + Char($36)
+  else nData := nData + Char(2 + 31) + Char($40) + Char($37);//7 针打印机用@7
   nData := nData + nCode + Char($40) + Char($39)+ Char($0D);
 
   FClient.Socket.Write(nData, Indy8BitEncoding);
