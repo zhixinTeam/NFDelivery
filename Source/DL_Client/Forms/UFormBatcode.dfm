@@ -24,7 +24,7 @@ inherited fFormBatcode: TfFormBatcode
       Left = 81
       Top = 61
       ParentFont = False
-      Properties.MaxLength = 15
+      Properties.MaxLength = 80
       TabOrder = 1
       Width = 116
     end
@@ -32,7 +32,7 @@ inherited fFormBatcode: TfFormBatcode
       Left = 81
       Top = 86
       ParentFont = False
-      Properties.MaxLength = 100
+      Properties.MaxLength = 5
       TabOrder = 2
       Width = 125
     end
