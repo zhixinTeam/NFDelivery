@@ -60,6 +60,7 @@ const
   cBC_PrintCode               = $0056;
   cBC_PrintFixCode            = $0057;   //ÅçÂë
   cBC_PrinterEnable           = $0058;   //ÅçÂë»úÆôÍ£
+  cBC_PrinterChinaEnable      = $0059;   //ÅçÂë»úÆôÍ£
 
   cBC_JSStart                 = $0060;
   cBC_JSStop                  = $0061;

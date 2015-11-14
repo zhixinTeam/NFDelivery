@@ -37,6 +37,7 @@ type
     EditWorker: TEdit;
     Label10: TLabel;
     MemoConn: TMemo;
+    BtnConnect: TButton;
     procedure ListParamClick(Sender: TObject);
     procedure EditIDChange(Sender: TObject);
     procedure EditIDKeyPress(Sender: TObject; var Key: Char);
@@ -96,25 +97,30 @@ end;
 
 //------------------------------------------------------------------------------
 procedure TfFormParamDB.LoadParams;
-var nIdx, nLen: Integer;
-    nDBItems: TDBParams;
+var nIdx, nInt, nLenFL, nLenDB: Integer;
+    nDBItemsFL, nDBItemsDB: TDBParams;
 begin
-  LoadDBParamFromFile(gWeiXinPath + sDBConfigFile, nDBItems);
-  nLen := Length(nDBItems);
-  if nLen<1 then Exit;
+  LoadDBParamFromDB(nDBItemsDB);
+  LoadDBParamFromFile(gWeiXinPath + sDBConfigFile, nDBItemsFL);
 
-  SetLength(FParams, nLen);
-  for nIdx:=Low(nDBItems) to High(nDBItems) do
+  nLenFL := Length(nDBItemsFL);
+  nLenDB := Length(nDBItemsDB);
+  SetLength(FParams, nLenFL+nLenDB);
+
+  nInt := Low(FParams);
+  for nIdx:=Low(nDBItemsFL) to High(nDBItemsFL) do
   begin
-    FParams[nIdx] := nDBItems[nIdx];
-  end;  
-  //配置文件获取
+    FParams[nInt] := nDBItemsFL[nIdx];
+    Inc(nInt);
+  end;
+  //文件中数据库参数
 
-  LoadDBParamFromDB(nDBItems);
-  nIdx := Length(nDBItems);
-  if nIdx<1 then Exit;
-
-  SetLength(FParams, nIdx + Length(FParams));
+  for nIdx:=Low(nDBItemsDB) to High(nDBItemsDB) do
+  begin
+    FParams[nInt] := nDBItemsDB[nIdx];
+    Inc(nInt);
+  end;
+  //数据库中数据库参数
 end;
 
 procedure TfFormParamDB.InitFormData(const nID: string);

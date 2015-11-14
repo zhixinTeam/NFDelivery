@@ -222,4 +222,12 @@ inherited fFormParamDB: TfFormParamDB
     OnChange = EditIDChange
     OnKeyDown = OnCtrlKeyDown
   end
+  object BtnConnect: TButton
+    Left = 280
+    Top = 408
+    Width = 64
+    Height = 20
+    Caption = #27979#35797
+    TabOrder = 14
+  end
 end

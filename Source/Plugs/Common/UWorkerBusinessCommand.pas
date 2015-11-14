@@ -1562,10 +1562,9 @@ begin
         if Eof then First;
         //使用第一条规则
 
-//        if FMData.FValue > FPData.FValue then
-//             nNet := FMData.FValue - FPData.FValue
-//        else nNet := FPData.FValue - FMData.FValue;
-        nNet := nMData.FValue - nPData.FValue;
+        if FMData.FValue > FPData.FValue then
+             nNet := FMData.FValue - FPData.FValue
+        else nNet := FPData.FValue - FMData.FValue;
 
         nVal := 0;
         //待扣减量

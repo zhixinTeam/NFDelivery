@@ -37,6 +37,7 @@ type
     FName      : string;
     FHost      : string;
     FPort      : Integer;
+    FEnable    : Boolean;
   end;
 
   TWXPlatFormHelper = class;
@@ -217,7 +218,7 @@ end;
 //Desc: ‘ÿ»ÎnFile≈‰÷√Œƒº˛
 procedure TWXPlatFormHelper.LoadConfig(const nFile: string);
 var nXML: TNativeXml;
-    nNode: TXmlNode;
+    nNode,nTmp: TXmlNode;
 begin
   nXML := TNativeXml.Create;
   try
@@ -230,6 +231,11 @@ begin
       FName  := nNode.NodeByName('name').ValueAsString;
       FHost  := nNode.NodeByName('ip').ValueAsString;
       FPort  := nNode.NodeByName('port').ValueAsInteger;
+
+      nTmp   := nNode.FindNode('enable');
+      if Assigned(nTmp) then
+           FEnable := nTmp.ValueAsString = '1'
+      else FEnable := True;
     end;
   finally
     nXML.Free;
@@ -285,6 +291,7 @@ begin
   try
     FWaiter.EnterWait;
     if Terminated then Exit;
+    if not FOwner.FHost.FEnable then Exit;
 
     try
       if not FClient.Connected then

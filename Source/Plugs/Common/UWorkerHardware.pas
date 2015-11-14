@@ -61,6 +61,7 @@ type
     function PrintFixCode(var nData: string): Boolean;
     //喷码机打印编码
     function PrinterEnable(var nData: string): Boolean;
+    function PrinterChinaEnable(var nData: string): Boolean;
     //启停喷码机
     function StartJS(var nData: string): Boolean;
     function PauseJS(var nData: string): Boolean;
@@ -238,6 +239,7 @@ begin
    cBC_PrintCode            : Result := PrintCode(nData);
    cBC_PrintFixCode         : Result := PrintFixCode(nData);
    cBC_PrinterEnable        : Result := PrinterEnable(nData);
+   cBC_PrinterChinaEnable   : Result := PrinterChinaEnable(nData);
 
    cBC_JSStart              : Result := StartJS(nData);
    cBC_JSStop               : Result := StopJS(nData);
@@ -518,8 +520,9 @@ begin
       if nUseDate then
       begin
         //protocol: 汉字喷码+客户代码(区域码) + 交货单号(末3位) + 批次号;
-        {$IFDEF PrintChinese}
-        if nArea <> '' then
+
+        if (nArea <> '') and
+          gCodePrinterManager.IsPrinterChinaEnable(FIn.FExtParam) then
         begin
           nStr := 'Select B_PrintCode From %s Where B_Source=''%s'' and ' +
                   'B_Valid=''%s''';
@@ -529,7 +532,6 @@ begin
           with gDBConnManager.WorkerQuery(FDBConn, nStr) do
           if RecordCount>0 then  nCode := nCode + Fields[0].AsString;
         end;
-        {$ENDIF}
 
         nCode := nCode + FillString(nCusCode, 2, ' ');
         nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6)+ '  ';
@@ -569,6 +571,15 @@ function THardwareCommander.PrinterEnable(var nData: string): Boolean;
 begin
   Result := True;
   gCodePrinterManager.PrinterEnable(FIn.FData, FIn.FExtParam = sFlag_Yes);
+end;
+
+//Date: 2015/10/16
+//Parm: 通道号[FIn.FData];是否启用[FIn.FExtParam]
+//Desc: 启停指定通道的喷码机(汉字)
+function THardwareCommander.PrinterChinaEnable(var nData: string): Boolean;
+begin
+  Result := True;
+  gCodePrinterManager.PrinterChinaEnable(FIn.FData, FIn.FExtParam = sFlag_Yes);
 end;
 
 function THardwareCommander.PrintFixCode(var nData: string): Boolean;

@@ -24,9 +24,10 @@ type
 
     FDriver : string;            //驱动
     FVersoin: Integer;           //版本
-    FEnable : Boolean;           //启用
     FOnline : Boolean;           //在线
     FLastOn : Int64;             //上次在线
+    FEnable : Boolean;           //启用
+    FChinaEnable : Boolean;        //启用汉字喷码
   end;
 
   TCodePrinterManager = class;
@@ -123,6 +124,9 @@ type
     //是否在线
     function IsPrinterEnable(const nTunnel: string): Boolean;
     procedure PrinterEnable(const nTunnel: string; const nEnable: Boolean);
+    //起停喷码机
+    function IsPrinterChinaEnable(const nTunnel: string): Boolean;
+    procedure PrinterChinaEnable(const nTunnel: string; const nEnable: Boolean);
     //起停喷码机
     property EnablePrinter: Boolean read FEnablePrinter;
     //属性相关
@@ -442,6 +446,40 @@ begin
   end;
 end;
 
+//------------------------------------------------------------------------------
+//Date: 2015/10/16
+//Parm: 通道号
+//Desc: 查询nTunnel通道上的喷码机状态(汉字)
+function TCodePrinterManager.IsPrinterChinaEnable(const nTunnel: string): Boolean;
+var nPrinter: PCodePrinter;
+begin
+  Result := False;
+
+  if FEnablePrinter then
+  begin
+    nPrinter := GetPrinter(nTunnel);
+    if Assigned(nPrinter) then
+      Result := nPrinter.FEnable and nPrinter.FChinaEnable;
+    //xxxxx
+  end;
+end;
+
+//Date: 2015/10/16
+//Parm: 通道;起停标识
+//Desc: 起停nTunnel通道上的喷码机
+procedure TCodePrinterManager.PrinterChinaEnable(const nTunnel: string;
+  const nEnable: Boolean);
+var nPrinter: PCodePrinter;
+begin
+  if FEnablePrinter then
+  begin
+    nPrinter := GetPrinter(nTunnel);
+    if Assigned(nPrinter) then
+      nPrinter.FChinaEnable := nEnable and nPrinter.FEnable;
+    //xxxxx
+  end;
+end;
+
 //Date: 2012-9-7
 //Parm: 通道;编码
 //Desc: 在nTunnel通道的喷码机上打印nCode
@@ -490,7 +528,7 @@ end;
 procedure TCodePrinterManager.LoadConfig(const nFile: string);
 var nIdx: Integer;
     nXML: TNativeXml;
-    nNode,nTmp: TXmlNode;
+    nNode,nTmp,nPNode: TXmlNode;
     nPrinter: PCodePrinter;
 begin
   nXML := TNativeXml.Create;
@@ -527,6 +565,11 @@ begin
           FDriver := nNode.NodeByName('driver').ValueAsString;
           FVersoin:= StrToIntDef(nNode.NodeByName('driver').AttributeByName['Version'],0);
           FEnable := nNode.NodeByName('enable').ValueAsInteger = 1;
+
+          nPNode  := nNode.FindNode('chinaenable');
+          if not Assigned(nPNode) then
+                FChinaEnable := False
+          else  FChinaEnable := nPNode.ValueAsString = '1';
 
           FOnline := False;
           FLastOn := 0;

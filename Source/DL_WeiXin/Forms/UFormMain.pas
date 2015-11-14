@@ -6,7 +6,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, IdContext, ExtCtrls, IdBaseComponent, IdComponent, UFormBase,
   IdCustomTCPServer, IdTCPServer, ComCtrls, StdCtrls, UTrayIcon, SyncObjs,
-  Menus;
+  Menus, IdGlobal, UMgrRemoteWXMsg;
 
 type
   TfFormMain = class(TForm)
@@ -69,6 +69,8 @@ type
     //显示日志
     procedure DoExecute(const nContext: TIdContext);
     //执行动作
+    procedure SendTPMsgExecute(var nBase: TWXDataBase; var nBuf: TIdBytes;
+      nCtx: TIdContext);
   public
     { Public declarations }
   end;
@@ -91,7 +93,7 @@ resourcestring
   sConfig             = 'Config.Ini';
   sForm               = 'FormInfo.Ini';
   sDB                 = 'DBConn.Ini';
-  sAutoStartKey       = 'PrepareReader';
+  sAutoStartKey       = 'WeiXinServer';
 
 procedure WriteLog(const nEvent: string);
 begin
@@ -231,6 +233,7 @@ end;
 
 procedure TfFormMain.CheckSrvClick(Sender: TObject);
 begin
+  IdTCPServer1.DefaultPort := StrToIntDef(EditPort.Text, 8000);
   //微信监听连接，目前仅支持80端口
   if CheckSrv.Checked then
   begin
@@ -240,6 +243,7 @@ begin
   else
      gWXMessgeMgr.WXStopService;
 
+  IdTCPServer1.Active := CheckSrv.Checked;
   N5.Enabled := CheckSrv.Checked;
   N4.Enabled := not CheckSrv.Checked;
   
@@ -259,18 +263,39 @@ begin
   except
     on E:Exception do
     begin
-      AContext.Connection.IOHandler.WriteBufferClear;
+      AContext.Connection.IOHandler.InputBuffer.Clear;
       WriteLog(E.Message);
     end;
   end;
 end;
 
 procedure TfFormMain.DoExecute(const nContext: TIdContext);
+var nBuf: TIdBytes;
+    nBase: TWXDataBase;
 begin
   with nContext.Connection do
   begin
+    Socket.ReadBytes(nBuf, cSizeWXDataBase, False);
+    BytesToRaw(nBuf, nBase, cSizeWXDataBase);
 
+    case nBase.FCommand of
+      cWXCmd_SendMsg:
+        begin
+          SendTPMsgExecute(nBase, nBuf, nContext);
+        //Send Template Message
+        end;
+    end;
   end;
+end;
+
+procedure TfFormMain.SendTPMsgExecute(var nBase: TWXDataBase; var nBuf: TIdBytes;
+  nCtx: TIdContext);
+var nStr: WideString;
+begin
+  nCtx.Connection.Socket.ReadBytes(nBuf, nBase.FDataLen, False);
+  nStr := Trim(BytesToString(nBuf));
+
+  gWXMessgeMgr.WXAddTemMsg(nStr);
 end;
 //Date: 2015/2/27
 //Parm:

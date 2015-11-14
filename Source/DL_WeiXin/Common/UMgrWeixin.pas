@@ -243,9 +243,6 @@ type
     function GetSalePInfo(nSearch: string; nOpenID: string = '';
       nCmd: string = ''): string;
     //销售价格查询
-    function GetAwaitInfo(nOpenID: string = ''): string;
-    //工厂待装查询
-    //
     //信用额度查询
 
     function GetWXReportStr(nSearch: string; nOpenID: string = '';
@@ -445,6 +442,9 @@ type
     function WXUpdateGroupName(nGroupID, nGroupName: string): Boolean;
 
     function WXGetUserInfo(nOpenID: string): TWXUserBaseInfo;
+
+    procedure WXAddTemMsg(nMsg: string);
+    //发送模版消息
 
     property appid: string read FAppID write FAppID;
     property apptoken: string read FAppToken write FAppToken;
@@ -1108,35 +1108,6 @@ begin
   end;
 end;
 
-//工厂待装查询
-function TWXSearchData.GetAwaitInfo(nOpenID: string = ''): string;
-var nDB: PDBWorker;
-    nStr: string;
-begin
-  nStr := 'Select * from $WXMATCH where M_WXID=''$MWXID'' Order by M_ID';
-  nStr := MacroValue(nStr, [MI('$WXMATCH', sTable_WeixinMatch),
-                            MI('$MWXID', nOpenID)]);
-  //xxxxxx
-
-  try
-    with gDBConnManager.SQLQuery(nStr, nDB) do
-    begin
-      if RecordCount < 1 then
-      begin
-        Result := '微信业务未绑定';
-        Exit;
-      end;
-
-      if FieldByName('M_isValid').AsString <> sFlag_Yes then
-      begin
-        Result := '客户未启用微信业务';Exit;
-      end;
-    end;
-  finally
-    gDBConnManager.ReleaseConnection(nDB);
-    if Result='' then Result := '未查到信息';
-  end;
-end;
 //销售价格查询
 function TWXSearchData.GetSalePInfo(nSearch: string; nOpenID: string = '';
   nCmd: string = ''): string;
@@ -2174,25 +2145,29 @@ begin
 
   if gWXSysParam.FIsWithMIT <> sFlag_Yes then
   begin
-    with FWXTCPServer do
-    begin
-      try
-        if Active then Active:= False;
-        OnExecute := IdTCPServerExecute;
-        DefaultPort := nTcpPort;
-        Active := True;
+//    with FWXTCPServer do
+//    begin
+//      try
+//        if Active then Active:= False;
+//        OnExecute := IdTCPServerExecute;
+//        DefaultPort := nTcpPort;
+//        Active := True;
+//
+//        FDataList.Clear;
+//        StartSendTecent;
+//        //启用即时发送
+//      except
+//        on E: Exception do
+//        begin
+//          WriteLog('WXStartService TCPServer Failed');
+//          Exit;
+//        end;
+//      end;
+//    end;
 
-        FDataList.Clear;
-        StartSendTecent;
-        //启用即时发送
-      except
-        on E: Exception do
-        begin
-          WriteLog('WXStartService TCPServer Failed');
-          Exit;
-        end;
-      end;
-    end;
+    FDataList.Clear;
+    StartSendTecent;
+    //启用即时发送
   end;
 
   Result := FWXHttpsServer.Active = True;
@@ -3056,6 +3031,19 @@ begin
 
   FWXHttps.InitHttpsClient;
 end;
+
+procedure TWXMessageMgr.WXAddTemMsg(nMsg: string);
+begin
+  FSyncLock.Enter;
+  try
+    FDataList.Add(nMsg);
+  finally
+    FSyncLock.Leave;
+  end;
+
+  WriteLog(Format('发送模版消息: %s', [nMsg]));
+  //loged
+end;  
 
 procedure TWXMessageMgr.IdTCPServerExecute(AContext: TIdContext);
 begin
