@@ -482,7 +482,7 @@ begin
     end;
   end;
 
-  if (nIdx>High(nLines)) or (not nLines[nInt].FValid) then
+  if nIdx>High(nLines) then
   begin
     Result := '装车道%s无效';
     Result := Format(Result, [nLines[nInt].FID]);
@@ -518,6 +518,10 @@ begin
       end;
     end;
   end;
+
+  {$IFDEF DEBUG}
+  WriteLog(Result);
+  {$ENDIF}
 
   if nHas < 1 then
   begin

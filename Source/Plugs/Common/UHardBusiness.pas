@@ -740,7 +740,7 @@ begin
   WriteNearReaderLog('MakeTruckLadingDai½øÈë.');
   {$ENDIF}
 
-  //if IsJSRun then Exit;
+  if IsJSRun then Exit;
   //tunnel is busy
 
   if not GetLadingBills(nCard, sFlag_TruckZT, nTrucks) then
