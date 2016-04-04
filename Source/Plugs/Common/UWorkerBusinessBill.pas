@@ -1126,7 +1126,7 @@ begin
       FListC.Values['Batch'] := FieldByName('L_Seal').AsString;
 
       nStr := FieldByName('L_Type').AsString;
-      if (nStr=sFlag_San) and (FieldByName('L_Value').AsFloat<=0) then
+      if (nStr=sFlag_San) and (FieldByName('L_MValue').AsFloat<=0) then
            FListC.Values['Value'] := '0.00'
       else FListC.Values['Value'] := FieldByName('L_Value').AsString;
 

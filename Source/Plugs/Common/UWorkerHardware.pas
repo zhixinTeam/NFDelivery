@@ -437,7 +437,7 @@ begin
   nTmp := Trim(nStr);
   if Length(nTmp) > nLen then
   begin
-    Result:=Copy(nTmp, Length(nTmp) - (nLen-1), nLen);
+    Result:=nTmp;
     Exit;
   end;
 

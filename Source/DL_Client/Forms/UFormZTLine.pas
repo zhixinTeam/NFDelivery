@@ -48,6 +48,8 @@ type
     { Protected declarations }
     FID: string;
     //标识
+    procedure WriteSysLog(const nID:string);
+    //记录操作日志
     procedure InitFormData(const nID: string);
     procedure GetData(Sender: TObject; var nData: string);
     function SetData(Sender: TObject; const nData: string): Boolean;
@@ -77,11 +79,23 @@ type
     FName : string;
   end;
 
+  TFormInfoItem = record
+    FID       : string;
+    FName     : string;
+    FStockID  : string;
+    FStockName: string;
+
+    FType     : string;
+    FMax      : string;
+    FPeer     : string;
+  end;
+
 var
   gStockItems: array of TLineStockItem;
   //品种列表
    gCheckValid: boolean;
   //通道钩选属性
+  gOldInfo: TFormInfoItem;
 
 function ShowAddZTLineForm: Boolean;
 begin
@@ -140,6 +154,19 @@ begin
     begin
       EditStockID.Text := FDM.SqlTemp.FieldByName('Z_StockNo').AsString;
       LoadDataToCtrl(FDM.SqlTemp, Self, '', SetData);
+
+      with gOldInfo do
+      begin
+        FID     := EditID.Text;
+        FName   := EditName.Text;
+
+        FStockID:= EditStockID.Text;
+        FStockName:=EditStockName.Text;
+        
+        FType   := EditType.Text;
+        FPeer   := EditPeer.Text;
+        FMax    := EditMax.Text;
+      end;  
     end;
   end;
 
@@ -274,6 +301,56 @@ begin
   end;
 end;
 
+procedure TfFormZTLine.WriteSysLog(const nID: string);
+var nEvent: string;
+begin
+  if nID='' then Exit;
+  with gOldInfo do
+  begin
+    if FID<>EditID.Text then
+    begin
+      nEvent := '通道 [ %s ] 信息由  [ %s ] 变为 [ %s ] ';
+      nEvent := Format(nEvent, [EditID.Text, FID, EditID.Text]);
+      FDM.WriteSysLog(sFlag_TruckQueue, 'UFromZTline',nEvent);
+    end;
+
+    if FName<>EditName.Text then
+    begin
+      nEvent := '通道 [ %s ] 信息由  [ %s ] 变为 [ %s ] ';
+      nEvent := Format(nEvent, [EditID.Text, FName, EditName.Text]);
+      FDM.WriteSysLog(sFlag_TruckQueue, 'UFromZTline',nEvent);
+    end;
+
+    if FStockName<>EditStockName.Text then
+    begin
+      nEvent := '通道 [ %s ] 信息由  [ %s ] 变为 [ %s ] ';
+      nEvent := Format(nEvent, [EditID.Text, FStockName, EditStockName.Text]);
+      FDM.WriteSysLog(sFlag_TruckQueue, 'UFromZTline',nEvent);
+    end;
+
+    if FPeer<>EditPeer.Text then
+    begin
+      nEvent := '通道 [ %s ] 信息由  [ %s ] 变为 [ %s ] ';
+      nEvent := Format(nEvent, [EditID.Text, FPeer, EditPeer.Text]);
+      FDM.WriteSysLog(sFlag_TruckQueue, 'UFromZTline',nEvent);
+    end;
+
+    if FType<>EditType.Text then
+    begin
+      nEvent := '通道 [ %s ] 信息由  [ %s ] 变为 [ %s ] ';
+      nEvent := Format(nEvent, [EditID.Text, FType, EditType.Text]);
+      FDM.WriteSysLog(sFlag_TruckQueue, 'UFromZTline',nEvent);
+    end;
+
+    if FMax<>EditMax.Text then
+    begin
+      nEvent := '通道 [ %s ] 信息由  [ %s ] 变为 [ %s ] ';
+      nEvent := Format(nEvent, [EditID.Text, FMax, EditMax.Text]);
+      FDM.WriteSysLog(sFlag_TruckQueue, 'UFromZTline',nEvent);
+    end;
+  end;  
+end;
+
 procedure TfFormZTLine.BtnOKClick(Sender: TObject);
 var nIdx: Integer;
     nList: TStrings;
@@ -315,6 +392,7 @@ begin
        nEvent := Format(nEvent, [EditID.Text]);
        FDM.WriteSysLog(sFlag_TruckQueue, 'UFromZTline',nEvent);
   end;
+  WriteSysLog(FID);
   //--写入操作通道日志
   ShowMsg('通道已保存,请等待刷新', sHint);
 end;
