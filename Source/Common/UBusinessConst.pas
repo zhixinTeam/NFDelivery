@@ -25,6 +25,7 @@ const
   cBC_ServerNow               = $0002;   //服务器当前时间
   cBC_IsSystemExpired         = $0003;   //系统是否已过期
   cBC_IsTruckValid            = $0004;   //车牌是否有效
+  cBC_GetCardUsed             = $0005;   //获取卡片类型
 
   cBC_GetSQLQueryOrder        = $0006;   //查询订单语句
   cBC_GetSQLQueryCustomer     = $0007;   //查询客户语句
@@ -50,6 +51,7 @@ const
   cBC_SaleAdjust              = $0023;   //销售调拨
   cBC_SaveBillCard            = $0024;   //绑定交货单磁卡
   cBC_LogoffCard              = $0025;   //注销磁卡
+  cBC_DeleteOrder             = $0026;   //删除入厂明细
 
   cBC_GetPostBills            = $0030;   //获取岗位交货单
   cBC_SavePostBills           = $0031;   //保存岗位交货单
@@ -135,6 +137,13 @@ type
     FLocked     : Boolean;         //锁定状态，更新预置皮重
     FPreTruckP  : Boolean;         //预置皮重；
 
+    FYSValid    : string;          //验收结果
+    FKZValue    : Double;          //扣杂量
+    FMemo       : string;          //备注
+    FExtID_1    : string;          //额外编号
+    FExtID_2    : string;          //额外编号
+    FCardUse    : string;          //卡片类型
+
     FNCChanged  : Boolean;         //NC可用量变化
     FChangeValue: Double;          //NC 减少
   end;
@@ -201,6 +210,7 @@ resourcestring
   sBus_GetQueryField          = 'Bus_GetQueryField';    //查询的字段
 
   sBus_BusinessSaleBill       = 'Bus_BusinessSaleBill'; //交货单相关
+  sBus_BusinessProvide        = 'Bus_BusinessProvide';  //采购单相关
   sBus_BusinessCommand        = 'Bus_BusinessCommand';  //业务指令
   sBus_HardwareCommand        = 'Bus_HardwareCommand';  //硬件指令
 
@@ -209,6 +219,7 @@ resourcestring
   sCLI_GetQueryField          = 'CLI_GetQueryField';    //查询的字段
 
   sCLI_BusinessSaleBill       = 'CLI_BusinessSaleBill'; //交货单业务
+  sCLI_BusinessProvide        = 'CLI_BusinessProvide';  //采购单业务
   sCLI_BusinessCommand        = 'CLI_BusinessCommand';  //业务指令
   sCLI_HardwareCommand        = 'CLI_HardwareCommand';  //硬件指令
 
@@ -242,6 +253,8 @@ begin
         FCusID      := Values['CusID'];
         FCusName    := Values['CusName'];
         FTruck      := Values['Truck'];
+        FExtID_1    := Values['ExtID_1'];
+        FExtID_2    := Values['ExtID_2'];
 
         FType       := Values['Type'];
         FStockNo    := Values['StockNo'];
@@ -301,6 +314,14 @@ begin
         if (nStr <> '') and IsNumber(nStr, True) then
              FChangeValue := StrToFloat(nStr)
         else FChangeValue := 0;
+
+        nStr := Trim(Values['KZValue']);
+        if (nStr <> '') and IsNumber(nStr, True) then
+             FKZValue := StrToFloat(nStr)
+        else FKZValue := 0;
+
+        FYSValid:= Values['YSValid'];
+        FMemo   := Values['Memo'];
       end;
 
       Inc(nInt);
@@ -338,6 +359,8 @@ begin
         Values['CusID']      := FCusID;
         Values['CusName']    := FCusName;
         Values['Truck']      := FTruck;
+        Values['ExtID_1']    := FExtID_1;
+        Values['ExtID_2']    := FExtID_2;
 
         Values['Type']       := FType;
         Values['StockNo']    := FStockNo;
@@ -390,7 +413,10 @@ begin
              Values['NCChanged'] := sFlag_Yes
         else Values['NCChanged'] := sFlag_No;
 
-        Values['NCChangeValue']  := FloatToStr(FChangeValue);
+        Values['NCChangeValue']  := FloatToStr(FChangeValue); 
+        Values['KZValue']    := FloatToStr(FKZValue);
+        Values['YSValid']    := FYSValid;
+        Values['Memo']       := FMemo;
       end;
 
       nListA.Add(PackerEncodeStr(nListB.Text));

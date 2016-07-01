@@ -64,6 +64,8 @@ type
     //获取串号
     function VerifyTruckNO(var nData: string): Boolean;
     //验证车牌是否有效
+    function GetCardUsed(var nData: string): Boolean;
+    //获取卡片类型
     function IsSystemExpired(var nData: string): Boolean;
     //系统是否已过期
     function SaveTruck(var nData: string): Boolean;
@@ -333,6 +335,7 @@ begin
    cBC_GetSerialNO         : Result := GetSerailID(nData);
    cBC_IsSystemExpired     : Result := IsSystemExpired(nData);
    cBC_IsTruckValid        : Result := VerifyTruckNO(nData);
+   cBC_GetCardUsed         : Result := GetCardUsed(nData);
 
    cBC_SaveTruckInfo       : Result := SaveTruck(nData);
    cBC_GetStockBatcode     : Result := GetStockBatcode(nData);
@@ -556,6 +559,27 @@ begin
   end;
 
   Result := True;
+end;
+
+//Date: 2014-09-05
+//Desc: 获取卡片类型：销售S;采购P;其他O
+function TWorkerBusinessCommander.GetCardUsed(var nData: string): Boolean;
+var nStr: string;
+begin
+  Result := False;
+
+  nStr := 'Select C_Used From %s Where C_Card=''%s'' ' +
+          'or C_Card3=''%s'' or C_Card2=''%s''';
+  nStr := Format(nStr, [sTable_Card, FIn.FData, FIn.FData, FIn.FData]);
+  //card status
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount<1 then Exit;
+
+    FOut.FData := Fields[0].AsString;
+    Result := True;
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -2065,8 +2089,12 @@ begin
         nData := '称重单据[ %s ]信订单号为空.';
         nData := Format(nData, [FIn.FData]);
         Exit;
-      end; 
+      end;
 
+      if FIn.FExtParam <> '' then
+        FZhiKa := FIn.FExtParam;
+      //xxxxx
+      
       with FPData do
       begin
         FValue    := FieldByName('P_PValue').AsFloat;

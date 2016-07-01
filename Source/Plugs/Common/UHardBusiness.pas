@@ -29,6 +29,8 @@ procedure WhenSaveJS(const nTunnel: PMultiJSTunnel);
 
 function PrepareShowInfo(const nCard: string; nTunnel: string=''):string;
 //计数器显示预装信息
+function GetCardUsed(const nCard: string; var nCardType: string): Boolean;
+//获取卡号类型
 
 implementation
 
@@ -103,6 +105,38 @@ begin
   end;
 end;
 
+//Date: 2016-06-15
+//Parm: 命令;数据;参数;输出
+//Desc: 调用中间件上的销售单据对象
+function CallBusinessProvide(const nCmd: Integer;
+  const nData, nExt: string; const nOut: PWorkerBusinessCommand): Boolean;
+var nStr: string;
+    nIn: TWorkerBusinessCommand;
+    nPacker: TBusinessPackerBase;
+    nWorker: TBusinessWorkerBase;
+begin
+  nPacker := nil;
+  nWorker := nil;
+  try
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nExt;
+
+    nPacker := gBusinessPackerManager.LockPacker(sBus_BusinessCommand);
+    nStr := nPacker.PackIn(@nIn);
+    nWorker := gBusinessWorkerManager.LockWorker(sBus_BusinessProvide);
+    //get worker
+
+    Result := nWorker.WorkActive(nStr);
+    if Result then
+         nPacker.UnPackOut(nStr, nOut)
+    else nOut.FData := nStr;
+  finally
+    gBusinessPackerManager.RelasePacker(nPacker);
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
 //Date: 2014-10-16
 //Parm: 命令;数据;参数;输出
 //Desc: 调用硬件守护上的业务对象
@@ -135,6 +169,20 @@ begin
   end;
 end;
 
+//Date: 2016-06-15
+//Parm: 磁卡号
+//Desc: 获取磁卡使用类型
+function GetCardUsed(const nCard: string; var nCardType: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessCommand(cBC_GetCardUsed, nCard, '', @nOut);
+
+  if Result then
+       nCardType := nOut.FData
+  else gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
+  //xxxxx
+end;
+
 //Date: 2012-3-23
 //Parm: 磁卡号;岗位;交货单列表
 //Desc: 获取nPost岗位上磁卡为nCard的交货单列表
@@ -162,6 +210,34 @@ begin
     gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
   //xxxxx
 end;
+
+//Date: 2016-06-15
+//Parm: 磁卡号;岗位;采购入厂单列表
+//Desc: 获取nPost岗位上磁卡为nCard的采购入厂单列表
+function GetProvideItems(const nCard,nPost: string;
+ var nData: TLadingBillItems): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessProvide(cBC_GetPostBills, nCard, nPost, @nOut);
+  if Result then
+       AnalyseBillItems(nOut.FData, nData)
+  else gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
+end;
+
+//Date: 2016-06-15
+//Parm: 岗位;采购入厂单列表
+//Desc: 保存nPost岗位上的采购入厂单数据
+function SaveProvideItems(const nPost: string; nData: TLadingBillItems): Boolean;
+var nStr: string;
+    nOut: TWorkerBusinessCommand;
+begin
+  nStr := CombineBillItmes(nData);
+  Result := CallBusinessProvide(cBC_SavePostBills, nStr, nPost, @nOut);
+
+  if not Result then
+    gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
+  //xxxxx
+end;
                                                              
 //------------------------------------------------------------------------------
 //Date: 2013-07-21
@@ -177,22 +253,30 @@ end;
 //Parm: 卡号
 //Desc: 对nCard放行进厂
 procedure MakeTruckIn(const nCard,nReader: string; const nDB: PDBWorker);
-var nStr,nTruck: string;
+var nStr,nTruck,nCardType: string;
     nIdx,nInt: Integer;
     nPLine: PLineItem;
+    nRet: Boolean;
     nPTruck: PTruckItem;
     nTrucks: TLadingBillItems;
 begin
-  if gTruckQueueManager.IsTruckAutoIn and (GetTickCount -
+  if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
+
+  if gTruckQueueManager.IsTruckAutoIn(nCardType=sFlag_Sale) and (GetTickCount -
      gHardwareHelper.GetCardLastDone(nCard, nReader) < 2 * 60 * 1000) then
   begin
     gHardwareHelper.SetReaderCard(nReader, nCard);
     Exit;
   end; //同读头同卡,在2分钟内不做二次进厂业务.
 
-  if not GetLadingBills(nCard, sFlag_TruckIn, nTrucks) then
+  if nCardType = sFlag_Sale then
+    nRet := GetLadingBills(nCard, sFlag_TruckIn, nTrucks) else
+  if nCardType = sFlag_Provide then
+    nRet := GetProvideItems(nCard, sFlag_TruckIn, nTrucks) else nRet := False;
+
+  if not nRet then
   begin
-    nStr := '读取磁卡[ %s ]交货单信息失败.';
+    nStr := '读取磁卡[ %s ]订单信息失败.';
     nStr := Format(nStr, [nCard]);
 
     WriteHardHelperLog(nStr, sPost_In);
@@ -223,7 +307,7 @@ begin
 
   if nTrucks[0].FStatus = sFlag_TruckIn then
   begin
-    if gTruckQueueManager.IsTruckAutoIn then
+    if gTruckQueueManager.IsTruckAutoIn(nCardType=sFlag_Sale) then
     begin
       gHardwareHelper.SetCardLastDone(nCard, nReader);
       gHardwareHelper.SetReaderCard(nReader, nCard);
@@ -243,6 +327,39 @@ begin
     Exit;
   end;
 
+  //----------------------------------------------------------------------------
+  if nCardType <> sFlag_Sale then //非销售业务,不使用队列
+  begin
+    if nCardType = sFlag_Provide then
+      nRet := SaveProvideItems(sFlag_TruckIn, nTrucks) else nRet := False;
+    //xxxxx
+
+    if not nRet then
+    begin
+      nStr := '车辆[ %s ]进厂放行失败.';
+      nStr := Format(nStr, [nTrucks[0].FTruck]);
+
+      WriteHardHelperLog(nStr, sPost_In);
+      Exit;
+    end;
+
+    if gTruckQueueManager.IsTruckAutoIn(nCardType=sFlag_Sale) then
+    begin
+      gHardwareHelper.SetCardLastDone(nCard, nReader);
+      gHardwareHelper.SetReaderCard(nReader, nCard);
+    end else
+    begin
+      gHardwareHelper.OpenDoor(nReader);
+      //抬杆
+    end;
+
+    nStr := '%s磁卡[%s]进厂抬杆成功';
+    nStr := Format(nStr, [BusinessToStr(nCardType), nCard]);
+    WriteHardHelperLog(nStr, sPost_In);
+    Exit;
+  end;
+
+  //----------------------------------------------------------------------------
   nPLine := nil;
   //nPTruck := nil;
 
@@ -284,7 +401,7 @@ begin
     Exit;
   end;
 
-  if gTruckQueueManager.IsTruckAutoIn then
+  if gTruckQueueManager.IsTruckAutoIn(nCardType=sFlag_Sale) then
   begin
     gHardwareHelper.SetCardLastDone(nCard, nReader);
     gHardwareHelper.SetReaderCard(nReader, nCard);
@@ -325,14 +442,23 @@ end;
 //Parm: 卡号;读头;打印机
 //Desc: 对nCard放行出厂
 procedure MakeTruckOut(const nCard,nReader,nPrinter: string);
-var nStr: string;
+var nStr, nCardType: string;
     nIdx: Integer;
+    nRet: Boolean;
     nTrucks: TLadingBillItems;
     {$IFDEF PrintBillMoney}
     nOut: TWorkerBusinessCommand;
     {$ENDIF}
 begin
-  if not GetLadingBills(nCard, sFlag_TruckOut, nTrucks) then
+  if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
+
+  if nCardType = sFlag_Sale then
+    nRet := GetLadingBills(nCard, sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_Provide then
+    nRet := GetProvideItems(nCard, sFlag_TruckOut, nTrucks) else nRet := False;
+  //xxxxx
+
+  if not nRet then
   begin
     nStr := '读取磁卡[ %s ]交货单信息失败.';
     nStr := Format(nStr, [nCard]);
@@ -361,7 +487,13 @@ begin
     Exit;
   end;
 
-  if not SaveLadingBills(sFlag_TruckOut, nTrucks) then
+  if nCardType = sFlag_Sale then
+    nRet := SaveLadingBills(sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_Provide then
+    nRet := SaveProvideItems(sFlag_TruckOut, nTrucks) else nRet := False;
+  //xxxxx
+
+  if not nRet then
   begin
     nStr := '车辆[ %s ]出厂放行失败.';
     nStr := Format(nStr, [nTrucks[0].FTruck]);
@@ -383,6 +515,9 @@ begin
     {$ELSE}
     nStr := '';
     {$ENDIF}
+
+    nStr := nStr + #7 + nCardType;
+    //磁卡类型
 
     if nPrinter = '' then
          gRemotePrinter.PrintBill(nTrucks[nIdx].FID + nStr)
@@ -871,6 +1006,10 @@ begin
 
   gERelayManager.ShowTxt(nTunnel, nStr);
   //显示内容
+  {$IFDEF JDNF}
+  gDisplayManager.Display(nTunnel, nStr);
+  {$ENDIF}
+  //显示内容
 end;
 
 //Date: 2012-4-24
@@ -927,6 +1066,10 @@ begin
     nIdx := Length(nTrucks[0].FTruck);
     nStr := nTrucks[0].FTruck + StringOfChar(' ',12 - nIdx) + '请换库装车';
     gERelayManager.ShowTxt(nTunnel, nStr);
+
+    {$IFDEF JDNF}
+    gDisplayManager.Display(nTunnel, nStr);
+    {$ENDIF}
     Exit;
   end; //检查通道
 
@@ -1017,8 +1160,15 @@ begin
   {$IFDEF DEBUG}
   WriteHardHelperLog(Format('华益标签 %s:%s', [nReader.FTunnel, nReader.FCard]));
   {$ENDIF}
-  
-  g02NReader.ActiveELabel(nReader.FTunnel, nReader.FCard);
+
+  if nReader.FVirtual then
+  begin
+    case nReader.FVType of
+    rt900 : gHardwareHelper.SetReaderCard(nReader.FVReader, 'H' + nReader.FCard, False);
+    rt02n : g02NReader.SetReaderCard(nReader.FVReader, nReader.FCard);
+    end;
+  end
+  else g02NReader.ActiveELabel(nReader.FTunnel, nReader.FCard);
 end;
 
 //------------------------------------------------------------------------------
@@ -1026,9 +1176,11 @@ end;
 //Parm: 磁卡号
 //Desc: 对nCardNo做自动出厂(模拟读头刷卡)
 procedure MakeTruckAutoOut(const nCardNo: string);
-var nReader: string;
+var nReader, nCardType: string;
 begin
-  if gTruckQueueManager.IsTruckAutoOut then
+  if not GetCardUsed(nCardNo, nCardType) then nCardType := sFlag_Sale;
+
+  if gTruckQueueManager.IsTruckAutoOut(nCardType=sFlag_Sale) then
   begin
     nReader := gHardwareHelper.GetReaderLastOn(nCardNo);
     if nReader <> '' then
@@ -1048,6 +1200,9 @@ begin
   if Pos('TruckOut', nData) = 1 then
     MakeTruckAutoOut(Copy(nData, Pos(':', nData) + 1, MaxInt));
   //auto out
+
+  if Pos('TruckSH', nData) = 1 then
+    MakeTruckOut(Copy(nData, Pos(':', nData) + 1, MaxInt), '', '');
 end;
 
 //Date: 2015-01-14

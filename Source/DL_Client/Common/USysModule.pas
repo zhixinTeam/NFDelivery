@@ -22,7 +22,10 @@ uses
   UFormChangeTunnel, UFrameDeduct, UFormDeduct, UFormGetNCStock, UFrameMine,
   UFormMine, UFormGetMine, UFormPoundDispatch, UFrameBatcodeQuery,
   UFormBatcodeEdit, UFramePoundAuto, UFrameQueryProvideDetail,
-  UFrameQueryDiapatchDetail
+  UFrameQueryDiapatchDetail,
+
+  UFormProvCard, UFormProvBase, UFrameProvBase, UFrameProvTruckDetail,
+  UFrameQueryProvDetail
   {$IFDEF MicroMsg},
   UFormWeiXinAccount, UFrameWeiXinAccount,
   UFormWeiXinSendlog, UFrameWeiXinSendlog,
@@ -40,7 +43,7 @@ implementation
 
 uses
   UMgrChannel, UChannelChooser, UDataModule, USysDB, USysMAC, SysUtils,
-  USysLoger, USysConst;
+  USysLoger, USysConst, UMemDataPool, UMgrLEDDisp;
 
 //Desc: 初始化系统对象
 procedure InitSystemObject;
@@ -49,11 +52,18 @@ begin
     gSysLoger := TSysLoger.Create(gPath + sLogDir);
   //system loger
 
+  if not Assigned(gMemDataManager) then
+    gMemDataManager := TMemDataManager.Create;
+  //Memory Manager
+
   gChannelManager := TChannelManager.Create;
   gChannelManager.ChannelMax := 20;
   gChannelChoolser := TChannelChoolser.Create('');
   gChannelChoolser.AutoUpdateLocal := False;
   //channel
+
+  gDisplayManager.LoadConfig(gPath + cDisp_Config);
+  //LED DisPlay
 end;
 
 //Desc: 运行系统对象
@@ -171,12 +181,15 @@ begin
   begin
     gSysParam.FHardMonURL := Fields[0].AsString;
   end;
+
+  gDisplayManager.StartDisplay;
 end;
 
 //Desc: 释放系统对象
 procedure FreeSystemObject;
 begin
   FreeAndNil(gSysLoger);
+  gDisplayManager.StopDisplay;
 end;
 
 end.

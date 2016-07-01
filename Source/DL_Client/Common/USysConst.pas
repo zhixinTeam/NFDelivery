@@ -69,6 +69,10 @@ const
   cFI_FrameWXAccount    = $0110;                     //微信账户
   cFI_FrameWXSendLog    = $0111;                     //发送日志
 
+  cFI_FrameProvBase     = $0120;                     //采购入厂单
+  cFI_FrameProvDetail   = $0121;                     //采购单明细
+  cFI_FrameProvTruckQuery= $0122;                    //采购单明细
+
   cFI_FormMemo          = $1000;                     //备注窗口
   cFI_FormBackup        = $1001;                     //数据备份
   cFI_FormRestore       = $1002;                     //数据恢复
@@ -95,6 +99,7 @@ const
   cFI_FormGetNCStock    = $1024;                     //获取物料
   cFI_FormMakeCard      = $1025;                     //办理磁卡
   cFI_FormMakeRFIDCard  = $1026;                     //办理电子标签
+  cFI_FormMakeProvCard  = $1027;                     //办理磁卡
 
   cFI_FormGetMine       = $1029;                     //矿点档案
 
@@ -117,6 +122,8 @@ const
 
   cFI_FormWXAccount     = $1091;                     //微信账户
   cFI_FormWXSendlog     = $1092;                     //微信日志
+
+  cFI_FormProvBase      = $1120;                     //采购入厂单
 
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据
@@ -299,14 +306,17 @@ begin
   AddMenuModuleItem('MAIN_L08', cFI_FrameZhiKaDetail);
   AddMenuModuleItem('MAIN_L10', cFI_FrameProvideDetailQuery);
   AddMenuModuleItem('MAIN_L11', cFI_FrameDiapatchDetailQuery);
+  AddMenuModuleItem('MAIN_L12', cFI_FrameProvDetail);
 
   AddMenuModuleItem('MAIN_H01', cFI_FormTruckIn, mtForm);
   AddMenuModuleItem('MAIN_H02', cFI_FormTruckOut, mtForm);
   AddMenuModuleItem('MAIN_H03', cFI_FrameTruckQuery);
   
   AddMenuModuleItem('MAIN_M01', cFI_FrameProvider);
-  AddMenuModuleItem('MAIN_M02', cFI_FrameMaterails);  
+  AddMenuModuleItem('MAIN_M02', cFI_FrameMaterails);
   AddMenuModuleItem('MAIN_M04', cFI_FrameProvideLog);
+  AddMenuModuleItem('MAIN_M05', cFI_FrameProvBase);
+  AddMenuModuleItem('MAIN_M06', cFI_FrameProvTruckQuery);
   AddMenuModuleItem('MAIN_M07', cFI_FrameMine);
 
   AddMenuModuleItem('MAIN_W01', cFI_FrameWXAccount);

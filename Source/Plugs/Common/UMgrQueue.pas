@@ -58,8 +58,10 @@ type
 
   TQueueParam = record
     FLoaded     : Boolean;     //载入标记
-    FAutoIn     : Boolean;     //自动进厂
-    FAutoOut    : Boolean;     //自动出厂
+    FSaleAutoIn : Boolean;     //自动进厂
+    FSaleAutoOut: Boolean;     //自动出厂
+    FOtherAutoIn : Boolean;     //自动进厂
+    FOtherAutoOut: Boolean;     //自动出厂
     FInTimeout  : Integer;     //进厂超时
     FNoDaiQueue : Boolean;     //袋装禁用队列
     FNoSanQueue : Boolean;     //散装禁用队列
@@ -161,8 +163,8 @@ type
     procedure StartQueue(const nDB: string);
     procedure StopQueue;
     //启停队列
-    function IsTruckAutoIn: Boolean;
-    function IsTruckAutoOut: Boolean;
+    function IsTruckAutoIn(nIsSale: Boolean=True): Boolean;
+    function IsTruckAutoOut(nIsSale: Boolean=True): Boolean;
     function IsDaiQueueClosed: Boolean;
     function IsSanQueueClosed: Boolean;
     function IsDelayQueue: Boolean;
@@ -284,28 +286,34 @@ begin
 end;
 
 //Desc: 车辆自动进厂
-function TTruckQueueManager.IsTruckAutoIn: Boolean;
+function TTruckQueueManager.IsTruckAutoIn(nIsSale: Boolean): Boolean;
 begin
   Result := False;
 
   if Assigned(FDBReader) then
   try
     FSyncLock.Enter;
-    Result := FDBReader.FParam.FAutoIn;
+    case nIsSale of
+    True:   Result := FDBReader.FParam.FSaleAutoIn;
+    False:  Result := FDBReader.FParam.FOtherAutoIn;
+    end;
   finally
     FSyncLock.Leave;
   end;
 end;
 
 //Desc: 车辆自动出厂
-function TTruckQueueManager.IsTruckAutoOut: Boolean;
+function TTruckQueueManager.IsTruckAutoOut(nIsSale: Boolean): Boolean;
 begin
   Result := False;
 
   if Assigned(FDBReader) then
   try
     FSyncLock.Enter;
-    Result := FDBReader.FParam.FAutoOut;
+    case nIsSale of
+    True:   Result := FDBReader.FParam.FSaleAutoOut;
+    False:  Result := FDBReader.FParam.FOtherAutoOut;
+    end;
   finally
     FSyncLock.Leave;
   end;
@@ -623,8 +631,10 @@ begin
   begin
     FLoaded := False;
     FInTimeout := 10;
-    FAutoIn := False;
-    FAutoOut := False;
+    FSaleAutoIn := False;
+    FSaleAutoOut:= False;
+    FOtherAutoIn := False;
+    FOtherAutoOut:= False;
     
     FNoDaiQueue := False;
     FNoSanQueue := False;
@@ -827,11 +837,19 @@ begin
     while not Eof do
     begin
       if CompareText(Fields[1].AsString, sFlag_AutoIn) = 0 then
-        FParam.FAutoIn := Fields[0].AsString = sFlag_Yes;
+        FParam.FSaleAutoIn := Fields[0].AsString = sFlag_Yes;
       //xxxxx
 
       if CompareText(Fields[1].AsString, sFlag_AutoOut) = 0 then
-        FParam.FAutoOut := Fields[0].AsString = sFlag_Yes;
+        FParam.FSaleAutoOut := Fields[0].AsString = sFlag_Yes;
+      //xxxxx
+
+      if CompareText(Fields[1].AsString, sFlag_OtherAutoIn) = 0 then
+        FParam.FOtherAutoIn := Fields[0].AsString = sFlag_Yes;
+      //xxxxx
+
+      if CompareText(Fields[1].AsString, sFlag_OtherAutoOut) = 0 then
+        FParam.FOtherAutoOut := Fields[0].AsString = sFlag_Yes;
       //xxxxx
 
       if CompareText(Fields[1].AsString, sFlag_InTimeout) = 0 then

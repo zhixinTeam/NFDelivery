@@ -51,7 +51,15 @@
 //通用版本
 
 {$DEFINE JSNF}
-//江山南方
+//建德南方
+
+{$IFDEF JDNF}
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+{$ENDIF}
+
 
 //江山南方
 {$IFDEF JSNF}

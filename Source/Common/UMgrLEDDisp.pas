@@ -12,8 +12,9 @@ uses
   ULibFun, IdTCPConnection, IdTCPClient, IdGlobal;
 
 const
-  cDisp_KeepLong   = 15 * 1000;     //内容保持时长                  
+  cDisp_KeepLong   = 600 * 1000;     //内容保持时长                  
   cDisp_CtrlCardType = 'YBKJ';
+  cDisp_Config     = 'LEDDisp.XML';
 type
   PDispCard = ^TDispCard;
   TDispCard = record
@@ -25,6 +26,7 @@ type
     FPort: Integer;
     FAddr: Integer;
     FLastUpdate: Int64;
+    FKeepShow: Boolean;
   end;
 
   PDispContent = ^TDispContent;
@@ -168,7 +170,7 @@ begin
     FControler.WakupMe;
   finally
     FSyncLock.Leave;
-  end;   
+  end;
 end;
 
 //Desc: 载入nFile配置文件
@@ -206,6 +208,11 @@ begin
         FHost := NodeByName('ip').ValueAsString;
         FPort := NodeByName('port').ValueAsInteger;
         FAddr := NodeByName('addr').ValueAsInteger;
+
+        nTmp := FindNode('KeepShow');
+        if not Assigned(nTmp) then
+             FKeepShow := True
+        else FKeepShow := nTmp.ValueAsString = '1';
 
         FLastUpdate := 0;
         Inc(nInt);
@@ -302,7 +309,7 @@ begin
     for nIdx:=Low(FOwner.FCards) to High(FOwner.FCards) do
     if GetTickCount - FOwner.FCards[nIdx].FLastUpdate >= cDisp_KeepLong then
     begin
-      if CompareText(FOwner.FCards[nIdx].FType, cDisp_CtrlCardType) = 0 then
+      if FOwner.FCards[nIdx].FKeepShow then
         Continue;
       //预装车辆显示，则一直保持信息
 
@@ -311,6 +318,10 @@ begin
       //date item
 
       nStr := StringReplace(nStr, 'wk', Date2Week(),
+              [rfReplaceAll, rfIgnoreCase]);
+      //week item
+
+      nStr := StringReplace(nStr, 'tm', Time2Str(Now),
               [rfReplaceAll, rfIgnoreCase]);
       //week item
 

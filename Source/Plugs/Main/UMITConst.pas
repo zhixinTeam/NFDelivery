@@ -66,10 +66,14 @@ type
   end;
   //系统参数
 
+  THardShareData = procedure (const nData: string);
+  //硬件数据共享接口
+
 var
   gPath: string;                                     //程序所在路径
   gSysParam:TSysParam;                               //程序环境参数
   gStatusBar: TStatusBar;                            //全局使用状态栏
+  gHardShareData: THardShareData = nil;              //硬件守护数据共享
 
 procedure InitSystemEnvironment;
 //初始化系统运行环境的变量

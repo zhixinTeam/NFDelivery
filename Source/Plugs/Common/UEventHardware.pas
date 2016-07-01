@@ -33,7 +33,7 @@ var
 implementation
 
 uses
-  SysUtils, USysLoger, UHardBusiness, UMgrTruckProbe, UMgrParam,
+  SysUtils, USysLoger, UHardBusiness, UMgrTruckProbe, UMgrParam, UMITConst,
   UMgrQueue, UMgrLEDCard, UMgrHardHelper, UMgrRemotePrint, U02NReader,
   UMgrERelay, UMultiJS, UMgrRemoteVoice, UMgrCodePrinter, UMgrLEDDisp,
   UMgrRFID102;
@@ -133,6 +133,9 @@ procedure THardwareWorker.InitSystemObject;
 begin
   gHardwareHelper := THardwareHelper.Create;
   //‘∂æ‡∂¡Õ∑
+
+  gHardShareData := WhenBusinessMITSharedDataIn;
+  //hard monitor share
 end;
 
 procedure THardwareWorker.BeforeStartServer;

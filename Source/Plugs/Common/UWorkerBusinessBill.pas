@@ -1285,6 +1285,7 @@ begin
     begin
       nStr := MakeSQLByStr([SF('C_Card', FIn.FExtParam),
               SF('C_Status', sFlag_CardUsed),
+              SF('C_Used', sFlag_Sale),
               SF('C_Freeze', sFlag_No),
               SF('C_Man', FIn.FBase.FFrom.FUser),
               SF('C_Date', sField_SQLServer_Now, sfVal)
@@ -1295,6 +1296,7 @@ begin
       nStr := Format('C_Card=''%s''', [FIn.FExtParam]);
       nStr := MakeSQLByStr([SF('C_Status', sFlag_CardUsed),
               SF('C_Freeze', sFlag_No),
+              SF('C_Used', sFlag_Sale),
               SF('C_Man', FIn.FBase.FFrom.FUser),
               SF('C_Date', sField_SQLServer_Now, sfVal)
               ], sTable_Card, nStr, False);
@@ -1471,6 +1473,7 @@ var nStr,nSQL,nTmp: string;
     nOut: TWorkerBusinessCommand;
 begin
   Result := False;
+  nTotal := 0.00;
   AnalyseBillItems(FIn.FData, nBills);
   nInt := Length(nBills);
 
@@ -1487,7 +1490,7 @@ begin
     nData := Format(nData, [PostTypeToStr(FIn.FExtParam)]);
     Exit;
   end;
-}
+}  
   FListA.Clear;
   //用于存储SQL列表
 

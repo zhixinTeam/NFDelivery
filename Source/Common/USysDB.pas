@@ -119,6 +119,8 @@ ResourceString
   sFlag_CardUsed      = 'U';                         //使用中
   sFlag_CardLoss      = 'L';                         //挂失卡
   sFlag_CardInvalid   = 'N';                         //注销卡
+  sFlag_ProvCardL     = 'L';                         //临时
+  sFlag_ProvCardG     = 'G';                         //固定
 
   sFlag_TruckNone     = 'N';                         //无状态车辆
   sFlag_TruckIn       = 'I';                         //进厂车辆
@@ -128,6 +130,7 @@ ResourceString
   sFlag_TruckSH       = 'S';                         //送货车辆
   sFlag_TruckFH       = 'F';                         //放灰车辆
   sFlag_TruckZT       = 'Z';                         //栈台车辆
+  sFlag_TruckXH       = 'X';                         //验收车辆
 
   sFlag_PoundBZ       = 'B';                         //标准
   sFlag_PoundPZ       = 'Z';                         //皮重
@@ -192,6 +195,8 @@ ResourceString
 
   sFlag_AutoIn        = 'Truck_AutoIn';              //自动进厂
   sFlag_AutoOut       = 'Truck_AutoOut';             //自动出厂
+  sFlag_OtherAutoIn   = 'Truck_OtherAutoIn';         //自动进厂(非销售)
+  sFlag_OtherAutoOut  = 'Truck_OtherAutoOut';        //自动出厂(非销售)
   sFlag_InTimeout     = 'InFactTimeOut';             //进厂超时(队列)
   sFlag_InAndBill     = 'InFactAndBill';             //进厂开单间隔
   sFlag_SanMultiBill  = 'SanMultiBill';              //散装预开多单
@@ -211,6 +216,8 @@ ResourceString
   sFlag_ForceHint     = 'Bus_HintMsg';               //强制提示
   sFlag_Customer      = 'Bus_Customer';              //客户编号
   sFlag_DuctTime      = 'Bus_DuctTime';              //暗扣时间段编号
+  sFlag_ProvideBase   = 'Bus_ProvBase';              //采购入厂基础
+  sFlag_ProvideDtl    = 'Bus_ProvDtl';               //采购入厂明细
   
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
@@ -243,11 +250,16 @@ ResourceString
   sTable_Mine         = 'S_Mine';                    //矿点表
   sTable_BatcodeDoc   = 'S_BatcodeDoc';              //批次号
 
-  sTable_Provider     = 'P_Provider';                //客户表
-  sTable_Materails    = 'P_Materails';               //物料表
   sTable_PoundLog     = 'Sys_PoundLog';              //过磅数据
   sTable_PoundBak     = 'Sys_PoundBak';              //过磅作废
   sTable_Picture      = 'Sys_Picture';               //存放图片
+
+  sTable_Provider     = 'P_Provider';                //客户表
+  sTable_Materails    = 'P_Materails';               //物料表
+  sTable_ProvBase     = 'P_ProvideBase';             //采购申请订单
+  sTable_ProvBaseBak  = 'P_ProvideBaseBak';          //已删除采购申请订单
+  sTable_ProvDtl      = 'P_ProvideDtl';              //采购订单明细
+  sTable_ProvDtlBak   = 'P_ProvideDtlBak';           //采购订单明细
 
   sTable_ChineseBase  = 'Sys_ChineseBase';           //汉字喷码表
   sTable_ChineseDict  = 'Sys_ChineseDict';           //汉字编码字典
@@ -697,6 +709,92 @@ ResourceString
    *.M_Memo: 备注
   -----------------------------------------------------------------------------}
 
+  sSQL_NewProvBase = 'Create Table $Table(R_ID $Inc, P_ID varChar(20),' +
+       'P_BID varChar(20),P_DID varChar(20),' +
+       'P_Card varChar(32), P_CType varChar(1),P_UsePre Char(1),' +
+       'P_Value $Float,P_Area varChar(50), P_Project varChar(100),' +
+       'P_Factory varChar(100), P_Origin varChar(100),' +
+       'P_ProType Char(1), P_ProID varChar(32), ' +
+       'P_ProName varChar(80), P_ProPY varChar(80),' +
+       'P_SaleID varChar(32), P_SaleMan varChar(80), P_SalePY varChar(80),' +
+       'P_Type Char(1), P_StockNo varChar(32), P_StockName varChar(80),' +
+       'P_PValue $Float, P_PDate DateTime, P_PMan varChar(32),' +
+       'P_MValue $Float, P_MDate DateTime, P_MMan varChar(32),' +
+       'P_Status Char(1), P_NextStatus Char(1), P_IsUsed Char(1),' +
+       'P_Truck varChar(15), P_Man varChar(32), P_Date DateTime,' +
+       'P_DelMan varChar(32), P_DelDate DateTime, P_Memo varChar(500))';
+  {-----------------------------------------------------------------------------
+   采购订单表: NewProvBase
+   *.R_ID: 编号
+   *.P_ID: 订单单号
+   *.P_BID: 采购申请单据号
+   *.P_DID: 入厂明细单号
+   *.P_Card,P_CType: 磁卡号,磁卡类型(L、临时卡;G、固定卡)
+   *.P_UsePre: 使用预置皮重
+   *.P_Value:订单量，
+   *.P_OStatus: 订单状态
+   *.P_Area,P_Project: 区域,项目
+   *.P_ProType,P_ProID,P_ProName,P_ProPY:供应商
+   *.P_SaleID,P_SaleMan:业务员
+   *.P_Type: 类型(袋,散)
+   *.P_StockNo: 原材料编号
+   *.P_StockName: 原材料名称
+   *.P_PValue,P_PDate,P_PMan: 称皮重
+   *.P_MValue,P_MDate,P_MMan: 称毛重
+   *.P_Status: 当前车辆状态
+   *.P_NextStus: 下一状态
+   *.P_IsUsed: 订单是否占用(Y、正在使用;N、未占用)
+   *.P_Truck: 车船号
+   *.P_Man:操作人
+   *.P_Date:创建时间
+   *.P_DelMan: 采购单删除人员
+   *.P_DelDate: 采购单删除时间
+   *.P_Memo: 动作备注
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewProvDtl = 'Create Table $Table(R_ID $Inc, D_ID varChar(20),' +
+       'D_OID varChar(20), D_PID varChar(20), D_Card varChar(32), ' +
+       'D_Area varChar(50), D_Project varChar(100),D_Truck varChar(15), ' +
+       'D_ProType Char(1), D_ProID varChar(32), D_XuNi Char(1),' +
+       'D_ProName varChar(80), D_ProPY varChar(80),' +
+       'D_SaleID varChar(32), D_SaleMan varChar(80), D_SalePY varChar(80),' +
+       'D_Type Char(1), D_StockNo varChar(32), D_StockName varChar(80),' +
+       'D_DStatus Char(1), D_Status Char(1), D_NextStatus Char(1),' +
+       'D_InTime DateTime, D_InMan varChar(32),' +
+       'D_PValue $Float, D_PDate DateTime, D_PMan varChar(32),' +
+       'D_MValue $Float, D_MDate DateTime, D_MMan varChar(32),' +
+       'D_YTime DateTime, D_YMan varChar(32), ' +
+       'D_Value $Float,D_KZValue $Float, D_AKValue $Float,' +
+       'D_YLine varChar(15), D_YLineName varChar(32), ' +
+       'D_DelMan varChar(32), D_DelDate DateTime, D_YSResult Char(1), ' +
+       'D_OutFact DateTime, D_OutMan varChar(32), D_Memo varChar(500))';
+  {-----------------------------------------------------------------------------
+   采购订单明细表: ProvDetail
+   *.R_ID: 编号
+   *.D_ID: 采购明细号
+   *.D_OID: 采购单号
+   *.D_PID: 磅单号
+   *.D_Card: 采购磁卡号
+   *.D_DStatus: 订单状态
+   *.D_Area,D_Project: 区域,项目
+   *.D_ProType,D_ProID,D_ProName,D_ProPY:供应商
+   *.D_XuNi: 虚拟明细
+   *.D_SaleID,D_SaleMan:业务员
+   *.D_Type: 类型(袋,散)
+   *.D_StockNo: 原材料编号
+   *.D_StockName: 原材料名称
+   *.D_Truck: 车船号
+   *.D_Status,D_NextStatus: 状态
+   *.D_InTime,D_InMan: 进厂放行
+   *.D_PValue,D_PDate,D_PMan: 称皮重
+   *.D_MValue,D_MDate,D_MMan: 称毛重
+   *.D_YTime,D_YMan: 收货时间,验收人,
+   *.D_Value,D_KZValue,D_AKValue: 收货量,验收扣除(明扣),暗扣
+   *.D_YLine,D_YLineName: 收货通道
+   *.D_YSResult: 验收结果
+   *.D_OutFact,D_OutMan: 出厂放行
+  -----------------------------------------------------------------------------}
+
   sSQL_NewBatcode = 'Create Table $Table(R_ID $Inc, B_Stock varChar(32),' +
        'B_Name varChar(80), B_Prefix varChar(5), B_Base Integer,' +
        'B_Interval Integer, B_Incement Integer, B_Length Integer,' +
@@ -834,6 +932,8 @@ function BillTypeToStr(const nType: string): string;
 //订单类型
 function PostTypeToStr(const nPost: string): string;
 //岗位类型
+function BusinessToStr(const nBus: string): string;
+//业务类型
 
 implementation
 
@@ -854,6 +954,7 @@ begin
   if nStatus = sFlag_TruckBFP then Result := '称皮重' else
   if nStatus = sFlag_TruckBFM then Result := '称毛重' else
   if nStatus = sFlag_TruckSH then Result := '送货中' else
+  if nStatus = sFlag_TruckXH then Result := '验收处' else
   if nStatus = sFlag_TruckFH then Result := '放灰处' else
   if nStatus = sFlag_TruckZT then Result := '栈台' else Result := '未进厂';
 end;
@@ -875,6 +976,15 @@ begin
   if nPost = sFlag_TruckBFM  then Result := '磅房称重' else
   if nPost = sFlag_TruckFH   then Result := '散装放灰' else
   if nPost = sFlag_TruckZT   then Result := '袋装栈台' else Result := '厂外';
+end;
+
+//Desc: 业务类型转为可识别内容
+function BusinessToStr(const nBus: string): string;
+begin
+  if nBus = sFlag_Sale       then Result := '销售' else
+  if nBus = sFlag_Provide    then Result := '供应' else
+  if nBus = sFlag_Returns    then Result := '退货' else
+  if nBus = sFlag_Other      then Result := '其它';
 end;
 
 //------------------------------------------------------------------------------
@@ -922,8 +1032,13 @@ begin
   AddSysTableItem(sTable_PoundLog, sSQL_NewPoundLog);
   AddSysTableItem(sTable_PoundBak, sSQL_NewPoundLog);
   AddSysTableItem(sTable_Picture, sSQL_NewPicture);
+
   AddSysTableItem(sTable_Provider, ssql_NewProvider);
   AddSysTableItem(sTable_Materails, sSQL_NewMaterails);
+  AddSysTableItem(sTable_ProvBase, sSQL_NewProvBase);
+  AddSysTableItem(sTable_ProvBaseBak, sSQL_NewProvBase);
+  AddSysTableItem(sTable_ProvDtl, sSQL_NewProvDtl);
+  AddSysTableItem(sTable_ProvDtlBak, sSQL_NewProvDtl);
 
   AddSysTableItem(sTable_WeixinLog, sSQL_NewWXLog);
   AddSysTableItem(sTable_WeixinMatch, sSQL_NewWXMatch);

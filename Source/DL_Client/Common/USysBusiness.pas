@@ -117,6 +117,19 @@ function SaveBillCard(const nBill, nCard: string): Boolean;
 function LogoutBillCard(const nCard: string): Boolean;
 //注销指定磁卡
 
+function SaveOrder(const nOrderData: string): string;
+//保存采购单
+function DeleteOrder(const nOrder: string): Boolean;
+//删除采购单
+function DeleteOrderDtl(const nOrder: string): Boolean;
+//删除采购明细
+function SetOrderCard(const nOrder,nTruck: string): Boolean;
+//为采购单办理磁卡
+function SaveOrderCard(const nOrderCard: string): Boolean;
+//保存采购单磁卡
+function LogoutOrderCard(const nCard: string): Boolean;
+//注销指定磁卡
+
 function GetLadingBills(const nCard,nPost: string;
  var nBills: TLadingBillItems): Boolean;
 //获取指定岗位的交货单列表
@@ -166,6 +179,11 @@ function GetTruckPValue(var nItem:TPreTruckPItem; const nTruck: string):Boolean;
 //获取车辆预置皮重
 function TruckInFact(nTruck: string):Boolean;
 //验证车辆是否出厂
+
+function GetTruckNO(const nTruck: String): string;
+function GetOrigin(const nOrigin: String): string;
+function GetValue(const nValue: Double): string;
+//显示格式化
 implementation
 
 //Desc: 记录日志
@@ -199,6 +217,27 @@ begin
   begin
     ShowDlg('该功能需要更高权限,请向管理员申请.', sHint);
   end;
+end;
+
+function GetTruckNO(const nTruck: String): string;
+var nStrTmp: string;
+begin
+  nStrTmp := '      ' + nTruck;
+  Result := Copy(nStrTmp, Length(nStrTmp)-6 + 1, 6);
+end;
+
+function GetOrigin(const nOrigin: String): string;
+var nStrTmp: string;
+begin
+  nStrTmp := '      ' + Copy(nOrigin, 1, 4);
+  Result := Copy(nStrTmp, Length(nStrTmp)-6 + 1, 6);
+end;
+
+function GetValue(const nValue: Double): string;
+var nStrTmp: string;
+begin
+  nStrTmp := Format('      %.2f', [nValue]);
+  Result := Copy(nStrTmp, Length(nStrTmp)-6 + 1, 6);
 end;
 
 //Date: 2014-09-05
@@ -258,6 +297,40 @@ begin
     //自动称重时不提示
 
     nWorker := gBusinessWorkerManager.LockWorker(sCLI_BusinessSaleBill);
+    //get worker
+    Result := nWorker.WorkActive(@nIn, nOut);
+
+    if not Result then
+      WriteLog(nOut.FBase.FErrDesc);
+    //xxxxx
+  finally
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
+//Date: 2014-09-05
+//Parm: 命令;数据;参数;输出
+//Desc: 调用中间件上的销售单据对象
+function CallBusinessProvideItems(const nCmd: Integer; const nData,nExt: string;
+  const nOut: PWorkerBusinessCommand; const nWarn: Boolean = True): Boolean;
+var nIn: TWorkerBusinessCommand;
+    nWorker: TBusinessWorkerBase;
+begin
+  nWorker := nil;
+  try
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nExt;
+
+    if nWarn then
+         nIn.FBase.FParam := ''
+    else nIn.FBase.FParam := sParam_NoHintOnError;
+
+    if gSysParam.FAutoPound and (not gSysParam.FIsManual) then
+      nIn.FBase.FParam := sParam_NoHintOnError;
+    //自动称重时不提示
+
+    nWorker := gBusinessWorkerManager.LockWorker(sCLI_BusinessProvide);
     //get worker
     Result := nWorker.WorkActive(@nIn, nOut);
 
@@ -361,6 +434,16 @@ begin
   if CallBusinessCommand(cBC_IsSystemExpired, '', '', @nOut) then
        Result := StrToInt(nOut.FData)
   else Result := 0;
+end;
+
+//Desc: 获取卡片类型
+function GetCardUsed(const nCard: string): string;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := sFlag_Sale;
+  if CallBusinessCommand(cBC_GetCardUsed, nCard, '', @nOut) then
+    Result := nOut.FData;
+  //xxxxx
 end;
 
 //Date: 2014-12-16
@@ -983,11 +1066,30 @@ end;
 //Desc: 获取nPost岗位上磁卡为nCard的交货单列表
 function GetLadingBills(const nCard,nPost: string;
  var nBills: TLadingBillItems): Boolean;
-var nOut: TWorkerBusinessCommand;
+var nStr: string;
+    nIdx: Integer;
+    nOut: TWorkerBusinessCommand;
 begin
-  Result := CallBusinessSaleBill(cBC_GetPostBills, nCard, nPost, @nOut);
+  Result := False;
+  SetLength(nBills, 0);
+  nStr := GetCardUsed(nCard);
+
+  if nStr = sFlag_Sale then //销售
+  begin
+    Result := CallBusinessSaleBill(cBC_GetPostBills, nCard, nPost, @nOut);
+  end else
+
+  if nStr = sFlag_Provide then
+  begin
+    Result := CallBusinessProvideItems(cBC_GetPostBills, nCard, nPost, @nOut);
+  end;
+
   if Result then
     AnalyseBillItems(nOut.FData, nBills);
+    //xxxxx
+
+  for nIdx:=Low(nBills) to High(nBills) do
+    nBills[nIdx].FCardUse := nStr;
   //xxxxx
 end;
 
@@ -1001,9 +1103,23 @@ var nStr: string;
     nList: TStrings;
     nOut: TWorkerBusinessCommand;
 begin
-  nStr := CombineBillItmes(nData);
-  Result := CallBusinessSaleBill(cBC_SavePostBills, nStr, nPost, @nOut);
-  if (not Result) or (nOut.FData = '') then Exit;
+  Result := False;
+  if Length(nData) < 1 then Exit;
+  nStr := nData[0].FCardUse;
+
+  if nStr = sFlag_Sale then //销售
+  begin
+    nStr := CombineBillItmes(nData);
+    Result := CallBusinessSaleBill(cBC_SavePostBills, nStr, nPost, @nOut);
+    if (not Result) or (nOut.FData = '') then Exit;
+  end else
+
+  if nStr = sFlag_Provide then
+  begin
+    nStr := CombineBillItmes(nData);
+    Result := CallBusinessProvideItems(cBC_SavePostBills, nStr, nPost, @nOut);
+    if (not Result) or (nOut.FData = '') then Exit;
+  end;
 
   if Assigned(nTunnel) then //过磅称重
   begin
@@ -1022,6 +1138,67 @@ begin
   end;
 end;
 
+//------------------------------------------------------------------------------
+//Date: 2014-09-15
+//Parm: 开单数据
+//Desc: 保存采购单,返回采购单号列表
+function SaveOrder(const nOrderData: string): string;
+var nOut: TWorkerBusinessCommand;
+begin
+  if CallBusinessProvideItems(cBC_SaveBills, nOrderData, '', @nOut) then
+       Result := nOut.FData
+  else Result := '';
+end;
+
+//Date: 2014-09-15
+//Parm: 交货单号
+//Desc: 删除nOrder单据
+function DeleteOrder(const nOrder: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessProvideItems(cBC_DeleteBill, nOrder, '', @nOut);
+end;
+
+//Date: 2014-09-15
+//Parm: 交货单号
+//Desc: 删除nOrder单据明细
+function DeleteOrderDtl(const nOrder: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessProvideItems(cBC_DeleteOrder, nOrder, '', @nOut);
+end;
+
+//Date: 2014-09-17
+//Parm: 交货单;车牌号;校验制卡开关
+//Desc: 为nBill交货单制卡
+function SetOrderCard(const nOrder,nTruck: string): Boolean;
+var nP: TFormCommandParam;
+begin
+  nP.FParamA := nOrder;
+  nP.FParamB := nTruck;
+  CreateBaseFormItem(cFI_FormMakeProvCard, '', @nP);
+  Result := (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK);
+end;
+
+//Date: 2014-09-17
+//Parm: 交货单号;磁卡
+//Desc: 绑定nBill.nCard
+function SaveOrderCard(const nOrderCard: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessProvideItems(cBC_SaveBillCard, PackerEncodeStr(nOrderCard), '', @nOut);
+end;
+
+//Date: 2014-09-17
+//Parm: 磁卡号
+//Desc: 注销nCard
+function LogoutOrderCard(const nCard: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessProvideItems(cBC_LogOffCard, nCard, '', @nOut);
+end;
+
+//微信
 function SaveWeiXinAccount(const nItem:TWeiXinAccount; var nWXID:string): Boolean;
 var nStr: string;
     nOut: TWorkerBusinessCommand;
@@ -1055,8 +1232,8 @@ begin
     Add(Format('当前状态:%s %s', [nDelimiter, TruckStatusToStr(FStatus)]));
 
     Add(Format('%s ', [nDelimiter]));
-    Add(Format('交货单号:%s %s', [nDelimiter, FId]));
-    Add(Format('交货数量:%s %.3f 吨', [nDelimiter, FValue]));
+    Add(Format('单据编号:%s %s', [nDelimiter, FId]));
+    Add(Format('提/供量 :%s %.3f 吨', [nDelimiter, FValue]));
     if FType = sFlag_Dai then nStr := '袋装' else nStr := '散装';
 
     Add(Format('品种类型:%s %s', [nDelimiter, nStr]));
