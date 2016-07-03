@@ -218,6 +218,7 @@ ResourceString
   sFlag_DuctTime      = 'Bus_DuctTime';              //暗扣时间段编号
   sFlag_ProvideBase   = 'Bus_ProvBase';              //采购入厂基础
   sFlag_ProvideDtl    = 'Bus_ProvDtl';               //采购入厂明细
+  sFlag_BillNewNO     = 'Bus_BillNew';
   
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
@@ -241,6 +242,8 @@ ResourceString
   sTable_Bill         = 'S_Bill';                    //提货单
   sTable_BillBak      = 'S_BillBak';                 //已删交货单
   sTable_StockMatch   = 'S_StockMatch';              //品种映射
+  sTable_BillNew      = 'S_BillNew';                 //交货单基础表
+  sTable_BillNewBak   = 'S_BillNewBak';              //已删除表
 
   sTable_Truck        = 'S_Truck';                   //车辆表
   sTable_ZTLines      = 'S_ZTLines';                 //装车道
@@ -423,6 +426,36 @@ ResourceString
    *.B_HasDone: 完成量
   -----------------------------------------------------------------------------}
 
+  sSQB_NewBillNew = 'Create Table $Table(R_ID $Inc, B_ID varChar(20),' +
+       'B_Card varChar(16), B_CusID varChar(20), B_CusName varChar(80),' +
+       'B_CusPY varChar(80), B_CusCode varChar(15),' +
+       'B_SaleID varChar(20), B_SaleMan varChar(32),B_SalePY varChar(32),' +
+       'B_Type Char(1), B_StockNo varChar(20), B_StockName varChar(80),' +
+       'B_Value $Float, B_Price $Float, B_PackStyle Char(1),' +
+       'B_Truck varChar(15), B_IsUsed Char(1),' +       
+       'B_Man varChar(32), B_Date DateTime,' +
+       'B_DelMan varChar(32), B_DelDate DateTime, B_Memo varChar(500))';
+  {-----------------------------------------------------------------------------
+   交货单基础表: BillNew
+   *.R_ID: 编号
+   *.B_ID: 基本编号
+   *.B_Card: 磁卡号
+   *.B_CusID,B_CusName,B_CusPY:客户
+   *.B_CusCode:客户代码
+   *.B_SaleID,B_SaleMan:业务员
+   *.B_Type: 类型(袋,散)
+   *.B_StockNo: 物料编号
+   *.B_StockName: 物料描述 
+   *.B_Value: 提货量
+   *.B_Truck: 车船号
+   *.B_Lading: 提货方式(自提,送货)
+   *.B_Man:操作人
+   *.B_Date:创建时间
+   *.B_DelMan: 交货单删除人员
+   *.B_DelDate: 交货单删除时间
+   *.B_Memo: 动作备注
+  -----------------------------------------------------------------------------}
+
   sSQL_NewBill = 'Create Table $Table(R_ID $Inc, L_ID varChar(20),' +
        'L_Card varChar(16), L_ZhiKa varChar(20), L_Project varChar(100),' +
        'L_Area varChar(50), L_CusID varChar(20), L_CusName varChar(80),' +
@@ -440,7 +473,7 @@ ResourceString
        'L_OutFact DateTime, L_OutMan varChar(32),' +
        'L_Lading Char(1), L_IsVIP varChar(1), L_Seal varChar(100),' +
        'L_HYDan varChar(15), L_Man varChar(32), L_Date DateTime,' +
-       'L_DelMan varChar(32), L_DelDate DateTime)';
+       'L_DelMan varChar(32), L_DelDate DateTime, L_Memo VarChar(500))';
   {-----------------------------------------------------------------------------
    交货单表: Bill
    *.R_ID: 编号
@@ -1020,6 +1053,8 @@ begin
   AddSysTableItem(sTable_Card, sSQL_NewCard);
   AddSysTableItem(sTable_Bill, sSQL_NewBill);
   AddSysTableItem(sTable_BillBak, sSQL_NewBill);
+  AddSysTableItem(sTable_BillNew, sSQB_NewBillNew);
+  AddSysTableItem(sTable_BillNewBak, sSQB_NewBillNew);
 
   AddSysTableItem(sTable_Truck, sSQL_NewTruck);
   AddSysTableItem(sTable_ZTLines, sSQL_NewZTLines);

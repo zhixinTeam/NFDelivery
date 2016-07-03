@@ -100,6 +100,17 @@ type
     //获取岗位交货单
     function SavePostBillItems(var nData: string): Boolean;
     //保存岗位交货单
+
+    function SaveBillNew(var nData: string): Boolean;
+    //保存交货单
+    function DeleteBillNew(var nData: string): Boolean;
+    //删除交货单
+    //function SaveBillNewCard(var nData: string): Boolean;
+    //绑定磁卡
+    //function LogoffCardNew(var nData: string): Boolean;
+    //注销磁卡
+    //function SaveBillFromNew(var nData: string): Boolean;
+    //保存交货单
   public
     constructor Create; override;
     destructor destroy; override;
@@ -170,6 +181,11 @@ begin
    cBC_LogoffCard          : Result := LogoffCard(nData);
    cBC_GetPostBills        : Result := GetPostBillItems(nData);
    cBC_SavePostBills       : Result := SavePostBillItems(nData);
+
+   cBC_SaveBillNew         : Result := SaveBillNew(nData);
+   cBC_DeleteBillNew       : Result := DeleteBillNew(nData);
+   //cBC_SaveBillNewCard     : Result := SaveBillNewCard(nData);
+   //cBC_SaveBillFromNew     : Result := SaveBillFromNew(nData);
    else
     begin
       Result := False;
@@ -2069,6 +2085,126 @@ begin
     gWXPlatFormHelper.WXSendMsg(cWXBus_OutFact, FListA.Text);
   end;
   {$ENDIF}
+end;
+
+function TWorkerBusinessBills.SaveBillNew(var nData: string): Boolean;
+var nStr, nTruck: string;
+    nOut: TWorkerBusinessCommand;
+begin
+  FListA.Text := PackerDecodeStr(FIn.FData);
+  nTruck := FListA.Values['Truck'];
+  //init card
+
+  TWorkerBusinessCommander.CallMe(cBC_SaveTruckInfo, nTruck, '', @nOut);
+  //保存车牌号
+
+  FDBConn.FConn.BeginTrans;
+  try
+    FListC.Clear;
+    FListC.Values['Group'] :=sFlag_BusGroup;
+    FListC.Values['Object'] := sFlag_BillNewNO;
+    //to get serial no
+
+    if not TWorkerBusinessCommander.CallMe(cBC_GetSerialNO,
+          FListC.Text, sFlag_Yes, @nOut) then
+      raise Exception.Create(nOut.FData);
+    //xxxxx
+
+    nStr := MakeSQLByStr([
+            SF('B_ID', nOut.FData),
+
+            SF('B_CusID', FListA.Values['CusID']),       //NC客户ID
+            SF('B_CusName', FListA.Values['CusName']),   //NC客户名称
+            SF('B_CusPY', GetPinYinOfStr(FListA.Values['CusName'])),
+
+            SF('B_SaleID', FListA.Values['SaleID']),     //NC业务员ID
+            SF('B_SaleMan', FListA.Values['SaleName']), //NC业务员名称
+            SF('B_SalePY', GetPinYinOfStr(FListA.Values['SaleName'])),
+
+            SF('B_Type', FListA.Values['Type']),
+            SF('B_StockNo', FListA.Values['StockNo']),
+            SF('B_StockName', FListA.Values['StockName']),
+
+            SF('B_Truck', nTruck),
+            SF('B_IsUsed', sFlag_No),
+            SF('B_Value', StrToFloatDef(FListA.Values['Value'],50), sfVal),
+            //默认50吨
+
+            SF('B_Man', FIn.FBase.FFrom.FUser),
+            SF('B_Date', sField_SQLServer_Now, sfVal)
+            ], sTable_BillNew, '', True);
+    gDBConnManager.WorkerExec(FDBConn, nStr);
+
+    FDBConn.FConn.CommitTrans;
+
+    FOut.FData := nOut.FData;
+    Result := True;
+  except
+    FDBConn.FConn.RollbackTrans;
+    raise;
+  end;
+end;
+
+
+//Date: 2015/9/19
+//Parm:
+//Desc: 删除采购入厂申请单
+function TWorkerBusinessBills.DeleteBillNew(var nData: string): Boolean;
+var nStr,nP: string;
+    nIdx: Integer;
+begin
+  Result := False;
+  //init
+
+  nStr := 'Select Count(*) From %s Where L_Memo=''%s''';
+  nStr := Format(nStr, [sTable_Bill, FIn.FData]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if Fields[0].AsInteger > 0 then
+    begin
+      nData := '订单[ %s ]已使用，禁止删除.';
+      nData := Format(nData, [FIn.FData]);
+      Exit;
+    end;
+  end;
+
+  FDBConn.FConn.BeginTrans;
+  try
+    //--------------------------------------------------------------------------
+    nStr := Format('Select * From %s Where 1<>1', [sTable_BillNew]);
+    //only for fields
+    nP := '';
+
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    begin
+      for nIdx:=0 to FieldCount - 1 do
+       if (Fields[nIdx].DataType <> ftAutoInc) and
+          (Pos('B_Del', Fields[nIdx].FieldName) < 1) then
+        nP := nP + Fields[nIdx].FieldName + ',';
+      //所有字段,不包括删除
+
+      System.Delete(nP, Length(nP), 1);
+    end;
+
+    nStr := 'Insert Into $OB($FL,B_DelMan,B_DelDate) ' +
+            'Select $FL,''$User'',$Now From $OO Where B_ID=''$ID''';
+    nStr := MacroValue(nStr, [MI('$OB', sTable_BillNewBak),
+            MI('$FL', nP), MI('$User', FIn.FBase.FFrom.FUser),
+            MI('$Now', sField_SQLServer_Now),
+            MI('$OO', sTable_BillNew), MI('$ID', FIn.FData)]);
+    gDBConnManager.WorkerExec(FDBConn, nStr);
+
+    nStr := 'Delete From %s Where B_ID=''%s''';
+    nStr := Format(nStr, [sTable_BillNew, FIn.FData]);
+    gDBConnManager.WorkerExec(FDBConn, nStr);
+
+    FDBConn.FConn.CommitTrans;
+    Result := True;
+  except
+    FDBConn.FConn.RollbackTrans;
+    raise;
+  end;
 end;
 
 initialization

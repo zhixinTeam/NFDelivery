@@ -56,6 +56,12 @@ const
   cBC_GetPostBills            = $0030;   //获取岗位交货单
   cBC_SavePostBills           = $0031;   //保存岗位交货单
 
+  cBC_SaveBillNew             = $0032;   //生成基础交货单
+  cBC_DeleteBillNew           = $0033;   //删除基础交货单
+  cBC_SaveBillNewCard         = $0034;   //绑定基础单磁卡
+  cBC_LogoffCardNew           = $0035;   //注销磁卡
+  cBC_SaveBillFromNew         = $0036;   //根据基础单据生成交货单
+
   cBC_ChangeDispatchMode      = $0053;   //切换调度模式
   cBC_GetPoundCard            = $0054;   //获取磅站卡号
   cBC_GetQueueData            = $0055;   //获取队列数据
