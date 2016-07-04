@@ -1102,6 +1102,13 @@ begin
     //按客户编号
   end;
 
+  nStr := FListA.Values['StockNo'];
+  if nStr <> '' then
+  begin
+    FOut.FData := FOut.FData + Format(' And invcode=''%s''', [nStr]);
+    //按物料编号
+  end;
+
   nStr := FListA.Values['Filter'];
   if nStr <> '' then
   begin

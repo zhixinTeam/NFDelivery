@@ -268,6 +268,7 @@ begin
 
         FCard       := Values['Card'];
         FIsVIP      := Values['IsVIP'];
+        FCardUse    := Values['CType'];
         FStatus     := Values['Status'];
         FNextStatus := Values['NextStatus'];
 
@@ -375,6 +376,7 @@ begin
         Values['Price']      := FloatToStr(FPrice);
 
         Values['Card']       := FCard;
+        Values['CType']      := FCardUse;
         Values['IsVIP']      := FIsVIP;
         Values['Status']     := FStatus;
         Values['NextStatus'] := FNextStatus;

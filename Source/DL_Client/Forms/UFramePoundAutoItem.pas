@@ -325,7 +325,8 @@ begin
   nInt := Length(FBillItems);
   if nInt > 0 then
   begin
-    if FBillItems[0].FCardUse = sFlag_Sale then
+    if (FBillItems[0].FCardUse = sFlag_Sale) or
+       (FBillItems[0].FCardUse = sFlag_SaleNew) then
     begin
       if nInt > 1 then
            nStr := '销售并单'
@@ -546,51 +547,6 @@ begin
       Exit;
     end;
     {$ENDIF}
-
-//    nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
-//    //净重
-//    nVal := nNet * 1000 - FInnerData.FValue * 1000;
-//    //与开票量误差(公斤)
-//
-//    with gSysParam,FBillItems[0] do
-//    begin
-//      if FDaiPercent and (FType = sFlag_Dai) then
-//      begin
-//        if nVal > 0 then
-//             FPoundDaiZ := Float2Float(FInnerData.FValue * FPoundDaiZ_1 * 1000,
-//                                       cPrecision, False)
-//        else FPoundDaiF := Float2Float(FInnerData.FValue * FPoundDaiF_1 * 1000,
-//                                       cPrecision, False);
-//      end;
-//
-//      if ((FType = sFlag_Dai) and (
-//          ((nVal > 0) and (FPoundDaiZ > 0) and (nVal > FPoundDaiZ)) or
-//          ((nVal < 0) and (FPoundDaiF > 0) and (-nVal > FPoundDaiF)))) then
-//      begin
-//        nStr := '车辆[%s]实际装车量误差较大，请通知司机点验包数';
-//        nStr := Format(nStr, [FTruck]);
-//        PlayVoice(nStr);
-//
-//        nStr := '车辆[ %s ]实际装车量误差较大,详情如下:' + #13#10#13#10 +
-//                '※.开单量: %.2f吨' + #13#10 +
-//                '※.装车量: %.2f吨' + #13#10 +
-//                '※.误差量: %.2f公斤';
-//
-//        if FDaiWCStop then
-//        begin
-//          nStr := nStr + #13#10#13#10 + '请通知司机点验包数.';
-//          nStr := Format(nStr, [FTruck, FInnerData.FValue, nNet, nVal]);
-//
-//          ShowDlg(nStr, sHint);
-//          Exit;
-//        end else
-//        begin
-//          nStr := nStr + #13#10#13#10 + '是否继续保存?';
-//          nStr := Format(nStr, [FTruck, FInnerData.FValue, nNet, nVal]);
-//          if not QueryDlg(nStr, sAsk) then Exit;
-//        end;
-//      end;
-//    end;
   end;
 
   with FBillItems[0] do
@@ -725,7 +681,8 @@ begin
     Exit;
   end else FEmptyPoundInit := 0;
 
-  if (Length(FBillItems) > 0) and (FUIData.FCardUse=sFlag_Sale) then
+  if (Length(FBillItems) > 0) and
+  ((FUIData.FCardUse=sFlag_Sale) or (FUIData.FCardUse = sFlag_SaleNew)) then
   begin
     if FUIData.FNextStatus = sFlag_TruckBFP then
          FUIData.FPData.FValue := nValue
@@ -771,7 +728,8 @@ begin
   end;
 
   FIsSaving := True;
-  if FUIData.FCardUse = sFlag_Sale then  nRet := SavePoundSale
+  if FUIData.FCardUse = sFlag_Sale then      nRet := SavePoundSale
+  else if FUIData.FCardUse = sFlag_SaleNew then nRet := SavePoundSale
   else if FUIData.FCardUse = sFlag_Provide then nRet := SavePoundProvide
   else nRet := False;
 

@@ -102,6 +102,14 @@ function GetOrderFHValue(const nOrders: TStrings;
 function GetOrderGYValue(const nOrders: TStrings): Boolean;
 //获取订单已供应量
 
+function SaveBillNew(const nBillData: string): string;
+//保存销售订单
+function DeleteBillNew(const nBill: string): Boolean;
+//删除长期凭证(必须为未使用)
+function SaveBillFromNew(const nBill: string): string;
+//根据销售订单生成交货单
+function SaveBillNewCard(const nBill, nCard: string): Boolean;
+//办理磁卡
 function SaveBill(const nBillData: string): string;
 //保存交货单
 function DeleteBill(const nBill: string): Boolean;
@@ -110,7 +118,8 @@ function ChangeLadingTruckNo(const nBill,nTruck: string): Boolean;
 //更改提货车辆
 function BillSaleAdjust(const nBill, nNewZK: string): Boolean;
 //交货单调拨
-function SetBillCard(const nBill,nTruck: string; nVerify: Boolean): Boolean;
+function SetBillCard(const nBill,nTruck: string; nVerify: Boolean;
+  nLongFlag: Boolean=False): Boolean;
 //为交货单办理磁卡
 function SaveBillCard(const nBill, nCard: string): Boolean;
 //保存交货单磁卡
@@ -981,6 +990,46 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+//Date: 2016/7/4
+//Parm: 开单数据
+//Desc: 办理散装长期卡
+function SaveBillNew(const nBillData: string): string;
+var nOut: TWorkerBusinessCommand;
+begin
+  if CallBusinessSaleBill(cBC_SaveBillNew, nBillData, '', @nOut) then
+       Result := nOut.FData
+  else Result := '';
+end;
+
+//Date: 2016/7/4
+//Parm: 单据号
+//Desc: 删除长期卡凭证
+function DeleteBillNew(const nBill: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessSaleBill(cBC_DeleteBillNew, nBill, '', @nOut);
+end;
+
+//Date: 2016/7/4
+//Parm: 销售订单号
+//Desc: 根据销售订单生成交货单
+function SaveBillFromNew(const nBill: string): string;
+var nOut: TWorkerBusinessCommand;
+begin
+  if CallBusinessSaleBill(cBC_SaveBillFromNew, nBill, '', @nOut) then
+       Result := nOut.FData
+  else Result := '';
+end;
+
+//Date: 2016/7/4
+//Parm: 单据号;磁卡号
+//Desc: 办理散装长期卡
+function SaveBillNewCard(const nBill, nCard: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessSaleBill(cBC_SaveBillNewCard, nBill, nCard, @nOut);
+end;
+
 //Date: 2014-09-15
 //Parm: 开单数据
 //Desc: 保存交货单,返回交货单号列表
@@ -1022,7 +1071,8 @@ end;
 //Date: 2014-09-17
 //Parm: 交货单;车牌号;校验制卡开关
 //Desc: 为nBill交货单制卡
-function SetBillCard(const nBill,nTruck: string; nVerify: Boolean): Boolean;
+function SetBillCard(const nBill,nTruck: string; nVerify: Boolean;
+    nLongFlag: Boolean): Boolean;
 var nStr: string;
     nP: TFormCommandParam;
 begin
@@ -1039,6 +1089,7 @@ begin
 
   nP.FParamA := nBill;
   nP.FParamB := nTruck;
+  nP.FParamC := nLongFlag;
   CreateBaseFormItem(cFI_FormMakeCard, '', @nP);
   Result := (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK);
 end;
@@ -1074,7 +1125,7 @@ begin
   SetLength(nBills, 0);
   nStr := GetCardUsed(nCard);
 
-  if nStr = sFlag_Sale then //销售
+  if (nStr = sFlag_Sale) or (nStr = sFlag_SaleNew) then //销售
   begin
     Result := CallBusinessSaleBill(cBC_GetPostBills, nCard, nPost, @nOut);
   end else
@@ -1107,7 +1158,7 @@ begin
   if Length(nData) < 1 then Exit;
   nStr := nData[0].FCardUse;
 
-  if nStr = sFlag_Sale then //销售
+  if (nStr = sFlag_Sale) or (nStr = sFlag_SaleNew) then //销售
   begin
     nStr := CombineBillItmes(nData);
     Result := CallBusinessSaleBill(cBC_SavePostBills, nStr, nPost, @nOut);

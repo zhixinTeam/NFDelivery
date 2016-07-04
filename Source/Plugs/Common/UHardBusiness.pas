@@ -211,6 +211,32 @@ begin
   //xxxxx
 end;
 
+function VerifyLadingBill(const nCard: string; const nDB: PDBWorker): Boolean;
+var nSQL, nStr: string;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
+  nSQL := 'Select * From %s Where B_Card=''%s''';
+  nSQL := Format(nSQL, [sTable_BillNew, nCard]);
+
+  with gDBConnManager.WorkerQuery(nDB, nSQL) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nStr := '磁卡[ %s ]关联的订单已丢失.';
+      nStr := Format(nStr, [nCard]);
+      gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
+      Exit;
+    end;
+
+    if FieldByName('B_IsUsed').AsString = sFlag_No then
+    begin
+      nStr := FieldByName('B_ID').AsString;
+      Result := CallBusinessSaleBill(cBC_SaveBillFromNew, nStr, '', @nOut);
+    end else Result := True;
+  end;  
+end;
+
 //Date: 2016-06-15
 //Parm: 磁卡号;岗位;采购入厂单列表
 //Desc: 获取nPost岗位上磁卡为nCard的采购入厂单列表
@@ -269,7 +295,11 @@ begin
     Exit;
   end; //同读头同卡,在2分钟内不做二次进厂业务.
 
-  if nCardType = sFlag_Sale then
+  if nCardType = sFlag_SaleNew then
+  if not VerifyLadingBill(nCard, nDB) then Exit;
+  //如果首次刷卡，则生成明细
+
+  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
     nRet := GetLadingBills(nCard, sFlag_TruckIn, nTrucks) else
   if nCardType = sFlag_Provide then
     nRet := GetProvideItems(nCard, sFlag_TruckIn, nTrucks) else nRet := False;
@@ -295,6 +325,7 @@ begin
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
+    FCardUse := nCardType;
     if (FStatus = sFlag_TruckNone) or (FStatus = sFlag_TruckIn) then Continue;
     //未进长,或已进厂
 
@@ -328,11 +359,9 @@ begin
   end;
 
   //----------------------------------------------------------------------------
-  if nCardType <> sFlag_Sale then //非销售业务,不使用队列
+  if nCardType = sFlag_Provide then //非销售业务,不使用队列
   begin
-    if nCardType = sFlag_Provide then
-      nRet := SaveProvideItems(sFlag_TruckIn, nTrucks) else nRet := False;
-    //xxxxx
+    nRet := SaveProvideItems(sFlag_TruckIn, nTrucks);
 
     if not nRet then
     begin
@@ -452,7 +481,7 @@ var nStr, nCardType: string;
 begin
   if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
 
-  if nCardType = sFlag_Sale then
+  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
     nRet := GetLadingBills(nCard, sFlag_TruckOut, nTrucks) else
   if nCardType = sFlag_Provide then
     nRet := GetProvideItems(nCard, sFlag_TruckOut, nTrucks) else nRet := False;
@@ -479,6 +508,7 @@ begin
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
+    FCardUse := nCardType;
     if FNextStatus = sFlag_TruckOut then Continue;
     nStr := '车辆[ %s ]下一状态为:[ %s ],无法出厂.';
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
@@ -487,7 +517,7 @@ begin
     Exit;
   end;
 
-  if nCardType = sFlag_Sale then
+  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
     nRet := SaveLadingBills(sFlag_TruckOut, nTrucks) else
   if nCardType = sFlag_Provide then
     nRet := SaveProvideItems(sFlag_TruckOut, nTrucks) else nRet := False;
@@ -516,6 +546,7 @@ begin
     nStr := '';
     {$ENDIF}
 
+    if nCardType = sFlag_SaleNew then nCardType := sFlag_Sale;
     nStr := nStr + #7 + nCardType;
     //磁卡类型
 
@@ -993,23 +1024,23 @@ begin
     g02NReader.SetRealELabel(nTunnel, nTmp);
   finally
     gDBConnManager.ReleaseConnection(nWorker);
-  end;   
-
-  gERelayManager.LineOpen(nTunnel);
-  //打开放灰
+  end;
 
   nStr := nTruck.FTruck + StringOfChar(' ', 12 - Length(nTruck.FTruck));
   nTmp := nTruck.FStockName + FloatToStr(nTruck.FValue);
   nStr := nStr + nTruck.FStockName + StringOfChar(' ', 12 - Length(nTmp)) +
           FloatToStr(nTruck.FValue);
-  //xxxxx  
+  //xxxxx
 
-  gERelayManager.ShowTxt(nTunnel, nStr);
-  //显示内容
   {$IFDEF JDNF}
   gDisplayManager.Display(nTunnel, nStr);
-  {$ENDIF}
   //显示内容
+  {$ELSE}
+  gERelayManager.LineOpen(nTunnel);
+  //打开放灰
+  gERelayManager.ShowTxt(nTunnel, nStr);
+  //显示内容
+  {$ENDIF}
 end;
 
 //Date: 2012-4-24
@@ -1065,10 +1096,11 @@ begin
 
     nIdx := Length(nTrucks[0].FTruck);
     nStr := nTrucks[0].FTruck + StringOfChar(' ',12 - nIdx) + '请换库装车';
-    gERelayManager.ShowTxt(nTunnel, nStr);
 
     {$IFDEF JDNF}
     gDisplayManager.Display(nTunnel, nStr);
+    {$ELSE}
+    gERelayManager.ShowTxt(nTunnel, nStr);
     {$ENDIF}
     Exit;
   end; //检查通道
@@ -1138,18 +1170,25 @@ begin
 
   if nHost.FETimeOut and (not nCard.FOldOne) then
   begin
+    {$IFDEF JDNF}
+    gDisplayManager.Display(nHost.FTunnel, '电子标签超出范围');
+    {$ELSE}
     gERelayManager.LineClose(nHost.FTunnel);
     Sleep(100);
     gERelayManager.ShowTxt(nHost.FTunnel, '电子标签超出范围');
-
     Sleep(100);
+    {$ENDIF}
     Exit;
   end;
 
+  {$IFDEF JDNF}
+  gDisplayManager.Display(nHost.FTunnel, nHost.FLEDText);
+  {$ELSE}
   gERelayManager.LineClose(nHost.FTunnel);
   Sleep(100);
   gERelayManager.ShowTxt(nHost.FTunnel, nHost.FLEDText);
   Sleep(100);
+  {$ENDIF}
 end;
 
 //Date: 2014-10-25

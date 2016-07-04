@@ -22,7 +22,7 @@ uses
   UFormChangeTunnel, UFrameDeduct, UFormDeduct, UFormGetNCStock, UFrameMine,
   UFormMine, UFormGetMine, UFormPoundDispatch, UFrameBatcodeQuery,
   UFormBatcodeEdit, UFramePoundAuto, UFrameQueryProvideDetail,
-  UFrameQueryDiapatchDetail,
+  UFrameQueryDiapatchDetail, UFormBillNew, UFrameBillNew,
 
   UFormProvCard, UFormProvBase, UFrameProvBase, UFrameProvTruckDetail,
   UFrameQueryProvDetail

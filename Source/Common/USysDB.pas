@@ -94,6 +94,7 @@ ResourceString
   sFlag_Sale          = 'S';                         //销售
   sFlag_Returns       = 'R';                         //退货
   sFlag_Other         = 'O';                         //其它
+  sFlag_SaleNew       = 'N';                         //固定卡销售
 
   sFlag_TiHuo         = 'T';                         //自提
   sFlag_SongH         = 'S';                         //送货
@@ -427,19 +428,21 @@ ResourceString
   -----------------------------------------------------------------------------}
 
   sSQB_NewBillNew = 'Create Table $Table(R_ID $Inc, B_ID varChar(20),' +
-       'B_Card varChar(16), B_CusID varChar(20), B_CusName varChar(80),' +
+       'B_Card varChar(32), B_CType Char(1), B_CardSerial varChar(16),' +
+       'B_CusID varChar(20), B_CusName varChar(80),' +
        'B_CusPY varChar(80), B_CusCode varChar(15),' +
        'B_SaleID varChar(20), B_SaleMan varChar(32),B_SalePY varChar(32),' +
        'B_Type Char(1), B_StockNo varChar(20), B_StockName varChar(80),' +
-       'B_Value $Float, B_Price $Float, B_PackStyle Char(1),' +
-       'B_Truck varChar(15), B_IsUsed Char(1),' +       
+       'B_Value $Float, B_Price $Float,' +
+       'B_Truck varChar(15), B_IsUsed Char(1), B_LID varChar(20),' +
        'B_Man varChar(32), B_Date DateTime,' +
+       'B_Lading Char(1), B_PackStyle Char(1), B_IsVIP Char(1),' +
        'B_DelMan varChar(32), B_DelDate DateTime, B_Memo varChar(500))';
   {-----------------------------------------------------------------------------
    交货单基础表: BillNew
    *.R_ID: 编号
    *.B_ID: 基本编号
-   *.B_Card: 磁卡号
+   *.B_Card, B_CardSerial: 磁卡号，卡序列号
    *.B_CusID,B_CusName,B_CusPY:客户
    *.B_CusCode:客户代码
    *.B_SaleID,B_SaleMan:业务员
@@ -449,6 +452,7 @@ ResourceString
    *.B_Value: 提货量
    *.B_Truck: 车船号
    *.B_Lading: 提货方式(自提,送货)
+   *.B_IsUsed,B_LID: 已占用(Y,是;N,否),当前明细
    *.B_Man:操作人
    *.B_Date:创建时间
    *.B_DelMan: 交货单删除人员

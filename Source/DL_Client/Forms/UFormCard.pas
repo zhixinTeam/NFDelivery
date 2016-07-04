@@ -189,6 +189,7 @@ end;
 
 //Desc: ±£´æ´Å¿¨
 procedure TfFormCard.BtnOKClick(Sender: TObject);
+var nRet: Boolean;
 begin
   EditCard.Text := Trim(EditCard.Text);
   if EditCard.Text = '' then
@@ -200,7 +201,11 @@ begin
     Exit;
   end;
 
-  if SaveBillCard(EditBill.Text, EditCard.Text) then
+  if not FParam.FParamC then
+       nRet := SaveBillCard(EditBill.Text, EditCard.Text)
+  else nRet := SaveBillNewCard(EditBill.Text, EditCard.Text);
+
+  if nRet then
     ModalResult := mrOk;
   //done
 end;

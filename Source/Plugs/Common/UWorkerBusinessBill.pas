@@ -11,7 +11,7 @@ uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, UWorkerBusinessCommand, ZnMD5, ULibFun,
   UFormCtrl, USysLoger, USysDB, {$IFDEF MicroMsg}UMgrRemoteWXMsg,{$ENDIF}
-  UMITConst;
+  UMITConst, UBase64;
 
 type
   TStockInfoItem = record
@@ -101,15 +101,17 @@ type
     function SavePostBillItems(var nData: string): Boolean;
     //保存岗位交货单
 
+    function LinkToNCSystem(var nData: string; nBill: TLadingBillItem): Boolean;
+    //关联NC订单
     function SaveBillNew(var nData: string): Boolean;
     //保存交货单
     function DeleteBillNew(var nData: string): Boolean;
     //删除交货单
-    //function SaveBillNewCard(var nData: string): Boolean;
+    function SaveBillNewCard(var nData: string): Boolean;
     //绑定磁卡
     //function LogoffCardNew(var nData: string): Boolean;
     //注销磁卡
-    //function SaveBillFromNew(var nData: string): Boolean;
+    function SaveBillFromNew(var nData: string): Boolean;
     //保存交货单
   public
     constructor Create; override;
@@ -184,8 +186,8 @@ begin
 
    cBC_SaveBillNew         : Result := SaveBillNew(nData);
    cBC_DeleteBillNew       : Result := DeleteBillNew(nData);
-   //cBC_SaveBillNewCard     : Result := SaveBillNewCard(nData);
-   //cBC_SaveBillFromNew     : Result := SaveBillFromNew(nData);
+   cBC_SaveBillNewCard     : Result := SaveBillNewCard(nData);
+   cBC_SaveBillFromNew     : Result := SaveBillFromNew(nData);
    else
     begin
       Result := False;
@@ -1146,6 +1148,7 @@ begin
            FListC.Values['Value'] := '0.00'
       else FListC.Values['Value'] := FieldByName('L_Value').AsString;
 
+      if Length(FListC.Values['Batch']) > 0 then
       if not TWorkerBusinessCommander.CallMe(cBC_SaveStockBatcode,
             FListC.Text, sFlag_No, @FOut) then
         raise Exception.Create(FOut.FData);
@@ -1153,6 +1156,10 @@ begin
 
     nStr := 'Delete From %s Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
+    gDBConnManager.WorkerExec(FDBConn, nStr);
+
+    nStr := 'Update %s Set B_IsUsed=''%s'', B_LID=NULL Where B_LID=''%s''';
+    nStr := Format(nStr, [sTable_BillNew, sFlag_No, FIn.FData]);
     gDBConnManager.WorkerExec(FDBConn, nStr);
 
     FDBConn.FConn.CommitTrans;
@@ -1407,7 +1414,7 @@ begin
 
   nStr := 'Select L_ID,L_ZhiKa,L_CusID,L_CusName,L_Type,L_StockNo,' +
           'L_StockName,L_Truck,L_Value,L_Price,L_Status,' +
-          'L_NextStatus,L_Card,L_IsVIP,L_PValue,L_MValue From $Bill b ';
+          'L_NextStatus,L_Card,L_IsVIP,L_PValue,L_MValue,L_Memo From $Bill b ';
   //xxxxx
 
   if nIsBill then
@@ -1467,6 +1474,7 @@ begin
 
       FPData.FValue := FieldByName('L_PValue').AsFloat;
       FMData.FValue := FieldByName('L_MValue').AsFloat;
+      FMemo     := FieldByName('L_Memo').AsString;
       FSelected := True;
 
       Inc(nIdx);
@@ -1714,6 +1722,14 @@ begin
       Exit;
     end;
 
+    //销售规定卡，在二次过磅时，自动选择可用订单
+    if nBills[nInt].FCardUse = sFlag_SaleNew then
+    begin
+      for nIdx:=Low(nBills) to High(nBills) do
+      if not LinkToNCSystem(nData, nBills[nIdx]) then
+        Exit;
+    end else
+
     if nBills[nInt].FType = sFlag_San then
     begin
       for nIdx:=Low(nBills) to High(nBills) do
@@ -1903,9 +1919,19 @@ begin
       raise Exception.Create(nOut.FData);
     //同步销售到NC榜单
 
-    nSQL := 'Update %s Set C_Status=''%s'' Where C_Card=''%s''';
-    nSQL := Format(nSQL, [sTable_Card, sFlag_CardIdle, nBills[0].FCard]);
-    FListA.Add(nSQL); //更新磁卡状态
+    if nBills[0].FCardUse = sFlag_Sale then
+    begin
+      nSQL := 'Update %s Set C_Status=''%s'' Where C_Card=''%s''';
+      nSQL := Format(nSQL, [sTable_Card, sFlag_CardIdle, nBills[0].FCard]);
+      FListA.Add(nSQL);
+    end else
+    if nBills[0].FCardUse = sFlag_SaleNew then
+    begin
+      nSQL := 'Update %s Set B_IsUsed=''%s'', B_LID=NULL Where B_Card=''%s''';
+      nSQL := Format(nSQL, [sTable_BillNew, sFlag_No, nBills[0].FCard]);
+      FListA.Add(nSQL);
+    end;    
+    //销售临时卡,更新磁卡状态
 
     nStr := AdjustListStrFormat2(FListB, '''', True, ',', False);
     //交货单列表
@@ -2087,13 +2113,196 @@ begin
   {$ENDIF}
 end;
 
-function TWorkerBusinessBills.SaveBillNew(var nData: string): Boolean;
-var nStr, nTruck: string;
+function TWorkerBusinessBills.LinkToNCSystem(var nData: string;
+  nBill: TLadingBillItem): Boolean;
+var nSQL: string;
+    nInt, nIdx: Integer;
+    nVal, nDec: Double;
+    nWorker: PDBWorker;
     nOut: TWorkerBusinessCommand;
 begin
+  FListB.Clear;
+  FListC.Clear;
+  Result := False;
+  //Init
+
+  FListC.Values['NoDate'] := sFlag_Yes;
+  FListC.Values['CustomerID'] := nBill.FCusID;
+  FListC.Values['StockNo'] := nBill.FStockNo;
+  FListC.Values['Order']   := 'TMAKETIME DESC';
+
+  if not TWorkerBusinessCommander.CallMe(cBC_GetSQLQueryOrder, '103',
+         PackerEncodeStr(FListC.Text), @nOut) then
+  begin
+    nData := '获取读NC订单语句失败，条件为[ %s ]';
+    nData := Format(nData, [FListC.Text]);
+    Exit;
+  end;
+
+  nWorker := nil;
+  try
+    with gDBConnManager.SQLQuery(nOut.FData, nWorker, sFlag_DB_NC) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nData := '无满足如下条件的订单: ' + #13#10#13#10 +
+                 '物料信息:[ %s.%s ]' + #13#10 +
+                 '客户信息:[ %s.%s ]' + #13#10#13#10 +
+                 '请在NC中补销售订单.';
+        nData := Format(nData, [nBill.FStockNo, nBill.FStockName,
+                 nBill.FCusID, nBill.FCusName]);
+        Exit;
+      end;
+
+      if not LoadStockInfo(nData) then Exit;
+      //载入物料
+
+      SetLength(FOrderItems, RecordCount);
+      nInt := 0;
+      First;
+
+      while not Eof do
+      begin
+        with FOrderItems[nInt] do
+        begin
+          FOrder := FieldByName('pk_meambill').AsString;
+          FCusCode := FieldByName('def30').AsString;
+          if FCusCode = '' then FCusCode := '00';
+
+          FStockID := FieldByName('invcode').AsString;
+          FStockName := FieldByName('invname').AsString;
+          FMaxValue := FieldByName('NPLANNUM').AsFloat;
+          FKDValue := 0;
+
+          FSaleID := '001';
+          FSaleName := FieldByName('VBILLTYPE').AsString;
+
+          FAreaTo := FieldByName('vdef2').AsString;
+          //区域流向
+
+          nIdx := GetStockInfo(FStockID);
+          if nIdx < 0 then
+          begin
+            nData := '品种[ %s ]在字典中的信息丢失.';
+            nData := Format(nData, [FStockName]);
+            Exit;
+          end else FStockType := FStockInfo[nIdx].FType;
+
+          FListB.Add(FOrder);
+        end;
+
+        Inc(nInt);
+        Next;
+      end;
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+
+  //----------------------------------------------------------------------------
+  if not TWorkerBusinessCommander.CallMe(cBC_GetOrderFHValue,
+         PackerEncodeStr(FListB.Text), '', @nOut) then
+  begin
+    nSQL := StringReplace(FListB.Text, #13#10, ',', [rfReplaceAll]);
+    nData := Format('获取[ %s ]订单发货量失败', [nSQL]);
+    Exit;
+  end;
+
+  FListC.Text := PackerDecodeStr(nOut.FData);
+  for nIdx:=Low(FOrderItems) to High(FOrderItems) do
+  begin
+    nSQL := FListC.Values[FOrderItems[nIdx].FOrder];
+    if not IsNumber(nSQL, True) then Continue;
+
+    with FOrderItems[nIdx] do
+      FMaxValue := FMaxValue - StrToFloat(nSQL);
+    //可用量 = 计划量 - 已发量
+  end;
+
+  SortOrderByValue(FOrderItems);
+  //按可用量由小到大排序
+
+  //----------------------------------------------------------------------------
+  if nBill.FType = sFlag_Dai then
+       nVal := nBill.FValue
+  else nVal := nBill.FMData.FValue - nBill.FPData.FValue;
+
+  if nVal <= 0 then
+  begin
+    nData := '交货单[ %s ]提交的数据出错.';
+    nData := Format(nData, [nBill.FID]);
+    Exit;
+  end;
+
+  nInt := -1;
+  for nIdx:=Low(FOrderItems) to High(FOrderItems) do
+  begin
+    nDec := Float2Float(FOrderItems[nIdx].FMaxValue, cPrecision, False);
+    //订单可用量
+
+    if nDec >= nVal then
+    begin
+      FOrderItems[nIdx].FKDValue := nVal;
+      nInt := nIdx;
+      Break;
+    end;
+    //订单够用则直接扣除开单量
+  end;
+
+  if nInt < 0 then
+  begin
+    nData := '当前无可用订单，请重新开单.';
+    nData := Format(nData, [nVal]);
+    Exit;
+  end;
+
+  with FOrderItems[nInt] do
+  begin
+    nSQL := MakeSQLByStr([
+            SF('L_ZhiKa', FOrder),
+            SF('L_CusCode', FCusCode),
+            SF('L_SaleID', FSaleID),
+            SF('L_SaleMan', FSaleName),
+            SF('L_Area', FAreaTo)
+            ], sTable_Bill, SF('L_ID', nBill.FID), False);
+    FListA.Add(nSQL);
+
+    nSQL := 'Select * From %s Where B_ID=''%s''';
+    nSQL := Format(nSQL, [sTable_Order, FOrder]);
+    with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+    if RecordCount < 1 then
+         nSQL := MakeSQLByStr([SF('B_ID', FOrder),SF('B_Freeze', FKDValue, sfVal)
+                  ], sTable_Order, '', True)
+    else nSQL := 'Update %s Set B_Freeze=B_Freeze+%.2f Where B_ID=''%s''';
+
+    FListA.Add(nSQL);
+  end;
+
+  Result := True;
+end;  
+
+function TWorkerBusinessBills.SaveBillNew(var nData: string): Boolean;
+var nStr, nTruck, nType: string;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
   FListA.Text := PackerDecodeStr(FIn.FData);
   nTruck := FListA.Values['Truck'];
   //init card
+
+  nStr := 'Select D_Memo From %s Where D_Name=''%s'' And D_ParamB=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_StockItem, FListA.Values['StockNO']]);
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nData := '物料信息[ %s.%s ]不存在!';
+      nData := Format(nData, [FListA.Values['StockNO'], FListA.Values['StockName']]);
+      Exit;
+    end;
+
+    nType := Fields[0].AsString;
+  end;
 
   TWorkerBusinessCommander.CallMe(cBC_SaveTruckInfo, nTruck, '', @nOut);
   //保存车牌号
@@ -2121,9 +2330,13 @@ begin
             SF('B_SaleMan', FListA.Values['SaleName']), //NC业务员名称
             SF('B_SalePY', GetPinYinOfStr(FListA.Values['SaleName'])),
 
-            SF('B_Type', FListA.Values['Type']),
+            SF('B_Type', nType),
             SF('B_StockNo', FListA.Values['StockNo']),
             SF('B_StockName', FListA.Values['StockName']),
+
+            SF('B_IsVip', FListA.Values['IsVip']),
+            SF('B_Lading', FListA.Values['Lading']),
+            SF('B_PackStyle', FListA.Values['IsVip']),
 
             SF('B_Truck', nTruck),
             SF('B_IsUsed', sFlag_No),
@@ -2205,6 +2418,285 @@ begin
     FDBConn.FConn.RollbackTrans;
     raise;
   end;
+end;
+
+function TWorkerBusinessBills.SaveBillNewCard(var nData: string): Boolean;
+var nSQL, nTruck: string;
+    nIdx: Integer;
+begin
+  Result := False;
+  //init card
+
+  nSQL := 'Select B_Card,B_Truck From %s Where B_ID=''%s''';
+  nSQL := Format(nSQL, [sTable_BillNew, FIn.FData]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nData := '销售单据[ %s ]已丢失.';
+      nData := Format(nData, [FIn.FData]);
+      Exit;
+    end;
+
+    FListC.Clear;
+    nTruck := Fields[1].AsString;
+    
+    if Fields[0].AsString <> '' then
+    begin
+      nSQL := 'Update %s set C_TruckNo=Null,C_Status=''%s'' Where C_Card=''%s''';
+      nSQL := Format(nSQL, [sTable_Card, sFlag_CardIdle, Fields[0].AsString]);
+      FListC.Add(nSQL); //磁卡状态
+    end;
+  end;
+
+  nSQL := 'Update %s Set P_Card=NULL, P_CType=NULL Where P_Card=''%s''';
+  nSQL := Format(nSQL, [sTable_ProvBase, FIn.FExtParam]);
+  FListC.Add(nSQL);
+  //注销正在使用该卡的原材料
+
+  nSQL := 'Update %s Set B_Card=NULL, B_CardSerial=NULL Where B_Card=''%s''';
+  nSQL := Format(nSQL, [sTable_BillNew, FIn.FExtParam]);
+  FListC.Add(nSQL);
+  //注销正在使用该卡的销售订单
+
+  nSQL := 'Update %s Set L_Card=NULL Where L_Card=''%s''';
+  nSQL := Format(nSQL, [sTable_Bill, FIn.FExtParam]);
+  FListC.Add(nSQL);
+  //注销正在使用该卡的交货单
+
+  nSQL := MakeSQLByStr([
+          SF('B_Card', FIn.FExtParam)
+          ], sTable_BillNew, SF('B_ID', FIn.FData), False);
+  FListC.Add(nSQL);
+  //更新磁卡
+
+  nSQL := 'Update %s Set L_Card=''%s'' Where L_Memo =''%s'' And L_OutFact Is NULL';
+  nSQL := Format(nSQL, [sTable_Bill,
+          FIn.FExtParam, FIn.FData]);
+  FListC.Add(nSQL);
+  //更新未出厂明细磁卡
+
+  nSQL := 'Select Count(*) From %s Where C_Card=''%s''';
+  nSQL := Format(nSQL, [sTable_Card, FIn.FExtParam]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+  if Fields[0].AsInteger < 1 then
+  begin
+    nSQL := MakeSQLByStr([SF('C_Card', FIn.FExtParam),
+            SF('C_Status', sFlag_CardUsed),
+            SF('C_Used', sFlag_SaleNew),
+            SF('C_Freeze', sFlag_No),
+            SF('C_TruckNo', nTruck),
+            SF('C_Man', FIn.FBase.FFrom.FUser),
+            SF('C_Date', sField_SQLServer_Now, sfVal)
+            ], sTable_Card, '', True);
+    FListC.Add(nSQL);
+  end else
+  begin
+    nSQL := Format('C_Card=''%s''', [FIn.FExtParam]);
+    nSQL := MakeSQLByStr([SF('C_Status', sFlag_CardUsed),
+            SF('C_Used', sFlag_SaleNew),
+            SF('C_Freeze', sFlag_No),
+            SF('C_TruckNo', nTruck),
+            SF('C_Man', FIn.FBase.FFrom.FUser),
+            SF('C_Date', sField_SQLServer_Now, sfVal)
+            ], sTable_Card, nSQL, False);
+    FListC.Add(nSQL);
+  end;
+  //更新磁卡状态
+
+  FDBConn.FConn.BeginTrans;
+  try
+    for nIdx:=0 to FListC.Count - 1 do
+      gDBConnManager.WorkerExec(FDBConn, FListC[nIdx]);
+    //xxxxx
+
+    FDBConn.FConn.CommitTrans;
+    Result := True;
+  except
+    on E: Exception do
+    begin
+      FDBConn.FConn.RollbackTrans;
+      nData := E.Message;
+    end;
+  end;
+end;
+
+function TWorkerBusinessBills.SaveBillFromNew(var nData: string): Boolean;
+var nStr,nSQL: string;
+    nIdx,nInt: Integer;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
+  //Init
+
+  nSQL := 'Select * From %s Where B_ID=''%s''';
+  nSQL := Format(nSQL, [sTable_BillNew, FIn.FData]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nData := '销售订单[ %s ]信息已丢失.';
+      nData := Format(nData, [FIn.FData]);
+      Exit;
+    end;
+
+    if FieldByName('B_IsUsed').AsString = sFlag_Yes then
+    begin
+      nData := '销售订单[ %s ]信息正在被[ %s ]使用.';
+      nData := Format(nData, [FIn.FData, FieldByName('B_LID').AsString]);
+      Exit;
+    end;
+
+    with FListA do
+    begin
+      Clear;
+
+      Values['BID']   := FieldByName('B_ID').AsString;
+      Values['CusID'] := FieldByName('B_CusID').AsString;
+      Values['CusName'] := FieldByName('B_CusName').AsString;
+      Values['CusCode'] := FieldByName('B_CusCode').AsString;
+
+      Values['SaleID'] := FieldByName('B_SaleID').AsString;
+      Values['SaleMan'] := FieldByName('B_SaleMan').AsString;
+
+      Values['Type'] := FieldByName('B_Type').AsString;
+      Values['StockNO'] := FieldByName('B_StockNO').AsString;
+      Values['StockName'] := FieldByName('B_StockName').AsString;
+
+      Values['Pack'] := FieldByName('B_PackStyle').AsString;
+      Values['Lading'] := FieldByName('B_Lading').AsString;
+      Values['IsVIP'] := FieldByName('B_IsVIP').AsString;
+
+      Values['Value'] := FieldByName('B_Value').AsString;
+      Values['Truck'] := FieldByName('B_Truck').AsString;
+      Values['Card']  := FieldByName('B_Card').AsString;
+    end;
+  end;
+
+  FDBConn.FConn.BeginTrans;
+  try
+    FOut.FData := '';
+    //bill list
+
+    FListC.Clear;
+    FListC.Values['Group'] :=sFlag_BusGroup;
+    FListC.Values['Object'] := sFlag_BillNo;
+    //to get serial no
+
+    if not TWorkerBusinessCommander.CallMe(cBC_GetSerialNO,
+          FListC.Text, sFlag_Yes, @nOut) then
+      raise Exception.Create(nOut.FData);
+    //xxxxx
+
+    FOut.FData := FOut.FData + nOut.FData + ',';
+    //combine bill
+
+    nStr := MakeSQLByStr([SF('L_ID', nOut.FData),
+            SF('L_CusID', FListA.Values['CusID']),
+            SF('L_CusName', FListA.Values['CusName']),
+            SF('L_CusPY', GetPinYinOfStr(FListA.Values['CusName'])),
+            SF('L_CusCode', FListA.Values['CusCode']),
+            SF('L_SaleID', FListA.Values['SaleID']),
+            SF('L_SaleMan', FListA.Values['SaleMan']),
+
+            SF('L_Type', FListA.Values['Type']),
+            SF('L_StockNo', FListA.Values['StockNO']),
+            SF('L_StockName', FListA.Values['StockName']),
+
+            SF('L_Price', 0, sfVal),
+            SF('L_Card', FListA.Values['Card']),
+            SF('L_PackStyle', FListA.Values['Pack']),
+            SF('L_Value', StrToFloat(FListA.Values['Value']), sfVal), 
+
+            SF('L_Truck', FListA.Values['Truck']),
+            SF('L_Status', sFlag_BillNew),
+            SF('L_Lading', FListA.Values['Lading']),
+            SF('L_IsVIP', FListA.Values['IsVIP']),
+            SF('L_Man', FIn.FBase.FFrom.FUser),
+            SF('L_Memo', FListA.Values['BID']),
+            SF('L_Date', sField_SQLServer_Now, sfVal)
+            ], sTable_Bill, '', True);
+    gDBConnManager.WorkerExec(FDBConn, nStr);
+
+    nSQL := 'Update %s Set B_IsUsed=''%s'', B_LID=''%s'' Where B_ID=''%s''';
+    nSQL := Format(nSQL, [sTable_BillNew, sFlag_Yes, nOut.FData, FListA.Values['BID']]);
+    gDBConnManager.WorkerExec(FDBConn, nSQL);
+
+    //更新销售订单状态
+
+    nStr := FListA.Values['StockNO'];
+    nStr := GetMatchRecord(nStr);
+    //该品种在装车队列中的记录号
+
+    if nStr <> '' then
+    begin
+      nSQL := 'Update $TK Set T_Value=T_Value + $Val,' +
+              'T_HKBills=T_HKBills+''$BL.'' Where R_ID=$RD';
+      nSQL := MacroValue(nSQL, [MI('$TK', sTable_ZTTrucks),
+              MI('$RD', nStr),
+              MI('$Val', FListA.Values['Value']),
+              MI('$BL', nOut.FData)]);
+      gDBConnManager.WorkerExec(FDBConn, nSQL);
+    end else
+    begin
+      nSQL := MakeSQLByStr([
+        SF('T_Truck'   , FListA.Values['Truck']),
+        SF('T_StockNo' , FListA.Values['StockNO']),
+        SF('T_Stock'   , FListA.Values['StockName']),
+        SF('T_Type'    , FListA.Values['Type']),
+        SF('T_InTime'  , sField_SQLServer_Now, sfVal),
+        SF('T_Bill'    , nOut.FData),
+        SF('T_Valid'   , sFlag_Yes),
+        SF('T_Value'   , StrToFloat(FListA.Values['Value']), sfVal),
+        SF('T_VIP'     , FListA.Values['IsVIP']),
+        SF('T_HKBills' , nOut.FData + '.')
+        ], sTable_ZTTrucks, '', True);
+      gDBConnManager.WorkerExec(FDBConn, nSQL);
+
+      nStr := 'Select Max(R_ID) From ' + sTable_ZTTrucks;
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+        nStr := Fields[0].AsString;
+      //插入记录号
+
+      nInt := Length(FMatchItems);
+      SetLength(FMatchItems, nInt + 1);
+      with FMatchItems[nInt] do
+      begin
+        FStock := FListA.Values['StockNO'];
+        FGroup := GetStockGroup(FStock);
+        FRecord := nStr;
+      end;
+    end;
+
+    nIdx := Length(FOut.FData);
+    if Copy(FOut.FData, nIdx, 1) = ',' then
+      System.Delete(FOut.FData, nIdx, 1);
+    //xxxxx
+
+    FDBConn.FConn.CommitTrans;
+    Result := True;
+  except
+    FDBConn.FConn.RollbackTrans;
+    raise;
+  end;
+
+  {$IFDEF MicroMsg}
+  with FListC do
+  begin
+    Clear;
+    Values['bill'] := FOut.FData;
+    Values['company'] := gSysParam.FHintText;
+  end;
+
+  if FListA.Values['BuDan'] = sFlag_Yes then
+       nStr := cWXBus_OutFact
+  else nStr := cWXBus_MakeCard;
+
+  gWXPlatFormHelper.WXSendMsg(nStr, FListC.Text);
+  {$ENDIF}
 end;
 
 initialization

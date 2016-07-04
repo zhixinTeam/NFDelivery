@@ -372,7 +372,8 @@ begin
   nInt := Length(FBillItems);
   if nInt > 0 then
   begin
-    if FBillItems[0].FCardUse = sFlag_Sale then
+    if (FBillItems[0].FCardUse = sFlag_Sale) or
+       (FBillItems[0].FCardUse = sFlag_SaleNew) then
     begin
       if nInt > 1 then
            nStr := '销售并单'
@@ -914,7 +915,8 @@ begin
     Exit;
   end;
 
-  if (Length(FBillItems) > 0) and (FUIData.FCardUse=sFlag_Sale) then
+  if (Length(FBillItems) > 0) and
+  ((FUIData.FCardUse=sFlag_Sale) or (FBillItems[0].FCardUse = sFlag_SaleNew)) then
   begin
     if FBillItems[0].FNextStatus = sFlag_TruckBFP then
          FUIData.FPData.FValue := nVal
@@ -1487,61 +1489,8 @@ end;
 //Parm: 需校正量
 //Desc: 从现有开单量中扣减nBillValue.
 procedure TfFrameManualPoundItem.AdjustSanValue(const nBillValue: Double);
-var nStr: string;
-    nIdx: Integer;
-    nDec,nVal: Double;
 begin
   Exit;
-  FDM.ADOConn.BeginTrans;
-  try
-    nVal := nBillValue;
-    //to dec
-
-    for nIdx:=Low(FBillItems) to High(FBillItems) do
-    with FBillItems[nIdx] do
-    begin
-      if FValue > nVal then
-           nDec := nVal
-      else nDec := FValue;
-
-      if nDec <= 0 then Continue;
-      //已处理完
-      nVal := nVal - nDec;
-
-      nStr := 'Update %s Set L_Value=L_Value-%.2f Where L_ID=''%s''';
-      nStr := Format(nStr, [sTable_Bill, nDec, FID]);
-      FDM.ExecuteSQL(nStr);
-
-      nStr := 'Update %s Set B_Freeze=B_Freeze-%.2f Where B_ID=''%s''';
-      nStr := Format(nStr, [sTable_Order, nDec, FZhiKa]);
-      FDM.ExecuteSQL(nStr);
-    end;
-
-    FDM.ADOConn.CommitTrans;
-    //提货冻结量
-  except
-    on E: Exception do
-    begin
-      FDM.ADOConn.RollbackTrans;
-      ShowDlg(E.Message, sHint);
-      Exit;
-    end;
-  end;
-
-  nVal := nBillValue;
-  //to adjust
-
-  for nIdx:=Low(FBillItems) to High(FBillItems) do
-  with FBillItems[nIdx] do
-  begin
-    if FValue > nVal then
-         nDec := nVal
-    else nDec := FValue;
-
-    if nDec <= 0 then Continue;
-    //已处理完
-    FValue := FValue - nDec;
-  end;
 end;
 
 //Desc: 保存销售
@@ -1618,7 +1567,7 @@ begin
         end;
       end;
 
-      if FType = sFlag_San then
+      if (FType = sFlag_San) And (FCardUse = sFlag_Sale) then
       begin
         if nVal > 0 then
         begin
@@ -1680,6 +1629,7 @@ begin
     ShowWaitForm(ParentForm, '正在保存称重', True);
 
     if FUIData.FCardUse = sFlag_Sale then      nBool := SavePoundSale
+    else if FUIData.FCardUse = sFlag_SaleNew then nBool := SavePoundSale
     else if FUIData.FCardUse = sFlag_Provide then nBool := SavePoundProvide
     else nBool := SavePoundData(nPoundID);
 

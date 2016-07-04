@@ -27,15 +27,16 @@ const
   cFI_FrameShip         = $0011;                     //船只档案
   cFI_FrameWharf        = $0012;                     //码头档案
   cFI_FrameInventory    = $0013;                     //存活档案
+  cFI_FrameBatchQuery   = $0016;                     //批次管理
   cFI_FrameDeduct       = $0017;                     //暗扣规则
   cFI_FrameBatch        = $0018;                     //批次管理
   cFI_FrameMine         = $0019;                     //矿点档案
-  cFI_FrameBatchQuery   = $0016;                     //批次管理
 
   cFI_FrameReqSale      = $0020;                     //销售申请
   cFI_FrameReqProvide   = $0021;                     //采购申请
   cFI_FrameReqDispatch  = $0022;                     //调拨单
 
+  cFI_FrameBillNew      = $0029;                     //开提货单
   cFI_FrameBill         = $0030;                     //开提货单
   cFI_FrameBillQuery    = $0031;                     //开单查询
   cFI_FrameMakeCard     = $0032;                     //办理磁卡
@@ -100,6 +101,7 @@ const
   cFI_FormMakeCard      = $1025;                     //办理磁卡
   cFI_FormMakeRFIDCard  = $1026;                     //办理电子标签
   cFI_FormMakeProvCard  = $1027;                     //办理磁卡
+  cFI_FormBillNew       = $1028;
 
   cFI_FormGetMine       = $1029;                     //矿点档案
 
@@ -284,6 +286,8 @@ begin
   AddMenuModuleItem('MAIN_D02', cFI_FrameMakeCard);
   AddMenuModuleItem('MAIN_D03', cFI_FormMakeBill, mtForm);
   AddMenuModuleItem('MAIN_D06', cFI_FrameBill);
+  AddMenuModuleItem('MAIN_D08', cFI_FormBillNew, mtForm);
+  AddMenuModuleItem('MAIN_D09', cFI_FrameBillNew);
 
   AddMenuModuleItem('MAIN_E01', cFI_FramePoundManual);
   AddMenuModuleItem('MAIN_E02', cFI_FormDisPound, mtForm);
