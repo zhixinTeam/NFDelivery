@@ -223,9 +223,8 @@ begin
   //xxxxx
 
   EditTruck.Text := FOrder.FTruck;
-  EditValue.Text := Format('%.2f', [FOrder.FValue]);
-
   SetCtrlData(EditPack, GetStockPackStyle(FOrder.FStockID));
+  if EditPack.ItemIndex < 0 then EditPack.ItemIndex := 0;
   //包装类型
 
   SetVipTruck(FOrder.FTruck);
