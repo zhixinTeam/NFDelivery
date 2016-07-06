@@ -1313,8 +1313,8 @@ begin
   nBill := AdjustListStrFormat(nBill, '''', True, ',', False);
   //Ìí¼ÓÒýºÅ
 
-  nStr := 'Select * From %s b Where L_ID In(%s)';
-  nStr := Format(nStr, [sTable_Bill, nBill]);
+  nStr := 'Select * From %s b Left Join %s p on b.L_ID=p.P_Bill Where L_ID In(%s)';
+  nStr := Format(nStr, [sTable_Bill, sTable_PoundLog, nBill]);
   //xxxxx
 
   if FDM.QueryTemp(nStr).RecordCount < 1 then

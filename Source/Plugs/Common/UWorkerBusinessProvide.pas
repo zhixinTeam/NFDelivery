@@ -557,7 +557,7 @@ end;
 //Parm: 交货单[FIn.FData];岗位[FIn.FExtParam]
 //Desc: 保存指定岗位提交的交货单列表
 function TWorkerBusinessProvide.SavePostProvideItems(var nData: string): Boolean;
-var nSQL,nStr,nS,nN: string;
+var nSQL,nStr,nS,nN,nYS: string;
     nInt, nIdx: Integer;
     nNet, nVal: Double;
     nPound: TLadingBillItems;
@@ -667,6 +667,13 @@ begin
     end;
     //同一状态重复保存
 
+    nStr := 'Select D_Value From %s Where D_Name=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_StockIfYS]);
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    if RecordCount > 0 then
+         nYS := Fields[0].AsString
+    else nYS := sFlag_No;
+
     FListB.Clear;
     nStr := 'Select D_Value From %s Where D_Name=''%s''';
     nStr := Format(nStr, [sTable_SysDict, sFlag_NFStock]);
@@ -698,7 +705,7 @@ begin
       FStatus := sFlag_TruckBFP;
       FNextStatus := sFlag_TruckXH;
 
-      if FListB.IndexOf(FStockNo) >= 0 then
+      if (FListB.IndexOf(FStockNo) >= 0) or (nYS <> sFlag_Yes) then
         FNextStatus := sFlag_TruckBFM;
       //现场不发货直接过重
 

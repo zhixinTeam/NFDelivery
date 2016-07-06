@@ -1172,15 +1172,23 @@ begin
   nStr := FListA.Values['QueryAll'];
   if nStr = '' then
   begin
-    FOut.FData := FOut.FData + ' And (crowstatus=0 And VBILLSTATUS=1)';
+    FOut.FData := FOut.FData + ' And (crowstatus=0 And VBILLSTATUS=1 ' +
+                  'And t1.dr=0 And t2.dr=0)';
     //当前有效单据
   end;
 
   nStr := FListA.Values['Customer'];
   if nStr <> '' then
   begin
-    FOut.FData := FOut.FData + Format(' And unitname Like ''%%%s%%''', [nStr]);
+    FOut.FData := FOut.FData + Format(' And unitname = ''%s''', [nStr]);
     //按客户编号
+  end;
+  
+  nStr := FListA.Values['StockNo'];
+  if nStr <> '' then
+  begin
+    FOut.FData := FOut.FData + Format(' And invcode=''%s''', [nStr]);
+    //按物料编号
   end;
 
   nStr := FListA.Values['Filter'];
@@ -1785,7 +1793,7 @@ begin
   nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
 
   nSQL := 'Select L_ID,L_ZhiKa,L_SaleMan,L_Truck,L_Value,L_PValue,L_PDate,' +
-          'L_PMan,L_MValue,L_MDate,L_MMan,L_OutFact,L_Date,P_ID From %s ' +
+          'L_PMan,L_MValue,L_MDate,L_MMan,L_OutFact,L_Date,L_Seal,P_ID From %s ' +
           '  Left Join %s On P_Bill=L_ID ' +
           'Where L_ID In (%s)';
   nSQL := Format(nSQL, [sTable_Bill, sTable_PoundLog, nStr]);
@@ -1818,6 +1826,7 @@ begin
         FType       := FieldByName('L_SaleMan').AsString;
         FTruck      := FieldByName('L_Truck').AsString;
         FValue      := FieldByName('L_Value').AsFloat;
+        FMemo       := FieldByName('L_Seal').AsString;
 
         if FListA.IndexOf(FZhiKa) < 0 then
           FListA.Add(FZhiKa);
@@ -2010,7 +2019,11 @@ begin
                 SF('pk_sourcebill', FieldByName('pk_meambill').AsString),
                 SF('pk_sourcebill_b', FieldByName('pk_meambill_b').AsString),
                 SF('ts', DateTime2Str(nBills[nIdx].FMData.FDate)),
+                {$IFDEF JDNF}
+                SF('vbatchcode', nBills[nIdx].FMemo),
+                {$ELSE}
                 SF('vbatchcode', FieldByName('vbatchcode').AsString),
+                {$ENDIF}
                 MakeField(nDS, 'vdef1', 1),
                 MakeField(nDS, 'vdef10', 1),
                 MakeField(nDS, 'vdef11', 1),

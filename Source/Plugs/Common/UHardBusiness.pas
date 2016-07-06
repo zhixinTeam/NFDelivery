@@ -546,7 +546,6 @@ begin
     nStr := '';
     {$ENDIF}
 
-    if nCardType = sFlag_SaleNew then nCardType := sFlag_Sale;
     nStr := nStr + #7 + nCardType;
     //¥≈ø®¿‡–Õ
 

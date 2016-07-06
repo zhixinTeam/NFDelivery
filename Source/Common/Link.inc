@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE JSNF}
+{$DEFINE JDNF}
 //建德南方
 
 {$IFDEF JDNF}

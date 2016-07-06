@@ -290,8 +290,9 @@ var nStr: string;
     nDS: TDataSet;
 begin
   Result := False;
-  nStr := 'Select *,%s As L_ValidMoney From %s b Where L_ID=''%s''';
-  nStr := Format(nStr, [nMoney, sTable_Bill, nBill]);
+  nStr := 'Select *,%s As L_ValidMoney From %s b ' +
+          'Left Join %s p on b.L_ID=p.P_Bill Where L_ID=''%s''';
+  nStr := Format(nStr, [nMoney, sTable_Bill, sTable_PoundLog, nBill]);
 
   nDS := FDM.SQLQuery(nStr, FDM.SQLQuery1);
   if not Assigned(nDS) then Exit;

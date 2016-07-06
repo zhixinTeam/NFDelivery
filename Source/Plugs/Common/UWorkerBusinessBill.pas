@@ -2092,6 +2092,13 @@ begin
     FDBConn.FConn.RollbackTrans;
     raise;
   end;
+
+  if FIn.FExtParam = sFlag_TruckBFM then
+  begin
+    if Assigned(gHardShareData) then
+      gHardShareData('TruckOut:' + nBills[0].FCard);
+    //单次过磅自动出厂
+  end;
   
   {$IFDEF MicroMsg}
   nStr := '';
@@ -2127,11 +2134,11 @@ begin
   //Init
 
   FListC.Values['NoDate'] := sFlag_Yes;
-  FListC.Values['CustomerID'] := nBill.FCusID;
+  FListC.Values['Customer'] := nBill.FCusName;
   FListC.Values['StockNo'] := nBill.FStockNo;
   FListC.Values['Order']   := 'TMAKETIME DESC';
 
-  if not TWorkerBusinessCommander.CallMe(cBC_GetSQLQueryOrder, '103',
+  if not TWorkerBusinessCommander.CallMe(cBC_GetSQLQueryDispatch, '',
          PackerEncodeStr(FListC.Text), @nOut) then
   begin
     nData := '获取读NC订单语句失败，条件为[ %s ]';
@@ -2148,7 +2155,7 @@ begin
         nData := '无满足如下条件的订单: ' + #13#10#13#10 +
                  '物料信息:[ %s.%s ]' + #13#10 +
                  '客户信息:[ %s.%s ]' + #13#10#13#10 +
-                 '请在NC中补销售订单.';
+                 '请在NC中补订单.';
         nData := Format(nData, [nBill.FStockNo, nBill.FStockName,
                  nBill.FCusID, nBill.FCusName]);
         Exit;
@@ -2166,8 +2173,6 @@ begin
         with FOrderItems[nInt] do
         begin
           FOrder := FieldByName('pk_meambill').AsString;
-          FCusCode := FieldByName('def30').AsString;
-          if FCusCode = '' then FCusCode := '00';
 
           FStockID := FieldByName('invcode').AsString;
           FStockName := FieldByName('invname').AsString;
@@ -2176,9 +2181,6 @@ begin
 
           FSaleID := '001';
           FSaleName := FieldByName('VBILLTYPE').AsString;
-
-          FAreaTo := FieldByName('vdef2').AsString;
-          //区域流向
 
           nIdx := GetStockInfo(FStockID);
           if nIdx < 0 then
@@ -2229,7 +2231,7 @@ begin
 
   if nVal <= 0 then
   begin
-    nData := '交货单[ %s ]提交的数据出错.';
+    nData := '调拨单[ %s ]提交的数据出错.';
     nData := Format(nData, [nBill.FID]);
     Exit;
   end;
@@ -2267,13 +2269,20 @@ begin
             ], sTable_Bill, SF('L_ID', nBill.FID), False);
     FListA.Add(nSQL);
 
+
     nSQL := 'Select * From %s Where B_ID=''%s''';
     nSQL := Format(nSQL, [sTable_Order, FOrder]);
     with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
     if RecordCount < 1 then
-         nSQL := MakeSQLByStr([SF('B_ID', FOrder),SF('B_Freeze', FKDValue, sfVal)
-                  ], sTable_Order, '', True)
-    else nSQL := 'Update %s Set B_Freeze=B_Freeze+%.2f Where B_ID=''%s''';
+    begin
+      nSQL := MakeSQLByStr([SF('B_ID', FOrder),SF('B_Freeze', FKDValue, sfVal)
+              ], sTable_Order, '', True);
+    end else
+
+    begin
+      nSQL := 'Update %s Set B_Freeze=B_Freeze+%.2f Where B_ID=''%s''';
+      nSQL := Format(nSQL, [sTable_Order, FKDValue, FOrder])
+    end;
 
     FListA.Add(nSQL);
   end;
@@ -2524,8 +2533,8 @@ begin
 end;
 
 function TWorkerBusinessBills.SaveBillFromNew(var nData: string): Boolean;
-var nStr,nSQL: string;
-    nIdx,nInt: Integer;
+var nIdx,nInt: Integer;
+    nStr,nSQL, nTruck: string;
     nOut: TWorkerBusinessCommand;
 begin
   Result := False;
@@ -2573,6 +2582,84 @@ begin
       Values['Value'] := FieldByName('B_Value').AsString;
       Values['Truck'] := FieldByName('B_Truck').AsString;
       Values['Card']  := FieldByName('B_Card').AsString;
+    end;
+  end;
+
+  //----------------------------------------------------------------------------
+  SetLength(FStockItems, 0);
+  SetLength(FMatchItems, 0);
+  //init
+
+  nTruck := FListA.Values['Truck'];
+  FSanMultiBill := AllowedSanMultiBill;
+  //散装允许开多单
+  
+  nStr := 'Select M_ID,M_Group From %s Where M_Status=''%s'' ';
+  nStr := Format(nStr, [sTable_StockMatch, sFlag_Yes]);
+  //品种分组匹配
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    SetLength(FStockItems, RecordCount);
+    nIdx := 0;
+    First;
+
+    while not Eof do
+    begin
+      FStockItems[nIdx].FStock := Fields[0].AsString;
+      FStockItems[nIdx].FGroup := Fields[1].AsString;
+
+      Inc(nIdx);
+      Next;
+    end;
+  end;
+
+  nStr := 'Select R_ID,T_Bill,T_StockNo,T_Type,T_InFact,T_Valid From %s ' +
+          'Where T_Truck=''%s'' ';
+  nStr := Format(nStr, [sTable_ZTTrucks, nTruck]);
+  //还在队列中车辆
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    SetLength(FMatchItems, RecordCount);
+    nIdx := 0;
+    First;
+
+    while not Eof do
+    begin
+      if (FieldByName('T_Type').AsString = sFlag_San) and (not FSanMultiBill) then
+      begin
+        nStr := '车辆[ %s ]在未完成[ %s ]交货单之前禁止开单.';
+        nData := Format(nStr, [nTruck, FieldByName('T_Bill').AsString]);
+        Exit;
+      end else
+
+      if (FieldByName('T_Type').AsString = sFlag_Dai) and
+         (FieldByName('T_InFact').AsString <> '') then
+      begin
+        nStr := '车辆[ %s ]在未完成[ %s ]交货单之前禁止开单.';
+        nData := Format(nStr, [nTruck, FieldByName('T_Bill').AsString]);
+        Exit;
+      end else
+
+      if FieldByName('T_Valid').AsString = sFlag_No then
+      begin
+        nStr := '车辆[ %s ]有已出队的交货单[ %s ],需先处理.';
+        nData := Format(nStr, [nTruck, FieldByName('T_Bill').AsString]);
+        Exit;
+      end; 
+
+      with FMatchItems[nIdx] do
+      begin
+        FStock := FieldByName('T_StockNo').AsString;
+        FGroup := GetStockGroup(FStock);
+        FRecord := FieldByName('R_ID').AsString;
+      end;
+
+      Inc(nIdx);
+      Next;
     end;
   end;
 

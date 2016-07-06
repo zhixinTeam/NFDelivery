@@ -38,6 +38,7 @@ type
     FType    : THHReaderType;
     FPound   : string;
     FCard    : string;
+    FCardExt : string;
     FPrinter : string;
     FLast    : Int64;
     FKeep    : Word;
@@ -111,6 +112,7 @@ type
     procedure StopRead;
     //启停读取
     function GetPoundCard(const nPound: string): string;
+    procedure SetPoundCardExt(const nPound,nExtCard: string);
     //磅站卡号
     procedure OpenDoor(const nReader: string);
     //道闸抬杆
@@ -120,6 +122,7 @@ type
     procedure SetCardLastDone(const nCard,nReader: string);
     function GetReaderLastOn(const nCard: string): string;
     //磁卡活动
+    property ConnHelper: Boolean read FConnHelper write FConnHelper;
     property OnProce: THHProce read FProce write FProce;
     property OnEvent: THHEvent read FEvent write FEvent;
     //事件相关
@@ -207,6 +210,21 @@ begin
         Break;
       //loop get card
     end;
+  finally
+    FSyncLock.Leave;
+  end;
+end;
+
+//Desc: 设定扩展卡号,用于特定比对业务
+procedure THardwareHelper.SetPoundCardExt(const nPound, nExtCard: string);
+var nIdx: Integer;
+begin
+  FSyncLock.Enter;
+  try
+    for nIdx:=Low(FItems) to High(FItems) do
+     if CompareText(nPound, FItems[nIdx].FPound) = 0 then
+      FItems[nIdx].FCardExt := nExtCard;
+    //xxxxx
   finally
     FSyncLock.Leave;
   end;
@@ -306,7 +324,7 @@ begin
   for nIdx:=Low(FItems) to High(FItems) do
   with FItems[nIdx] do
   begin
-    if FCard <> nCard then Continue;
+    if (FCard <> nCard) and (FCardExt <> nCard) then Continue;
     //match card_no
 
     if nLast < 0 then nLast := nIdx;
@@ -350,6 +368,8 @@ begin
     with nNode.Nodes[nIdx],FItems[nInt] do
     begin
       FCard := '';
+      FCardExt := '';
+
       FLast := 0;
       FOKTime := 0;
       FID := AttributeByName['ID'];
