@@ -602,9 +602,7 @@ begin
   if not GetOrderGYValue(FListB) then Exit;
 
   nVal := StrToFloat(FListB.Values[FUIData.FExtID_2]);
-  if FUIData.FPData.FValue > FUIData.FMData.FValue then
-       nNet := FUIData.FPData.FValue - FUIData.FMData.FValue
-  else nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
+  nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
 
   if FloatRelation(nVal, nNet, rtLE) then
   begin
@@ -615,7 +613,7 @@ begin
     Exit;
   end;
 
-  if FBillItems[0].FPreTruckP then
+  if FUIData.FPreTruckP then
        nNextStatus := sFlag_TruckSH
   else nNextStatus := FBillItems[0].FNextStatus;
 
@@ -633,6 +631,10 @@ begin
     else FMData.FStation := FPoundTunnel.FID;
   end;
 
+  nStr := '保存状态:[ %s ] ,皮重:[ %.2f ], 毛重:[ %.2f] , 下一状态:[ %s ]';
+  nStr := Format(nStr, [nNextStatus, FBillItems[0].FPData.FValue,
+          FBillItems[0].FMData.FValue, FBillItems[0].FNextStatus]);
+  WriteSysLog(nStr);        
   Result := SaveLadingBills(nNextStatus, FBillItems, FPoundTunnel);
   //保存称重
 end;

@@ -145,6 +145,7 @@ type
 
     FYSValid    : string;          //验收结果
     FKZValue    : Double;          //扣杂量
+    FSeal       : string;          //批次号
     FMemo       : string;          //备注
     FExtID_1    : string;          //额外编号
     FExtID_2    : string;          //额外编号
@@ -329,6 +330,7 @@ begin
 
         FYSValid:= Values['YSValid'];
         FMemo   := Values['Memo'];
+        FSeal   := Values['Seal'];
       end;
 
       Inc(nInt);
@@ -425,6 +427,7 @@ begin
         Values['KZValue']    := FloatToStr(FKZValue);
         Values['YSValid']    := FYSValid;
         Values['Memo']       := FMemo;
+        Values['Seal']       := FSeal;
       end;
 
       nListA.Add(PackerEncodeStr(nListB.Text));

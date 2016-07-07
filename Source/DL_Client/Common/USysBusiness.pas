@@ -4,6 +4,7 @@
 *******************************************************************************}
 unit USysBusiness;
 
+{$I Link.Inc} 
 interface
 
 uses
@@ -412,6 +413,7 @@ begin
   end;   
 end;
 
+{$IFNDEF JDNF}
 //Date: 2015-01-16
 //Parm: 物料号;品牌名;开单量;原始批次
 //Desc: 生产nStock的批次号
@@ -424,6 +426,7 @@ begin
 
   try
     nList.Clear;
+
     nList.Values['Batch'] := nBatch;
     nList.Values['Brand'] := nBrand;
     nList.Values['Value'] := FloatToStr(nValue);
@@ -435,6 +438,20 @@ begin
     nList.Free;
   end;
 end;
+{$ELSE}
+//Date: 2016/7/7
+//Parm: 物料号;预提量
+//Desc: 生产nStock的批次号
+function GetStockBatcode(const nStock: string;
+ const nBrand: string=''; const nValue: Double=0; const nBatch: string=''): string;
+var nOut: TWorkerBusinessCommand;
+begin
+  if CallBusinessCommand(cBC_GetStockBatcode, nStock, FloatToStr(nValue),
+     @nOut, True) then
+       Result := nOut.FData
+  else Result := '';
+end;
+{$ENDIF}
 
 //Desc: 获取系统有效期
 function GetSysValidDate: Integer;

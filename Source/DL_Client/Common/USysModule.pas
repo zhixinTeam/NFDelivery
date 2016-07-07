@@ -18,11 +18,13 @@ uses
   UFormGetCustom, UFormBill, UFrameBill, UFormTruckIn, UFormTruckOut,
   UFormLadingSan, UFormLadingDai, UFrameBillCard, UFormCard, UFramePoundManual,
   UFrameTruckQuery, UFrameQueryDiapatch, UFrameQuerySaleDetail, UFrameZTDispatch,
-  UFormZTLine, UFramePoundQuery, UFormRFIDCard, UFrameBatcode, UFormBatcode,
+  UFormZTLine, UFramePoundQuery, UFormRFIDCard,
   UFormChangeTunnel, UFrameDeduct, UFormDeduct, UFormGetNCStock, UFrameMine,
   UFormMine, UFormGetMine, UFormPoundDispatch, UFrameBatcodeQuery,
   UFormBatcodeEdit, UFramePoundAuto, UFrameQueryProvideDetail,
   UFrameQueryDiapatchDetail, UFormBillNew, UFrameBillNew,
+  {$IFDEF JDNF}UFrameBatcodeJ, UFormBatcodeJ, {$ELSE}
+  UFrameBatcode, UFormBatcode, {$ENDIF}
 
   UFormProvCard, UFormProvBase, UFrameProvBase, UFrameProvTruckDetail,
   UFrameQueryProvDetail

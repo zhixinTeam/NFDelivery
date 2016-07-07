@@ -661,6 +661,7 @@ begin
       if FOrderItems[nIdx].FKDValue <= 0 then Continue;
       //无开单量
 
+      {$IFNDEF JDNF}
       if FOrderItems[nIdx].FStockType = sFlag_Dai then
       begin
         FListC.Clear;
@@ -679,7 +680,8 @@ begin
             FListC.Text, sFlag_Yes, @nOut) then
         raise Exception.Create(nOut.FData);
       end;
-      //如果是袋装，则更新批次信息
+      //如果是袋装，则更新批次信息 
+      {$ENDIF}
 
       FListC.Clear;
       FListC.Values['Group'] :=sFlag_BusGroup;
@@ -876,7 +878,16 @@ begin
           gDBConnManager.WorkerExec(FDBConn, nStr);
         end;
       end;
-    end;
+
+      {$IFDEF JDNF}
+      nSQL := 'Update %s Set B_HasUse=B_HasUse+(%s),B_LastDate=%s ' +
+              'Where B_Stock=''%s'' and B_Batcode=''%s''';
+      nSQL := Format(nSQL, [sTable_Batcode, FloatToStr(FOrderItems[nIdx].FKDValue),
+              sField_SQLServer_Now, FOrderItems[nIdx].FStockID,
+              FListA.Values['Seal']]);
+      gDBConnManager.WorkerExec(FDBConn, nSQL); //更新批次号使用量
+      {$ENDIF}
+    end;         
 
     nIdx := Length(FOut.FData);
     if Copy(FOut.FData, nIdx, 1) = ',' then
@@ -1007,12 +1018,12 @@ function TWorkerBusinessBills.DeleteBill(var nData: string): Boolean;
 var nIdx: Integer;
     nHasOut: Boolean;
     nVal: Double;
-    nStr,nP,nRID,nBill,nZK: string;
+    nStr,nP,nRID,nBill,nZK,nSN,nHY: string;
 begin
   Result := False;
   //init
 
-  nStr := 'Select L_ZhiKa,L_Value,L_OutFact From %s ' +
+  nStr := 'Select L_ZhiKa,L_Value,L_Seal,L_StockNO,L_OutFact From %s ' +
           'Where L_ID=''%s''';
   nStr := Format(nStr, [sTable_Bill, FIn.FData]);
 
@@ -1035,7 +1046,9 @@ begin
       Exit;
     end;
 
+    nSN  := FieldByName('L_StockNO').AsString;
     nZK  := FieldByName('L_ZhiKa').AsString;
+    nHY  := FieldByName('L_Seal').AsString;
     nVal := FieldByName('L_Value').AsFloat;
   end;
                    
@@ -1131,6 +1144,13 @@ begin
             MI('$BI', sTable_Bill), MI('$ID', FIn.FData)]);
     gDBConnManager.WorkerExec(FDBConn, nStr);
 
+    {$IFDEF JDNF}
+    nStr := 'Update %s Set B_HasUse=B_HasUse-(%.2f),B_LastDate=%s ' +
+            'Where B_Stock=''%s'' and B_Batcode=''%s''';
+    nStr := Format(nStr, [sTable_Batcode, nVal,
+            sField_SQLServer_Now, nSN, nHY]);
+    gDBConnManager.WorkerExec(FDBConn, nStr); //更新批次号使用量
+    {$ELSE}
     nStr := 'Select L_Type,L_MValue,L_Seal,L_Value,D_Brand from $BL bl ' +
             'Left join $BC bc on bl.L_Seal=bc.D_ID ' +
             'Where L_ID=''$ID''';
@@ -1153,6 +1173,8 @@ begin
             FListC.Text, sFlag_No, @FOut) then
         raise Exception.Create(FOut.FData);
     end;
+    {$ENDIF}
+    //批次管理
 
     nStr := 'Delete From %s Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
@@ -1414,7 +1436,8 @@ begin
 
   nStr := 'Select L_ID,L_ZhiKa,L_CusID,L_CusName,L_Type,L_StockNo,' +
           'L_StockName,L_Truck,L_Value,L_Price,L_Status,' +
-          'L_NextStatus,L_Card,L_IsVIP,L_PValue,L_MValue,L_Memo From $Bill b ';
+          'L_NextStatus,L_Card,L_IsVIP,L_PValue,L_MValue,' +
+          'L_Seal,L_Memo From $Bill b ';
   //xxxxx
 
   if nIsBill then
@@ -1474,6 +1497,7 @@ begin
 
       FPData.FValue := FieldByName('L_PValue').AsFloat;
       FMData.FValue := FieldByName('L_MValue').AsFloat;
+      FSeal     := FieldByName('L_Seal').AsString;
       FMemo     := FieldByName('L_Memo').AsString;
       FSelected := True;
 
@@ -1768,6 +1792,14 @@ begin
         nSQL := 'Update %s Set B_Freeze=B_Freeze-%.2f Where B_ID=''%s''';
         nSQL := Format(nSQL, [sTable_Order, nDec, FZhiKa]);
         FListA.Add(nSQL);
+
+        {$IFDEF JDNF}
+        nSQL := 'Update %s Set B_HasUse=B_HasUse-(%.2f),B_LastDate=%s ' +
+                'Where B_Stock=''%s'' and B_Batcode=''%s''';
+        nSQL := Format(nSQL, [sTable_Batcode, nDec,
+                sField_SQLServer_Now, FStockNo, FSeal]);
+        FListA.Add(nSQL); //更新批次号使用量
+        {$ENDIF}
       end;
     end;
     //AjustSanValue;
@@ -1835,6 +1867,10 @@ begin
       if i >= 0 then
         FListB.Delete(i);
       //排除本次称重
+
+      if FloatRelation(FMData.FValue, FPData.FValue, rtLE, cPrecision) then
+        FMData.FValue := FPData.FValue;
+      //毛重不能小与皮重
 
       if FType = sFlag_San then
            nVal:=FMData.FValue-FPData.FValue
@@ -2045,6 +2081,7 @@ begin
   //----------------------------------------------------------------------------
   FDBConn.FConn.BeginTrans;
   try
+    {$IFNDEF JDNF}
     if (FIn.FExtParam=sFlag_TruckBFM) and (nBills[nInt].FType=sFlag_San) then
     begin
       nStr := 'Select L_Seal,L_Value,D_Brand from $BL bl ' +
@@ -2081,6 +2118,7 @@ begin
           FListC.Text, sFlag_Yes, @nOut) then
       raise Exception.Create(nOut.FData);
     end;
+    {$ENDIF}
 
     for nIdx:=0 to FListA.Count - 1 do
       gDBConnManager.WorkerExec(FDBConn, FListA[nIdx]);
@@ -2236,6 +2274,27 @@ begin
     Exit;
   end;
 
+  {$IFDEF JDNF}
+  if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
+      nBill.FStockNo, FloatToStr(nVal), @nOut) then
+  begin
+    nData := '获取读NC订单语句失败，错误信息为[ %s ]';
+    nData := Format(nData, [nOut.FData]);
+    Exit;
+  end;
+
+  nSQL := 'Update %s Set B_HasUse=B_HasUse+(%s),B_LastDate=%s ' +
+          'Where B_Stock=''%s'' and B_Batcode=''%s''';
+  nSQL := Format(nSQL, [sTable_Batcode, FloatToStr(nVal),
+          sField_SQLServer_Now, nBill.FStockNo, nOut.FData]);
+  FListA.Add(nSQL);//更新批次号使用量
+
+  nSQL := MakeSQLByStr([
+            SF('L_Seal', nOut.FData)
+            ], sTable_Bill, SF('L_ID', nBill.FID), False);
+    FListA.Add(nSQL);
+  {$ENDIF}
+
   nInt := -1;
   for nIdx:=Low(FOrderItems) to High(FOrderItems) do
   begin
@@ -2268,7 +2327,6 @@ begin
             SF('L_Area', FAreaTo)
             ], sTable_Bill, SF('L_ID', nBill.FID), False);
     FListA.Add(nSQL);
-
 
     nSQL := 'Select * From %s Where B_ID=''%s''';
     nSQL := Format(nSQL, [sTable_Order, FOrder]);

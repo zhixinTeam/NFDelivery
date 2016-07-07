@@ -833,6 +833,33 @@ ResourceString
    *.D_OutFact,D_OutMan: 出厂放行
   -----------------------------------------------------------------------------}
 
+  {$IFDEF JDNF}
+  sSQL_NewBatcode = 'Create Table $Table(R_ID $Inc, B_Stock varChar(32),' +
+       'B_Name varChar(80), B_Prefix varChar(5), B_Base Integer,' +
+       'B_Incement Integer, B_Length Integer, ' +
+       'B_Value $Float, B_Low $Float, B_High $Float, B_Interval Integer,' +
+       'B_AutoNew Char(1), B_UseDate Char(1), B_FirstDate DateTime,' +
+       'B_LastDate DateTime, B_HasUse $Float Default 0, B_Batcode varChar(32))';
+  {-----------------------------------------------------------------------------
+   批次编码表: Batcode
+   *.R_ID: 编号
+   *.B_Stock: 物料号
+   *.B_Name: 物料名
+   *.B_Prefix: 前缀
+   *.B_Base: 起始编码(基数)
+   *.B_Incement: 编号增量
+   *.B_Length: 编号长度
+   *.B_Value:检测量
+   *.B_Low,B_High:上下限(%)
+   *.B_Interval: 编号周期(天)
+   *.B_AutoNew: 元旦重置(Y/N)
+   *.B_UseDate: 使用日期编码
+   *.B_FirstDate: 首次使用时间
+   *.B_LastDate: 上次基数更新时间
+   *.B_HasUse: 已使用
+   *.B_Batcode: 当前批次号
+  -----------------------------------------------------------------------------}
+  {$ELSE}
   sSQL_NewBatcode = 'Create Table $Table(R_ID $Inc, B_Stock varChar(32),' +
        'B_Name varChar(80), B_Prefix varChar(5), B_Base Integer,' +
        'B_Interval Integer, B_Incement Integer, B_Length Integer,' +
@@ -850,7 +877,8 @@ ResourceString
    *.B_UseDate: 使用日期编码
    *.B_LastDate: 上次基数更新时间
   -----------------------------------------------------------------------------}
-
+  {$ENDIF}
+  
   sSQL_NewBatcodeDoc = 'Create Table $Table(R_ID $Inc, D_ID varChar(32),' +
        'D_Stock varChar(32),D_Name varChar(80), D_Brand varChar(32), ' +
        'D_Plan $Float, D_Sent $Float, D_Rund $Float, D_Init $Float, D_Warn $Float, ' +

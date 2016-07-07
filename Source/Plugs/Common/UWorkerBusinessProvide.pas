@@ -948,6 +948,8 @@ begin
                 SF('P_MStation', FMData.FStation)
                 ], sTable_PoundLog, nStr, False);
         //称重时,由于皮重大,交换皮毛重数据
+
+        WriteLog(nSQL);
         FListA.Add(nSQL);
 
         nSQL := MakeSQLByStr([
@@ -961,6 +963,7 @@ begin
                 SF('D_MMan', FMData.FOperator),
                 SF('D_Value', nVal, sfVal)
                 ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);
+        WriteLog(nSQL);
         FListA.Add(nSQL);
 
       end else
@@ -972,6 +975,7 @@ begin
                 SF('P_MStation', FMData.FStation)
                 ], sTable_PoundLog, nStr, False);
         //xxxxx
+        WriteLog(nSQL);
         FListA.Add(nSQL);
 
         nSQL := MakeSQLByStr([
@@ -982,6 +986,7 @@ begin
                 SF('D_MMan', FMData.FOperator),
                 SF('D_Value', nVal, sfVal)
                 ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);
+        WriteLog(nSQL);
         FListA.Add(nSQL);
       end;
 
