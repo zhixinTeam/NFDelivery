@@ -747,7 +747,11 @@ begin
 
       nSQL := MakeSQLByStr([
               SF('P_Status', FStatus),
-              SF('P_NextStatus', FNextStatus)
+              SF('P_NextStatus', FNextStatus),
+
+              SF('P_PValue', FPData.FValue, sfVal),
+              SF('P_PDate', sField_SQLServer_Now, sfVal),
+              SF('P_PMan', FIn.FBase.FFrom.FUser)
               ], sTable_ProvBase, SF('P_ID', FZhiKa), False);
       FListA.Add(nSQL);
     end;  
@@ -935,6 +939,9 @@ begin
       //where
 
       nVal := FMData.FValue - FPData.FValue -FKZValue;
+      nVal := Float2Float(nVal, cPrecision, False);
+      //¾»ÖØ
+
       if FNextStatus = sFlag_TruckBFP then
       begin
         nSQL := MakeSQLByStr([
@@ -963,7 +970,18 @@ begin
                 SF('D_MMan', FMData.FOperator),
                 SF('D_Value', nVal, sfVal)
                 ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);
-        WriteLog(nSQL);
+        FListA.Add(nSQL);
+
+        nSQL := MakeSQLByStr([
+                SF('P_Status', sFlag_TruckBFM),
+                SF('P_NextStatus', sFlag_TruckOut),
+                SF('P_PValue', FPData.FValue, sfVal),
+                SF('P_PDate', sField_SQLServer_Now, sfVal),
+                SF('P_PMan', FIn.FBase.FFrom.FUser),
+                SF('P_MValue', FMData.FValue, sfVal),
+                SF('P_MDate', DateTime2Str(FMData.FDate)),
+                SF('P_MMan', FMData.FOperator)
+              ], sTable_ProvBase, SF('P_ID', FZhiKa), False);
         FListA.Add(nSQL);
 
       end else
@@ -986,15 +1004,17 @@ begin
                 SF('D_MMan', FMData.FOperator),
                 SF('D_Value', nVal, sfVal)
                 ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);
-        WriteLog(nSQL);
+        FListA.Add(nSQL);
+
+        nSQL := MakeSQLByStr([
+              SF('P_Status', sFlag_TruckBFM),
+              SF('P_NextStatus', sFlag_TruckOut),
+              SF('P_MValue', FMData.FValue, sfVal),
+              SF('P_MDate', sField_SQLServer_Now, sfVal),
+              SF('P_MMan', FMData.FOperator)
+              ], sTable_ProvBase, SF('P_ID', FZhiKa), False);
         FListA.Add(nSQL);
       end;
-
-      nSQL := MakeSQLByStr([
-              SF('P_Status', sFlag_TruckBFM),
-              SF('P_NextStatus', sFlag_TruckOut)
-              ], sTable_ProvBase, SF('P_ID', FZhiKa), False);
-      FListA.Add(nSQL);
     end;
 
     nSQL := 'Select P_ID From %s Where P_Order=''%s''';
@@ -1020,14 +1040,15 @@ begin
               SF('D_OutFact', sField_SQLServer_Now, sfVal),
               SF('D_OutMan', FIn.FBase.FFrom.FUser)
               ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);
-      FListA.Add(nSQL);
+      FListA.Add(nSQL);   
 
-      nSQL := MakeSQLByStr([
-              SF('P_DID', ''),
-              SF('P_IsUsed', sFlag_No),
-              SF('P_Status', sFlag_TruckNone),
-              SF('P_NextStatus', sFlag_TruckNone)
-              ], sTable_ProvBase, SF('P_ID', FZhiKa), False);
+      nSQL := 'Update %s Set P_DID=NULL,' +
+              'P_PDate=NULL,P_PMan=NULL,P_PValue=0,' +
+              'P_MDate=NULL,P_MMan=NULL,P_MValue=0,' +
+              'P_IsUsed=''%s'', P_Status=''%s'', P_NextStatus=''%s'' ' +
+              'Where P_ID=''%s''';
+      nSQL := Format(nSQL, [sTable_ProvBase, sFlag_No, sFlag_TruckNone,
+              sFlag_TruckNone, FZhiKa]);
       FListA.Add(nSQL);
 
       nSQL := 'Select P_ID From %s Where P_Order=''%s''';

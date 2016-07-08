@@ -228,7 +228,7 @@ begin
   if cxView1.DataController.GetSelectedCount > 0 then
   begin
     nStr := SQLQuery.FieldByName('D_ID').AsString;
-    //PrintOrderReport(nStr, False);
+    PrintOrderReport(nStr, False);
   end;
 end;
 

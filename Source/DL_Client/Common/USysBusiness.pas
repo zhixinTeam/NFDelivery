@@ -175,6 +175,8 @@ function PrintPoundReport(const nPound: string; nAsk: Boolean): Boolean;
 //打印榜单
 function PrintSalePoundReport(const nPound: string; nAsk: Boolean): Boolean;
 //打印销售磅单
+function PrintOrderReport(nOrder: string; const nAsk: Boolean): Boolean;
+//打印采购单
 
 //保存电子标签
 function SetTruckRFIDCard(nTruck: string; var nRFIDCard: string;
@@ -1342,6 +1344,44 @@ begin
   end;
 
   nStr := gPath + sReportDir + 'LadingBill.fr3';
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nStr := '无法正确加载报表文件';
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nParam.FName := 'UserName';
+  nParam.FValue := gSysParam.FUserID;
+  FDR.AddParamItem(nParam);
+
+  nParam.FName := 'Company';
+  nParam.FValue := gSysParam.FHintText;
+  FDR.AddParamItem(nParam);
+
+  FDR.Dataset1.DataSet := FDM.SqlTemp;
+  FDR.ShowReport;
+  Result := FDR.PrintSuccess;
+end;
+
+//Date: 2012-4-1
+//Parm: 采购单号;提示;数据对象;打印机
+//Desc: 打印nOrder采购单号
+function PrintOrderReport(nOrder: string; const nAsk: Boolean): Boolean;
+var nStr: string; 
+    nParam: TReportParamItem;
+begin
+  Result := False;
+  nStr := 'Select * From %s Where D_ID=''%s''';
+  nStr := Format(nStr, [sTable_ProvDtl, nOrder]);
+
+  if FDM.QueryTemp(nStr).RecordCount < 1 then
+  begin
+    nStr := '编号为[ %s ] 的记录已无效!!';
+    nStr := Format(nStr, [nOrder]);
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nStr := gPath + sReportDir +'PurchaseOrder.fr3';
   if not FDR.LoadReportFile(nStr) then
   begin
     nStr := '无法正确加载报表文件';
