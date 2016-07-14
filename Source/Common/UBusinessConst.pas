@@ -25,11 +25,9 @@ const
   cBC_ServerNow               = $0002;   //服务器当前时间
   cBC_IsSystemExpired         = $0003;   //系统是否已过期
   cBC_IsTruckValid            = $0004;   //车牌是否有效
-  cBC_GetCardUsed             = $0005;   //获取卡片类型
-
-  cBC_GetSQLQueryOrder        = $0006;   //查询订单语句
-  cBC_GetSQLQueryCustomer     = $0007;   //查询客户语句
-  cBC_GetSQLQueryDispatch     = $0008;   //查询调拨订单
+  cBC_UserLogin               = $0005;   //用户登录
+  cBC_UserLogOut              = $0006;   //用户注销
+  cBC_GetCardUsed             = $0007;   //获取卡片类型
 
   cBC_GetCustomerMoney        = $0010;   //获取客户可用金
   cBC_GetZhiKaMoney           = $0011;   //获取纸卡可用金
@@ -44,6 +42,9 @@ const
   cBC_GetOrderGYValue         = $0019;   //获取订单供应量
   cBC_SyncME25                = $0100;   //同步发货单到榜单
   cBC_SyncME03                = $0101;   //同步供应到磅单
+  cBC_GetSQLQueryOrder        = $0102;   //查询订单语句
+  cBC_GetSQLQueryCustomer     = $0103;   //查询客户语句
+  cBC_GetSQLQueryDispatch     = $0104;   //查询调拨订单
 
   cBC_SaveBills               = $0020;   //保存交货单列表
   cBC_DeleteBill              = $0021;   //删除交货单

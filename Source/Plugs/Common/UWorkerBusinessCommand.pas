@@ -70,6 +70,9 @@ type
     //系统是否已过期
     function SaveTruck(var nData: string): Boolean;
     //保存车辆到Truck表
+    function Login(var nData: string):Boolean;
+    function LogOut(var nData: string): Boolean;
+    //登录注销，用于移动终端
 
     function GetStockBatcode(var nData: string): Boolean;
     {$IFNDEF  JDNF}
@@ -338,6 +341,8 @@ begin
    cBC_IsSystemExpired     : Result := IsSystemExpired(nData);
    cBC_IsTruckValid        : Result := VerifyTruckNO(nData);
    cBC_GetCardUsed         : Result := GetCardUsed(nData);
+   cBC_UserLogin           : Result := Login(nData);
+   cBC_UserLogOut          : Result := LogOut(nData);
 
    cBC_SaveTruckInfo       : Result := SaveTruck(nData);
    cBC_GetStockBatcode     : Result := GetStockBatcode(nData);
@@ -2737,8 +2742,71 @@ begin
   Result := Trunc(nSrcValue) div 100 * 100;
   Result := Result + Trunc(nSrcValue) mod 100
             div Trunc(nWCValue) * Trunc(nWCValue);
-  //xxxxx          
+  //xxxxx
 end;
+
+//------------------------------------------------------------------------------
+//Date: 2015/9/9
+//Parm: 用户名，密码；返回用户数据
+//Desc: 用户登录
+function TWorkerBusinessCommander.Login(var nData: string): Boolean;
+var nStr: string;
+begin
+  Result := False;
+
+  FListA.Clear;
+  FListA.Text := PackerDecodeStr(FIn.FData);
+  if FListA.Values['User']='' then Exit;
+  //未传递用户名
+
+  nStr := 'Select U_Password From %s Where U_Name=''%s''';
+  nStr := Format(nStr, [sTable_User, FListA.Values['User']]);
+  //card status
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount<1 then Exit;
+
+    nStr := Fields[0].AsString;
+    if nStr<>FListA.Values['Password'] then Exit;
+    {
+    if CallMe(cBC_ServerNow, '', '', @nOut) then
+         nStr := PackerEncodeStr(nOut.FData)
+    else nStr := IntToStr(Random(999999));
+
+    nInfo := FListA.Values['User'] + nStr;
+    //xxxxx
+
+    nStr := 'Insert into $EI(I_Group, I_ItemID, I_Item, I_Info) ' +
+            'Values(''$Group'', ''$ItemID'', ''$Item'', ''$Info'')';
+    nStr := MacroValue(nStr, [MI('$EI', sTable_ExtInfo),
+            MI('$Group', sFlag_UserLogItem), MI('$ItemID', FListA.Values['User']),
+            MI('$Item', PackerEncodeStr(FListA.Values['Password'])),
+            MI('$Info', nInfo)]);
+    gDBConnManager.WorkerExec(FDBConn, nStr);  }
+
+    Result := True;
+  end;
+end;
+//------------------------------------------------------------------------------
+//Date: 2015/9/9
+//Parm: 用户名；验证数据
+//Desc: 用户注销
+function TWorkerBusinessCommander.LogOut(var nData: string): Boolean;
+//var nStr: string;
+begin
+  {nStr := 'delete From %s Where I_ItemID=''%s''';
+  nStr := Format(nStr, [sTable_ExtInfo, PackerDecodeStr(FIn.FData)]);
+  //card status
+
+
+  if gDBConnManager.WorkerExec(FDBConn, nStr)<1 then
+       Result := False
+  else Result := True;     }
+
+  Result := True;
+end;
+
 
 initialization
   gBusinessWorkerManager.RegisteWorker(TBusWorkerQueryField, sPlug_ModuleBus);
