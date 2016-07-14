@@ -15,6 +15,15 @@ uses
   cxDropDownEdit, cxLabel, ULEDFont;
 
 type
+  TOrderItem = record
+    FOrder: string;         //订单号
+    FMaxValue: Double;      //最大可用
+    FKDValue: Double;       //开单量
+  end;
+
+  TOrderItems = array of TOrderItem;
+  //订单列表
+
   TfFrameAutoPoundItem = class(TBaseFrame)
     GroupBox1: TGroupBox;
     EditValue: TLEDFontNum;
@@ -73,13 +82,15 @@ type
     //磅站通道
     FLastGS,FLastBT,FLastBQ: Int64;
     //上次活动
-    FBillItems: TLadingBillItems;
+    FOrderItems: TOrderItems;
+    //订单列表
+    FBillItems: TLadingBillItems;  
     FUIData,FInnerData: TLadingBillItem;
     //称重数据
     FLastCardDone: Int64;
     FLastCard, FCardTmp: string;
     //上次卡号
-    FListA, FListB: TStrings;
+    FListA, FListB, FListC: TStrings;
     FSampleIndex: Integer;
     FValueSamples: array of Double;
     //数据采样
@@ -109,6 +120,8 @@ type
     //播放语音
     procedure LEDDisplay(const nStrtext: string);
     //LED显示
+    function MakeNewSanBill(nBillValue: Double): Boolean;
+    //散装并新单
   public
     { Public declarations }
     class function FrameID: integer; override;
@@ -117,7 +130,7 @@ type
     //子类继承
     property PoundTunnel: PPTTunnelItem read FPoundTunnel write SetTunnel;
     //属性相关
-    property Additional: TStrings read FListA write FListA;
+    property Additional: TStrings read FListC write FListC;
   end;
 
 implementation
@@ -127,7 +140,7 @@ implementation
 uses
   ULibFun, UFormBase, {$IFDEF HR1847}UKRTruckProber,{$ELSE}UMgrTruckProbe,{$ENDIF}
   UMgrRemoteVoice, UMgrVoiceNet, UDataModule, USysBusiness, UMgrLEDDisp,
-  USysLoger, USysConst, USysDB;
+  USysLoger, USysConst, USysDB, UBase64;
 
 const
   cFlag_ON    = 10;
@@ -148,6 +161,7 @@ begin
   FEmptyPoundInit := 0;
   FListA := TStringList.Create;
   FListB := TStringList.Create;
+  FListC := TStringList.Create;
 end;
 
 procedure TfFrameAutoPoundItem.OnDestroyFrame;
@@ -156,6 +170,7 @@ begin
   //关闭表头端口
   FListA.Free;
   FListB.Free;
+  FListC.Free;
   inherited;
 end;
 
@@ -368,7 +383,7 @@ begin
   if (not GetLadingBills(nCard, sFlag_TruckBFP, nBills)) or
      (Length(nBills) < 1) then
   begin
-    SetUIData(True);
+    Timer_SaveFail.Enabled := True;
     Exit;
   end;
   
@@ -505,10 +520,241 @@ begin
   end;
 end;
 
+//Date: 2014-12-26
+//Parm: 订单列表
+//Desc: 将nOrders按可用量从小到大排序
+procedure SortOrderByValue(var nOrders: TOrderItems);
+var i,j,nInt: Integer;
+    nItem: TOrderItem;
+begin
+  nInt := High(nOrders);
+  //xxxxx
+
+  for i:=Low(nOrders) to nInt do
+   for j:=i+1 to nInt do
+    if nOrders[j].FMaxValue < nOrders[i].FMaxValue then
+    begin
+      nItem := nOrders[i];
+      nOrders[i] := nOrders[j];
+      nOrders[j] := nItem;
+    end;
+  //冒泡排序
+end;
+
+//Date: 2014-12-28
+//Parm: 需并单量
+//Desc: 从当前客户可用订单中开出指定量的新单
+function TfFrameAutoPoundItem.MakeNewSanBill(nBillValue: Double): Boolean;
+var nStr: string;
+    nDec: Double;
+    nIdx,nInt: Integer;
+    nP: TFormCommandParam;
+    nOrder: TOrderItemInfo;
+begin
+  FListA.Clear;
+  Result := False;
+
+  for nIdx:=Low(FBillItems) to High(FBillItems) do
+    FListA.Add(FBillItems[nIdx].FZhiKa);
+  nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
+
+  FListB.Clear;
+  FListB.Values['MeamKeys'] := nStr;
+
+  nStr := EncodeBase64(FListB.Text);
+  nStr := GetQueryOrderSQL('103', nStr);
+  if nStr = '' then Exit;
+
+  with FDM.QueryTemp(nStr, True) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nStr := StringReplace(FListA.Text, #13#10, ',', [rfReplaceAll]);
+      nStr := Format('订单[ %s ]信息已丢失.', [nStr]);
+
+      ShowDlg(nStr, sHint);
+      Exit;
+    end;
+
+    SetLength(FOrderItems, RecordCount);
+    nInt := 0;
+    First;
+
+    while not Eof do
+    begin
+      with FOrderItems[nInt] do
+      begin
+        FOrder := FieldByName('pk_meambill').AsString;
+        FMaxValue := FieldByName('NPLANNUM').AsFloat;
+        FKDValue := 0;
+      end;
+
+      Inc(nInt);
+      Next;
+    end;
+  end;
+
+  if not GetOrderFHValue(FListA) then Exit;
+  //获取已发货量
+
+  for nIdx:=Low(FOrderItems) to High(FOrderItems) do
+  with FOrderItems[nIdx] do
+  begin
+    nStr := FListA.Values[FOrder];
+    if not IsNumber(nStr, True) then Continue;
+
+    FMaxValue := FMaxValue - Float2Float(StrToFloat(nStr), cPrecision, False);
+    //可用量 = 计划量 - 已发量
+  end;
+
+  SortOrderByValue(FOrderItems);
+  //按可用量由小到大排序
+
+  //----------------------------------------------------------------------------
+  for nIdx:=Low(FOrderItems) to High(FOrderItems) do
+  begin
+    if nBillValue <= 0 then Break;
+    //已开单完毕
+
+    if FOrderItems[nIdx].FMaxValue<=0 then Continue;
+    //NC可用量不能为负
+
+    nDec := FOrderItems[nIdx].FMaxValue;
+    if nDec >= nBillValue then
+      nDec := nBillValue;
+    //订单量够用
+
+    FOrderItems[nIdx].FKDValue := nDec;
+    nBillValue := Float2Float(nBillValue - nDec, cPrecision, True);
+  end;
+
+  FDM.ADOConn.BeginTrans;
+  try
+    for nIdx:=Low(FOrderItems) to High(FOrderItems) do
+    with FOrderItems[nIdx] do
+    begin
+      if FKDValue <= 0 then Continue;
+      //无开单量
+
+      nStr := 'Update %s Set B_Freeze=B_Freeze+%.2f Where B_ID=''%s''';
+      nStr := Format(nStr, [sTable_Order, FKDValue, FOrder]);
+      FDM.ExecuteSQL(nStr);
+
+      for nInt:=Low(FBillItems) to High(FBillItems) do
+      begin
+        if FBillItems[nInt].FZhiKa <> FOrder then Continue;
+        //xxxxx
+
+        nStr := 'Update %s Set L_Value=L_Value+%.2f Where L_ID=''%s''';
+        nStr := Format(nStr, [sTable_Bill, FKDValue, FBillItems[nInt].FID]);
+        FDM.ExecuteSQL(nStr);
+      end;
+    end;
+
+    FDM.ADOConn.CommitTrans;
+    //提货冻结量
+  except
+    on E: Exception do
+    begin
+      FDM.ADOConn.RollbackTrans;
+      ShowDlg(E.Message, sHint);
+      Exit;
+    end;
+  end;
+
+  for nIdx:=Low(FOrderItems) to High(FOrderItems) do
+  with FOrderItems[nIdx] do
+  begin
+    if FKDValue <= 0 then Continue;
+    //无开单量
+
+    for nInt:=Low(FBillItems) to High(FBillItems) do
+    begin
+      if FBillItems[nInt].FZhiKa <> FOrder then Continue;
+      //xxxxx
+
+      FBillItems[nInt].FValue := FBillItems[nInt].FValue + FKDValue;
+      //更新开单量
+
+      FInnerData.FValue := FInnerData.FValue + FKDValue;
+      FUIData.FValue := FInnerData.FValue;
+    end;
+  end;
+
+  if nBillValue <= 0 then Exit;
+  //已开单完毕
+
+  //----------------------------------------------------------------------------
+  nStr := '本次发货量超出[ %.2f ]吨,请选择新的订单.';
+  nStr := Format(nStr, [nBillValue]);
+  ShowDlg(nStr, sHint);
+
+  while True do
+  begin
+    nP.FParamA := FBillItems[0].FCusID;
+    nP.FParamB := FBillItems[0].FStockNo;
+    nP.FParamC := sFlag_Sale;
+    CreateBaseFormItem(cFI_FormGetOrder, PopedomItem, @nP);
+
+    if (nP.FCommand <> cCmd_ModalResult) or (nP.FParamA <> mrOK) then Exit;
+    nStr := nP.FParamB;
+
+    AnalyzeOrderInfo(nStr, nOrder);
+    if nOrder.FValue >= nBillValue then Break;
+
+    nStr := '订单可用量不足,详情如下: ' + #13#10#13#10 +
+            '※.订单量: %.2f 吨'  + #13#10 +
+            '※.待开量: %.2f 吨'  + #13#10 +
+            '※.相  差: %.2f 吨'  + #13#10#13#10 +
+            '请重新选择订单.';
+    nStr := Format(nStr, [nOrder.FValue, nBillValue, nBillValue - nOrder.FValue]);
+    ShowDlg(nStr, sHint);
+  end;
+
+  nStr := 'Select L_Lading,L_IsVIP,L_Seal From %s Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, FBillItems[0].FID]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nStr := '交货单[ %s ]已丢失,请联系管理员.';
+      nStr := Format(nStr, [FBillItems[0].FID]);
+
+      ShowDlg(nStr, sHint);
+      Exit;
+    end;
+
+    with FListA do
+    begin
+      Clear;
+      Values['Orders'] := EncodeBase64(nOrder.FOrders);
+      Values['Value'] := FloatToStr(nBillValue);
+      Values['Truck'] := FBillItems[0].FTruck;
+      Values['Lading'] := FieldByName('L_Lading').AsString;
+      Values['IsVIP'] := FieldByName('L_IsVIP').AsString;
+      Values['Seal'] := FieldByName('L_Seal').AsString;
+
+      Values['Card'] := FBillItems[0].FCard;
+      Values['Post'] := sFlag_TruckBFM;
+      Values['PValue'] := FloatToStr(FBillItems[0].FPData.FValue);
+    end;
+
+    nStr := SaveBill(EncodeBase64(FListA.Text));
+    //call mit bus
+    if nStr = '' then Exit;
+
+    LoadBillItems(FCardTmp);
+    //重新载入交货单
+  end;
+
+  Result := True;
+end;
+
 //Desc: 保存销售
 function TfFrameAutoPoundItem.SavePoundSale: Boolean;
 var nStr: string;
-//    nVal,nNet: Double;
+    nVal,nNet: Double;
 begin
   Result := False;
   //init
@@ -536,7 +782,7 @@ begin
       WriteLog('皮重应小于毛重');
       Exit;
     end;
-    {$IFNDEF JDNF}
+    {$IFNDEF AutoSan}
     if FBillItems[0].FType = sFlag_San then
     begin
       nStr := '散装车辆[%s]不允许在此过磅';
@@ -547,6 +793,68 @@ begin
       Exit;
     end;
     {$ENDIF}
+  end;
+
+  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
+  begin
+    if FUIData.FPData.FValue > FUIData.FMData.FValue then
+    begin
+      ShowMsg('皮重应小于毛重', sHint);
+      Exit;
+    end;
+
+    nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
+    //净重
+    nVal := nNet * 1000 - FInnerData.FValue * 1000;
+    //与开票量误差(公斤)
+
+    with gSysParam,FBillItems[0] do
+    begin
+      if FDaiPercent and (FType = sFlag_Dai) then
+      begin
+        if nVal > 0 then
+             FPoundDaiZ := Float2Float(FInnerData.FValue * FPoundDaiZ_1 * 1000,
+                                       cPrecision, False)
+        else FPoundDaiF := Float2Float(FInnerData.FValue * FPoundDaiF_1 * 1000,
+                                       cPrecision, False);
+      end;
+
+      if ((FType = sFlag_Dai) and (
+          ((nVal > 0) and (FPoundDaiZ > 0) and (nVal > FPoundDaiZ)) or
+          ((nVal < 0) and (FPoundDaiF > 0) and (-nVal > FPoundDaiF)))) or
+         ((FType = sFlag_San) and (
+          (nVal < 0) and (FPoundSanF > 0) and (-nVal > FPoundSanF))) then
+      begin
+        nStr := '车辆[ %s ]实际装车量误差较大,详情如下:' + #13#10#13#10 +
+                '※.开单量: %.2f吨' + #13#10 +
+                '※.装车量: %.2f吨' + #13#10 +
+                '※.误差量: %.2f公斤';
+
+        if FDaiWCStop and (FType = sFlag_Dai) then
+        begin
+          nStr := nStr + #13#10#13#10 + '请通知司机点验包数.';
+          nStr := Format(nStr, [FTruck, FInnerData.FValue, nNet, nVal]);
+
+          ShowDlg(nStr, sHint);
+          Exit;
+        end else
+        begin
+          nStr := nStr + #13#10#13#10 + '是否继续保存?';
+          nStr := Format(nStr, [FTruck, FInnerData.FValue, nNet, nVal]);
+          if not QueryDlg(nStr, sAsk) then Exit;
+        end;
+      end;
+
+      if (FType = sFlag_San) And (FCardUse = sFlag_Sale) then
+      begin
+        if nVal > 0 then
+        begin
+          nVal := Float2Float(nNet - FInnerData.FValue, cPrecision, True);
+          if not MakeNewSanBill(nVal) then Exit;
+          //散装发超时并新单
+        end;
+      end;
+    end;
   end;
 
   with FBillItems[0] do

@@ -12,7 +12,7 @@ uses
   ULibFun, IdTCPConnection, IdTCPClient, IdGlobal;
 
 const
-  cDisp_KeepLong   = 600 * 1000;     //内容保持时长                  
+  cDisp_KeepLong   = 600;     //内容保持时长
   cDisp_CtrlCardType = 'YBKJ';
   cDisp_Config     = 'LEDDisp.XML';
 type
@@ -26,6 +26,7 @@ type
     FPort: Integer;
     FAddr: Integer;
     FLastUpdate: Int64;
+    FKeepTime: Int64;
     FKeepShow: Boolean;
   end;
 
@@ -209,10 +210,15 @@ begin
         FPort := NodeByName('port').ValueAsInteger;
         FAddr := NodeByName('addr').ValueAsInteger;
 
-        nTmp := FindNode('KeepShow');
+        nTmp := FindNode('keepshow');
         if not Assigned(nTmp) then
              FKeepShow := True
         else FKeepShow := nTmp.ValueAsString = '1';
+
+        nTmp := FindNode('keepkime');
+        if not Assigned(nTmp) then
+             FKeepTime := cDisp_KeepLong
+        else FKeepTime := nTmp.ValueAsInt64Def(cDisp_KeepLong);
 
         FLastUpdate := 0;
         Inc(nInt);
@@ -307,7 +313,8 @@ begin
     end;
 
     for nIdx:=Low(FOwner.FCards) to High(FOwner.FCards) do
-    if GetTickCount - FOwner.FCards[nIdx].FLastUpdate >= cDisp_KeepLong then
+    if GetTickCount - FOwner.FCards[nIdx].FLastUpdate >=
+       FOwner.FCards[nIdx].FKeepTime * 1000 then
     begin
       if FOwner.FCards[nIdx].FKeepShow then
         Continue;

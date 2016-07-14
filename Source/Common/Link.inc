@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE JDNF}
+{$DEFINE JSNF}
 //建德南方
 
 {$IFDEF JDNF}
@@ -75,4 +75,6 @@
   //过磅时校验NC开票量
   {$DEFINE PrintChinese}
   //汉字喷码支持
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
 {$ENDIF}
