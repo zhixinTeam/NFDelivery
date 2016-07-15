@@ -126,6 +126,7 @@ const
   cFI_FormWXSendlog     = $1092;                     //微信日志
 
   cFI_FormProvBase      = $1120;                     //采购入厂单
+  cFI_FormPurchase      = $1121;                     //采购验收
 
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据
@@ -318,6 +319,7 @@ begin
   
   AddMenuModuleItem('MAIN_M01', cFI_FrameProvider);
   AddMenuModuleItem('MAIN_M02', cFI_FrameMaterails);
+  AddMenuModuleItem('MAIN_M03', cFI_FormPurchase, mtForm);
   AddMenuModuleItem('MAIN_M04', cFI_FrameProvideLog);
   AddMenuModuleItem('MAIN_M05', cFI_FrameProvBase);
   AddMenuModuleItem('MAIN_M06', cFI_FrameProvTruckQuery);

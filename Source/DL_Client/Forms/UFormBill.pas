@@ -217,6 +217,9 @@ begin
   EditBrand.Text:=FOrder.FStockBrand;
   EditBrand.Properties.ReadOnly := EditBrand.Text<>'';
 
+  {$IFNDEF JDNF}
+  EditValue.Text := Format('%.2f', [FOrder.FValue]);
+  {$ENDIF}
   EditFQ.Text := FOrder.FBatchCode;
   if EditFQ.Text = '' then
     EditFQ.Text := GetStockBatcode(FOrder.FStockID, FOrder.FStockBrand);

@@ -27,7 +27,7 @@ uses
   UFrameBatcode, UFormBatcode, {$ENDIF}
 
   UFormProvCard, UFormProvBase, UFrameProvBase, UFrameProvTruckDetail,
-  UFrameQueryProvDetail
+  UFrameQueryProvDetail, UFormPurchasing
   {$IFDEF MicroMsg},
   UFormWeiXinAccount, UFrameWeiXinAccount,
   UFormWeiXinSendlog, UFrameWeiXinSendlog,
