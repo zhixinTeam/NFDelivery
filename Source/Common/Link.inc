@@ -23,7 +23,7 @@
 {.$DEFINE ClientMon}
 //进程守护客户端
 
-{$DEFINE HardMon}
+{.$DEFINE HardMon}
 //编译硬件守护
 
 {.$DEFINE GenRODL}
@@ -51,17 +51,36 @@
 //通用版本
 
 {$DEFINE JSNF}
-//建德南方
+//特定系统
 
 {$IFDEF JDNF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
   {$DEFINE HYRFID201}
   //华益读头
   {$DEFINE AppAtTaskBar}
   //状态栏显示
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
 {$ENDIF}
+//建德南方
 
+{$IFDEF FYNF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+  {$DEFINE FORCEOPENDOOR}
+  //强制抬杆
+{$ENDIF}
+//富阳南方
 
-//江山南方
 {$IFDEF JSNF}
   {$DEFINE HYRFID201}
   //华益读头
@@ -77,4 +96,7 @@
   //汉字喷码支持
   {$DEFINE AutoSan}
   //散装允许自动过磅
+  {.$DEFINE VerfiyAutoWeight}
+  //校验过磅方式
 {$ENDIF}
+//江山南方(永丰、安抚)

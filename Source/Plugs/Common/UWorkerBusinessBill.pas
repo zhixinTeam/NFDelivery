@@ -495,7 +495,7 @@ begin
     end;
   end;
 
-  //TWorkerBusinessCommander.CallMe(cBC_SaveTruckInfo, nTruck, '', @nOut);
+  TWorkerBusinessCommander.CallMe(cBC_SaveTruckInfo, nTruck, '', @nOut);
   //保存车牌号
 
   //----------------------------------------------------------------------------
@@ -661,7 +661,7 @@ begin
       if FOrderItems[nIdx].FKDValue <= 0 then Continue;
       //无开单量
 
-      {$IFNDEF JDNF}
+      {$IFNDEF BatchVerifyValue}
       if FOrderItems[nIdx].FStockType = sFlag_Dai then
       begin
         FListC.Clear;
@@ -879,7 +879,7 @@ begin
         end;
       end;
 
-      {$IFDEF JDNF}
+      {$IFDEF BatchVerifyValue}
       nSQL := 'Update %s Set B_HasUse=B_HasUse+(%s),B_LastDate=%s ' +
               'Where B_Stock=''%s'' and B_Batcode=''%s''';
       nSQL := Format(nSQL, [sTable_Batcode, FloatToStr(FOrderItems[nIdx].FKDValue),
@@ -1015,12 +1015,13 @@ end;
 //Parm: 交货单号[FIn.FData]
 //Desc: 删除指定交货单
 function TWorkerBusinessBills.DeleteBill(var nData: string): Boolean;
-var nIdx: Integer;
-    nHasOut: Boolean;
-    nVal: Double;
+var nVal: Double;
+    nIdx: Integer;
+    nHasOut, nIsAdmin: Boolean;
     nStr,nP,nRID,nBill,nZK,nSN,nHY: string;
 begin
   Result := False;
+  nIsAdmin := FIn.FExtParam = 'Y';
   //init
 
   nStr := 'Select L_ZhiKa,L_Value,L_Seal,L_StockNO,L_OutFact From %s ' +
@@ -1039,7 +1040,7 @@ begin
     nHasOut := FieldByName('L_OutFact').AsString <> '';
     //已出厂
 
-    if nHasOut then
+    if nHasOut and (not nIsAdmin) then       //管理员可以删除
     begin
       nData := '交货单[ %s ]已出厂,不允许删除.';
       nData := Format(nData, [FIn.FData]);
@@ -1144,7 +1145,7 @@ begin
             MI('$BI', sTable_Bill), MI('$ID', FIn.FData)]);
     gDBConnManager.WorkerExec(FDBConn, nStr);
 
-    {$IFDEF JDNF}
+    {$IFDEF BatchVerifyValue}
     nStr := 'Update %s Set B_HasUse=B_HasUse-(%.2f),B_LastDate=%s ' +
             'Where B_Stock=''%s'' and B_Batcode=''%s''';
     nStr := Format(nStr, [sTable_Batcode, nVal,
@@ -1793,7 +1794,7 @@ begin
         nSQL := Format(nSQL, [sTable_Order, nDec, FZhiKa]);
         FListA.Add(nSQL);
 
-        {$IFDEF JDNF}
+        {$IFDEF BatchVerifyValue}
         nSQL := 'Update %s Set B_HasUse=B_HasUse-(%.2f),B_LastDate=%s ' +
                 'Where B_Stock=''%s'' and B_Batcode=''%s''';
         nSQL := Format(nSQL, [sTable_Batcode, nDec,
@@ -2081,7 +2082,7 @@ begin
   //----------------------------------------------------------------------------
   FDBConn.FConn.BeginTrans;
   try
-    {$IFNDEF JDNF}
+    {$IFNDEF BatchVerifyValue}
     if (FIn.FExtParam=sFlag_TruckBFM) and (nBills[nInt].FType=sFlag_San) then
     begin
       nStr := 'Select L_Seal,L_Value,D_Brand from $BL bl ' +
@@ -2274,7 +2275,7 @@ begin
     Exit;
   end;
 
-  {$IFDEF JDNF}
+  {$IFDEF BatchVerifyValue}
   if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
       nBill.FStockNo, FloatToStr(nVal), @nOut) then
   begin

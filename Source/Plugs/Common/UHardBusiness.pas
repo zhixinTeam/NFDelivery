@@ -32,6 +32,9 @@ function PrepareShowInfo(const nCard: string; nTunnel: string=''):string;
 function GetCardUsed(const nCard: string; var nCardType: string): Boolean;
 //获取卡号类型
 
+procedure HardOpenDoor(const nReader: String);
+//打开道闸
+
 implementation
 
 uses
@@ -292,6 +295,9 @@ begin
      gHardwareHelper.GetCardLastDone(nCard, nReader) < 2 * 60 * 1000) then
   begin
     gHardwareHelper.SetReaderCard(nReader, nCard);
+    {$IFDEF FORCEOPENDOOR}
+    HardOpenDoor(nReader);
+    {$ENDIF}
     Exit;
   end; //同读头同卡,在2分钟内不做二次进厂业务.
 
@@ -331,7 +337,7 @@ begin
 
     nStr := '车辆[ %s ]下一状态为:[ %s ],进厂刷卡无效.';
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
-    
+
     WriteHardHelperLog(nStr, sPost_In);
     Exit;
   end;
@@ -342,11 +348,14 @@ begin
     begin
       gHardwareHelper.SetCardLastDone(nCard, nReader);
       gHardwareHelper.SetReaderCard(nReader, nCard);
+      {$IFDEF FORCEOPENDOOR}
+      HardOpenDoor(nReader);
+      {$ENDIF}
     end else
     begin
       if gTruckQueueManager.TruckReInfactFobidden(nTrucks[0].FTruck) then
       begin
-        gHardwareHelper.OpenDoor(nReader);
+        HardOpenDoor(nReader);
         //抬杆
 
         nStr := '车辆[ %s ]再次抬杆操作.';
@@ -376,9 +385,12 @@ begin
     begin
       gHardwareHelper.SetCardLastDone(nCard, nReader);
       gHardwareHelper.SetReaderCard(nReader, nCard);
+      {$IFDEF FORCEOPENDOOR}
+      HardOpenDoor(nReader);
+      {$ENDIF}
     end else
     begin
-      gHardwareHelper.OpenDoor(nReader);
+      HardOpenDoor(nReader);
       //抬杆
     end;
 
@@ -434,9 +446,12 @@ begin
   begin
     gHardwareHelper.SetCardLastDone(nCard, nReader);
     gHardwareHelper.SetReaderCard(nReader, nCard);
+    {$IFDEF FORCEOPENDOOR}
+    HardOpenDoor(nReader);
+    {$ENDIF}
   end else
   begin
-    gHardwareHelper.OpenDoor(nReader);
+    HardOpenDoor(nReader);
     //抬杆
   end;
 
@@ -471,9 +486,10 @@ end;
 //Parm: 卡号;读头;打印机
 //Desc: 对nCard放行出厂
 procedure MakeTruckOut(const nCard,nReader,nPrinter: string);
-var nStr, nCardType: string;
+var nStr, nCardType, nPrint: string;
     nIdx: Integer;
     nRet: Boolean;
+    nReaderItem: THHReaderItem;
     nTrucks: TLadingBillItems;
     {$IFDEF PrintBillMoney}
     nOut: TWorkerBusinessCommand;
@@ -533,7 +549,7 @@ begin
   end;
 
   if nReader <> '' then
-    gHardwareHelper.OpenDoor(nReader);
+    HardOpenDoor(nReader);
   //抬杆
 
   for nIdx:=Low(nTrucks) to High(nTrucks) do
@@ -550,8 +566,14 @@ begin
     //磁卡类型
 
     if nPrinter = '' then
+    begin
+      gHardwareHelper.GetReaderLastOn(nCard, nReaderItem);
+      nPrint := nReaderItem.FPrinter;
+    end else nPrint := nPrinter;
+
+    if nPrint = '' then
          gRemotePrinter.PrintBill(nTrucks[nIdx].FID + nStr)
-    else gRemotePrinter.PrintBill(nTrucks[nIdx].FID + #9 + nPrinter + nStr);
+    else gRemotePrinter.PrintBill(nTrucks[nIdx].FID + #9 + nPrint + nStr);
   end; //打印报表
 end;
 
@@ -590,7 +612,7 @@ begin
     Exit;
   end;
 
-  gHardwareHelper.OpenDoor(nReader);
+  HardOpenDoor(nReader);
   //抬杆
 
   for nIdx:=Low(nTrucks) to High(nTrucks) do
@@ -658,7 +680,7 @@ begin
       if nReader.FType = rtGate then
       begin
         if nReader.FID <> '' then
-          gHardwareHelper.OpenDoor(nReader.FID);
+          HardOpenDoor(nReader.FID);
         //抬杆
       end else
 
@@ -1388,5 +1410,18 @@ begin
 
   if nInt<1 then Result := '车辆不在队列中';
 end;
+
+procedure HardOpenDoor(const nReader: String);
+var nIdx: Integer;
+begin
+  for nIdx := 0 to 3 do
+  begin
+    {$IFDEF RFIDOPENDOOR}
+    gHYReaderManager.OpenDoor(nReader);
+    {$ELSE}
+    gHardwareHelper.OpenDoor(nReader);
+    {$ENDIF}
+  end;  
+end;  
 
 end.

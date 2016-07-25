@@ -36,6 +36,7 @@ type
       AButtonIndex: Integer);
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
+    procedure BtnAddClick(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -121,6 +122,45 @@ begin
     FListA.Text := 'BillCode=' + EditID.Text;
     InitFormData('');
   end;
+end;
+
+procedure TfFrameReqProvide.BtnAddClick(Sender: TObject);
+var nStr: string;
+    nP: TFormCommandParam;
+    nOrder: TOrderItemInfo;
+begin
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('请选择订单', sHint);
+    Exit;
+  end;
+
+  with nOrder,SQLQuery do
+  begin
+    FOrders := FieldByName('PK_MEAMBILL').AsString;
+    FCusID  := FieldByName('custcode').AsString;
+    FCusName:= FieldByName('custname').AsString;
+    FStockID:= FieldByName('invcode').AsString;
+    FStockName:= FieldByName('invname').AsString;
+    FStockArea:= FieldByName('vdef10').AsString;
+    FValue:= FieldByName('NPLANNUM').AsFloat;
+
+    FListA.Text := nOrder.FOrders;
+    if not GetOrderGYValue(FListA) then
+    begin
+      ShowMsg('读取已发量失败', sHint);
+      Exit;
+    end;
+
+    nStr := FListA.Values[FOrders];
+    if not IsNumber(nStr, True) then nStr := '0';
+
+    FValue := FValue - Float2Float(StrToFloat(nStr), cPrecision, True);
+    //可用量 = 计划量 - 已发量
+  end;
+
+  nP.FParamA := BuildOrderInfo(nOrder);
+  CreateBaseFormItem(cFI_FormProvBase, PopedomItem, @nP);
 end;
 
 initialization

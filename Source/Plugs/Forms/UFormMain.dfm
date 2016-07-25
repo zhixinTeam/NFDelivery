@@ -1,25 +1,25 @@
 object fFormMain: TfFormMain
   Left = 387
-  Top = 246
+  Top = 122
   Width = 892
   Height = 606
   Caption = #19994#21153#20013#38388#20214
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
-  Font.Height = -15
+  Font.Height = -12
   Font.Name = #23435#20307
   Font.Style = []
   OldCreateOrder = False
   OnClose = FormClose
   OnCreate = FormCreate
-  PixelsPerInch = 120
-  TextHeight = 15
+  PixelsPerInch = 96
+  TextHeight = 12
   object dxNavBar1: TdxNavBar
     Left = 0
-    Top = 60
-    Width = 225
-    Height = 495
+    Top = 48
+    Width = 180
+    Height = 501
     Align = alLeft
     Color = 14408641
     ActiveGroupIndex = 0
@@ -133,14 +133,14 @@ object fFormMain: TfFormMain
       OnClick = SysSummaryClick
     end
     object BarGroup4Control: TdxNavBarGroupControl
-      Left = 16
-      Top = 392
-      Width = 193
-      Height = 60
+      Left = 13
+      Top = 365
+      Width = 154
+      Height = 48
       TabOrder = 1
       UseStyle = True
       GroupIndex = 3
-      OriginalHeight = 60
+      OriginalHeight = 48
       object LabelCopy: TcxLabel
         Left = 0
         Top = 0
@@ -154,12 +154,12 @@ object fFormMain: TfFormMain
         Properties.ShadowedColor = clTeal
         Properties.WordWrap = True
         Transparent = True
-        Width = 193
-        AnchorY = 11
+        Width = 154
+        AnchorY = 9
       end
       object LabelAdmin: TcxLabel
         Left = 0
-        Top = 21
+        Top = 18
         Cursor = crHandPoint
         Align = alClient
         Caption = #31649#29702#21592#30331#24405
@@ -168,7 +168,7 @@ object fFormMain: TfFormMain
         Style.Color = clMoneyGreen
         Style.Font.Charset = DEFAULT_CHARSET
         Style.Font.Color = clRed
-        Style.Font.Height = -15
+        Style.Font.Height = -12
         Style.Font.Name = #23435#20307
         Style.Font.Style = []
         Style.HotTrack = False
@@ -182,27 +182,27 @@ object fFormMain: TfFormMain
         Properties.LabelStyle = cxlsLowered
         Properties.ShadowedColor = clMoneyGreen
         OnClick = LabelAdminClick
-        AnchorX = 193
-        AnchorY = 41
+        AnchorX = 154
+        AnchorY = 33
       end
     end
   end
   object PanelTitle: TPanel
     Left = 0
     Top = 0
-    Width = 884
-    Height = 60
+    Width = 876
+    Height = 48
     Align = alTop
     BevelOuter = bvNone
     TabOrder = 1
     DesignSize = (
-      884
-      60)
+      876
+      48)
     object ImgLeft: TImage
       Left = 0
       Top = 0
       Width = 289
-      Height = 60
+      Height = 48
       Align = alLeft
       AutoSize = True
       Picture.Data = {
@@ -793,8 +793,8 @@ object fFormMain: TfFormMain
     object ImgClient: TImage
       Left = 289
       Top = 0
-      Width = 595
-      Height = 60
+      Width = 587
+      Height = 48
       Align = alClient
       Picture.Data = {
         07544269746D6170920D0000424D920D00000000000032040000280000002500
@@ -909,15 +909,15 @@ object fFormMain: TfFormMain
       Stretch = True
     end
     object LabelHint: TcxLabel
-      Left = 678
-      Top = 20
+      Left = 542
+      Top = 16
       Anchors = [akTop, akRight]
       Caption = #36890#29992#20013#38388#20214#26694#26550
       ParentFont = False
       Style.BorderStyle = ebsNone
       Style.Font.Charset = DEFAULT_CHARSET
       Style.Font.Color = clWindowText
-      Style.Font.Height = -25
+      Style.Font.Height = -20
       Style.Font.Name = #23435#20307
       Style.Font.Style = [fsBold]
       Style.TextColor = clWindow
@@ -931,8 +931,8 @@ object fFormMain: TfFormMain
   end
   object SBar: TStatusBar
     Left = 0
-    Top = 555
-    Width = 884
+    Top = 549
+    Width = 876
     Height = 19
     Panels = <
       item
@@ -946,10 +946,10 @@ object fFormMain: TfFormMain
       end>
   end
   object PanelWork: TPanel
-    Left = 225
-    Top = 60
-    Width = 659
-    Height = 495
+    Left = 180
+    Top = 48
+    Width = 696
+    Height = 501
     Align = alClient
     BevelOuter = bvNone
     DockSite = True

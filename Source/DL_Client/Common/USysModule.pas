@@ -23,11 +23,12 @@ uses
   UFormMine, UFormGetMine, UFormPoundDispatch, UFrameBatcodeQuery,
   UFormBatcodeEdit, UFramePoundAuto, UFrameQueryProvideDetail,
   UFrameQueryDiapatchDetail, UFormBillNew, UFrameBillNew,
-  {$IFDEF JDNF}UFrameBatcodeJ, UFormBatcodeJ, {$ELSE}
+  {$IFDEF BatchVerifyValue}UFrameBatcodeJ, UFormBatcodeJ, {$ELSE}
   UFrameBatcode, UFormBatcode, {$ENDIF}
 
   UFormProvCard, UFormProvBase, UFrameProvBase, UFrameProvTruckDetail,
-  UFrameQueryProvDetail, UFormPurchasing
+  UFrameQueryProvDetail, UFormPurchasing,
+  UFormTransfer, UFormTransferCard, UFrameQueryTransferDetail
   {$IFDEF MicroMsg},
   UFormWeiXinAccount, UFrameWeiXinAccount,
   UFormWeiXinSendlog, UFrameWeiXinSendlog,

@@ -35,6 +35,8 @@ type
     CheckGPS: TcxCheckBox;
     dxLayout1Item10: TdxLayoutItem;
     dxLayout1Group4: TdxLayoutGroup;
+    EditValue: TcxTextEdit;
+    dxLayout1Item11: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
   protected
     { Protected declarations }
@@ -108,9 +110,12 @@ begin
       Exit;
     end;
 
-    EditTruck.Text := FieldByName('T_Truck').AsString;     
+    EditTruck.Text := FieldByName('T_Truck').AsString;
     EditOwner.Text := FieldByName('T_Owner').AsString;
     EditPhone.Text := FieldByName('T_Phone').AsString;
+    
+    EditValue.Enabled := gSysParam.FIsAdmin;
+    EditValue.Text := FieldByName('T_PrePValue').AsString;
     
     CheckVerify.Checked := FieldByName('T_NoVerify').AsString = sFlag_No;
     CheckValid.Checked := FieldByName('T_Valid').AsString = sFlag_Yes;
@@ -124,6 +129,7 @@ end;
 //Desc: ±£´æ
 procedure TfFormTruck.BtnOKClick(Sender: TObject);
 var nStr,nTruck,nU,nV,nP,nVip,nGps,nEvent: string;
+    nVal: Double;
 begin
   nTruck := UpperCase(Trim(EditTruck.Text));
   if nTruck = '' then
@@ -157,6 +163,8 @@ begin
        nStr := ''
   else nStr := SF('R_ID', FTruckID, sfVal);
 
+  nVal := StrToFloatDef(Trim(EditValue.Text), 0);
+
   nStr := MakeSQLByStr([SF('T_Truck', nTruck),
           SF('T_Owner', EditOwner.Text),
           SF('T_Phone', EditPhone.Text),
@@ -165,6 +173,7 @@ begin
           SF('T_PrePUse', nP),
           SF('T_VIPTruck', nVip),
           SF('T_HasGPS', nGps),
+          SF('T_PrePValue', nVal, sfVal),
           SF('T_LastTime', sField_SQLServer_Now, sfVal)
           ], sTable_Truck, nStr, FTruckID = '');
   FDM.ExecuteSQL(nStr);

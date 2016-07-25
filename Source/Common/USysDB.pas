@@ -94,6 +94,7 @@ ResourceString
   sFlag_Sale          = 'S';                         //销售
   sFlag_Returns       = 'R';                         //退货
   sFlag_Other         = 'O';                         //其它
+  sFlag_DuanDao       = 'D';                         //短倒
   sFlag_SaleNew       = 'N';                         //固定卡销售
 
   sFlag_TiHuo         = 'T';                         //自提
@@ -220,6 +221,7 @@ ResourceString
   sFlag_DuctTime      = 'Bus_DuctTime';              //暗扣时间段编号
   sFlag_ProvideBase   = 'Bus_ProvBase';              //采购入厂基础
   sFlag_ProvideDtl    = 'Bus_ProvDtl';               //采购入厂明细
+  sFlag_Transfer      = 'Bus_Transfer';              //短倒单号
   sFlag_BillNewNO     = 'Bus_BillNew';
   
   {*数据表*}
@@ -265,6 +267,8 @@ ResourceString
   sTable_ProvBaseBak  = 'P_ProvideBaseBak';          //已删除采购申请订单
   sTable_ProvDtl      = 'P_ProvideDtl';              //采购订单明细
   sTable_ProvDtlBak   = 'P_ProvideDtlBak';           //采购订单明细
+  sTable_Transfer     = 'P_Transfer';                //短倒明细单
+  sTable_TransferBak  = 'P_TransferBak';             //短倒明细单
 
   sTable_ChineseBase  = 'Sys_ChineseBase';           //汉字喷码表
   sTable_ChineseDict  = 'Sys_ChineseDict';           //汉字编码字典
@@ -543,6 +547,8 @@ ResourceString
        'T_PValue $Float Default 0, T_PTime Integer Default 0,' +
        'T_PlateColor varChar(12),T_Type varChar(12), T_LastTime DateTime, ' +
        'T_Card varChar(32), T_CardUse Char(1), T_NoVerify Char(1),' +
+       'T_MatePID varChar(32), T_MateID varChar(32), T_MateName varChar(80),' +
+       'T_SrcAddr varChar(150), T_DestAddr varChar(150),' +
        'T_Valid Char(1), T_VIPTruck Char(1), T_HasGPS Char(1))';
   {-----------------------------------------------------------------------------
    车辆信息:Truck
@@ -568,6 +574,14 @@ ResourceString
    *.T_Valid: 是否有效
    *.T_VIPTruck:是否VIP
    *.T_HasGPS:安装GPS(Y/N)
+
+   //---------------------------短倒业务数据信息--------------------------------
+   *.T_MatePID:上个物料编号
+   *.T_MateID:物料编号
+   *.T_MateName: 物料名称
+   *.T_SrcAddr:倒出地址
+   *.T_DestAddr:倒入地址
+   ---------------------------------------------------------------------------//
 
    有效平均皮重算法:
    T_PValue = (T_PValue * T_PTime + 新皮重) / (T_PTime + 1) 
@@ -833,7 +847,36 @@ ResourceString
    *.D_OutFact,D_OutMan: 出厂放行
   -----------------------------------------------------------------------------}
 
-  {$IFDEF JDNF}
+  sSQL_NewTransfer = 'Create Table $Table(R_ID $Inc, T_ID varChar(20),' +
+       'T_Card varChar(16), T_Truck varChar(15), T_PID varChar(15),' +
+       'T_SrcAddr varChar(160), T_DestAddr varChar(160),' +
+       'T_Type Char(1), T_StockNo varChar(32), T_StockName varChar(160),' +
+       'T_PValue $Float, T_PDate DateTime, T_PMan varChar(32),' +
+       'T_MValue $Float, T_MDate DateTime, T_MMan varChar(32),' +
+       'T_Value $Float, T_Man varChar(32), T_Date DateTime,' +
+       'T_DelMan varChar(32), T_DelDate DateTime, T_Memo varChar(500),' +
+       'T_SyncNum Integer Default 0, T_SyncDate DateTime, T_SyncMemo varChar(500))';
+  {-----------------------------------------------------------------------------
+   入厂表: Transfer
+   *.R_ID: 编号
+   *.T_ID: 短倒业务号
+   *.T_PID: 磅单编号
+   *.T_Card: 磁卡号
+   *.T_Truck: 车牌号
+   *.T_SrcAddr:倒出地点
+   *.T_DestAddr:倒入地点
+   *.T_Type: 类型(袋,散)
+   *.T_StockNo: 物料编号
+   *.T_StockName: 物料描述
+   *.T_PValue,T_PDate,T_PMan: 称皮重
+   *.T_MValue,T_MDate,T_MMan: 称毛重
+   *.T_Value: 收货量
+   *.T_Man,T_Date: 单据信息
+   *.T_DelMan,T_DelDate: 删除信息
+   *.T_SyncNum, T_SyncDate, T_SyncMemo: 同步次数; 同步完成时间; 同步信息
+  -----------------------------------------------------------------------------}
+
+  {$IFDEF BatchVerifyValue}
   sSQL_NewBatcode = 'Create Table $Table(R_ID $Inc, B_Stock varChar(32),' +
        'B_Name varChar(80), B_Prefix varChar(5), B_Base Integer,' +
        'B_Incement Integer, B_Length Integer, ' +
@@ -1049,6 +1092,7 @@ function BusinessToStr(const nBus: string): string;
 begin
   if nBus = sFlag_Sale       then Result := '销售' else
   if nBus = sFlag_Provide    then Result := '供应' else
+  if nBus = sFlag_DuanDao    then Result := '内倒' else
   if nBus = sFlag_Returns    then Result := '退货' else
   if nBus = sFlag_Other      then Result := '其它';
 end;
@@ -1107,6 +1151,8 @@ begin
   AddSysTableItem(sTable_ProvBaseBak, sSQL_NewProvBase);
   AddSysTableItem(sTable_ProvDtl, sSQL_NewProvDtl);
   AddSysTableItem(sTable_ProvDtlBak, sSQL_NewProvDtl);
+  AddSysTableItem(sTable_Transfer, sSQL_NewTransfer);
+  AddSysTableItem(sTable_TransferBak, sSQL_NewTransfer);
 
   AddSysTableItem(sTable_WeixinLog, sSQL_NewWXLog);
   AddSysTableItem(sTable_WeixinMatch, sSQL_NewWXMatch);

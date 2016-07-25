@@ -74,6 +74,7 @@ type
     procedure TimerDelayTimer(Sender: TObject);
     procedure Timer_SaveFailTimer(Sender: TObject);
     procedure ckCloseAllClick(Sender: TObject);
+    procedure EditBillKeyPress(Sender: TObject; var Key: Char);
   private
     { Private declarations }
     FIsWeighting, FIsSaving, FHasReaded: Boolean;
@@ -113,6 +114,7 @@ type
     //处理采样
     function SavePoundSale: Boolean;
     function SavePoundProvide: Boolean;
+    function SavePoundDuanDao: Boolean;
     //保存称重
     procedure WriteLog(nEvent: string);
     //记录日志
@@ -469,7 +471,9 @@ procedure TfFrameAutoPoundItem.Timer_ReadCardTimer(Sender: TObject);
 var nStr,nCard: string;
     nLast: Int64;
 begin
-  //if gSysParam.FIsManual then Exit;
+  {$IFNDEF VerfiyAutoWeight}
+  if gSysParam.FIsManual then Exit;
+  {$ENDIF}
   Timer_ReadCard.Tag := Timer_ReadCard.Tag + 1;
   if Timer_ReadCard.Tag < 5 then Exit;
 
@@ -825,6 +829,10 @@ begin
          ((FType = sFlag_San) and (
           (nVal < 0) and (FPoundSanF > 0) and (-nVal > FPoundSanF))) then
       begin
+        nStr := '车辆[%s]实际装车量误差较大，请通知司机检验载重';
+        nStr := Format(nStr, [FTruck]);
+        PlayVoice(nStr);
+
         nStr := '车辆[ %s ]实际装车量误差较大,详情如下:' + #13#10#13#10 +
                 '※.开单量: %.2f吨' + #13#10 +
                 '※.装车量: %.2f吨' + #13#10 +
@@ -896,28 +904,37 @@ begin
     Exit;
   end;
 
-  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
+  if FUIData.FPreTruckP then
   begin
-    if FUIData.FPData.FValue > FUIData.FMData.FValue then
+    if (FUIData.FPData.FValue <= 0) or (FUIData.FMData.FValue <= 0) then
     begin
-      ShowMsg('皮重应小于毛重', sHint);
+      nStr := '该车辆需要预置皮重，请先联系管理员预置皮重';
+      ShowMsg(nStr, sHint);
+      PlayVoice(nStr);
+      LEDDisplay(nStr);
+      Exit;
+    end;
+
+    FListB.Clear;
+    FListB.Add(FUIData.FExtID_2);
+    if not GetOrderGYValue(FListB) then Exit;
+
+    nVal := StrToFloat(FListB.Values[FUIData.FExtID_2]);
+    nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
+
+    if FloatRelation(nVal, nNet, rtLE) then
+    begin
+      nStr := 'NC订单可用量不足，请联系管理员重新办卡';
+      ShowMsg(nStr, sHint);
+      PlayVoice(nStr);
+      LEDDisplay(nStr);
       Exit;
     end;
   end;
 
-  FListB.Clear;
-  FListB.Add(FUIData.FExtID_2);
-  if not GetOrderGYValue(FListB) then Exit;
-
-  nVal := StrToFloat(FListB.Values[FUIData.FExtID_2]);
-  nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
-
-  if FloatRelation(nVal, nNet, rtLE) then
+  if (FUIData.FPData.FValue <= 0) And (FUIData.FMData.FValue <= 0) then
   begin
-    nStr := 'NC订单可用量不足，请重新办卡';
-    ShowMsg(nStr, sHint);
-    PlayVoice(nStr);
-    LEDDisplay(nStr);
+    ShowMsg('请先称重', sHint);
     Exit;
   end;
 
@@ -933,19 +950,65 @@ begin
   begin
     FFactory := gSysParam.FFactNum;
     //xxxxx
-    
+
     if FNextStatus = sFlag_TruckBFP then
          FPData.FStation := FPoundTunnel.FID
     else FMData.FStation := FPoundTunnel.FID;
   end;
 
-  nStr := '保存状态:[ %s ] ,皮重:[ %.2f ], 毛重:[ %.2f] , 下一状态:[ %s ]';
-  nStr := Format(nStr, [nNextStatus, FBillItems[0].FPData.FValue,
-          FBillItems[0].FMData.FValue, FBillItems[0].FNextStatus]);
-  WriteSysLog(nStr);        
   Result := SaveLadingBills(nNextStatus, FBillItems, FPoundTunnel);
   //保存称重
 end;
+
+//Desc: 短倒业务
+function TfFrameAutoPoundItem.SavePoundDuanDao: Boolean;
+begin
+  Result := False;
+  //init
+
+  if FUIData.FNextStatus = sFlag_TruckBFP then
+  begin
+    if FUIData.FPData.FValue <= 0 then
+    begin
+      WriteLog('请先称量皮重');
+      Exit;
+    end;
+  end else
+  begin
+    if FUIData.FMData.FValue <= 0 then
+    begin
+      WriteLog('请先称量毛重');
+      Exit;
+    end;
+  end;
+
+  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
+  begin
+    if FUIData.FPData.FValue > FUIData.FMData.FValue then
+    begin
+      WriteLog('皮重应小于毛重');
+      Exit;
+    end;
+  end;
+
+  SetLength(FBillItems, 1);
+  FBillItems[0] := FUIData;
+  //复制用户界面数据
+
+  with FBillItems[0] do
+  begin
+    FFactory := gSysParam.FFactNum;
+    //xxxxx
+
+    if FNextStatus = sFlag_TruckBFP then
+         FPData.FStation := FPoundTunnel.FID
+    else FMData.FStation := FPoundTunnel.FID;
+  end;
+
+  Result := SaveLadingBills(FBillItems[0].FNextStatus, FBillItems, FPoundTunnel);
+  //保存称重
+end;
+
 
 //Desc: 读取表头数据
 procedure TfFrameAutoPoundItem.OnPoundDataEvent(const nValue: Double);
@@ -975,8 +1038,11 @@ begin
 
   if not FIsWeighting then Exit;
   //不在称重中
-  // gSysParam.FIsManual then Exit;
+
+  {$IFNDEF VerfiyAutoWeight}
+  if gSysParam.FIsManual then Exit;
   //手动时无效
+  {$ENDIF}
 
   if (nValue < 0.02) or
     FloatRelation(nValue, FPoundTunnel.FPort.FMinValue, rtLE, 1000) then //空磅
@@ -992,7 +1058,8 @@ begin
   end else FEmptyPoundInit := 0;
 
   if (Length(FBillItems) > 0) and
-  ((FUIData.FCardUse=sFlag_Sale) or (FUIData.FCardUse = sFlag_SaleNew)) then
+  ((FUIData.FCardUse=sFlag_Sale) or (FUIData.FCardUse = sFlag_SaleNew) or
+   (FUIData.FCardUse=sFlag_DuanDao)) then
   begin
     if FUIData.FNextStatus = sFlag_TruckBFP then
          FUIData.FPData.FValue := nValue
@@ -1040,6 +1107,7 @@ begin
   FIsSaving := True;
   if FUIData.FCardUse = sFlag_Sale then      nRet := SavePoundSale
   else if FUIData.FCardUse = sFlag_SaleNew then nRet := SavePoundSale
+  else if FUIData.FCardUse = sFlag_DuanDao then nRet := SavePoundDuanDao
   else if FUIData.FCardUse = sFlag_Provide then nRet := SavePoundProvide
   else nRet := False;
 
@@ -1187,6 +1255,20 @@ begin
     end;
 
     nP := nP.Parent;
+  end;
+end;
+
+procedure TfFrameAutoPoundItem.EditBillKeyPress(Sender: TObject;
+  var Key: Char);
+begin
+  inherited;
+  if Key = #13 then
+  begin
+    Key := #0;
+    if EditBill.Properties.ReadOnly then Exit;
+
+    EditBill.Text := Trim(EditBill.Text);
+    LoadBillItems(EditBill.Text);
   end;
 end;
 

@@ -3,6 +3,16 @@ inherited fFrameReqSale: TfFrameReqSale
   Height = 516
   inherited ToolBar1: TToolBar
     Width = 985
+    inherited BtnAdd: TToolButton
+      Caption = #24320#21333
+      OnClick = BtnAddClick
+    end
+    inherited BtnEdit: TToolButton
+      Visible = False
+    end
+    inherited BtnDel: TToolButton
+      Visible = False
+    end
   end
   inherited cxGrid1: TcxGrid
     Top = 202

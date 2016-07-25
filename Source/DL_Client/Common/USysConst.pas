@@ -58,7 +58,8 @@ const
   cFI_FrameDispatchQuery = $0056;                    //调度查询
 
   cFI_FrameProvideDetailQuery = $0057;                  //供应明细
-  cFI_FrameDiapatchDetailQuery = $0058;                  //调度明细
+  cFI_FrameDiapatchDetailQuery = $0058;                 //调度明细
+  cFI_FrameTransferDetailQuery = $0059;                 //短倒明细
 
   cFI_FrameChineseBase  = $0062;                     //汉字喷码
   cFI_FrameChineseDict  = $0063;                     //喷码字典
@@ -102,8 +103,8 @@ const
   cFI_FormMakeRFIDCard  = $1026;                     //办理电子标签
   cFI_FormMakeProvCard  = $1027;                     //办理磁卡
   cFI_FormBillNew       = $1028;
-
   cFI_FormGetMine       = $1029;                     //矿点档案
+  cFI_FormMakeTranCard  = $1030;                     //办理磁卡
 
   cFI_FormTruckIn       = $1031;                     //车辆进厂
   cFI_FormTruckOut      = $1032;                     //车辆出厂
@@ -127,6 +128,7 @@ const
 
   cFI_FormProvBase      = $1120;                     //采购入厂单
   cFI_FormPurchase      = $1121;                     //采购验收
+  cFI_FormTransfer      = $1122;                     //短倒业务
 
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据

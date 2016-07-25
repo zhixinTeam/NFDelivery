@@ -98,10 +98,10 @@ begin
   begin
     gProberManager := TProberManager.Create;
     gProberManager.LoadConfig(gPath + 'TruckProber.xml');
-
-    Inc(gSysParam.FProberUser);
-    gProberManager.StartProber;
   end;
+
+  Inc(gSysParam.FProberUser);
+  gProberManager.StartProber;
 
   if gSysParam.FVoiceUser < 1 then
   begin
@@ -241,7 +241,9 @@ begin
       if nStr = sFlag_No then Continue;
       //不在本机加载
 
+      {$IFDEF VerfiyAutoWeight}
       if not nT.FAutoWeight then
+      {$ENDIF}
       with TfFrameManualPoundItem.Create(Self) do
       begin
         Name := 'fFrameManualPoundItem' + IntToStr(nIdx);

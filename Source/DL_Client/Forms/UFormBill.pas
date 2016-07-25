@@ -217,7 +217,7 @@ begin
   EditBrand.Text:=FOrder.FStockBrand;
   EditBrand.Properties.ReadOnly := EditBrand.Text<>'';
 
-  {$IFNDEF JDNF}
+  {$IFDEF JSNF}
   EditValue.Text := Format('%.2f', [FOrder.FValue]);
   {$ENDIF}
   EditFQ.Text := FOrder.FBatchCode;

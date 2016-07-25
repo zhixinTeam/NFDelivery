@@ -785,37 +785,38 @@ begin
       FNextStatus := sFlag_TruckOut;
 
       nSQL := MakeSQLByStr([
-            SF('P_ID', nOut.FData),
-            SF('P_Type', sFlag_Provide),
-            SF('P_Order', FID),
-            SF('P_Truck', FTruck),
-            SF('P_CusID', FCusID),
-            SF('P_CusName', FCusName),
-            SF('P_MID', FStockNo),
-            SF('P_MName', FStockName),
-            SF('P_MType', FType),
-            SF('P_LimValue', 0),
+              SF('P_ID', nOut.FData),
+              SF('P_Type', sFlag_Provide),
+              SF('P_Order', FID),
+              SF('P_Truck', FTruck),
+              SF('P_CusID', FCusID),
+              SF('P_CusName', FCusName),
+              SF('P_MID', FStockNo),
+              SF('P_MName', FStockName),
+              SF('P_MType', FType),
+              SF('P_LimValue', 0),
 
-            SF('P_PValue', FPData.FValue, sfVal),
-            SF('P_PDate', sField_SQLServer_Now, sfVal),
-            SF('P_PMan', FIn.FBase.FFrom.FUser),
-            SF('P_PStation', FPData.FStation),
+              SF('P_PValue', FPData.FValue, sfVal),
+              SF('P_PDate', sField_SQLServer_Now, sfVal),
+              SF('P_PMan', FIn.FBase.FFrom.FUser),
+              SF('P_PStation', FPData.FStation),
 
-            SF('P_MValue', FMData.FValue, sfVal),
-            SF('P_MDate', sField_SQLServer_Now, sfVal),
-            SF('P_MMan', FIn.FBase.FFrom.FUser),
-            SF('P_MStation', FMData.FStation),
+              SF('P_MValue', FMData.FValue, sfVal),
+              SF('P_MDate', sField_SQLServer_Now, sfVal),
+              SF('P_MMan', FIn.FBase.FFrom.FUser),
+              SF('P_MStation', FMData.FStation),
 
-            SF('P_FactID', FFactory),
-            SF('P_Origin', FOrigin),
-            SF('P_Direction', '进厂'),
-            SF('P_PModel', FPModel),
-            SF('P_Status', sFlag_TruckBFM),
-            SF('P_Valid', sFlag_Yes),
-            SF('P_PrintNum', 1, sfVal)
-            ], sTable_PoundLog, '', True);
+              SF('P_FactID', FFactory),
+              SF('P_Origin', FOrigin),
+              SF('P_Direction', '进厂'),
+              SF('P_PModel', FPModel),
+              SF('P_Status', sFlag_TruckBFM),
+              SF('P_Valid', sFlag_Yes),
+              SF('P_PrintNum', 1, sfVal)
+              ], sTable_PoundLog, '', True);
       FListA.Add(nSQL);
 
+      nVal := FMData.FValue - FPData.FValue;
       nSQL := MakeSQLByStr([
               SF('D_Status', FStatus),
               SF('D_NextStatus', FNextStatus),
@@ -826,6 +827,7 @@ begin
               SF('D_MValue', FMData.FValue, sfVal),
               SF('D_MDate', sField_SQLServer_Now, sfVal),
               SF('D_MMan', FIn.FBase.FFrom.FUser),
+              SF('D_Value', nVal, sfVal),
 
               SF('D_PID', nOut.FData)
               ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);
@@ -862,6 +864,7 @@ begin
               SF('D_YMan', FIn.FBase.FFrom.FUser),
               SF('D_KZValue', FKZValue, sfVal),
               SF('D_YSResult', FYSValid),
+              SF('D_YLineName', FSeal),    //保存批次号
               SF('D_Memo', FMemo)
               ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);
       FListA.Add(nSQL);
@@ -942,6 +945,15 @@ begin
       nVal := Float2Float(nVal, cPrecision, False);
       //净重
 
+      {$IFDEF AutoSaveTruckP}
+      nStr := MakeSQLByStr([SF('T_PrePValue', FPData.FValue, sfVal),
+              SF('T_PrePTime', sField_SQLServer_Now, sfVal),
+              SF('T_PrePMan', FIn.FBase.FFrom.FUser)],
+              sTable_Truck, SF('T_Truck', FTruck), False);
+      FListA.Add(nSQL);
+      //预置皮重
+      {$ENDIF}
+
       if FNextStatus = sFlag_TruckBFP then
       begin
         nSQL := MakeSQLByStr([
@@ -955,8 +967,6 @@ begin
                 SF('P_MStation', FMData.FStation)
                 ], sTable_PoundLog, nStr, False);
         //称重时,由于皮重大,交换皮毛重数据
-
-        WriteLog(nSQL);
         FListA.Add(nSQL);
 
         nSQL := MakeSQLByStr([
@@ -993,7 +1003,6 @@ begin
                 SF('P_MStation', FMData.FStation)
                 ], sTable_PoundLog, nStr, False);
         //xxxxx
-        WriteLog(nSQL);
         FListA.Add(nSQL);
 
         nSQL := MakeSQLByStr([

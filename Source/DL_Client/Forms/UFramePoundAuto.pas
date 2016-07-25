@@ -98,12 +98,12 @@ begin
   begin
     gProberManager := TProberManager.Create;
     gProberManager.LoadConfig(gPath + 'TruckProber.xml');
-
-    Inc(gSysParam.FProberUser);
-    {$IFNDEF DEBUG}
-    gProberManager.StartProber;
-    {$ENDIF}
   end;
+
+  Inc(gSysParam.FProberUser);
+  {$IFNDEF DEBUG}
+  gProberManager.StartProber;
+  {$ENDIF}
   {$ENDIF}
   if gSysParam.FVoiceUser < 1 then
   begin
@@ -231,7 +231,9 @@ begin
       nT := Tunnels[nIdx];
       //tunnel
 
+      {$IFDEF VerfiyAutoWeight}
       if nT.FAutoWeight then
+      {$ENDIF}
       with TfFrameAutoPoundItem.Create(Self) do
       begin
         Name := 'fFrameAutoPoundItem' + IntToStr(nIdx);

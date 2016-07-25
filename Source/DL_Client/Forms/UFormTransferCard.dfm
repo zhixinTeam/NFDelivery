@@ -1,26 +1,26 @@
-inherited fFormProvCard: TfFormProvCard
-  Left = 452
-  Top = 293
+inherited fFormTransferCard: TfFormTransferCard
+  Left = 633
+  Top = 413
   Caption = #20851#32852#30913#21345
-  ClientHeight = 255
-  ClientWidth = 375
+  ClientHeight = 182
+  ClientWidth = 326
   Position = poMainFormCenter
   OnClose = FormClose
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 375
-    Height = 255
+    Width = 326
+    Height = 182
     inherited BtnOK: TButton
-      Left = 229
-      Top = 222
+      Left = 180
+      Top = 149
       Caption = #30830#23450
-      TabOrder = 7
+      TabOrder = 4
     end
     inherited BtnExit: TButton
-      Left = 299
-      Top = 222
-      TabOrder = 8
+      Left = 250
+      Top = 149
+      TabOrder = 5
     end
     object EditBill: TcxTextEdit [2]
       Left = 81
@@ -57,45 +57,20 @@ inherited fFormProvCard: TfFormProvCard
     end
     object EditCard: TcxTextEdit [5]
       Left = 81
-      Top = 136
+      Top = 111
       ParentFont = False
       Properties.MaxLength = 15
       Style.BorderColor = clWindowFrame
       Style.BorderStyle = ebsOffice11
-      TabOrder = 4
-      OnKeyPress = EditCardKeyPress
-      Width = 121
-    end
-    object BtnTruckPre: TcxCheckBox [6]
-      Left = 23
-      Top = 161
-      Caption = #37319#29992#39044#32622#30382#37325
-      ParentFont = False
-      TabOrder = 5
-      Transparent = True
-      Width = 121
-    end
-    object BtnLongUse: TcxCheckBox [7]
-      Left = 23
-      Top = 187
-      Caption = #21150#29702#38271#26399#21345
-      ParentFont = False
-      TabOrder = 6
-      Transparent = True
-      Width = 121
-    end
-    object EditMemo: TcxTextEdit [8]
-      Left = 81
-      Top = 111
-      ParentFont = False
       TabOrder = 3
+      OnKeyPress = EditCardKeyPress
       Width = 121
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup
         Caption = ''
         object dxLayout1Item3: TdxLayoutItem
-          Caption = #37319#36141#21333#21495':'
+          Caption = #29289#26009#32534#21495':'
           Control = EditBill
           ControlOptions.ShowBorder = False
         end
@@ -110,26 +85,9 @@ inherited fFormProvCard: TfFormProvCard
           Control = cxLabel1
           ControlOptions.ShowBorder = False
         end
-        object dxLayout1Item9: TdxLayoutItem
-          Caption = #21345#24207#21015#21495':'
-          Control = EditMemo
-          ControlOptions.ShowBorder = False
-        end
         object dxLayout1Item6: TdxLayoutItem
           Caption = #30913#21345#32534#21495':'
           Control = EditCard
-          ControlOptions.ShowBorder = False
-        end
-        object dxLayout1Item7: TdxLayoutItem
-          Caption = 'cxCheckBox1'
-          ShowCaption = False
-          Control = BtnTruckPre
-          ControlOptions.ShowBorder = False
-        end
-        object dxLayout1Item8: TdxLayoutItem
-          Caption = 'cxCheckBox2'
-          ShowCaption = False
-          Control = BtnLongUse
           ControlOptions.ShowBorder = False
         end
       end
@@ -152,6 +110,6 @@ inherited fFormProvCard: TfFormProvCard
     Timeouts.ReadTotalConstant = 100
     OnRxChar = ComPort1RxChar
     Left = 14
-    Top = 204
+    Top = 180
   end
 end

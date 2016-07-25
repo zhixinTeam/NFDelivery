@@ -78,8 +78,13 @@ begin
   begin
     New(nP);
     FillChar(nP^, SizeOf(TFormCommandParam), #0);
-  end else nP := nParam;
+  end else
+  begin
+    nP := nParam;
+    nStr := nP.FParamA;
+  end;
 
+  if nStr = '' then
   try
     CreateBaseFormItem(cFI_FormGetCustom, nPopedom, nP);
     if (nP.FCommand <> cCmd_ModalResult) or (nP.FParamA <> mrOK) then Exit;

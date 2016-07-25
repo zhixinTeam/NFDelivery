@@ -140,6 +140,13 @@ function SaveOrderCard(const nOrderCard: string): Boolean;
 function LogoutOrderCard(const nCard: string): Boolean;
 //注销指定磁卡
 
+function SaveDuanDaoCard(const nTruck, nCard: string): Boolean;
+//保存短倒磁卡
+function LogoutDuanDaoCard(const nCard: string): Boolean;
+//注销指定磁卡
+function SaveTransferInfo(nTruck, nMateID, nMate, nSrcAddr, nDstAddr:string):Boolean;
+//办理短倒磁卡
+
 function GetLadingBills(const nCard,nPost: string;
  var nBills: TLadingBillItems): Boolean;
 //获取指定岗位的交货单列表
@@ -177,6 +184,8 @@ function PrintSalePoundReport(const nPound: string; nAsk: Boolean): Boolean;
 //打印销售磅单
 function PrintOrderReport(nOrder: string; const nAsk: Boolean): Boolean;
 //打印采购单
+function PrintDuanDaoReport(nID: string; const nAsk: Boolean): Boolean;
+//打印短倒单
 
 //保存电子标签
 function SetTruckRFIDCard(nTruck: string; var nRFIDCard: string;
@@ -354,6 +363,40 @@ begin
   end;
 end;
 
+//Date: 2014-09-05
+//Parm: 命令;数据;参数;输出
+//Desc: 调用中间件上的短倒单据对象
+function CallBusinessDuanDao(const nCmd: Integer; const nData,nExt: string;
+  const nOut: PWorkerBusinessCommand; const nWarn: Boolean = True): Boolean;
+var nIn: TWorkerBusinessCommand;
+    nWorker: TBusinessWorkerBase;
+begin
+  nWorker := nil;
+  try
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nExt;
+
+    if nWarn then
+         nIn.FBase.FParam := ''
+    else nIn.FBase.FParam := sParam_NoHintOnError;
+
+    if gSysParam.FAutoPound and (not gSysParam.FIsManual) then
+      nIn.FBase.FParam := sParam_NoHintOnError;
+    //自动称重时不提示
+
+    nWorker := gBusinessWorkerManager.LockWorker(sCLI_BusinessDuanDao);
+    //get worker
+    Result := nWorker.WorkActive(@nIn, nOut);
+
+    if not Result then
+      WriteLog(nOut.FBase.FErrDesc);
+    //xxxxx
+  finally
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
 //Date: 2014-10-01
 //Parm: 命令;数据;参数;输出
 //Desc: 调用中间件上的销售单据对象
@@ -415,7 +458,7 @@ begin
   end;   
 end;
 
-{$IFNDEF JDNF}
+{$IFNDEF BatchVerifyValue}
 //Date: 2015-01-16
 //Parm: 物料号;品牌名;开单量;原始批次
 //Desc: 生产nStock的批次号
@@ -1065,8 +1108,12 @@ end;
 //Desc: 删除nBillID单据
 function DeleteBill(const nBill: string): Boolean;
 var nOut: TWorkerBusinessCommand;
+    nIsAdmin: string;
 begin
-  Result := CallBusinessSaleBill(cBC_DeleteBill, nBill, '', @nOut);
+  if gSysParam.FIsAdmin then
+       nIsAdmin := sFlag_Yes
+  else nIsAdmin := sFlag_No;
+  Result := CallBusinessSaleBill(cBC_DeleteBill, nBill, nIsAdmin, @nOut);
 end;
 
 //Date: 2014-09-15
@@ -1152,6 +1199,11 @@ begin
   if nStr = sFlag_Provide then
   begin
     Result := CallBusinessProvideItems(cBC_GetPostBills, nCard, nPost, @nOut);
+  end else
+
+  if nStr = sFlag_DuanDao then
+  begin
+    Result := CallBusinessDuanDao(cBC_GetPostBills, nCard, nPost, @nOut);
   end;
 
   if Result then
@@ -1189,6 +1241,13 @@ begin
     nStr := CombineBillItmes(nData);
     Result := CallBusinessProvideItems(cBC_SavePostBills, nStr, nPost, @nOut);
     if (not Result) or (nOut.FData = '') then Exit;
+  end else
+
+  if nStr = sFlag_DuanDao then
+  begin
+    nStr := CombineBillItmes(nData);
+    Result := CallBusinessDuanDao(cBC_SavePostBills, nStr, nPost, @nOut);
+	  if (not Result) or (nOut.FData = '') then Exit;
   end;
 
   if Assigned(nTunnel) then //过磅称重
@@ -1266,6 +1325,37 @@ function LogoutOrderCard(const nCard: string): Boolean;
 var nOut: TWorkerBusinessCommand;
 begin
   Result := CallBusinessProvideItems(cBC_LogOffCard, nCard, '', @nOut);
+end;
+
+//------------------------------------------------------------------------------
+//保存短倒磁卡
+function SaveDuanDaoCard(const nTruck, nCard: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessDuanDao(cBC_SaveBillCard, nTruck, nCard, @nOut);
+end;
+
+//注销指定磁卡
+function LogoutDuanDaoCard(const nCard: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessDuanDao(cBC_LogOffCard, nCard, '', @nOut);
+end;
+
+function SaveTransferInfo(nTruck, nMateID, nMate, nSrcAddr, nDstAddr:string):Boolean;
+var nP: TFormCommandParam;
+begin
+  with nP do
+  begin
+    FParamA := nTruck;
+    FParamB := nMateID;
+    FParamC := nMate;
+    FParamD := nSrcAddr;
+    FParamE := nDstAddr;
+
+    CreateBaseFormItem(cFI_FormTransfer, '', @nP);
+    Result  := (FCommand = cCmd_ModalResult) and (FParamA = mrOK);
+  end;
 end;
 
 //微信
@@ -1506,6 +1596,50 @@ begin
     nStr := Format(nStr, [sTable_PoundLog, nPound]);
     FDM.ExecuteSQL(nStr);
   end;
+end;
+
+//Desc: 打印nID对应的短倒单据
+function PrintDuanDaoReport(nID: string; const nAsk: Boolean): Boolean;
+var nStr: string;
+    nParam: TReportParamItem;
+begin
+  Result := False;
+
+  if nAsk then
+  begin
+    nStr := '是否要打印短倒业务称重磅单?';
+    if not QueryDlg(nStr, sAsk) then Exit;
+  end;
+
+  nStr := 'Select * From %s b Where T_ID=''%s''';
+  nStr := Format(nStr, [sTable_Transfer, nID]);
+  //xxxxx
+
+  if FDM.QueryTemp(nStr).RecordCount < 1 then
+  begin
+    nStr := '编号为[ %s ] 的记录已无效!!';
+    nStr := Format(nStr, [nID]);
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nStr := gPath + sReportDir + 'DuanDao.fr3';
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nStr := '无法正确加载报表文件';
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nParam.FName := 'UserName';
+  nParam.FValue := gSysParam.FUserID;
+  FDR.AddParamItem(nParam);
+
+  nParam.FName := 'Company';
+  nParam.FValue := gSysParam.FHintText;
+  FDR.AddParamItem(nParam);
+
+  FDR.Dataset1.DataSet := FDM.SqlTemp;
+  FDR.ShowReport;
+  Result := FDR.PrintSuccess;
 end;
 
 //Date: 2015/1/18

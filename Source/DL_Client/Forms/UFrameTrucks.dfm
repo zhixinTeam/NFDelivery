@@ -121,6 +121,10 @@ inherited fFrameTrucks: TfFrameTrucks
       Caption = #36710#36742#31614#21040
       OnClick = N2Click
     end
+    object N8: TMenuItem
+      Caption = #21150#29702#20869#20498
+      OnClick = N8Click
+    end
     object N3: TMenuItem
       Caption = '-'
       Enabled = False

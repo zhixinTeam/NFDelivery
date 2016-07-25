@@ -331,6 +331,7 @@ inherited fFrameAutoPoundItem: TfFrameAutoPoundItem
     StyleFocused.LookAndFeel.NativeStyle = True
     StyleHot.LookAndFeel.NativeStyle = True
     TabOrder = 9
+    OnKeyPress = EditBillKeyPress
     Width = 275
   end
   object EditZValue: TcxTextEdit

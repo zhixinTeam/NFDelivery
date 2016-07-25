@@ -138,6 +138,7 @@ type
     function SavePoundSale: Boolean;
     function SavePoundProvide: Boolean;
     function SavePoundData(var nPoundID: string): Boolean;
+    function SavePoundDuanDao: Boolean;
     //保存称重
     procedure PlayVoice(const nStrtext: string);
     //播发语音
@@ -916,7 +917,8 @@ begin
   end;
 
   if (Length(FBillItems) > 0) and
-  ((FUIData.FCardUse=sFlag_Sale) or (FBillItems[0].FCardUse = sFlag_SaleNew)) then
+  ((FUIData.FCardUse=sFlag_Sale) or (FBillItems[0].FCardUse = sFlag_SaleNew) or
+   (FBillItems[0].FCardUse = sFlag_DuanDao)) then
   begin
     if FBillItems[0].FNextStatus = sFlag_TruckBFP then
          FUIData.FPData.FValue := nVal
@@ -1251,6 +1253,55 @@ begin
   end;
 
   Result := SaveLadingBills(nNextStatus, FBillItems, FPoundTunnel);
+  //保存称重
+end;
+
+//Desc: 短倒业务
+function TfFrameManualPoundItem.SavePoundDuanDao: Boolean;
+begin
+  Result := False;
+  //init
+
+  if FUIData.FNextStatus = sFlag_TruckBFP then
+  begin
+    if FUIData.FPData.FValue <= 0 then
+    begin
+      ShowMsg('请先称量皮重', sHint);
+      Exit;
+    end;
+  end else
+  begin
+    if FUIData.FMData.FValue <= 0 then
+    begin
+      ShowMsg('请先称量毛重', sHint);
+      Exit;
+    end;
+  end;
+
+  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
+  begin
+    if FUIData.FPData.FValue > FUIData.FMData.FValue then
+    begin
+      ShowMsg('皮重应小于毛重', sHint);
+      Exit;
+    end;
+  end;
+
+  SetLength(FBillItems, 1);
+  FBillItems[0] := FUIData;
+  //复制用户界面数据
+
+  with FBillItems[0] do
+  begin
+    FFactory := gSysParam.FFactNum;
+    //xxxxx
+    
+    if FNextStatus = sFlag_TruckBFP then
+         FPData.FStation := FPoundTunnel.FID
+    else FMData.FStation := FPoundTunnel.FID;
+  end;
+
+  Result := SaveLadingBills(FBillItems[0].FNextStatus, FBillItems, FPoundTunnel);
   //保存称重
 end;
 
@@ -1631,6 +1682,7 @@ begin
     if FUIData.FCardUse = sFlag_Sale then      nBool := SavePoundSale
     else if FUIData.FCardUse = sFlag_SaleNew then nBool := SavePoundSale
     else if FUIData.FCardUse = sFlag_Provide then nBool := SavePoundProvide
+    else if FUIData.FCardUse = sFlag_DuanDao then nBool := SavePoundDuanDao
     else nBool := SavePoundData(nPoundID);
 
     if nBool then
@@ -1729,6 +1781,7 @@ begin
       FStation := '';
       FOperator := '';
     end;
+    FInnerData.FNextStatus := sFlag_TruckBFP;
     FUIData := FInnerData;
     //删除毛重信息
 

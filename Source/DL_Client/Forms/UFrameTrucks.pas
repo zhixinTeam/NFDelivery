@@ -32,6 +32,7 @@ type
     N3: TMenuItem;
     VIP1: TMenuItem;
     VIP2: TMenuItem;
+    N8: TMenuItem;
     procedure EditNamePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnAddClick(Sender: TObject);
@@ -44,6 +45,7 @@ type
     procedure N7Click(Sender: TObject);
     procedure VIP1Click(Sender: TObject);
     procedure VIP2Click(Sender: TObject);
+    procedure N8Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -256,6 +258,26 @@ begin
     FDM.ExecuteSQL(nStr);
     InitFormData(FWhere);
     ShowMsg('关闭车辆VIP成功', sHint);
+  end;
+end;
+
+procedure TfFrameTrucks.N8Click(Sender: TObject);
+var nTruck,nMID,nMate,nSrc,nDst: string;
+begin
+  inherited;
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    nSrc := SQLQuery.FieldByName('T_SrcAddr').AsString;
+    nDst := SQLQuery.FieldByName('T_DestAddr').AsString;
+    nTruck:= SQLQuery.FieldByName('T_Truck').AsString;
+
+    nMID  := SQLQuery.FieldByName('T_MateID').AsString;
+    nMate := SQLQuery.FieldByName('T_MateName').AsString;
+
+    if SaveTransferInfo(nTruck, nMID, nMate, nSrc, nDst) then
+      ShowMsg('短倒业务磁卡保存成功', sHint);
+
+    InitFormData(FWhere);
   end;
 end;
 

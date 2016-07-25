@@ -120,7 +120,9 @@ type
       const nVirtualReader: Boolean = True);
     function GetCardLastDone(const nCard,nReader: string): Int64;
     procedure SetCardLastDone(const nCard,nReader: string);
-    function GetReaderLastOn(const nCard: string): string;
+    function GetReaderLastOn(const nCard: string): string;overload;
+    function GetReaderLastOn(const nCard: string;
+      var nReader: THHReaderItem): string; overload;
     //磁卡活动
     property ConnHelper: Boolean read FConnHelper write FConnHelper;
     property OnProce: THHProce read FProce write FProce;
@@ -330,6 +332,32 @@ begin
     if nLast < 0 then nLast := nIdx;
     if FLast >= FItems[nLast].FLast then
     begin
+      Result := FID;
+      nLast := nIdx;
+    end;
+  end;
+end;
+
+//Date: 2016-7-22
+//Parm: 磁卡号
+//Desc: 获取nCard最后一次刷卡所在读头
+function THardwareHelper.GetReaderLastOn(const nCard: string;
+  var nReader: THHReaderItem): string;
+var nIdx,nLast: Integer;
+begin
+  Result := '';
+  nLast := -1;
+
+  for nIdx:=Low(FItems) to High(FItems) do
+  with FItems[nIdx] do
+  begin
+    if (FCard <> nCard) and (FCardExt <> nCard) then Continue;
+    //match card_no
+
+    if nLast < 0 then nLast := nIdx;
+    if FLast >= FItems[nLast].FLast then
+    begin
+      nReader := FItems[nLast];
       Result := FID;
       nLast := nIdx;
     end;

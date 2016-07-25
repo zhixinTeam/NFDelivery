@@ -45,6 +45,7 @@ const
   cBC_GetSQLQueryOrder        = $0102;   //查询订单语句
   cBC_GetSQLQueryCustomer     = $0103;   //查询客户语句
   cBC_GetSQLQueryDispatch     = $0104;   //查询调拨订单
+  cBC_SyncDuanDao             = $0105;   //同步短倒
 
   cBC_SaveBills               = $0020;   //保存交货单列表
   cBC_DeleteBill              = $0021;   //删除交货单
@@ -221,6 +222,7 @@ resourcestring
   sBus_BusinessProvide        = 'Bus_BusinessProvide';  //采购单相关
   sBus_BusinessCommand        = 'Bus_BusinessCommand';  //业务指令
   sBus_HardwareCommand        = 'Bus_HardwareCommand';  //硬件指令
+  sBus_BusinessDuanDao        = 'Bus_BusinessDuanDao';  //短倒业务相关
 
   {*client function name*}
   sCLI_ServiceStatus          = 'CLI_ServiceStatus';    //服务状态
@@ -230,6 +232,7 @@ resourcestring
   sCLI_BusinessProvide        = 'CLI_BusinessProvide';  //采购单业务
   sCLI_BusinessCommand        = 'CLI_BusinessCommand';  //业务指令
   sCLI_HardwareCommand        = 'CLI_HardwareCommand';  //硬件指令
+  sCLI_BusinessDuanDao        = 'CLI_BusinessDuanDao';  //短倒业务相关
 
 implementation
 

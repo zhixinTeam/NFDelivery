@@ -95,7 +95,7 @@ end;
 function TfFrameSaleDetailQuery.InitFormDataSQL(const nWhere: string): string;
 begin
   EditDate.Text := Format('%s жа %s', [Date2Str(FStart), Date2Str(FEnd)]);
-  Result := 'Select * From $Bill b ';
+  Result := 'Select * From $Bill b Left Join $PoundLog p on b.L_ID=p.P_Bill ';
 
   if FJBWhere = '' then
   begin
@@ -113,6 +113,7 @@ begin
     Result := Result + ' And ( L_Type=''' + sFlag_San + ''')';
 
   Result := MacroValue(Result, [MI('$Bill', sTable_Bill),
+            MI('$PoundLog', sTable_PoundLog),
             MI('$S', Date2Str(FStart)), MI('$End', Date2Str(FEnd + 1))]);
   //xxxxx
 end;

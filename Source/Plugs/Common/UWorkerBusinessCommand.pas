@@ -75,7 +75,7 @@ type
     //登录注销，用于移动终端
 
     function GetStockBatcode(var nData: string): Boolean;
-    {$IFNDEF  JDNF}
+    {$IFNDEF  BatchVerifyValue}
     function SaveStockBatcode(var nData: string): Boolean;
     {$ENDIF}
     //批次编号管理
@@ -346,7 +346,7 @@ begin
 
    cBC_SaveTruckInfo       : Result := SaveTruck(nData);
    cBC_GetStockBatcode     : Result := GetStockBatcode(nData);
-   {$IFNDEF JDNF}
+   {$IFNDEF BatchVerifyValue}
    cBC_SaveStockBatcode    : Result := SaveStockBatcode(nData);
    {$ENDIF}
    
@@ -649,7 +649,7 @@ begin
   end;
 end;
 
-{$IFDEF JDNF}
+{$IFDEF BatchVerifyValue}
 //Date: 2016-02-24
 //Parm: 物料编号[FIn.FData];预扣减量[FIn.ExtParam];
 //Desc: 按规则生成指定品种的批次编号
@@ -2158,7 +2158,7 @@ begin
                 SF('pk_sourcebill', FieldByName('pk_meambill').AsString),
                 SF('pk_sourcebill_b', FieldByName('pk_meambill_b').AsString),
                 SF('ts', DateTime2Str(nBills[nIdx].FMData.FDate)),
-                {$IFDEF JDNF}
+                {$IFDEF BatchVerifyValue}
                 SF('vbatchcode', nBills[nIdx].FMemo),
                 {$ELSE}
                 SF('vbatchcode', FieldByName('vbatchcode').AsString),
