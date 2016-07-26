@@ -578,9 +578,16 @@ begin
     end;
   end;
 
+  if not nUpdateUI then
+  begin
+    FUIData.FValue := FInnerData.FValue;
+    SetUIData(False);
+    Exit;
+  end;
+  //不更新数据
+
   FInnerData.FPModel := sFlag_PoundPD;
-  if nUpdateUI then
-    FUIData := FInnerData;
+  FUIData := FInnerData; 
   SetUIData(False);
 
   if not FPoundTunnel.FUserInput then

@@ -106,7 +106,7 @@ type
     procedure OnPoundDataEvent(const nValue: Double);
     procedure OnPoundData(const nValue: Double);
     //读取磅重
-    procedure LoadBillItems(const nCard: string);
+    procedure LoadBillItems(const nCard: string; nUpdateUI: Boolean = True);
     //读取交货单
     procedure InitSamples;
     procedure AddSample(const nValue: Double);
@@ -159,11 +159,13 @@ begin
   FPoundTunnel := nil;
   FIsWeighting := False;
   FHasReaded   := False;
-  
-  FEmptyPoundInit := 0;
+
   FListA := TStringList.Create;
   FListB := TStringList.Create;
   FListC := TStringList.Create;
+
+  FEmptyPoundInit := 0;
+  FLastCardDone   := GetTickCount;
 end;
 
 procedure TfFrameAutoPoundItem.OnDestroyFrame;
@@ -282,6 +284,9 @@ begin
     FIsSaving    := False;
     FIsWeighting := False;
     FEmptyPoundInit := 0;
+    if FLastCardDone = 0 then
+      FLastCardDone   := GetTickCount;
+    //防止49.71天后，系统更新为0
     
     gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
     //关闭表头端口
@@ -374,7 +379,8 @@ end;
 //Date: 2014-09-19
 //Parm: 磁卡或交货单号
 //Desc: 读取nCard对应的交货单
-procedure TfFrameAutoPoundItem.LoadBillItems(const nCard: string);
+procedure TfFrameAutoPoundItem.LoadBillItems(const nCard: string;
+ nUpdateUI: Boolean);
 var nStr,nHint: string;
     nIdx,nInt: Integer;
     nBills: TLadingBillItems;
@@ -453,6 +459,14 @@ begin
     end;
   end;
 
+  if not nUpdateUI then
+  begin
+    FUIData.FValue := FInnerData.FValue;
+    SetUIData(False);
+    Exit;
+  end;
+  //不更新数据
+
   FInnerData.FPModel := sFlag_PoundPD;
   FUIData := FInnerData;
   SetUIData(False);
@@ -469,7 +483,7 @@ end;
 //Desc: 由定时读取交货单
 procedure TfFrameAutoPoundItem.Timer_ReadCardTimer(Sender: TObject);
 var nStr,nCard: string;
-    nLast: Int64;
+    nLast, nDoneTmp: Int64;
 begin
   {$IFNDEF VerfiyAutoWeight}
   if gSysParam.FIsManual then Exit;
@@ -487,12 +501,13 @@ begin
 
     FHasReaded := True;
     if nCard <> FLastCard then
-      FLastCardDone := 0;
+         nDoneTmp := 0
+    else nDoneTmp := FLastCardDone;
     //新卡时重置
 
     WriteSysLog('读取到新卡号:::' + nCard + '=>旧卡号:::' + FLastCard);
-    nLast := Trunc((GetTickCount - FLastCardDone) / 1000);
-    if nLast < FPoundTunnel.FCardInterval then
+    nLast := Trunc((GetTickCount - nDoneTmp) / 1000);
+    if (nLast < FPoundTunnel.FCardInterval) And (nDoneTmp <> 0) then
     begin
       nStr := '磁卡[ %s ]需等待 %d 秒后才能过磅';
       nStr := Format(nStr, [nCard, FPoundTunnel.FCardInterval - nLast]);
@@ -748,7 +763,7 @@ begin
     //call mit bus
     if nStr = '' then Exit;
 
-    LoadBillItems(FCardTmp);
+    LoadBillItems(FCardTmp, False);
     //重新载入交货单
   end;
 
@@ -1224,8 +1239,6 @@ begin
   inherited;
   try
     Timer_SaveFail.Enabled := False;
-    FLastCardDone := GetTickCount;
-
     gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
     //关闭表头
     SetUIData(True);
