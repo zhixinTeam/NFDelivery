@@ -370,6 +370,7 @@ begin
   if Fields[0].AsInteger < 1 then
   begin
     nSQL := MakeSQLByStr([SF('C_Card', FListA.Values['Card']),
+            SF('C_Group', FListA.Values['CardType']),
             SF('C_Status', sFlag_CardUsed),
             SF('C_Used', sFlag_Provide),
             SF('C_Freeze', sFlag_No),
@@ -382,6 +383,7 @@ begin
   begin
     nSQL := Format('C_Card=''%s''', [FListA.Values['Card']]);
     nSQL := MakeSQLByStr([SF('C_Status', sFlag_CardUsed),
+            SF('C_Group', FListA.Values['CardType']),
             SF('C_Used', sFlag_Provide),
             SF('C_Freeze', sFlag_No),
             SF('C_TruckNo', nTruck),

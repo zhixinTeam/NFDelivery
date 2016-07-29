@@ -1216,13 +1216,57 @@ end;
 //Parm: 读头数据
 //Desc: 华益读头磁卡动作
 procedure WhenHYReaderCardArrived(const nReader: PHYReaderItem);
+var nStr: string;
+    nErrNum: Integer;
+    nDBConn: PDBWorker;
 begin
+  nDBConn := nil;
   {$IFDEF DEBUG}
   WriteHardHelperLog(Format('华益标签 %s:%s', [nReader.FTunnel, nReader.FCard]));
   {$ENDIF}
 
+  with gParamManager.ActiveParam^ do
+  try
+    nDBConn := gDBConnManager.GetConnection(FDB.FID, nErrNum);
+    if not Assigned(nDBConn) then
+    begin
+      WriteHardHelperLog('连接HM数据库失败(DBConn Is Null).');
+      Exit;
+    end;
+
+    if not nDBConn.FConn.Connected then
+      nDBConn.FConn.Connected := True;
+    //conn db
+
+    nStr := 'Select C_Group From $TB Where C_Card=''$CD'' or ' +
+            'C_Card2=''$CD'' or C_Card3=''$CD''';
+    nStr := MacroValue(nStr, [MI('$TB', sTable_Card), MI('$CD', nReader.FCard)]);
+
+    with gDBConnManager.WorkerQuery(nDBConn, nStr) do
+    if RecordCount > 0 then
+    begin
+      nStr := Fields[0].AsString;
+    end else
+    begin
+      nStr := Format('磁卡号[ %s ]匹配失败.', [nReader.FCard]);
+      WriteHardHelperLog(nStr);
+      Exit;
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nDBConn);
+  end;
+
   if nReader.FVirtual then
   begin
+    if (nReader.FVRGroup <> '') and        //分组不为空,且读卡器与卡片分组不同
+       (UpperCase(nReader.FVRGroup) <> UpperCase(nStr)) then
+    begin
+      nStr := Format('磁卡分组[ %s:%s ],读卡器分组[%s:%s]',
+              [nReader.FCard, nStr, nReader.FVReader, nReader.FVRGroup]);
+      WriteHardHelperLog(nStr);
+      Exit;
+    end;  
+
     case nReader.FVType of
     rt900 : gHardwareHelper.SetReaderCard(nReader.FVReader, 'H' + nReader.FCard, False);
     rt02n : g02NReader.SetReaderCard(nReader.FVReader, nReader.FCard);
@@ -1250,6 +1294,23 @@ begin
 end;
 
 //Date: 2012-12-16
+//Parm: 磁卡号
+//Desc: 对nCardNo做自动出厂(模拟读头刷卡),用于仅有一个读卡器模拟所有流程
+procedure MakeTruckSHAutoOut(const nCardNo: string);
+var nReader, nCardType: string;
+begin
+  if not GetCardUsed(nCardNo, nCardType) then nCardType := sFlag_Sale;
+
+  if gTruckQueueManager.IsTruckAutoOut(nCardType=sFlag_Sale) then
+  begin
+    nReader := gHardwareHelper.GetReaderLastOn(nCardNo);
+    if nReader <> '' then
+      gHardwareHelper.SetReaderCard(nReader + 'SH', nCardNo);
+    //模拟刷卡
+  end;
+end;  
+
+//Date: 2012-12-16
 //Parm: 共享数据
 //Desc: 处理业务中间件与硬件守护的交互数据
 procedure WhenBusinessMITSharedDataIn(const nData: string);
@@ -1262,7 +1323,7 @@ begin
   //auto out
 
   if Pos('TruckSH', nData) = 1 then
-    MakeTruckOut(Copy(nData, Pos(':', nData) + 1, MaxInt), '', '');
+    MakeTruckSHAutoOut(Copy(nData, Pos(':', nData) + 1, MaxInt));
 end;
 
 //Date: 2015-01-14

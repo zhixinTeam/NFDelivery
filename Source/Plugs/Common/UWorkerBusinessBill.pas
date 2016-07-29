@@ -1331,6 +1331,7 @@ begin
     begin
       nStr := MakeSQLByStr([SF('C_Card', FIn.FExtParam),
               SF('C_Status', sFlag_CardUsed),
+              SF('C_Group', sFlag_ProvCardL),
               SF('C_Used', sFlag_Sale),
               SF('C_Freeze', sFlag_No),
               SF('C_Man', FIn.FBase.FFrom.FUser),
@@ -1341,6 +1342,7 @@ begin
     begin
       nStr := Format('C_Card=''%s''', [FIn.FExtParam]);
       nStr := MakeSQLByStr([SF('C_Status', sFlag_CardUsed),
+              SF('C_Group', sFlag_ProvCardL),
               SF('C_Freeze', sFlag_No),
               SF('C_Used', sFlag_Sale),
               SF('C_Man', FIn.FBase.FFrom.FUser),
@@ -2553,8 +2555,10 @@ begin
   begin
     nSQL := MakeSQLByStr([SF('C_Card', FIn.FExtParam),
             SF('C_Status', sFlag_CardUsed),
+            SF('C_Group', sFlag_ProvCardG),
             SF('C_Used', sFlag_SaleNew),
             SF('C_Freeze', sFlag_No),
+
             SF('C_TruckNo', nTruck),
             SF('C_Man', FIn.FBase.FFrom.FUser),
             SF('C_Date', sField_SQLServer_Now, sfVal)
@@ -2564,6 +2568,7 @@ begin
   begin
     nSQL := Format('C_Card=''%s''', [FIn.FExtParam]);
     nSQL := MakeSQLByStr([SF('C_Status', sFlag_CardUsed),
+            SF('C_Group', sFlag_ProvCardG),
             SF('C_Used', sFlag_SaleNew),
             SF('C_Freeze', sFlag_No),
             SF('C_TruckNo', nTruck),

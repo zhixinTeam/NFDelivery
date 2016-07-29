@@ -520,7 +520,7 @@ ResourceString
   -----------------------------------------------------------------------------}
 
   sSQL_NewCard = 'Create Table $Table(R_ID $Inc, C_Card varChar(16),' +
-       'C_Card2 varChar(32), C_Card3 varChar(32),' +
+       'C_Card2 varChar(32), C_Card3 varChar(32), C_Group varChar(32), ' +
        'C_Owner varChar(15), C_TruckNo varChar(15), C_Status Char(1),' +
        'C_Freeze Char(1), C_Used Char(1), C_UseTime Integer Default 0,' +
        'C_Man varChar(32), C_Date DateTime, C_Memo varChar(500))';
@@ -531,6 +531,7 @@ ResourceString
    *.C_Card2,C_Card3:副卡号
    *.C_Owner:持有人标识
    *.C_TruckNo:提货车牌
+   *.C_Group:卡片分组
    *.C_Used:用途(供应,销售)
    *.C_UseTime:使用次数
    *.C_Status:状态(空闲,使用,注销,挂失)
