@@ -1216,56 +1216,21 @@ end;
 //Parm: 读头数据
 //Desc: 华益读头磁卡动作
 procedure WhenHYReaderCardArrived(const nReader: PHYReaderItem);
-var nStr: string;
-    nErrNum: Integer;
-    nDBConn: PDBWorker;
 begin
-  nDBConn := nil;
   {$IFDEF DEBUG}
   WriteHardHelperLog(Format('华益标签 %s:%s', [nReader.FTunnel, nReader.FCard]));
   {$ENDIF}
 
-  with gParamManager.ActiveParam^ do
-  try
-    nDBConn := gDBConnManager.GetConnection(FDB.FID, nErrNum);
-    if not Assigned(nDBConn) then
-    begin
-      WriteHardHelperLog('连接HM数据库失败(DBConn Is Null).');
-      Exit;
-    end;
-
-    if not nDBConn.FConn.Connected then
-      nDBConn.FConn.Connected := True;
-    //conn db
-
-    nStr := 'Select C_Group From $TB Where C_Card=''$CD'' or ' +
-            'C_Card2=''$CD'' or C_Card3=''$CD''';
-    nStr := MacroValue(nStr, [MI('$TB', sTable_Card), MI('$CD', nReader.FCard)]);
-
-    with gDBConnManager.WorkerQuery(nDBConn, nStr) do
-    if RecordCount > 0 then
-    begin
-      nStr := Fields[0].AsString;
-    end else
-    begin
-      nStr := Format('磁卡号[ %s ]匹配失败.', [nReader.FCard]);
-      WriteHardHelperLog(nStr);
-      Exit;
-    end;
-  finally
-    gDBConnManager.ReleaseConnection(nDBConn);
-  end;
-
   if nReader.FVirtual then
   begin
-    if (nReader.FVRGroup <> '') and        //分组不为空,且读卡器与卡片分组不同
-       (UpperCase(nReader.FVRGroup) <> UpperCase(nStr)) then
-    begin
-      nStr := Format('磁卡分组[ %s:%s ],读卡器分组[%s:%s]',
-              [nReader.FCard, nStr, nReader.FVReader, nReader.FVRGroup]);
-      WriteHardHelperLog(nStr);
-      Exit;
-    end;  
+//    if (nReader.FVRGroup <> '') and        //分组不为空,且读卡器与卡片分组不同
+//       (UpperCase(nReader.FVRGroup) <> UpperCase(nStr)) then
+//    begin
+//      nStr := Format('磁卡分组[ %s:%s ],读卡器分组[%s:%s]',
+//              [nReader.FCard, nStr, nReader.FVReader, nReader.FVRGroup]);
+//      WriteHardHelperLog(nStr);
+//      Exit;
+//    end;
 
     case nReader.FVType of
     rt900 : gHardwareHelper.SetReaderCard(nReader.FVReader, 'H' + nReader.FCard, False);
@@ -1324,6 +1289,7 @@ begin
 
   if Pos('TruckSH', nData) = 1 then
     MakeTruckSHAutoOut(Copy(nData, Pos(':', nData) + 1, MaxInt));
+  //auto out
 end;
 
 //Date: 2015-01-14
