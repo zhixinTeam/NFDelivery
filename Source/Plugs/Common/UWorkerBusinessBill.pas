@@ -11,7 +11,7 @@ uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, UWorkerBusinessCommand, ZnMD5, ULibFun,
   UFormCtrl, USysLoger, USysDB, {$IFDEF MicroMsg}UMgrRemoteWXMsg,{$ENDIF}
-  UMITConst, UBase64;
+  {$IFDEF HardMon}UMgrHardHelper, {$ENDIF}UMITConst, UBase64;
 
 type
   TStockInfoItem = record
@@ -1520,6 +1520,7 @@ function TWorkerBusinessBills.SavePostBillItems(var nData: string): Boolean;
 var nStr,nSQL,nTmp: string;
     f,m,nVal,nMVal,nTotal,nDec,nNet: Double;
     i,nIdx,nInt: Integer;
+    nReader: THHReaderItem;
     nBills: TLadingBillItems;
     nOut: TWorkerBusinessCommand;
 begin
@@ -1541,7 +1542,41 @@ begin
     nData := Format(nData, [PostTypeToStr(FIn.FExtParam)]);
     Exit;
   end;
-}  
+}
+
+  {$IFDEF HardMon}
+  if (FIn.FExtParam = sFlag_TruckBFP) or (FIn.FExtParam = sFlag_TruckBFM) then
+  begin
+    nTmp := gHardwareHelper.GetReaderLastOn(nBills[0].FCard, nReader);
+
+    if (nTmp <> '') and (nReader.FGroup <> '') then
+    begin
+      nSQL := 'Select C_Group From %s Where C_Card=''%s''';
+      nSQL := Format(nSQL, [sTable_Card, nBills[0].FCard]);
+      with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+      begin
+        if RecordCount < 1 then
+        begin
+          nData := '磁卡编号[ %s ]不匹配.';
+          nData := Format(nData, [nBills[0].FCard]);
+          Exit;
+        end;
+
+        nStr := UpperCase(Fields[0].AsString);
+      end;
+
+      if UpperCase(nReader.FGroup) <> nStr then
+      begin
+        nData := '磁卡号[ %s:::%s ]与读卡器[ %s:::%s ]分组匹配失败.';
+        nData := Format(nData,[nBills[0].FCard, nStr, nReader.FID,
+                 nReader.FGroup]);
+        Exit;
+      end;
+    end;
+  end;
+  //过磅时，验证读卡器与卡片分组
+  {$ENDIF}
+
   FListA.Clear;
   //用于存储SQL列表
 

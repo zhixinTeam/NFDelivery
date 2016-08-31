@@ -255,5 +255,13 @@ inherited fFrameProvTruckDetail: TfFrameProvTruckDetail
       Caption = #25171#21360#37319#36141#21333
       OnClick = N4Click
     end
+    object N7: TMenuItem
+      Caption = '-'
+      Enabled = False
+    end
+    object N8: TMenuItem
+      Caption = #20986#21378#26102#25235#25293
+      OnClick = N8Click
+    end
   end
 end

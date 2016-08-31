@@ -11,7 +11,7 @@ uses
   Windows, DB, Classes, Controls, SysUtils, UBusinessPacker, UBusinessWorker,
   UBusinessConst, ULibFun, UAdjustForm, UFormCtrl, UDataModule, UDataReport,
   UFormBase, cxMCListBox, UMgrPoundTunnels, HKVNetSDK, USysConst, USysDB,
-  USysLoger, UBase64;
+  USysLoger, UBase64, UFormWait, Graphics, ShellAPI;
 
 type
   TLadingStockItem = record
@@ -205,6 +205,13 @@ function GetTruckNO(const nTruck: String): string;
 function GetOrigin(const nOrigin: String): string;
 function GetValue(const nValue: Double): string;
 //显示格式化
+
+procedure ShowCapturePicture(const nID: string);
+//查看抓拍
+
+function GetTruckLastTime(const nTruck: string; var nLast: Integer): Boolean;
+//获取车辆活动间隔
+
 implementation
 
 //Desc: 记录日志
@@ -1641,6 +1648,79 @@ begin
   FDR.ShowReport;
   Result := FDR.PrintSuccess;
 end;
+
+//Date: 2016/8/7
+//Parm: 记录编号
+//Desc: 查看抓拍
+procedure ShowCapturePicture(const nID: string);
+var nStr,nDir: string;
+    nPic: TPicture;
+begin
+  nDir := gSysParam.FPicPath + nID + '\';
+
+  if DirectoryExists(nDir) then
+  begin
+    ShellExecute(GetDesktopWindow, 'open', PChar(nDir), nil, nil, SW_SHOWNORMAL);
+    Exit;
+  end else ForceDirectories(nDir);
+
+  nPic := nil;
+  nStr := 'Select * From %s Where P_ID=''%s''';
+  nStr := Format(nStr, [sTable_Picture, nID]);
+
+  ShowWaitForm('读取图片', True);
+  try
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount < 1 then
+      begin
+        ShowMsg('本条记录无抓拍', sHint);
+        Exit;
+      end;
+
+      nPic := TPicture.Create;
+      First;
+
+      While not eof do
+      begin
+        nStr := nDir + Format('%s_%s.jpg', [FieldByName('P_ID').AsString,
+                FieldByName('R_ID').AsString]);
+        //xxxxx
+
+        FDM.LoadDBImage(FDM.SqlTemp, 'P_Picture', nPic);
+        nPic.SaveToFile(nStr);
+        Next;
+      end;
+    end;
+
+    ShellExecute(GetDesktopWindow, 'open', PChar(nDir), nil, nil, SW_SHOWNORMAL);
+    //open dir
+  finally
+    nPic.Free;
+    CloseWaitForm;
+    FDM.SqlTemp.Close;
+  end;
+end;
+
+//Date: 2016/8/7
+//Parm: 车牌号;时间间隔
+//Desc: 查看车辆保存时间
+function GetTruckLastTime(const nTruck: string; var nLast: Integer): Boolean;
+var nStr: string;
+begin
+  Result := False;
+  nStr := 'Select %s as T_Now,T_LastTime From %s ' +
+          'Where T_Truck=''%s''';
+  nStr := Format(nStr, [sField_SQLServer_Now, sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+  begin
+    nLast := Trunc((FieldByName('T_Now').AsDateTime -
+                    FieldByName('T_LastTime').AsDateTime) * 24 * 60 * 60);
+    Result := True;                
+  end;
+end;  
 
 //Date: 2015/1/18
 //Parm: 车牌号；电子标签；是否启用；旧电子标签

@@ -36,7 +36,7 @@ uses
   SysUtils, USysLoger, UHardBusiness, UMgrTruckProbe, UMgrParam, UMITConst,
   UMgrQueue, UMgrLEDCard, UMgrHardHelper, UMgrRemotePrint, U02NReader,
   UMgrERelay, UMultiJS, UMgrRemoteVoice, UMgrCodePrinter, UMgrLEDDisp,
-  UMgrRFID102;
+  UMgrRFID102{$IFDEF HKVDVR}, UMgrCamera{$ENDIF};
 
 class function THardwareWorker.ModuleInfo: TPlugModuleInfo;
 begin
@@ -85,6 +85,11 @@ begin
 
     nStr := 'Ð¡ÆÁÏÔÊ¾';
     gDisplayManager.LoadConfig(nCfg + 'LEDDisp.xml');
+
+    {$IFDEF HKVDVR}
+    nStr := 'Ó²ÅÌÂ¼Ïñ»ú';
+    gCameraManager.LoadConfig(nCfg + cCameraXML);
+    {$ENDIF}
 
     {$IFDEF HYRFID201}
     nStr := '»ªÒæRFID102';
@@ -155,6 +160,12 @@ begin
   end;
   {$ENDIF}
 
+  {$IFDEF HKVDVR}
+  gCameraManager.OnCameraProc := WhenCaptureFinished;
+  gCameraManager.ControlStart;
+  //Ó²ÅÌÂ¼Ïñ»ú
+  {$ENDIF}
+
   g02NReader.OnCardIn := WhenReaderCardIn;
   g02NReader.OnCardOut := WhenReaderCardOut;
   g02NReader.StartReader;
@@ -204,6 +215,12 @@ begin
     gHYReaderManager.StopReader;
     gHYReaderManager.OnCardProc := nil;
   end;
+  {$ENDIF}
+
+  {$IFDEF HKVDVR}
+  gCameraManager.OnCameraProc := nil;
+  gCameraManager.ControlStop;
+  //Ó²ÅÌÂ¼Ïñ»ú
   {$ENDIF}
 
   gDisplayManager.StopDisplay;

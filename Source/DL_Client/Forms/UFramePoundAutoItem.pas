@@ -382,7 +382,7 @@ end;
 procedure TfFrameAutoPoundItem.LoadBillItems(const nCard: string;
  nUpdateUI: Boolean);
 var nStr,nHint: string;
-    nIdx,nInt: Integer;
+    nIdx,nInt,nLast: Integer;
     nBills: TLadingBillItems;
 begin
   nStr := Format('读取到卡号[ %s ],开始执行业务.', [nCard]);
@@ -391,6 +391,23 @@ begin
   if (not GetLadingBills(nCard, sFlag_TruckBFP, nBills)) or
      (Length(nBills) < 1) then
   begin
+    Timer_SaveFail.Enabled := True;
+    Exit;
+  end;
+
+  if GetTruckLastTime(nBills[0].FTruck, nLast) and
+     (nLast < FPoundTunnel.FCardInterval) then
+  begin
+    nStr := '磁卡[ %s ]需等待 %d 秒后才能过磅';
+    nStr := Format(nStr, [nCard, FPoundTunnel.FCardInterval - nLast]);
+
+    WriteLog(nStr);
+    //PlayVoice(nStr);
+
+    nStr := Format('磅站[ %s.%s ]: ',[FPoundTunnel.FID,
+            FPoundTunnel.FName]) + nStr;
+    WriteSysLog(nStr);
+
     Timer_SaveFail.Enabled := True;
     Exit;
   end;
@@ -907,7 +924,7 @@ begin
 end;
 
 function TfFrameAutoPoundItem.SavePoundProvide: Boolean;
-var nVal, nNet: Double;
+var nVal, nNet, nPlan: Double;
     nStr,nNextStatus: string;
 begin
   Result := False;
@@ -919,22 +936,43 @@ begin
     Exit;
   end;
 
-  if FUIData.FPreTruckP then
+  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
   begin
-    if (FUIData.FPData.FValue <= 0) or (FUIData.FMData.FValue <= 0) then
+    if FUIData.FPData.FValue > FUIData.FMData.FValue then
     begin
-      nStr := '该车辆需要预置皮重，请先联系管理员预置皮重';
-      ShowMsg(nStr, sHint);
-      PlayVoice(nStr);
-      LEDDisplay(nStr);
+      ShowMsg('皮重应小于毛重', sHint);
       Exit;
+    end;
+
+    FListA.Clear;
+    FListA.Add(FUIData.FExtID_2);
+    nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
+
+    FListB.Clear;
+    FListB.Values['MeamKeys'] := nStr;
+    nStr := EncodeBase64(FListB.Text);
+    nStr := GetQueryOrderSQL('203', nStr);
+    if nStr = '' then Exit;
+
+    with FDM.QueryTemp(nStr, True) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nStr := StringReplace(FListA.Text, #13#10, ',', [rfReplaceAll]);
+        nStr := Format('订单[ %s ]信息已丢失.', [nStr]);
+
+        ShowDlg(nStr, sHint);
+        Exit;
+      end;
+
+      nPlan := FieldByName('NPLANNUM').AsFloat;
     end;
 
     FListB.Clear;
     FListB.Add(FUIData.FExtID_2);
     if not GetOrderGYValue(FListB) then Exit;
 
-    nVal := StrToFloat(FListB.Values[FUIData.FExtID_2]);
+    nVal := nPlan - StrToFloat(FListB.Values[FUIData.FExtID_2]); 
     nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
 
     if FloatRelation(nVal, nNet, rtLE) then
@@ -947,10 +985,16 @@ begin
     end;
   end;
 
-  if (FUIData.FPData.FValue <= 0) And (FUIData.FMData.FValue <= 0) then
+  if FUIData.FPreTruckP then
   begin
-    ShowMsg('请先称重', sHint);
-    Exit;
+    if (FUIData.FPData.FValue <= 0) or (FUIData.FMData.FValue <= 0) then
+    begin
+      nStr := '该车辆需要预置皮重，请先联系管理员预置皮重';
+      ShowMsg(nStr, sHint);
+      PlayVoice(nStr);
+      LEDDisplay(nStr);
+      Exit;
+    end;
   end;
 
   if FUIData.FPreTruckP then

@@ -40,6 +40,7 @@ type
     FCard    : string;
     FCardExt : string;
     FPrinter : string;
+    FGroup   : string;
     FLast    : Int64;
     FKeep    : Word;
     FOKTime  : Int64;
@@ -420,6 +421,11 @@ begin
       if Assigned(nTP) then
            FPrinter := nTP.ValueAsString
       else FPrinter := '';
+
+      nTP := NodeByName('group');
+      if Assigned(nTP) then
+           FGroup := nTP.ValueAsString
+      else FGroup := '';
       
       nTP := NodeByName('keeptime');
       if Assigned(nTP) then

@@ -423,6 +423,7 @@ begin
 
   if not GetLadingBills(nCard, sFlag_TruckBFP, nBills) then
   begin
+    ShowMsg('无订单信息', sHint);
     SetUIData(True);
     Exit;
   end;
@@ -1203,7 +1204,7 @@ end;
 
 //Desc: 持卡原材料
 function TfFrameManualPoundItem.SavePoundProvide: Boolean;
-var nVal, nNet: Double;
+var nVal, nNet, nPlan: Double;
     nStr, nNextStatus: string;
 begin
   Result := False;
@@ -1222,24 +1223,48 @@ begin
       ShowMsg('皮重应小于毛重', sHint);
       Exit;
     end;
-  end;
 
-  FListB.Clear;
-  FListB.Add(FUIData.FExtID_2);
-  if not GetOrderGYValue(FListB) then Exit;
+    FListA.Clear;
+    FListA.Add(FUIData.FExtID_2);
+    nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
 
-  nVal := StrToFloat(FListB.Values[FUIData.FExtID_2]);
-  if FUIData.FPData.FValue > FUIData.FMData.FValue then
-       nNet := FUIData.FPData.FValue - FUIData.FMData.FValue
-  else nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
+    FListB.Clear;
+    FListB.Values['MeamKeys'] := nStr;
+    nStr := EncodeBase64(FListB.Text);
+    nStr := GetQueryOrderSQL('203', nStr);
+    if nStr = '' then Exit;
 
-  if FloatRelation(nVal, nNet, rtLE) then
-  begin
-    nStr := 'NC订单可用量不足，请重新办卡';
-    ShowMsg(nStr, sHint);
-    LEDDisplay(nStr);
-    Exit;
-  end;
+    with FDM.QueryTemp(nStr, True) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nStr := StringReplace(FListA.Text, #13#10, ',', [rfReplaceAll]);
+        nStr := Format('订单[ %s ]信息已丢失.', [nStr]);
+
+        ShowDlg(nStr, sHint);
+        Exit;
+      end;
+
+      nPlan := FieldByName('NPLANNUM').AsFloat;
+    end;
+
+    FListB.Clear;
+    FListB.Add(FUIData.FExtID_2);
+    if not GetOrderGYValue(FListB) then Exit;
+
+    nVal := nPlan - StrToFloat(FListB.Values[FUIData.FExtID_2]);
+    if FUIData.FPData.FValue > FUIData.FMData.FValue then
+         nNet := FUIData.FPData.FValue - FUIData.FMData.FValue
+    else nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
+
+    if FloatRelation(nVal, nNet, rtLE) then
+    begin
+      nStr := 'NC订单可用量不足，请重新办卡';
+      ShowMsg(nStr, sHint);
+      LEDDisplay(nStr);
+      Exit;
+    end;
+  end;  
 
   if FBillItems[0].FPreTruckP then
        nNextStatus := sFlag_TruckSH

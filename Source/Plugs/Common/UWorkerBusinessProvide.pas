@@ -10,7 +10,7 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, ZnMD5, ULibFun, UFormCtrl, USysLoger,
-  USysDB, UMITConst, UWorkerBusinessCommand;
+  USysDB, UMITConst, UWorkerBusinessCommand{$IFDEF HardMon},UMgrHardHelper{$ENDIF};
 
 type
   TWorkerBusinessProvide = class(TMITDBWorker)
@@ -562,6 +562,7 @@ function TWorkerBusinessProvide.SavePostProvideItems(var nData: string): Boolean
 var nSQL,nStr,nS,nN,nYS: string;
     nInt, nIdx: Integer;
     nNet, nVal: Double;
+    nReader: THHReaderItem;
     nPound: TLadingBillItems;
     nOut: TWorkerBusinessCommand;
 begin
@@ -584,6 +585,39 @@ begin
     Exit;
   end;
 
+  {$IFDEF HardMon}
+  if (FIn.FExtParam = sFlag_TruckBFP) or (FIn.FExtParam = sFlag_TruckBFM) then
+  begin
+    nYS := gHardwareHelper.GetReaderLastOn(nPound[0].FCard, nReader);
+
+    if (nYS <> '') and (nReader.FGroup <> '') then
+    begin
+      nSQL := 'Select C_Group From %s Where C_Card=''%s''';
+      nSQL := Format(nSQL, [sTable_Card, nPound[0].FCard]);
+      with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+      begin
+        if RecordCount < 1 then
+        begin
+          nData := '磁卡编号[ %s ]不匹配.';
+          nData := Format(nData, [nPound[0].FCard]);
+          Exit;
+        end;
+
+        nStr := UpperCase(Fields[0].AsString);
+      end;
+
+      if UpperCase(nReader.FGroup) <> nStr then
+      begin
+        nData := '磁卡号[ %s:::%s ]与读卡器[ %s:::%s ]分组匹配失败.';
+        nData := Format(nData,[nPound[0].FCard, nStr, nReader.FID,
+                 nReader.FGroup]);
+        Exit;
+      end;
+    end;
+  end;
+  //过磅时，验证读卡器与卡片分组
+  {$ENDIF}
+
   nSQL := 'Select P_Status, P_NextStatus From %s Where P_ID=''%s''';
   nSQL := Format(nSQL, [sTable_ProvBase, nPound[0].FZhiKa]);
   with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
@@ -598,7 +632,7 @@ begin
     nS := Fields[0].AsString;
     nN := Fields[1].AsString;
     //申请单当前状态和下一状态
-  end;  
+  end;
 
   FListA.Clear;
   //用于存储SQL列表
@@ -655,7 +689,7 @@ begin
               SF('P_NextStatus', sFlag_TruckBFP)
               ], sTable_ProvBase, SF('P_ID', FZhiKa), False);
       FListA.Add(nSQL);
-    end;  
+    end;
 
   end else
 
@@ -756,7 +790,13 @@ begin
               SF('P_PMan', FIn.FBase.FFrom.FUser)
               ], sTable_ProvBase, SF('P_ID', FZhiKa), False);
       FListA.Add(nSQL);
-    end;  
+
+      nSQL := MakeSQLByStr([
+              SF('T_LastTime',sField_SQLServer_Now, sfVal)
+              ], sTable_Truck, SF('T_Truck', FTruck), False);
+      FListA.Add(nSQL);
+      //更新车辆活动时间
+    end;
 
   end else
 
@@ -840,6 +880,11 @@ begin
               SF('P_NextStatus', FNextStatus)
               ], sTable_ProvBase, SF('P_ID', FZhiKa), False);
       FListA.Add(nSQL);
+
+      nSQL := MakeSQLByStr([
+              SF('T_LastTime',sField_SQLServer_Now, sfVal)
+              ], sTable_Truck, SF('T_Truck', FTruck), False);
+      FListA.Add(nSQL);
     end;
   end else
 
@@ -857,7 +902,7 @@ begin
                 SF('P_KZValue', FKZValue, sfVal)
                 ], sTable_PoundLog, nStr, False);
       //验收扣杂
-     FListA.Add(nSQL);
+      FListA.Add(nSQL);
 
       nSQL := MakeSQLByStr([
               SF('D_Status', FStatus),
@@ -1026,6 +1071,12 @@ begin
               ], sTable_ProvBase, SF('P_ID', FZhiKa), False);
         FListA.Add(nSQL);
       end;
+
+      nSQL := MakeSQLByStr([
+              SF('T_LastTime',sField_SQLServer_Now, sfVal)
+              ], sTable_Truck, SF('T_Truck', FTruck), False);
+      FListA.Add(nSQL);
+      //更新车辆活动时间
     end;
 
     nSQL := 'Select P_ID From %s Where P_Order=''%s''';
@@ -1051,7 +1102,7 @@ begin
               SF('D_OutFact', sField_SQLServer_Now, sfVal),
               SF('D_OutMan', FIn.FBase.FFrom.FUser)
               ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);
-      FListA.Add(nSQL);   
+      FListA.Add(nSQL);
 
       nSQL := 'Update %s Set P_DID=NULL,' +
               'P_PDate=NULL,P_PMan=NULL,P_PValue=0,' +

@@ -43,6 +43,8 @@ type
     N4: TMenuItem;
     N5: TMenuItem;
     N6: TMenuItem;
+    N7: TMenuItem;
+    N8: TMenuItem;
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
@@ -53,6 +55,7 @@ type
     procedure Check1Click(Sender: TObject);
     procedure N4Click(Sender: TObject);
     procedure N5Click(Sender: TObject);
+    procedure N8Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -248,6 +251,18 @@ begin
   finally
     FJBWhere := '';
   end;
+end;
+
+procedure TfFrameProvTruckDetail.N8Click(Sender: TObject);
+begin
+  inherited;
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('请选择要查看的记录', sHint);
+    Exit;
+  end;
+
+  ShowCapturePicture(SQLQuery.FieldByName('D_ID').AsString);
 end;
 
 initialization

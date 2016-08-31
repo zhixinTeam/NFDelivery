@@ -23,7 +23,7 @@
 {.$DEFINE ClientMon}
 //进程守护客户端
 
-{.$DEFINE HardMon}
+{$DEFINE HardMon}
 //编译硬件守护
 
 {.$DEFINE GenRODL}
@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE JSNF}
+{$DEFINE FYNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -78,6 +78,8 @@
   //批次控制发货量
   {$DEFINE FORCEOPENDOOR}
   //强制抬杆
+  {$DEFINE HKVDVR}
+  //服务器抓拍
 {$ENDIF}
 //富阳南方
 

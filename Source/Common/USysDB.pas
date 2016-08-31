@@ -547,6 +547,7 @@ ResourceString
        'T_PrePUse Char(1), T_MinPVal $Float, T_MaxPVal $Float, ' +
        'T_PValue $Float Default 0, T_PTime Integer Default 0,' +
        'T_PlateColor varChar(12),T_Type varChar(12), T_LastTime DateTime, ' +
+       'T_PoundLastTime DateTime, T_PoundValue $Float Default 0,' +
        'T_Card varChar(32), T_CardUse Char(1), T_NoVerify Char(1),' +
        'T_MatePID varChar(32), T_MateID varChar(32), T_MateName varChar(80),' +
        'T_SrcAddr varChar(150), T_DestAddr varChar(150),' +

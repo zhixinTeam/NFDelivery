@@ -11,7 +11,7 @@ uses
   Windows, Classes, Controls, SysUtils, UMgrDBConn, UMgrParam,
   UBusinessWorker, UBusinessConst, UBusinessPacker, UMgrQueue,
   UMgrHardHelper, U02NReader, UMgrERelay, UMultiJS, UMgrRemotePrint,
-  UMgrLEDDisp, UMgrRFID102;
+  UMgrLEDDisp, UMgrRFID102, {$IFDEF HKVDVR}UMgrCamera, {$ENDIF}Graphics, DB;
 
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
 procedure WhenHYReaderCardArrived(const nReader: PHYReaderItem);
@@ -34,11 +34,15 @@ function GetCardUsed(const nCard: string; var nCardType: string): Boolean;
 
 procedure HardOpenDoor(const nReader: String);
 //打开道闸
+{$IFDEF HKVDVR}
+procedure WhenCaptureFinished(const nPtr: Pointer);
+//保存图片
+{$ENDIF}
 
 implementation
 
 uses
-  ULibFun, USysDB, USysLoger, UTaskMonitor;
+  ULibFun, USysDB, USysLoger, UTaskMonitor, UFormCtrl;
 
 const
   sPost_In   = 'in';
@@ -552,8 +556,18 @@ begin
     HardOpenDoor(nReader);
   //抬杆
 
+  nStr := '车辆%s已出厂';
+  nStr := Format(nStr, [nTrucks[0].FTruck]);
+  gDisplayManager.Display(nReader, nStr);
+  //LED显示
+
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   begin
+    {$IFDEF HKVDVR}
+    gCameraManager.CapturePicture(nReader, nTrucks[nIdx].FID);
+    //抓拍
+    {$ENDIF}
+
     {$IFDEF PrintBillMoney}
     if CallBusinessCommand(cBC_GetZhiKaMoney,nTrucks[nIdx].FZhiKa,'',@nOut) then
          nStr := #8 + nOut.FData
@@ -629,7 +643,7 @@ end;
 //Parm: 读头数据
 //Desc: 对nReader读到的卡号做具体动作
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
-var nStr: string;
+var nStr, nGroup: string;
     nErrNum: Integer;
     nDBConn: PDBWorker;
 begin
@@ -651,7 +665,7 @@ begin
       nDBConn.FConn.Connected := True;
     //conn db
 
-    nStr := 'Select C_Card From $TB Where C_Card=''$CD'' or ' +
+    nStr := 'Select C_Card,C_Group From $TB Where C_Card=''$CD'' or ' +
             'C_Card2=''$CD'' or C_Card3=''$CD''';
     nStr := MacroValue(nStr, [MI('$TB', sTable_Card), MI('$CD', nReader.FCard)]);
 
@@ -659,12 +673,22 @@ begin
     if RecordCount > 0 then
     begin
       nStr := Fields[0].AsString;
+      nGroup := UpperCase(Fields[1].AsString);
     end else
     begin
       nStr := Format('磁卡号[ %s ]匹配失败.', [nReader.FCard]);
       WriteHardHelperLog(nStr);
       Exit;
     end;
+
+    if (nReader.FGroup <> '') and (UpperCase(nReader.FGroup) <> nGroup) then
+    begin
+      nStr := Format('磁卡号[ %s:::%s ]与读卡器[ %s:::%s ]分组匹配失败.',
+              [nReader.FCard, nGroup, nReader.FID, nReader.FGroup]);
+      WriteHardHelperLog(nStr);
+      Exit;
+    end;
+    //读卡器分组与卡片分组不匹配 
 
     try
       if nReader.FType = rtIn then
@@ -1158,7 +1182,7 @@ begin
   if nHost.FType = rtOnce then
   begin
     if nHost.FFun = rfOut then
-         MakeTruckOut(nCard.FCard, '', nHost.FPrinter)
+         MakeTruckOut(nCard.FCard, nHost.FID, nHost.FPrinter)
     else MakeTruckLadingDai(nCard.FCard, nHost.FTunnel);
   end else
 
@@ -1223,15 +1247,6 @@ begin
 
   if nReader.FVirtual then
   begin
-//    if (nReader.FVRGroup <> '') and        //分组不为空,且读卡器与卡片分组不同
-//       (UpperCase(nReader.FVRGroup) <> UpperCase(nStr)) then
-//    begin
-//      nStr := Format('磁卡分组[ %s:%s ],读卡器分组[%s:%s]',
-//              [nReader.FCard, nStr, nReader.FVReader, nReader.FVRGroup]);
-//      WriteHardHelperLog(nStr);
-//      Exit;
-//    end;
-
     case nReader.FVType of
     rt900 : gHardwareHelper.SetReaderCard(nReader.FVReader, 'H' + nReader.FCard, False);
     rt02n : g02NReader.SetReaderCard(nReader.FVReader, nReader.FCard);
@@ -1449,6 +1464,120 @@ begin
     gHardwareHelper.OpenDoor(nReader);
     {$ENDIF}
   end;  
-end;  
+end;
 
+//Date: 2009-7-4
+//Parm: 数据集;字段名;图像数据
+//Desc: 将nImage图像存入nDS.nField字段
+function SaveDBImage(const nDS: TDataSet; const nFieldName: string;
+  const nImage: TGraphic): Boolean;
+var nField: TField;
+    nStream: TMemoryStream;
+    nBuf: array[1..MAX_PATH] of Char;
+begin
+  Result := False;
+  nField := nDS.FindField(nFieldName);
+  if not (Assigned(nField) and (nField is TBlobField)) then Exit;
+
+  nStream := nil;
+  try
+    if not Assigned(nImage) then
+    begin
+      nDS.Edit;
+      TBlobField(nField).Clear;
+      nDS.Post; Result := True; Exit;
+    end;
+    
+    nStream := TMemoryStream.Create;
+    nImage.SaveToStream(nStream);
+    nStream.Seek(0, soFromEnd);
+
+    FillChar(nBuf, MAX_PATH, #0);
+    StrPCopy(@nBuf[1], nImage.ClassName);
+    nStream.WriteBuffer(nBuf, MAX_PATH);
+
+    nDS.Edit;
+    nStream.Position := 0;
+    TBlobField(nField).LoadFromStream(nStream);
+
+    nDS.Post;
+    FreeAndNil(nStream);
+    Result := True;
+  except
+    if Assigned(nStream) then nStream.Free;
+    if nDS.State = dsEdit then nDS.Cancel;
+  end;
+end;
+
+{$IFDEF HKVDVR}
+procedure WhenCaptureFinished(const nPtr: Pointer);
+var nStr: string;
+    nDS: TDataSet;
+    nPic: TPicture;
+    nDBConn: PDBWorker;
+    nErrNum, nRID: Integer;
+    nCapture: PCameraFrameCapture;
+begin
+  nDBConn := nil;
+  {$IFDEF DEBUG}
+  WriteHardHelperLog('WhenCaptureFinished进入.');
+  {$ENDIF}
+
+  nCapture :=  PCameraFrameCapture(nPtr);
+  if not FileExists(nCapture.FCaptureName) then Exit;
+
+  with gParamManager.ActiveParam^ do
+  try
+    nDBConn := gDBConnManager.GetConnection(FDB.FID, nErrNum);
+    if not Assigned(nDBConn) then
+    begin
+      WriteHardHelperLog('连接HM数据库失败(DBConn Is Null).');
+      Exit;
+    end;
+
+    if not nDBConn.FConn.Connected then
+      nDBConn.FConn.Connected := True;
+    //conn db
+
+    nDBConn.FConn.BeginTrans;
+    try
+      nStr := MakeSQLByStr([
+              SF('P_ID', nCapture.FCaptureFix),
+              //SF('P_Name', nCapture.FCaptureName),
+              SF('P_Date', sField_SQLServer_Now, sfVal)
+              ], sTable_Picture, '', True);
+      //xxxxx
+
+      if gDBConnManager.WorkerExec(nDBConn, nStr) < 1 then Exit;
+
+      nStr := 'Select Max(%s) From %s';
+      nStr := Format(nStr, ['R_ID', sTable_Picture]);
+      with gDBConnManager.WorkerQuery(nDBConn, nStr) do
+        nRID := Fields[0].AsInteger;
+
+      nStr := 'Select P_Picture From %s Where R_ID=%d';
+      nStr := Format(nStr, [sTable_Picture, nRID]);
+      nDS := gDBConnManager.WorkerQuery(nDBConn, nStr);
+
+      nPic := nil;
+      try
+        nPic := TPicture.Create;
+        nPic.LoadFromFile(nCapture.FCaptureName);
+
+        SaveDBImage(nDS, 'P_Picture', nPic.Graphic);
+        FreeAndNil(nPic);
+      except
+        if Assigned(nPic) then nPic.Free;
+      end;
+
+      DeleteFile(nCapture.FCaptureName);
+      nDBConn.FConn.CommitTrans;
+    except
+      nDBConn.FConn.RollbackTrans;
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nDBConn);
+  end;
+end;
+{$ENDIF}
 end.
