@@ -395,11 +395,12 @@ begin
     Exit;
   end;
 
-  if GetTruckLastTime(nBills[0].FTruck, nLast) and
+  nLast := -1;
+  if GetTruckLastTime(nBills[0].FTruck, nLast) and (nLast > 0) and 
      (nLast < FPoundTunnel.FCardInterval) then
   begin
-    nStr := '磁卡[ %s ]需等待 %d 秒后才能过磅';
-    nStr := Format(nStr, [nCard, FPoundTunnel.FCardInterval - nLast]);
+    nStr := '车辆[ %s ]需等待 %d 秒后才能过磅';
+    nStr := Format(nStr, [nBills[0].FTruck, FPoundTunnel.FCardInterval - nLast]);
 
     WriteLog(nStr);
     //PlayVoice(nStr);
