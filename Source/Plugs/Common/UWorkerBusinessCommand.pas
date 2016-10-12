@@ -1177,8 +1177,8 @@ begin
 
   nStr := FListA.Values['NoDate'];
   if nStr = '' then
-  begin
-    nStr := '(TMAKETIME>=''%s'' And TMAKETIME<''%s'')';
+  begin        
+    nStr := '(t1.dbilldate>=''%s'' And t1.dbilldate<''%s'')';
     FOut.FData := FOut.FData + Format(nStr, [
                   FListA.Values['DateStart'],
                   FListA.Values['DateEnd']]);
