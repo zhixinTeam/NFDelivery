@@ -215,7 +215,7 @@ begin
              FKeepShow := True
         else FKeepShow := nTmp.ValueAsString = '1';
 
-        nTmp := FindNode('keepkime');
+        nTmp := FindNode('keeptime');
         if not Assigned(nTmp) then
              FKeepTime := cDisp_KeepLong
         else FKeepTime := nTmp.ValueAsInt64Def(cDisp_KeepLong);
