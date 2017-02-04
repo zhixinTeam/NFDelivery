@@ -14,7 +14,7 @@ uses
   UTaskMonitor, USysShareMem, USysLoger, UMITConst, UMITPacker,
   {$IFDEF HardMon}UEventHardware, UWorkerHardware,{$ENDIF} {$IFDEF MicroMsg}
   UMgrRemoteWXMsg,{$ENDIF}UWorkerBusinessCommand, UWorkerBusinessBill,
-  UWorkerBusinessProvide, UWorkerBusinessDuanDao,
+  UWorkerBusinessProvide, UWorkerBusinessDuanDao, UMemDataPool,
   UMgrDBConn, UMgrParam, UMgrPlug, UMgrChannel, UChannelChooser, USAPConnection;
 
 procedure InitSystemObject(const nMainForm: THandle);
@@ -153,6 +153,8 @@ begin
   //日志管理器
   gTaskMonitor := TTaskMonitor.Create;
   //任务监控器
+  gMemDataManager := TMemDataManager.Create;
+  //内存管理器
 
   gParamManager := TParamManager.Create(gPath + 'Parameters.xml');
   if gSysParam.FParam <> '' then

@@ -16,9 +16,9 @@ uses
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
 procedure WhenHYReaderCardArrived(const nReader: PHYReaderItem);
 //有新卡号到达读头
-procedure WhenReaderCardIn(nHost: TReaderHost; nCard: TReaderCard);
+procedure WhenReaderCardIn(const nCard: string; const nHost: PReaderHost);
 //现场读头有新卡号
-procedure WhenReaderCardOut(nHost: TReaderHost; nCard: TReaderCard);
+procedure WhenReaderCardOut(const nCard: string; const nHost: PReaderHost);
 //现场读头卡号超时
 procedure WhenBusinessMITSharedDataIn(const nData: string);
 //业务中间件共享数据
@@ -1077,15 +1077,10 @@ begin
           FloatToStr(nTruck.FValue);
   //xxxxx
 
-  {$IFDEF JDNF}
-  gDisplayManager.Display(nTunnel, nStr);
-  //显示内容
-  {$ELSE}
   gERelayManager.LineOpen(nTunnel);
   //打开放灰
   gERelayManager.ShowTxt(nTunnel, nStr);
   //显示内容
-  {$ENDIF}
 end;
 
 //Date: 2012-4-24
@@ -1142,11 +1137,7 @@ begin
     nIdx := Length(nTrucks[0].FTruck);
     nStr := nTrucks[0].FTruck + StringOfChar(' ',12 - nIdx) + '请换库装车';
 
-    {$IFDEF JDNF}
-    gDisplayManager.Display(nTunnel, nStr);
-    {$ELSE}
     gERelayManager.ShowTxt(nTunnel, nStr);
-    {$ENDIF}
     Exit;
   end; //检查通道
 
@@ -1176,64 +1167,45 @@ end;
 //Date: 2012-4-24
 //Parm: 主机;卡号
 //Desc: 对nHost.nCard新到卡号作出动作
-procedure WhenReaderCardIn(nHost: TReaderHost; nCard: TReaderCard);
+procedure WhenReaderCardIn(const nCard: string; const nHost: PReaderHost);
 var nTxt: string;
 begin 
   if nHost.FType = rtOnce then
   begin
     if nHost.FFun = rfOut then
-         MakeTruckOut(nCard.FCard, nHost.FID, nHost.FPrinter)
-    else MakeTruckLadingDai(nCard.FCard, nHost.FTunnel);
+         MakeTruckOut(nCard, nHost.FID, nHost.FPrinter)
+    else MakeTruckLadingDai(nCard, nHost.FTunnel);
   end else
 
   if nHost.FType = rtKeep then
   begin
-    if nHost.FPrepare then
-    begin
-      nTxt := PrepareShowInfo(nCard.FCard, nHost.FTunnel);
-      WriteHardHelperLog(nTxt, nHost.FID);
-    end
-    else MakeTruckLadingSan(nCard.FCard, nHost.FTunnel);
+    MakeTruckLadingSan(nCard, nHost.FTunnel);
   end;
 end;
 
 //Date: 2012-4-24
 //Parm: 主机;卡号
 //Desc: 对nHost.nCard超时卡作出动作
-procedure WhenReaderCardOut(nHost: TReaderHost; nCard: TReaderCard);
+procedure WhenReaderCardOut(const nCard: string; const nHost: PReaderHost);
 begin
   {$IFDEF DEBUG}
   WriteHardHelperLog('WhenReaderCardOut退出.');
   {$ENDIF}
 
-  if nHost.FPrepare then
+  if nHost.FETimeOut then
   begin
-    WriteHardHelperLog(nHost.FLEDText, nHost.FID);
-    Sleep(100);
-    Exit;
-  end;
-
-  if nHost.FETimeOut and (not nCard.FOldOne) then
-  begin
-    {$IFDEF JDNF}
-    gDisplayManager.Display(nHost.FTunnel, '电子标签超出范围');
-    {$ELSE}
     gERelayManager.LineClose(nHost.FTunnel);
     Sleep(100);
     gERelayManager.ShowTxt(nHost.FTunnel, '电子标签超出范围');
     Sleep(100);
-    {$ENDIF}
     Exit;
   end;
+  //电子标签超出范围
 
-  {$IFDEF JDNF}
-  gDisplayManager.Display(nHost.FTunnel, nHost.FLEDText);
-  {$ELSE}
   gERelayManager.LineClose(nHost.FTunnel);
   Sleep(100);
   gERelayManager.ShowTxt(nHost.FTunnel, nHost.FLEDText);
   Sleep(100);
-  {$ENDIF}
 end;
 
 //Date: 2014-10-25
