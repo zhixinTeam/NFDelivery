@@ -47,6 +47,9 @@ const
   cBC_GetSQLQueryDispatch     = $0104;   //查询调拨订单
   cBC_SyncDuanDao             = $0105;   //同步短倒
 
+  cBC_GetStationPoundData     = $0115;   //获取车辆称重数据
+  cBC_SaveStationPoundData    = $0116;   //保存车辆称重数据
+
   cBC_SaveBills               = $0020;   //保存交货单列表
   cBC_DeleteBill              = $0021;   //删除交货单
   cBC_ModifyBillTruck         = $0022;   //修改车牌号

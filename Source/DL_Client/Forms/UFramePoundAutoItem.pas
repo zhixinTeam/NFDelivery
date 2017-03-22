@@ -91,7 +91,7 @@ type
     FLastCardDone: Int64;
     FLastCard, FCardTmp: string;
     //上次卡号
-    FListA, FListB, FListC: TStrings;
+    FListA, FListB: TStrings;
     FSampleIndex: Integer;
     FValueSamples: array of Double;
     //数据采样
@@ -132,7 +132,6 @@ type
     //子类继承
     property PoundTunnel: PPTTunnelItem read FPoundTunnel write SetTunnel;
     //属性相关
-    property Additional: TStrings read FListC write FListC;
   end;
 
 implementation
@@ -162,7 +161,6 @@ begin
 
   FListA := TStringList.Create;
   FListB := TStringList.Create;
-  FListC := TStringList.Create;
 
   FEmptyPoundInit := 0;
   FLastCardDone   := GetTickCount;
@@ -174,7 +172,6 @@ begin
   //关闭表头端口
   FListA.Free;
   FListB.Free;
-  FListC.Free;
   inherited;
 end;
 
@@ -1268,14 +1265,16 @@ end;
 
 procedure TfFrameAutoPoundItem.PlayVoice(const nStrtext: string);
 begin
-  if UpperCase(Additional.Values['Voice'])='NET' then
+  if Assigned(FPoundTunnel.FOptions) And
+     (UpperCase(FPoundTunnel.FOptions.Values['Voice'])='NET') then
        gNetVoiceHelper.PlayVoice(nStrtext, FPoundTunnel.FID, 'pound')
   else gVoiceHelper.PlayVoice(nStrtext);
 end;
 
 procedure TfFrameAutoPoundItem.LEDDisplay(const nStrtext: string);
 begin
-  if UpperCase(Additional.Values['LEDEnable'])='Y' then
+  if Assigned(FPoundTunnel.FOptions) And
+     (UpperCase(FPoundTunnel.FOptions.Values['LEDEnable'])='Y') then
     gDisplayManager.Display(FPoundTunnel.FID, nStrtext);
 end;
 

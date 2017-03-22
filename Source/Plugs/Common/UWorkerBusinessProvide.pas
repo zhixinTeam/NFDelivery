@@ -562,7 +562,9 @@ function TWorkerBusinessProvide.SavePostProvideItems(var nData: string): Boolean
 var nSQL,nStr,nS,nN,nYS: string;
     nInt, nIdx: Integer;
     nNet, nVal: Double;
+    {$IFDEF HardMon}
     nReader: THHReaderItem;
+    {$ENDIF}
     nPound: TLadingBillItems;
     nOut: TWorkerBusinessCommand;
 begin

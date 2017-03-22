@@ -28,7 +28,9 @@ uses
 
   UFormProvCard, UFormProvBase, UFrameProvBase, UFrameProvTruckDetail,
   UFrameQueryProvDetail, UFormPurchasing,
-  UFormTransfer, UFormTransferCard, UFrameQueryTransferDetail
+  UFormTransfer, UFormTransferCard, UFrameQueryTransferDetail,
+  UFramePoundStation, UFrameStationProviders, UFrameStationMaterail,
+  UFrameStationPQuery, UFrameStationStandard, UFormStationStandard
   {$IFDEF MicroMsg},
   UFormWeiXinAccount, UFrameWeiXinAccount,
   UFormWeiXinSendlog, UFrameWeiXinSendlog,

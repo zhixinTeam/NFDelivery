@@ -115,7 +115,8 @@ ResourceString
   sFlag_TypeShip      = 'S';                         //船运
   sFlag_TypeZT        = 'Z';                         //栈台
   sFlag_TypeVIP       = 'V';                         //VIP
-  sFlag_TypeCommon    = 'C';                         //普通,订单类型
+  sFlag_TypeCommon    = 'C';                         //普通
+  sFlag_TypeStation   = 'H';                         //火车,订单类型
 
   sFlag_CardIdle      = 'I';                         //空闲卡
   sFlag_CardUsed      = 'U';                         //使用中
@@ -182,6 +183,7 @@ ResourceString
   sFlag_OrderInFact   = 'OrderInFact';               //工厂可发货订单
   sFlag_FactoryItem   = 'FactoryItem';               //工厂信息项
   sFlag_DuctTimeItem  = 'DuctTimeItem';              //暗扣时间段项
+  sFlag_TiHuoTypeItem = 'TiHuoTypeItem';             //提货类型
 
   sFlag_InWHouse      = 'Warehouse';                 //库存可发(收)货订单
   sFlag_InWHID        = 'WarehouseID';               //仓库可发(收)货订单
@@ -223,6 +225,7 @@ ResourceString
   sFlag_ProvideDtl    = 'Bus_ProvDtl';               //采购入厂明细
   sFlag_Transfer      = 'Bus_Transfer';              //短倒单号
   sFlag_BillNewNO     = 'Bus_BillNew';
+  sFlag_PStationNo    = 'Bus_PStation';              //火车衡称重记录
   
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
@@ -249,17 +252,20 @@ ResourceString
   sTable_BillNew      = 'S_BillNew';                 //交货单基础表
   sTable_BillNewBak   = 'S_BillNewBak';              //已删除表
 
+  sTable_Mine         = 'S_Mine';                    //矿点表
   sTable_Truck        = 'S_Truck';                   //车辆表
+  sTable_Batcode      = 'S_Batcode';                 //批次号
   sTable_ZTLines      = 'S_ZTLines';                 //装车道
   sTable_ZTTrucks     = 'S_ZTTrucks';                //车辆队列
-  sTable_Batcode      = 'S_Batcode';                 //批次号
   sTable_Deduct       = 'S_PoundDeduct';             //过磅暗扣
-  sTable_Mine         = 'S_Mine';                    //矿点表
   sTable_BatcodeDoc   = 'S_BatcodeDoc';              //批次号
-
+  sTable_StationTruck = 'S_StationTruck';            //火车厢
+  
   sTable_PoundLog     = 'Sys_PoundLog';              //过磅数据
   sTable_PoundBak     = 'Sys_PoundBak';              //过磅作废
   sTable_Picture      = 'Sys_Picture';               //存放图片
+  sTable_PoundStation = 'Sys_PoundStation';          //火车衡过磅数据
+  sTable_PoundStatBak = 'Sys_PoundStatBak';          //火车衡作废数据
 
   sTable_Provider     = 'P_Provider';                //客户表
   sTable_Materails    = 'P_Materails';               //物料表
@@ -589,6 +595,21 @@ ResourceString
    T_PValue = (T_PValue * T_PTime + 新皮重) / (T_PTime + 1) 
   -----------------------------------------------------------------------------}
 
+  sSQL_NewStationTruck = 'Create Table $Table(R_ID $Inc, S_Stock varChar(32),' +
+       'S_StockName varChar(80), S_CusID varChar(32), S_CusName varChar(80),' +
+       'S_Value $Float, S_TruckPreFix varChar(20), S_Valid Char(1))';
+  {-----------------------------------------------------------------------------
+   火车厢档案表: StationTruck
+   *.R_ID: 编号
+   *.S_Stock: 物料号
+   *.S_StockName: 物料名
+   *.S_CusID: 客户号
+   *.S_CusName: 客户名
+   *.S_Value: 取值
+   *.S_TruckPreFix: 车厢前缀
+   *.S_Valid: 是否有效(Y/N)
+  -----------------------------------------------------------------------------}
+
   sSQL_NewPoundLog = 'Create Table $Table(R_ID $Inc, P_ID varChar(15),' +
        'P_Type varChar(1), P_Order varChar(20), P_Card varChar(16),' +
        'P_Bill varChar(20), P_Truck varChar(15), P_CusID varChar(32),' +
@@ -605,8 +626,8 @@ ResourceString
    过磅记录: Materails
    *.P_ID: 编号
    *.P_Type: 类型(销售,供应,临时)
-   *.P_Order: 订单号
-   *.P_Bill: 交货单
+   *.P_Order: 订单号,火车衡过磅时保存仓库编号
+   *.P_Bill: 交货单,火车衡过磅时保存批次号
    *.P_Truck: 车牌
    *.P_CusID: 客户号
    *.P_CusName: 物料名
@@ -617,7 +638,7 @@ ResourceString
    *.P_PValue,P_PDate,P_PMan: 皮重
    *.P_MValue,P_MDate,P_MMan: 毛重
    *.P_FactID: 工厂编号
-   *.P_Origin: 来源,产地
+   *.P_Origin: 来源,产地,火车衡过磅时保存仓库名称
    *.P_PStation,P_MStation: 称重磅站
    *.P_Direction: 物料流向(进,出)
    *.P_PModel: 过磅模式(标准,配对等)
@@ -881,7 +902,7 @@ ResourceString
   {$IFDEF BatchVerifyValue}
   sSQL_NewBatcode = 'Create Table $Table(R_ID $Inc, B_Stock varChar(32),' +
        'B_Name varChar(80), B_Prefix varChar(5), B_Base Integer,' +
-       'B_Incement Integer, B_Length Integer, ' +
+       'B_Incement Integer, B_Length Integer, B_Type Char(1),' +
        'B_Value $Float, B_Low $Float, B_High $Float, B_Interval Integer,' +
        'B_AutoNew Char(1), B_UseDate Char(1), B_FirstDate DateTime,' +
        'B_LastDate DateTime, B_HasUse $Float Default 0, B_Batcode varChar(32))';
@@ -894,6 +915,7 @@ ResourceString
    *.B_Base: 起始编码(基数)
    *.B_Incement: 编号增量
    *.B_Length: 编号长度
+   *.B_Type: 提货类型(H、火车;Q、汽运;N、普通)
    *.B_Value:检测量
    *.B_Low,B_High:上下限(%)
    *.B_Interval: 编号周期(天)
@@ -1142,10 +1164,13 @@ begin
   AddSysTableItem(sTable_BatcodeDoc, sSQL_NewBatcodeDoc);
   AddSysTableItem(sTable_Deduct, sSQL_NewDeduct);
   AddSysTableItem(sTable_Mine, sSQL_NewMine);
+  AddSysTableItem(sTable_StationTruck, sSQL_NewStationTruck);
 
   AddSysTableItem(sTable_PoundLog, sSQL_NewPoundLog);
   AddSysTableItem(sTable_PoundBak, sSQL_NewPoundLog);
   AddSysTableItem(sTable_Picture, sSQL_NewPicture);
+  AddSysTableItem(sTable_PoundStation, sSQL_NewPoundLog);
+  AddSysTableItem(sTable_PoundStatBak, sSQL_NewPoundLog);
 
   AddSysTableItem(sTable_Provider, ssql_NewProvider);
   AddSysTableItem(sTable_Materails, sSQL_NewMaterails);

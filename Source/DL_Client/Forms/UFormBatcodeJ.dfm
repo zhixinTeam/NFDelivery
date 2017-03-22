@@ -1,24 +1,24 @@
 inherited fFormBatcode: TfFormBatcode
-  Left = 476
-  Top = 336
+  Left = 466
+  Top = 259
   ClientHeight = 394
-  ClientWidth = 472
+  ClientWidth = 470
   Position = poMainFormCenter
   OnClose = FormClose
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 472
+    Width = 470
     Height = 394
     inherited BtnOK: TButton
-      Left = 326
-      Top = 361
-      TabOrder = 16
-    end
-    inherited BtnExit: TButton
-      Left = 396
+      Left = 324
       Top = 361
       TabOrder = 17
+    end
+    inherited BtnExit: TButton
+      Left = 394
+      Top = 361
+      TabOrder = 18
     end
     object EditName: TcxTextEdit [2]
       Left = 81
@@ -73,10 +73,10 @@ inherited fFormBatcode: TfFormBatcode
     end
     object Check1: TcxCheckBox [8]
       Left = 23
-      Top = 136
+      Top = 161
       Caption = #20351#29992#26085#26399#32534#30721
       ParentFont = False
-      TabOrder = 6
+      TabOrder = 7
       Transparent = True
       Width = 121
     end
@@ -84,7 +84,7 @@ inherited fFormBatcode: TfFormBatcode
       Left = 81
       Top = 253
       ParentFont = False
-      TabOrder = 9
+      TabOrder = 10
       Text = '80'
       Width = 135
     end
@@ -92,7 +92,7 @@ inherited fFormBatcode: TfFormBatcode
       Left = 81
       Top = 278
       ParentFont = False
-      TabOrder = 11
+      TabOrder = 12
       Text = '100'
       Width = 135
     end
@@ -101,7 +101,7 @@ inherited fFormBatcode: TfFormBatcode
       Top = 328
       Caption = #26032#24180#26102#33258#21160#37325#32622','#32534#21495#22522#25968#20174'1'#24320#22987#35745#25968'.'
       ParentFont = False
-      TabOrder = 15
+      TabOrder = 16
       Transparent = True
       Width = 121
     end
@@ -123,7 +123,7 @@ inherited fFormBatcode: TfFormBatcode
       Left = 81
       Top = 228
       ParentFont = False
-      TabOrder = 7
+      TabOrder = 8
       Text = '0'
       Width = 135
     end
@@ -138,7 +138,7 @@ inherited fFormBatcode: TfFormBatcode
       Left = 81
       Top = 303
       ParentFont = False
-      TabOrder = 13
+      TabOrder = 14
       Text = '20'
       Width = 135
     end
@@ -148,6 +148,13 @@ inherited fFormBatcode: TfFormBatcode
       Caption = #27880':'#20174#31532#19968#36710#21551#29992#24320#22987#19981#36229#36807#22810#23569#22825'.'
       ParentFont = False
       Transparent = True
+    end
+    object EditType: TcxComboBox [18]
+      Left = 81
+      Top = 136
+      ParentFont = False
+      TabOrder = 6
+      Width = 121
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup
@@ -203,6 +210,11 @@ inherited fFormBatcode: TfFormBatcode
               Control = EditInc
               ControlOptions.ShowBorder = False
             end
+          end
+          object dxLayout1Item3: TdxLayoutItem
+            Caption = #25552#36135#31867#22411':'
+            Control = EditType
+            ControlOptions.ShowBorder = False
           end
           object dxLayout1Item10: TdxLayoutItem
             Caption = 'cxCheckBox1'

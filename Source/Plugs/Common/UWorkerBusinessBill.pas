@@ -1520,7 +1520,9 @@ function TWorkerBusinessBills.SavePostBillItems(var nData: string): Boolean;
 var nStr,nSQL,nTmp: string;
     f,m,nVal,nMVal,nTotal,nDec,nNet: Double;
     i,nIdx,nInt: Integer;
+    {$IFDEF HardMon}
     nReader: THHReaderItem;
+    {$ENDIF}
     nBills: TLadingBillItems;
     nOut: TWorkerBusinessCommand;
 begin

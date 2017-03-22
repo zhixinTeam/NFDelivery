@@ -109,7 +109,7 @@ type
     //称重数据
     FPreTruckPFlag: Boolean;
     //预置皮重标记
-    FListA,FListB,FListC: TStrings;
+    FListA,FListB: TStrings;
     //数据列表
     FTitleHeight: Integer;
     FPanelHeight: Integer;
@@ -160,7 +160,6 @@ type
     //异步读卡
     procedure LoadCollapseConfig(const nCollapse: Boolean);
     //折叠配置
-    property Additional: TStrings read FListC write FListC;
     property CardReader: Integer read FCardReader write FCardReader;
     property PoundTunnel: PPTTunnelItem read FPoundTunnel write SetTunnel;
     //属性相关
@@ -192,7 +191,6 @@ begin
 
   FListA := TStringList.Create;
   FListB := TStringList.Create;
-  FListC := TStringList.Create;
 
   FPoundTunnel := nil;
   InitUIData;
@@ -215,7 +213,6 @@ begin
 
   FListA.Free;
   FListB.Free;
-  FListC.Free;
   inherited;
 end;
 
@@ -1829,14 +1826,17 @@ end;
 
 procedure TfFrameManualPoundItem.PlayVoice(const nStrtext: string);
 begin
-  if UpperCase(Additional.Values['Voice'])='NET' then
+  //{$IFNDEF DEBUG}
+  if Assigned(FPoundTunnel.FOptions) And
+     (UpperCase(FPoundTunnel.FOptions.Values['Voice'])='NET') then
        gNetVoiceHelper.PlayVoice(nStrtext, FPoundTunnel.FID, 'pound')
   else gVoiceHelper.PlayVoice(nStrtext);
 end;
 
 procedure TfFrameManualPoundItem.LEDDisplay(const nStrtext: string);
 begin
-  if UpperCase(Additional.Values['LEDEnable'])='Y' then
+  if Assigned(FPoundTunnel.FOptions) And
+     (UpperCase(FPoundTunnel.FOptions.Values['LEDEnable'])='Y') then
     gDisplayManager.Display(FPoundTunnel.FID, nStrtext);
 end;
 

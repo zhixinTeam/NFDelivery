@@ -1,10 +1,9 @@
 {*******************************************************************************
-  作者: dmzn@163.com 2014-06-10
-  描述: 手动称重
+  作者: fendou116688@163.com 2017/2/17
+  描述: 火车衡过磅
 *******************************************************************************}
-unit UFramePoundManual;
+unit UFramePoundStation;
 
-{$I Link.Inc}
 interface
 
 uses
@@ -16,7 +15,7 @@ uses
   cxGridDBTableView, cxGrid, cxSplitter, Menus;
 
 type
-  TfFramePoundManual = class(TBaseFrame)
+  TfFramePoundStation = class(TBaseFrame)
     WorkPanel: TScrollBox;
     Timer1: TTimer;
     cxSplitter1: TcxSplitter;
@@ -54,27 +53,26 @@ implementation
 {$R *.dfm}
 
 uses
-  IniFiles, UlibFun, UMgrControl, UMgrPoundTunnels, UFramePoundManualItem,
-  UMgrTruckProbe, UMgrRemoteVoice, UDataModule, UFormWait, USysDataDict,
-  USysGrid, USysLoger, USysConst, USysDB, UPoundCardReader, UMgrVoiceNet;
+  IniFiles, UlibFun, UMgrControl, UMgrPoundTunnels, UFramePoundStationItem,
+  UDataModule, UFormWait, USysDataDict, USysGrid,
+  USysLoger, USysConst, USysDB;
 
-class function TfFramePoundManual.FrameID: integer;
+class function TfFramePoundStation.FrameID: integer;
 begin
-  Result := cFI_FramePoundManual;
+  Result := cFI_FrameStationPound;
 end;
 
-function TfFramePoundManual.FrameTitle: string;
+function TfFramePoundStation.FrameTitle: string;
 begin
-  Result := '称重 - 人工';
+  Result := '称重 - 临时';
 end;
 
-procedure TfFramePoundManual.OnCreateFrame;
+procedure TfFramePoundStation.OnCreateFrame;
 var nInt: Integer;
     nIni: TIniFile;
 begin
   inherited;
   FListA := TStringList.Create;
-  gSysParam.FIsManual := True;
 
   nIni := TIniFile.Create(gPath + sFormConfig);
   try
@@ -83,7 +81,7 @@ begin
       cxGrid1.Height := nInt;
     //xxxxx
 
-    gSysEntityManager.BuildViewColumn(cxView1, 'MAIN_E03');
+    gSysEntityManager.BuildViewColumn(cxView1, 'MAIN_C02');
     InitTableView(Name, cxView1, nIni);
   finally
     nIni.Free;
@@ -94,58 +92,13 @@ begin
     gPoundTunnelManager := TPoundTunnelManager.Create;
     gPoundTunnelManager.LoadConfig(gPath + 'Tunnels.xml');
   end;
-
-  if not Assigned(gProberManager) then
-  begin
-    gProberManager := TProberManager.Create;
-    gProberManager.LoadConfig(gPath + 'TruckProber.xml');
-  end;
-
-  Inc(gSysParam.FProberUser);
-  gProberManager.StartProber;
-
-  if gSysParam.FVoiceUser < 1 then
-  begin
-    Inc(gSysParam.FVoiceUser);
-    gVoiceHelper.LoadConfig(gPath + 'Voice.xml');
-    gVoiceHelper.StartVoice;
-
-    if FileExists(gPath + 'NetVoice.xml') then
-    begin
-      if not Assigned(gNetVoiceHelper) then
-        gNetVoiceHelper := TNetVoiceManager.Create;
-      gNetVoiceHelper.LoadConfig(gPath + 'NetVoice.xml');
-      gNetVoiceHelper.StartVoice;
-    end;
-  end;
-
-  if not Assigned(gPoundCardReader) then
-  begin
-    gPoundCardReader := TPoundCardReader.Create;
-  end;
 end;
 
-procedure TfFramePoundManual.OnDestroyFrame;
+procedure TfFramePoundStation.OnDestroyFrame;
 var nIni: TIniFile;
 begin
   FListA.Free;
-  gSysParam.FIsManual := False;
-  //关闭手动称重
-
-  Dec(gSysParam.FVoiceUser);
-  if gSysParam.FVoiceUser < 1 then
-  begin
-    gVoiceHelper.StopVoice;
-
-    if Assigned(gNetVoiceHelper) then
-      gNetVoiceHelper.StopVoice;
-  end;
-  //xxxxx
-
-  Dec(gSysParam.FProberUser);
-  if gSysParam.FProberUser < 1 then
-    gProberManager.StopProber;
-  //xxxxx
+  //xxxxxx
 
   nIni := TIniFile.Create(gPath + sFormConfig);
   try
@@ -158,17 +111,17 @@ begin
   inherited;
 end;
 
-function TfFramePoundManual.DealCommand(Sender: TObject;
+function TfFramePoundStation.DealCommand(Sender: TObject;
   const nCmd: integer): integer;
 begin
-  if (Sender is TfFrameManualPoundItem) and (nCmd = cCmd_RefreshData) then
+  if (Sender is TfFramePoundStationItem) and (nCmd = cCmd_RefreshData) then
     LoadPoundData;
   Result := 0;
 end;
 
 //------------------------------------------------------------------------------
 //Desc: 延时载入通道
-procedure TfFramePoundManual.Timer1Timer(Sender: TObject);
+procedure TfFramePoundStation.Timer1Timer(Sender: TObject);
 begin
   Timer1.Enabled := False;
   if gSysParam.FFactNum = '' then
@@ -182,7 +135,7 @@ begin
 end;
 
 //Desc: 支持滚轮
-procedure TfFramePoundManual.WorkPanelMouseWheel(Sender: TObject;
+procedure TfFramePoundStation.WorkPanelMouseWheel(Sender: TObject;
   Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint;
   var Handled: Boolean);
 begin
@@ -192,7 +145,7 @@ begin
 end;
 
 //Desc: 载入通道
-procedure TfFramePoundManual.LoadPoundItems;
+procedure TfFramePoundStation.LoadPoundItems;
 var nStr: string;
     nList: TStrings;
     nIdx,nInt: Integer;
@@ -242,40 +195,33 @@ begin
       if nStr = sFlag_No then Continue;
       //不在本机加载
 
-      {$IFDEF VerfiyAutoWeight}
-      if not nT.FAutoWeight then
-      {$ENDIF}
-      with TfFrameManualPoundItem.Create(Self) do
+      with TfFramePoundStationItem.Create(Self) do
       begin
-        Name := 'fFrameManualPoundItem' + IntToStr(nIdx);
+        Name := 'fFramePoundStationItem' + IntToStr(nIdx);
         Parent := WorkPanel;
 
         Align := alTop;
         HintLabel.Caption := nT.FName;
         PoundTunnel := nT;
 
-        CardReader := gPoundCardReader.AddCardReader(ReadCardSync, nT.FID); 
         LoadCollapseConfig(nIdx <> 0);
         //折叠面板
       end;
     end;
-
-    if Tunnels.Count>0 then gPoundCardReader.StartCardReader;
-    //通道不为0，启动读卡线程
   finally
     nList.Free;
   end;
 end;
 
 //Desc: 载入数据
-procedure TfFramePoundManual.LoadPoundData(const nWhere: string);
+procedure TfFramePoundStation.LoadPoundData(const nWhere: string);
 var nStr: string;
 begin
   ShowWaitForm(ParentForm, '读取数据');
   try
     nStr := 'Select * From $TB Where (P_PDate Is Null Or P_MDate Is Null)' +
             ' And (P_PDate > $Now-2 Or P_MDate > $Now-2) And (P_PModel<>''$Tmp'')';
-    nStr := MacroValue(nStr, [MI('$TB', sTable_PoundLog),
+    nStr := MacroValue(nStr, [MI('$TB', sTable_PoundStation),
             MI('$Now', sField_SQLServer_Now), MI('$Tmp', sFlag_PoundLS)]);
     //xxxxx
 
@@ -287,11 +233,11 @@ begin
   end;
 end;
 
-procedure TfFramePoundManual.N1Click(Sender: TObject);
+procedure TfFramePoundStation.N1Click(Sender: TObject);
 begin
   LoadPoundData('');
 end;
 
 initialization
-  gControlManager.RegCtrl(TfFramePoundManual, TfFramePoundManual.FrameID);
+  gControlManager.RegCtrl(TfFramePoundStation, TfFramePoundStation.FrameID);
 end.

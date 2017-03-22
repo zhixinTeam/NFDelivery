@@ -56,6 +56,8 @@ type
     dxLayout1Item19: TdxLayoutItem;
     dxLayout1Group11: TdxLayoutGroup;
     dxLayout1Group6: TdxLayoutGroup;
+    EditType: TcxComboBox;
+    dxLayout1Item3: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditStockPropertiesEditValueChanged(Sender: TObject);
@@ -131,6 +133,12 @@ begin
   FDM.FillStringsData(EditStock.Properties.Items, nStr, 0, '.');
   AdjustCXComboBoxItem(EditStock, False);
 
+  nStr := 'D_Value=Select D_Value,D_Memo From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_TiHuoTypeItem]);
+
+  FDM.FillStringsData(EditType.Properties.Items, nStr, 1, '.');
+  AdjustCXComboBoxItem(EditType, False);
+
   if nID <> '' then
   begin
     nStr := 'Select * From %s Where R_ID=%s';
@@ -141,6 +149,9 @@ begin
     begin
       nStr := FieldByName('B_Stock').AsString;
       SetCtrlData(EditStock, nStr);
+
+      nStr := FieldByName('B_Type').AsString;
+      SetCtrlData(EditType, nStr);
 
       EditName.Text := FieldByName('B_Name').AsString;
       EditBase.Text := FieldByName('B_Base').AsString;
@@ -182,8 +193,9 @@ begin
     nHint := 'ÇëÑ¡ÔñÎïÁÏ';
     if not Result then Exit;
 
-    nStr := 'Select R_ID From %s Where B_Stock=''%s''';
-    nStr := Format(nStr, [sTable_Batcode, GetCtrlData(EditStock)]);
+    nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s''';
+    nStr := Format(nStr, [sTable_Batcode, GetCtrlData(EditStock),
+            GetCtrlData(EditType)]);
 
     with FDM.QueryTemp(nStr) do
     if RecordCount > 0 then
@@ -263,12 +275,14 @@ begin
           SF('B_Incement', EditInc.Text, sfVal),
           SF('B_UseDate', nU),
 
-          SF('B_Value', EditValue.Text, sfVal),
+          SF('B_AutoNew', nN),
           SF('B_Low', EditLow.Text, sfVal),
           SF('B_High', EditHigh.Text, sfVal),
+          SF('B_Value', EditValue.Text, sfVal),
           SF('B_Interval', EditWeek.Text, sfVal),
-          SF('B_AutoNew', nN),
-          SF('B_LastDate', sField_SQLServer_Now, sfVal)
+          SF('B_LastDate', sField_SQLServer_Now, sfVal),
+
+          SF('B_Type', GetCtrlData(EditType))
           ], sTable_Batcode, nStr, FRecordID = '');
   FDM.ExecuteSQL(nStr);
 

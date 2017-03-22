@@ -89,6 +89,9 @@ type
     function GetTruckPoundData(var nData: string): Boolean;
     function SaveTruckPoundData(var nData: string): Boolean;
     //存取车辆称重数据
+    function GetStationPoundData(var nData: string): Boolean;
+    function SaveStationPoundData(var nData: string): Boolean;
+    //存取火车衡称重数据
     function GetTruckPValue(var nData: string): Boolean;
     //获取车辆预置皮重
     function SaveTruckPValue(var nData: string): Boolean;
@@ -363,8 +366,9 @@ begin
    cBC_GetTruckPValue      : Result := GetTruckPValue(nData);
    cBC_SaveTruckPValue     : Result := SaveTruckPValue(nData);
    cBC_GetPoundBaseValue   : Result := GetPoundBaseValue(nData);
-
-
+   cBC_GetStationPoundData : Result := GetStationPoundData(nData);
+   cBC_SaveStationPoundData: Result := SaveStationPoundData(nData);
+   
    {$IFDEF MicroMsg}
    cBC_GetSQLQueryWeixin   : Result := GetSQLQueryWeixin(nData);
    cBC_SaveWeixinAccount   : Result := SaveWeixinAccount(nData);
@@ -2805,6 +2809,178 @@ begin
   else Result := True;     }
 
   Result := True;
+end;
+
+//Date: 2017/3/1
+//Parm: 车厢编号[FIn.FData]
+//Desc: 获取火车衡过磅数据(使用配对模式,未称重)
+function TWorkerBusinessCommander.GetStationPoundData(var nData: string): Boolean;
+var nStr: string;
+    nPound: TLadingBillItems;
+begin
+  SetLength(nPound, 1);
+  FillChar(nPound[0], SizeOf(TLadingBillItem), #0);
+
+  nStr := 'Select * From %s Where P_Truck=''%s'' And ' +
+          'P_MValue Is Null And P_PModel=''%s''';
+  nStr := Format(nStr, [sTable_PoundStation, FIn.FData, sFlag_PoundPD]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr),nPound[0] do
+  begin
+    if RecordCount > 0 then
+    begin
+      FID         := FieldByName('P_Bill').AsString;
+      FZhiKa      := FieldByName('P_Order').AsString;
+      
+      FCusID      := FieldByName('P_CusID').AsString;
+      FCusName    := FieldByName('P_CusName').AsString;
+      FTruck      := FieldByName('P_Truck').AsString;
+
+      FType       := FieldByName('P_MType').AsString;
+      FStockNo    := FieldByName('P_MID').AsString;
+      FStockName  := FieldByName('P_MName').AsString;
+
+      with FPData do
+      begin
+        FStation  := FieldByName('P_PStation').AsString;
+        FValue    := FieldByName('P_PValue').AsFloat;
+        FDate     := FieldByName('P_PDate').AsDateTime;
+        FOperator := FieldByName('P_PMan').AsString;
+      end;  
+
+      FFactory    := FieldByName('P_FactID').AsString;
+      FOrigin     := FieldByName('P_Origin').AsString;
+      FPModel     := FieldByName('P_PModel').AsString;
+      FPType      := FieldByName('P_Type').AsString;
+      FPoundID    := FieldByName('P_ID').AsString;
+
+      FStatus     := sFlag_TruckBFP;
+      FNextStatus := sFlag_TruckBFM;
+      FSelected   := True;
+    end else
+    begin
+      FTruck      := FIn.FData;
+      FPModel     := sFlag_PoundPD;
+
+      FStatus     := '';
+      FNextStatus := sFlag_TruckBFP;
+      FSelected   := True;
+    end;
+  end;
+
+  FOut.FData := CombineBillItmes(nPound);
+  Result := True;
+end;
+
+//Date: 2017/3/1
+//Parm: 称重数据[FIn.FData]
+//Desc: 保存火车衡称重数据
+function TWorkerBusinessCommander.SaveStationPoundData(var nData: string): Boolean;
+var nStr,nSQL: string;
+    nPound: TLadingBillItems;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
+  AnalyseBillItems(FIn.FData, nPound);
+  //解析数据
+
+  with nPound[0] do
+  begin
+    TWorkerBusinessCommander.CallMe(cBC_SaveTruckInfo, FTruck, '', @nOut);
+    //保存车牌号
+
+    if FPoundID = '' then
+    begin
+      FListC.Clear;
+      FListC.Values['Group'] := sFlag_BusGroup;
+      FListC.Values['Object'] := sFlag_PStationNo;
+
+      if not CallMe(cBC_GetSerialNO, FListC.Text, sFlag_Yes, @nOut) then
+        raise Exception.Create(nOut.FData);
+      //xxxxx
+
+      FPoundID := nOut.FData;
+      //new id
+
+      if FPModel = sFlag_PoundLS then
+           nStr := sFlag_Other
+      else nStr := sFlag_Sale;
+
+      nSQL := MakeSQLByStr([
+              SF('P_ID', FPoundID),
+              SF('P_Type', nStr),
+              SF('P_Truck', FTruck),
+              SF('P_CusID', FCusID),
+              SF('P_CusName', FCusName),
+              SF('P_MID', FStockNo),
+              SF('P_MName', FStockName),
+              SF('P_MType', sFlag_San),
+              SF('P_PValue', FPData.FValue, sfVal),
+              SF('P_PDate', sField_SQLServer_Now, sfVal),
+              SF('P_PMan', FIn.FBase.FFrom.FUser),
+              SF('P_FactID', FFactory),
+              SF('P_PStation', FPData.FStation),
+              SF('P_Direction', '出厂'),
+              SF('P_PModel', FPModel),
+              SF('P_Status', sFlag_TruckBFP),
+              SF('P_Valid', sFlag_Yes),
+              SF('P_PrintNum', 1, sfVal)
+              ], sTable_PoundStation, '', True);
+      gDBConnManager.WorkerExec(FDBConn, nSQL);
+    end else
+
+    if (FPData.FValue > 0) and (FMData.FValue > 0) then
+    begin
+      try
+        if FNextStatus = sFlag_TruckBFP then
+        begin
+          nSQL := MakeSQLByStr([
+                  SF('P_PValue', FPData.FValue, sfVal),
+                  SF('P_PDate', sField_SQLServer_Now, sfVal),
+                  SF('P_PMan', FIn.FBase.FFrom.FUser),
+                  SF('P_PStation', FPData.FStation),
+                  SF('P_MValue', FMData.FValue, sfVal),
+                  SF('P_MDate', DateTime2Str(FMData.FDate)),
+                  SF('P_MMan', FMData.FOperator),
+                  SF('P_MStation', FMData.FStation),
+
+                  SF('P_Bill', FID),                  //批次号
+                  SF('P_Order', FZhiKa),              //仓库编号
+                  SF('P_Origin', FOrigin)             //仓库名称
+                  ], sTable_PoundStation, SF('P_ID', FPoundID), False);
+          //称重时,由于皮重大,交换皮毛重数据
+        end else
+        begin
+          nSQL := MakeSQLByStr([
+                  SF('P_MValue', FMData.FValue, sfVal),
+                  SF('P_MDate', sField_SQLServer_Now, sfVal),
+                  SF('P_MMan', FIn.FBase.FFrom.FUser),
+                  SF('P_MStation', FMData.FStation),
+
+                  SF('P_Bill', FID),                  //批次号
+                  SF('P_Order', FZhiKa),              //仓库编号
+                  SF('P_Origin', FOrigin)             //仓库名称
+                  ], sTable_PoundStation, SF('P_ID', FPoundID), False);
+          //xxxxx
+        end;
+
+        gDBConnManager.WorkerExec(FDBConn, nSQL);
+      except
+        on nErr: Exception do
+        begin
+          nSQL := 'Update %s Set P_PValue=P_MValue,P_MValue=Null Where P_ID=''%s''';
+          nSQL := Format(nSQL, [sTable_PoundStation, FPoundID]);
+          gDBConnManager.WorkerExec(FDBConn, nSQL);
+
+          nData := nErr.Message;
+          Exit;
+        end;
+      end;
+    end;
+
+    FOut.FData := FPoundID;
+    Result := True;
+  end;
 end;
 
 

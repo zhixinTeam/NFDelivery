@@ -168,6 +168,12 @@ function ReadPoundCard(const nTunnel: string; nReadOnly: string=''): string;
 procedure CapturePicture(const nTunnel: PPTTunnelItem; const nList: TStrings);
 //抓拍指定通道
 
+function GetStationPoundItem(const nTruck: string;
+ var nPoundData: TLadingBillItems): Boolean;
+function SaveStationPoundItem(const nTunnel: PPTTunnelItem;
+ const nData: TLadingBillItems; var nPoundID: string): Boolean;
+//存取火车衡过磅记录
+
 function LoadTruckQueue(var nLines: TZTLineItems; var nTrucks: TZTTruckItems;
  const nRefreshLine: Boolean = False): Boolean;
 //读取车辆队列
@@ -1787,6 +1793,49 @@ begin
   //车辆回毛前不能使用
 
   Result := False;
+end;
+
+//Date: 2017/2/28
+//Parm: 车厢号[nTruck];过磅数据[nPoundData]
+//Desc: 获取火车衡过磅数据
+function GetStationPoundItem(const nTruck: string;
+ var nPoundData: TLadingBillItems): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessCommand(cBC_GetStationPoundData, nTruck, '', @nOut);
+  if Result then
+    AnalyseBillItems(nOut.FData, nPoundData);
+  //xxxxx
+end;
+
+//Date: 2017/2/28
+//Parm: 磅站信息[nTunnel];保存数据[nData];磅单号[nPoundID,Out]
+//Desc: 获取火车衡过磅数据
+function SaveStationPoundItem(const nTunnel: PPTTunnelItem;
+ const nData: TLadingBillItems; var nPoundID: string): Boolean;
+var nStr: string;
+    nIdx: Integer;
+    nList: TStrings;
+    nOut: TWorkerBusinessCommand;
+begin
+  nPoundID := '';
+  nStr := CombineBillItmes(nData);
+  Result := CallBusinessCommand(cBC_SaveStationPoundData, nStr, '', @nOut);
+  if (not Result) or (nOut.FData = '') then Exit;
+  nPoundID := nOut.FData;
+
+  nList := TStringList.Create;
+  try
+    CapturePicture(nTunnel, nList);
+    //capture file
+
+    for nIdx:=0 to nList.Count - 1 do
+      SavePicture(nOut.FData, nData[0].FTruck,
+                              nData[0].FStockName, nList[nIdx]);
+    //save file
+  finally
+    nList.Free;
+  end;
 end;
 
 end.
