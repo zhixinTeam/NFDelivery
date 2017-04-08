@@ -76,8 +76,7 @@ function GetSysValidDate: Integer;
 function GetSerialNo(const nGroup,nObject: string;
  nUseDate: Boolean = True): string;
 //获取串行编号
-function GetStockBatcode(const nStock: string;
-  const nBrand: string=''; const nValue: Double=0; const nBatch: string=''): string;
+function GetStockBatcode(const nStock: string; const nExt: string): string;
 //获取批次号
 function GetLadingStockItems(var nItems: TDynamicStockItemArray): Boolean;
 //可用品种列表
@@ -471,45 +470,16 @@ begin
   end;   
 end;
 
-{$IFNDEF BatchVerifyValue}
 //Date: 2015-01-16
-//Parm: 物料号;品牌名;开单量;原始批次
+//Parm: 物料号;其他信息
 //Desc: 生产nStock的批次号
-function GetStockBatcode(const nStock: string;
- const nBrand: string=''; const nValue: Double=0; const nBatch: string=''): string;
-var nOut: TWorkerBusinessCommand;
-    nList: TStrings;
-begin
-  nList := TStringList.Create;
-
-  try
-    nList.Clear;
-
-    nList.Values['Batch'] := nBatch;
-    nList.Values['Brand'] := nBrand;
-    nList.Values['Value'] := FloatToStr(nValue);
-
-    if CallBusinessCommand(cBC_GetStockBatcode, nStock, nList.Text, @nOut, False) then
-         Result := nOut.FData
-    else Result := '';
-  finally
-    nList.Free;
-  end;
-end;
-{$ELSE}
-//Date: 2016/7/7
-//Parm: 物料号;预提量
-//Desc: 生产nStock的批次号
-function GetStockBatcode(const nStock: string;
- const nBrand: string=''; const nValue: Double=0; const nBatch: string=''): string;
+function GetStockBatcode(const nStock: string; const nExt: string): string;
 var nOut: TWorkerBusinessCommand;
 begin
-  if CallBusinessCommand(cBC_GetStockBatcode, nStock, FloatToStr(nValue),
-     @nOut, True) then
+  if CallBusinessCommand(cBC_GetStockBatcode, nStock, nExt, @nOut, False) then
        Result := nOut.FData
   else Result := '';
 end;
-{$ENDIF}
 
 //Desc: 获取系统有效期
 function GetSysValidDate: Integer;

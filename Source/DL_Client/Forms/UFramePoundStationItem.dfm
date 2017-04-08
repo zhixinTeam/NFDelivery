@@ -151,7 +151,7 @@ inherited fFramePoundStationItem: TfFramePoundStationItem
     AnchorY = 14
   end
   object EditTruck: TcxComboBox
-    Left = 502
+    Left = 600
     Top = 50
     ParentFont = False
     Properties.ItemHeight = 22
@@ -170,7 +170,7 @@ inherited fFramePoundStationItem: TfFramePoundStationItem
     StyleHot.LookAndFeel.NativeStyle = True
     TabOrder = 3
     OnKeyPress = EditTruckKeyPress
-    Width = 275
+    Width = 177
   end
   object EditMID: TcxComboBox
     Left = 502
@@ -613,6 +613,23 @@ inherited fFramePoundStationItem: TfFramePoundStationItem
     Transparent = True
     OnClick = CheckZDClick
     Width = 80
+  end
+  object EditPrefix: TcxTextEdit
+    Left = 502
+    Top = 50
+    ParentFont = False
+    Style.Font.Charset = GB2312_CHARSET
+    Style.Font.Color = clWindowText
+    Style.Font.Height = -20
+    Style.Font.Name = #24188#22278
+    Style.Font.Style = []
+    Style.LookAndFeel.NativeStyle = True
+    Style.IsFontAssigned = True
+    StyleDisabled.LookAndFeel.NativeStyle = True
+    StyleFocused.LookAndFeel.NativeStyle = True
+    StyleHot.LookAndFeel.NativeStyle = True
+    TabOrder = 29
+    Width = 91
   end
   object Timer1: TTimer
     OnTimer = Timer1Timer

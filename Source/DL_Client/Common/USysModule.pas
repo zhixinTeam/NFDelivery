@@ -23,14 +23,13 @@ uses
   UFormMine, UFormGetMine, UFormPoundDispatch, UFrameBatcodeQuery,
   UFormBatcodeEdit, UFramePoundAuto, UFrameQueryProvideDetail,
   UFrameQueryDiapatchDetail, UFormBillNew, UFrameBillNew,
-  {$IFDEF BatchVerifyValue}UFrameBatcodeJ, UFormBatcodeJ, {$ELSE}
-  UFrameBatcode, UFormBatcode, {$ENDIF}
+  UFrameBatcodeJ, UFormBatcodeJ,
 
   UFormProvCard, UFormProvBase, UFrameProvBase, UFrameProvTruckDetail,
   UFrameQueryProvDetail, UFormPurchasing,
   UFormTransfer, UFormTransferCard, UFrameQueryTransferDetail,
-  UFramePoundStation, UFrameStationProviders, UFrameStationMaterail,
-  UFrameStationPQuery, UFrameStationStandard, UFormStationStandard
+  UFramePoundStation, UFrameStationPQuery, UFrameStationPQueryImport,
+  UFrameStationStandard, UFormStationStandard
   {$IFDEF MicroMsg},
   UFormWeiXinAccount, UFrameWeiXinAccount,
   UFormWeiXinSendlog, UFrameWeiXinSendlog,

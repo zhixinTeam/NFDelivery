@@ -80,6 +80,7 @@ const
   cFI_FrameStationStandard = $0133;                  //车厢标重档案
   cFI_FrameStationPound = $0134;                     //火车衡
   cFI_FrameStationPQuery= $0135;                     //火车衡过磅查询
+  cFI_FrameStationPQueryImport= $0136;               //动态火车衡过磅查询
 
   cFI_FormMemo          = $1000;                     //备注窗口
   cFI_FormBackup        = $1001;                     //数据备份
@@ -137,6 +138,7 @@ const
   cFI_FormTransfer      = $1122;                     //短倒业务
 
   cFI_FormStationStandard= $1133;                    //火车厢档案
+  cFI_FormPoundVerify   = $1134;                     //
 
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据
@@ -296,8 +298,7 @@ begin
 
   AddMenuModuleItem('MAIN_C01', cFI_FrameStationPound);
   AddMenuModuleItem('MAIN_C02', cFI_FrameStationPQuery);
-  AddMenuModuleItem('MAIN_C03', cFI_FrameStationMaterail);
-  AddMenuModuleItem('MAIN_C04', cFI_FrameStationProvider);
+  AddMenuModuleItem('MAIN_C03', cFI_FrameStationPQueryImport);
   AddMenuModuleItem('MAIN_C05', cFI_FrameStationStandard);
 
   AddMenuModuleItem('MAIN_D02', cFI_FrameMakeCard);

@@ -1,4 +1,4 @@
-inherited fFrameStationPQuery: TfFrameStationPQuery
+inherited fFrameStationPQueryImport: TfFrameStationPQueryImport
   Width = 976
   Height = 582
   inherited ToolBar1: TToolBar
@@ -8,7 +8,6 @@ inherited fFrameStationPQuery: TfFrameStationPQuery
     end
     inherited BtnEdit: TToolButton
       Visible = False
-      OnClick = BtnEditClick
     end
     inherited BtnDel: TToolButton
       OnClick = BtnDelClick
@@ -186,7 +185,7 @@ inherited fFrameStationPQuery: TfFrameStationPQuery
   inherited TitlePanel1: TZnBitmapPanel
     Width = 976
     inherited TitleBar: TcxLabel
-      Caption = #28779#36710#34913#31216#37327#26597#35810
+      Caption = #21160#24577#28779#36710#34913#31216#37327#26597#35810
       Style.IsFontAssigned = True
       Width = 976
       AnchorX = 488

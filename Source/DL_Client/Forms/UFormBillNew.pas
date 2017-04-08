@@ -87,8 +87,8 @@ begin
 
     InitFormData;
 
-    if Assigned(nParam) then
-    with PFormCommandParam(nParam)^ do
+    if Assigned(nP) then
+    with PFormCommandParam(nP)^ do
     begin
       FCommand := cCmd_ModalResult;
       FParamA := ShowModal;

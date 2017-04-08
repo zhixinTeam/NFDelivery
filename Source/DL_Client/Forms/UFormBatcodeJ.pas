@@ -58,6 +58,12 @@ type
     dxLayout1Group6: TdxLayoutGroup;
     EditType: TcxComboBox;
     dxLayout1Item3: TdxLayoutItem;
+    EditBatcode: TcxTextEdit;
+    dxLayout1Item20: TdxLayoutItem;
+    dxLayout1Group4: TdxLayoutGroup;
+    cxLabel5: TcxLabel;
+    dxLayout1Item21: TdxLayoutItem;
+    dxLayout1Group12: TdxLayoutGroup;
     procedure BtnOKClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditStockPropertiesEditValueChanged(Sender: TObject);
@@ -161,6 +167,7 @@ begin
       EditInc.Text := FieldByName('B_Incement').AsString;
       Check1.Checked := FieldByName('B_UseDate').AsString = sFlag_Yes;
 
+      EditBatcode.Text := FieldByName('B_Batcode').AsString;
       EditValue.Text := FieldByName('B_Value').AsString;
       EditLow.Text := FieldByName('B_Low').AsString;
       EditHigh.Text := FieldByName('B_High').AsString;
@@ -225,25 +232,25 @@ begin
 
   if Sender = EditValue then
   begin
-    Result := IsNumber(EditValue.Text, True) and (StrToFloat(EditValue.Text) > 0);
+    Result := Check1.Checked or (IsNumber(EditValue.Text, True) and (StrToFloat(EditValue.Text) > 0));
     nHint := '请输入检测量';
   end else
 
   if Sender = EditLow then
   begin
-    Result := IsNumber(EditLow.Text, True) and (StrToFloat(EditLow.Text) >= 0);
+    Result := Check1.Checked or (IsNumber(EditLow.Text, True) and (StrToFloat(EditLow.Text) >= 0));
     nHint := '请输入超发提醒';
   end else
 
   if Sender = EditHigh then
   begin
-    Result := IsNumber(EditHigh.Text, True) and (StrToFloat(EditHigh.Text) >= 0);
+    Result := Check1.Checked or (IsNumber(EditHigh.Text, True) and (StrToFloat(EditHigh.Text) >= 0));
     nHint := '请输入超发上限';
   end else
 
   if Sender = EditWeek then
   begin
-    Result := IsNumber(EditWeek.Text, False) and (StrToFloat(EditWeek.Text) >= 0);
+    Result := Check1.Checked or (IsNumber(EditWeek.Text, False) and (StrToFloat(EditWeek.Text) >= 0));
     nHint := '请输入周期值';
   end;
 end;
@@ -282,6 +289,7 @@ begin
           SF('B_Interval', EditWeek.Text, sfVal),
           SF('B_LastDate', sField_SQLServer_Now, sfVal),
 
+          SF('B_Batcode', EditBatcode.Text),
           SF('B_Type', GetCtrlData(EditType))
           ], sTable_Batcode, nStr, FRecordID = '');
   FDM.ExecuteSQL(nStr);

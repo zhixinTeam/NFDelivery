@@ -109,6 +109,7 @@ inherited fFormBillNew: TfFormBillNew
     object EditPack: TcxComboBox [10]
       Left = 81
       Top = 206
+      ParentFont = False
       Properties.DropDownListStyle = lsEditFixedList
       Properties.Items.Strings = (
         'C=C'#12289#26222#36890

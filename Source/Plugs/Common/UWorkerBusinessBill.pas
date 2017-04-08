@@ -661,27 +661,15 @@ begin
       if FOrderItems[nIdx].FKDValue <= 0 then Continue;
       //无开单量
 
-      {$IFNDEF BatchVerifyValue}
-      if FOrderItems[nIdx].FStockType = sFlag_Dai then
-      begin
-        FListC.Clear;
-        FListC.Values['Batch'] := FListA.Values['Seal'];
-        FListC.Values['Brand'] := FListA.Values['Brand'];
-        FListC.Values['Value'] := FloatToStr(FOrderItems[nIdx].FKDValue);
+      FListC.Clear;
+      FListC.Values['Brand'] := FListA.Values['Brand'];
+      FListC.Values['Value'] := FloatToStr(FOrderItems[nIdx].FKDValue);
 
-        if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
-            FOrderItems[nIdx].FStockID, FListC.Text, @nOut) then
-        raise Exception.Create(nOut.FData);
-        //获取新的批次
-
-        FListA.Values['Seal'] := nOut.FData;
-        FListC.Values['Batch'] := nOut.FData;
-        if not TWorkerBusinessCommander.CallMe(cBC_SaveStockBatcode,
-            FListC.Text, sFlag_Yes, @nOut) then
-        raise Exception.Create(nOut.FData);
-      end;
-      //如果是袋装，则更新批次信息 
-      {$ENDIF}
+      if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
+          FOrderItems[nIdx].FStockID, PackerEncodeStr(FListC.Text), @nOut) then
+      raise Exception.Create(nOut.FData);
+      FListA.Values['Seal'] := nOut.FData;
+      //获取新的批次
 
       FListC.Clear;
       FListC.Values['Group'] :=sFlag_BusGroup;
@@ -879,15 +867,17 @@ begin
         end;
       end;
 
-      {$IFDEF BatchVerifyValue}
       nSQL := 'Update %s Set B_HasUse=B_HasUse+(%s),B_LastDate=%s ' +
-              'Where B_Stock=''%s'' and B_Batcode=''%s''';
+              'Where B_Stock=''%s'' and B_Type=''%s'' ';
       nSQL := Format(nSQL, [sTable_Batcode, FloatToStr(FOrderItems[nIdx].FKDValue),
-              sField_SQLServer_Now, FOrderItems[nIdx].FStockID,
+              sField_SQLServer_Now, FOrderItems[nIdx].FStockID, sFlag_TypeCommon]);
+      gDBConnManager.WorkerExec(FDBConn, nSQL); //更新批次号使用量
+
+      nSQL := 'Update %s Set D_Sent=D_Sent+(%s) Where D_ID=''%s''';
+      nSQL := Format(nSQL, [sTable_BatcodeDoc, FloatToStr(FOrderItems[nIdx].FKDValue),
               FListA.Values['Seal']]);
       gDBConnManager.WorkerExec(FDBConn, nSQL); //更新批次号使用量
-      {$ENDIF}
-    end;         
+    end;
 
     nIdx := Length(FOut.FData);
     if Copy(FOut.FData, nIdx, 1) = ',' then
@@ -1145,37 +1135,15 @@ begin
             MI('$BI', sTable_Bill), MI('$ID', FIn.FData)]);
     gDBConnManager.WorkerExec(FDBConn, nStr);
 
-    {$IFDEF BatchVerifyValue}
     nStr := 'Update %s Set B_HasUse=B_HasUse-(%.2f),B_LastDate=%s ' +
-            'Where B_Stock=''%s'' and B_Batcode=''%s''';
+            'Where B_Stock=''%s'' and B_Type=''%s''';
     nStr := Format(nStr, [sTable_Batcode, nVal,
-            sField_SQLServer_Now, nSN, nHY]);
+            sField_SQLServer_Now, nSN, sFlag_TypeCommon]);
     gDBConnManager.WorkerExec(FDBConn, nStr); //更新批次号使用量
-    {$ELSE}
-    nStr := 'Select L_Type,L_MValue,L_Seal,L_Value,D_Brand from $BL bl ' +
-            'Left join $BC bc on bl.L_Seal=bc.D_ID ' +
-            'Where L_ID=''$ID''';
-    nStr := MacroValue(nStr, [MI('$BL', sTable_Bill),
-            MI('$BC', sTable_BatcodeDoc),MI('$ID', FIn.FData)]);
-    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
-    if RecordCount>0 then
-    begin
-      FListC.Clear;
-      FListC.Values['Brand'] := FieldByName('D_Brand').AsString;
-      FListC.Values['Batch'] := FieldByName('L_Seal').AsString;
 
-      nStr := FieldByName('L_Type').AsString;
-      if (nStr=sFlag_San) and (FieldByName('L_MValue').AsFloat<=0) then
-           FListC.Values['Value'] := '0.00'
-      else FListC.Values['Value'] := FieldByName('L_Value').AsString;
-
-      if Length(FListC.Values['Batch']) > 0 then
-      if not TWorkerBusinessCommander.CallMe(cBC_SaveStockBatcode,
-            FListC.Text, sFlag_No, @FOut) then
-        raise Exception.Create(FOut.FData);
-    end;
-    {$ENDIF}
-    //批次管理
+    nStr := 'Update %s Set D_Sent=D_Sent-(%.2f) Where D_ID=''%s''';
+    nStr := Format(nStr, [sTable_BatcodeDoc, nVal, nHY]);
+    gDBConnManager.WorkerExec(FDBConn, nStr); //更新批次号使用量
 
     nStr := 'Delete From %s Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
@@ -1527,7 +1495,6 @@ var nStr,nSQL,nTmp: string;
     nOut: TWorkerBusinessCommand;
 begin
   Result := False;
-  nTotal := 0.00;
   AnalyseBillItems(FIn.FData, nBills);
   nInt := Length(nBills);
 
@@ -1537,14 +1504,6 @@ begin
     nData := Format(nData, [PostTypeToStr(FIn.FExtParam)]);
     Exit;
   end;
-{
-  if (nBills[0].FType = sFlag_San) and (nInt > 1) then
-  begin
-    nData := '岗位[ %s ]提交了散装合单,该业务系统暂时不支持.';
-    nData := Format(nData, [PostTypeToStr(FIn.FExtParam)]);
-    Exit;
-  end;
-}
 
   {$IFDEF HardMon}
   if (FIn.FExtParam = sFlag_TruckBFP) or (FIn.FExtParam = sFlag_TruckBFM) then
@@ -1833,13 +1792,15 @@ begin
         nSQL := Format(nSQL, [sTable_Order, nDec, FZhiKa]);
         FListA.Add(nSQL);
 
-        {$IFDEF BatchVerifyValue}
         nSQL := 'Update %s Set B_HasUse=B_HasUse-(%.2f),B_LastDate=%s ' +
-                'Where B_Stock=''%s'' and B_Batcode=''%s''';
+                'Where B_Stock=''%s'' and B_Type=''%s''';
         nSQL := Format(nSQL, [sTable_Batcode, nDec,
-                sField_SQLServer_Now, FStockNo, FSeal]);
+                sField_SQLServer_Now, FStockNo, sFlag_TypeCommon]);
         FListA.Add(nSQL); //更新批次号使用量
-        {$ENDIF}
+
+        nSQL := 'Update %s Set D_Sent=D_Sent-(%.2f) Where D_ID=''%s''';
+        nSQL := Format(nSQL, [sTable_BatcodeDoc, nDec, FSeal]);
+        FListA.Add(nSQL); //更新批次号使用量
       end;
     end;
     //AjustSanValue;
@@ -2121,45 +2082,6 @@ begin
   //----------------------------------------------------------------------------
   FDBConn.FConn.BeginTrans;
   try
-    {$IFNDEF BatchVerifyValue}
-    if (FIn.FExtParam=sFlag_TruckBFM) and (nBills[nInt].FType=sFlag_San) then
-    begin
-      nStr := 'Select L_Seal,L_Value,D_Brand from $BL bl ' +
-            'Left join $BC bc on bl.L_Seal=bc.D_ID ' +
-            'Where L_ID=''$ID''';
-      nStr := MacroValue(nStr, [MI('$BL', sTable_Bill),
-              MI('$BC', sTable_BatcodeDoc),MI('$ID', nBills[nInt].FID)]);
-      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
-      if RecordCount>0 then
-      begin
-        FListC.Clear;
-        FListC.Values['Brand'] := FieldByName('D_Brand').AsString;
-        FListC.Values['Batch'] := FieldByName('L_Seal').AsString;
-        FListC.Values['Value'] := FloatToStr(nTotal);
-      end;
-
-      if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
-          nBills[nInt].FStockNo, FListC.Text, @nOut) then
-      raise Exception.Create(nOut.FData);
-
-      for nIdx:=Low(nBills) to High(nBills) do
-      with nBills[nIdx] do
-      begin
-        if nBills[nInt].FPModel = sFlag_PoundCC then Continue;
-        //出厂模式,不更新状态
-
-        nSQL := MakeSQLByStr([SF('L_Seal', nOut.FData)
-                ], sTable_Bill, SF('L_ID', FID), False);
-        FListA.Add(nSQL);
-      end;
-
-      FListC.Values['Batch'] := nOut.FData;
-      if not TWorkerBusinessCommander.CallMe(cBC_SaveStockBatcode,
-          FListC.Text, sFlag_Yes, @nOut) then
-      raise Exception.Create(nOut.FData);
-    end;
-    {$ENDIF}
-
     for nIdx:=0 to FListA.Count - 1 do
       gDBConnManager.WorkerExec(FDBConn, FListA[nIdx]);
     //xxxxx

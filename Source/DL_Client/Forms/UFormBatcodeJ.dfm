@@ -1,24 +1,24 @@
 inherited fFormBatcode: TfFormBatcode
-  Left = 466
-  Top = 259
-  ClientHeight = 394
-  ClientWidth = 470
+  Left = 438
+  Top = 194
+  ClientHeight = 410
+  ClientWidth = 482
   Position = poMainFormCenter
   OnClose = FormClose
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 470
-    Height = 394
+    Width = 482
+    Height = 410
     inherited BtnOK: TButton
-      Left = 324
-      Top = 361
-      TabOrder = 17
+      Left = 336
+      Top = 377
+      TabOrder = 19
     end
     inherited BtnExit: TButton
-      Left = 394
-      Top = 361
-      TabOrder = 18
+      Left = 406
+      Top = 377
+      TabOrder = 20
     end
     object EditName: TcxTextEdit [2]
       Left = 81
@@ -82,7 +82,7 @@ inherited fFormBatcode: TfFormBatcode
     end
     object EditLow: TcxTextEdit [9]
       Left = 81
-      Top = 253
+      Top = 244
       ParentFont = False
       TabOrder = 10
       Text = '80'
@@ -90,7 +90,7 @@ inherited fFormBatcode: TfFormBatcode
     end
     object EditHigh: TcxTextEdit [10]
       Left = 81
-      Top = 278
+      Top = 269
       ParentFont = False
       TabOrder = 12
       Text = '100'
@@ -98,30 +98,30 @@ inherited fFormBatcode: TfFormBatcode
     end
     object Check2: TcxCheckBox [11]
       Left = 23
-      Top = 328
+      Top = 344
       Caption = #26032#24180#26102#33258#21160#37325#32622','#32534#21495#22522#25968#20174'1'#24320#22987#35745#25968'.'
       ParentFont = False
-      TabOrder = 16
+      TabOrder = 18
       Transparent = True
       Width = 121
     end
     object cxLabel1: TcxLabel [12]
       Left = 221
-      Top = 253
+      Top = 244
       Caption = #27880':'#35813#20540#20026#30334#20998#27604'(%),'#36229#36807#35813#20540#25552#37266'.'
       ParentFont = False
       Transparent = True
     end
     object cxLabel2: TcxLabel [13]
       Left = 221
-      Top = 278
+      Top = 269
       Caption = #27880':'#35813#20540#20026#30334#20998#27604'(%),'#36229#36807#35813#20540#26356#25442#32534#21495'.'
       ParentFont = False
       Transparent = True
     end
     object EditValue: TcxTextEdit [14]
       Left = 81
-      Top = 228
+      Top = 219
       ParentFont = False
       TabOrder = 8
       Text = '0'
@@ -129,14 +129,14 @@ inherited fFormBatcode: TfFormBatcode
     end
     object cxLabel3: TcxLabel [15]
       Left = 221
-      Top = 228
+      Top = 219
       Caption = #27880':'#27599#22810#23569#21544#26816#27979#19968#27425'.'
       ParentFont = False
       Transparent = True
     end
     object EditWeek: TcxTextEdit [16]
       Left = 81
-      Top = 303
+      Top = 294
       ParentFont = False
       TabOrder = 14
       Text = '20'
@@ -144,7 +144,7 @@ inherited fFormBatcode: TfFormBatcode
     end
     object cxLabel4: TcxLabel [17]
       Left = 221
-      Top = 303
+      Top = 294
       Caption = #27880':'#20174#31532#19968#36710#21551#29992#24320#22987#19981#36229#36807#22810#23569#22825'.'
       ParentFont = False
       Transparent = True
@@ -155,6 +155,19 @@ inherited fFormBatcode: TfFormBatcode
       ParentFont = False
       TabOrder = 6
       Width = 121
+    end
+    object EditBatcode: TcxTextEdit [19]
+      Left = 81
+      Top = 319
+      TabOrder = 15
+      Width = 121
+    end
+    object cxLabel5: TcxLabel [20]
+      Left = 221
+      Top = 315
+      Caption = #27880':'#24403#21069#27491#22312#20351#29992#30340#25209#27425#21495','#22914#38656#35843#25972#35831#26356#26032
+      ParentFont = False
+      Transparent = True
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup
@@ -291,16 +304,37 @@ inherited fFormBatcode: TfFormBatcode
               Hidden = True
               LayoutDirection = ldHorizontal
               ShowBorder = False
-              object dxLayout1Item18: TdxLayoutItem
-                Caption = #32534#21495#21608#26399':'
-                Control = EditWeek
-                ControlOptions.ShowBorder = False
-              end
-              object dxLayout1Item19: TdxLayoutItem
-                Caption = 'cxLabel4'
+              object dxLayout1Group4: TdxLayoutGroup
                 ShowCaption = False
-                Control = cxLabel4
-                ControlOptions.ShowBorder = False
+                Hidden = True
+                ShowBorder = False
+                object dxLayout1Item18: TdxLayoutItem
+                  Caption = #32534#21495#21608#26399':'
+                  Control = EditWeek
+                  ControlOptions.ShowBorder = False
+                end
+                object dxLayout1Item20: TdxLayoutItem
+                  Caption = #24403#21069#25209#27425':'
+                  Control = EditBatcode
+                  ControlOptions.ShowBorder = False
+                end
+              end
+              object dxLayout1Group12: TdxLayoutGroup
+                ShowCaption = False
+                Hidden = True
+                ShowBorder = False
+                object dxLayout1Item19: TdxLayoutItem
+                  Caption = 'cxLabel4'
+                  ShowCaption = False
+                  Control = cxLabel4
+                  ControlOptions.ShowBorder = False
+                end
+                object dxLayout1Item21: TdxLayoutItem
+                  Caption = 'cxLabel5'
+                  ShowCaption = False
+                  Control = cxLabel5
+                  ControlOptions.ShowBorder = False
+                end
               end
             end
           end

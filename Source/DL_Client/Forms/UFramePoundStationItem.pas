@@ -60,6 +60,7 @@ type
     CheckZD: TcxCheckBox;
     CheckSound: TcxCheckBox;
     Timer_Savefail: TTimer;
+    EditPrefix: TcxTextEdit;
     procedure Timer1Timer(Sender: TObject);
     procedure N1Click(Sender: TObject);
     procedure N3Click(Sender: TObject);
@@ -206,10 +207,11 @@ var nStr: string;
     nEx: TDynamicStrArray;
 begin
   SetLength(nEx, 1);
-  nStr := 'M_ID=Select M_ID,M_Name From %s Order By M_ID ASC';
-  nStr := Format(nStr, [sTable_Materails]);
+  nStr := 'D_ParamB=Select D_ParamB,D_Value From %s Where D_Name=''%s'' ' +
+          'And D_Index>=2 Order By D_Index DESC';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_StockItem]);
 
-  nEx[0] := 'M_ID';
+  nEx[0] := 'D_ParamB';
   FDM.FillStringsData(EditMID.Properties.Items, nStr, 0, '', nEx);
   AdjustCXComboBoxItem(EditMID, False);
 
@@ -219,18 +221,12 @@ begin
   nEx[0] := 'P_ID';
   FDM.FillStringsData(EditPID.Properties.Items, nStr, 0, '', nEx);
   AdjustCXComboBoxItem(EditPID, False);
-
-  nStr := 'Z_ID=Select Z_ID,Z_Name From %s Order By Z_ID ASC';
-  nStr := Format(nStr, [sTable_ZTLines]);
-  
-  nEx[0] := 'Z_ID';
-  FDM.FillStringsData(EditKID.Properties.Items, nStr, 0, '', nEx);
-  AdjustCXComboBoxItem(EditKID, False);
 end;
 
 //Desc: 重置界面数据
 procedure TfFramePoundStationItem.SetUIData(const nReset,nOnlyData: Boolean);
 var nVal: Double;
+    nTruck: string;
     nItem: TLadingBillItem;
 begin
   if nReset then
@@ -256,10 +252,14 @@ begin
 
   with FUIData do
   begin
-    EditTruck.Text := FTruck;
+    nTruck := FTruck; 
+    Delete(nTruck, 1, Length(EditPrefix.Text));
+    EditTruck.Text := nTruck;
+
     EditMID.Text := FStockName;
     EditPID.Text := FCusName;
-    EditKID.Text := FOrigin;
+    if FOrigin <> '' then
+      EditKID.Text := FOrigin;
 
     EditMValue.Text := Format('%.2f', [FMData.FValue]);
     EditPValue.Text := Format('%.2f', [FPData.FValue]);
@@ -477,28 +477,15 @@ end;
 
 procedure TfFramePoundStationItem.EditTruckKeyPress(Sender: TObject;
   var Key: Char);
-var nP: TFormCommandParam;
 begin
   if Key = Char(VK_RETURN) then
   begin
     Key := #0;
     if EditTruck.Properties.ReadOnly then Exit;
     EditTruck.Text := Trim(EditTruck.Text);
+    EditPrefix.Text:= Trim(EditPrefix.Text);
 
-    LoadTruckPoundItem(EditTruck.Text);
-  end;
-
-  if Key = Char(VK_SPACE) then
-  begin
-    Key := #0;
-    if EditTruck.Properties.ReadOnly then Exit;
-
-    nP.FParamA := EditTruck.Text;
-    CreateBaseFormItem(cFI_FormGetTruck, '', @nP);
-
-    if (nP.FCommand = cCmd_ModalResult) and(nP.FParamA = mrOk) then
-      EditTruck.Text := nP.FParamB;
-    EditTruck.SelectAll;
+    LoadTruckPoundItem(EditPrefix.Text + EditTruck.Text);
   end;
 end;
 
@@ -573,7 +560,9 @@ begin
     if not EditTruck.Focused then Exit;
     //非操作人员调整
     EditTruck.Text := Trim(EditTruck.Text);
-    FUIData.FTruck := EditTruck.Text;
+    EditPrefix.Text:= Trim(EditPrefix.Text);
+
+    FUIData.FTruck := EditPrefix.Text + EditTruck.Text;
   end else
 
   if Sender = EditMID then
@@ -615,16 +604,6 @@ begin
     if not EditKID.Focused then Exit;
     //非操作人员调整
     EditKID.Text := Trim(EditKID.Text);
-
-    if EditKID.ItemIndex < 0 then
-    begin
-      FUIData.FZhiKa := '';
-      FUIData.FOrigin := EditKID.Text;
-    end else
-    begin
-      FUIData.FZhiKa := GetCtrlData(EditKID);
-      FUIData.FOrigin := EditKID.Text;
-    end;
   end;
 end;
 
@@ -662,6 +641,16 @@ begin
     if FNextStatus = sFlag_TruckBFM then
          FMData.FStation := FPoundTunnel.FID
     else FPData.FStation := FPoundTunnel.FID;
+
+    if EditKID.ItemIndex < 0 then
+    begin
+      FZhiKa := '';
+      FOrigin := EditKID.Text;
+    end else
+    begin
+      FZhiKa := GetCtrlData(EditKID);
+      FOrigin := EditKID.Text;
+    end;
   end;
 
   Result := SaveStationPoundItem(FPoundTunnel, FBillItems, nPoundID);

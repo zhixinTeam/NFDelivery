@@ -217,12 +217,20 @@ begin
   EditBrand.Text:=FOrder.FStockBrand;
   EditBrand.Properties.ReadOnly := EditBrand.Text<>'';
 
-  {$IFDEF JSNF}
+  {$IFDEF ORDERVALUE}
   EditValue.Text := Format('%.2f', [FOrder.FValue]);
   {$ENDIF}
-  EditFQ.Text := FOrder.FBatchCode;
+  {EditFQ.Text := FOrder.FBatchCode;
   if EditFQ.Text = '' then
-    EditFQ.Text := GetStockBatcode(FOrder.FStockID, FOrder.FStockBrand);
+  with FListA do
+  begin
+    Clear;
+    Values['Brand'] := FOrder.FStockBrand;
+    Values['Value'] := '0.00';
+    //暂时不定
+
+    EditFQ.Text := GetStockBatcode(FOrder.FStockID, PackerEncodeStr(Text));
+  end;}
   //xxxxx
 
   EditTruck.Text := FOrder.FTruck;
@@ -271,7 +279,6 @@ end;
 //Desc: 保存
 procedure TfFormBill.BtnOKClick(Sender: TObject);
 var nPrint: Boolean;
-    nList: TStrings;
 begin
   if not IsDataValid then Exit;
   //check valid
@@ -283,35 +290,30 @@ begin
   end;
   //Query Truck GPS
 
-  nList := TStringList.Create;
-  try
-    LoadSysDictItem(sFlag_PrintBill, nList);
-    //需打印品种
-    nPrint := nList.IndexOf(FOrder.FStockID) >= 0;
+  LoadSysDictItem(sFlag_PrintBill, FListB);
+  //需打印品种
+  nPrint := FListB.IndexOf(FOrder.FStockID) >= 0;
 
-    with nList do
-    begin
-      Clear;
-      Values['Orders'] := PackerEncodeStr(FOrder.FOrders);
-      Values['Value'] := EditValue.Text;
-      Values['Truck'] := EditTruck.Text;
-      Values['Lading'] := GetCtrlData(EditLading);
-      Values['IsVIP'] := GetCtrlData(EditType);
-      Values['Pack'] := GetCtrlData(EditPack);
-      Values['BuDan'] := FBuDanFlag;
-      Values['Seal'] := EditFQ.Text;
-      Values['Brand'] := EditBrand.Text;
+  with FListA do
+  begin
+    Clear;
+    Values['Orders'] := PackerEncodeStr(FOrder.FOrders);
+    Values['Value'] := EditValue.Text;
+    Values['Truck'] := EditTruck.Text;
+    Values['Lading'] := GetCtrlData(EditLading);
+    Values['IsVIP'] := GetCtrlData(EditType);
+    Values['Pack'] := GetCtrlData(EditPack);
+    Values['BuDan'] := FBuDanFlag;
+    Values['Seal'] := EditFQ.Text;
+    Values['Brand'] := EditBrand.Text;
       
-      Values['CusID'] := FOrder.FCusID;
-      Values['CusName'] := FOrder.FCusName;
-    end;
-
-    FBills := SaveBill(PackerEncodeStr(nList.Text));
-    //call mit bus
-    if FBills = '' then Exit;
-  finally
-    nList.Free;
+    Values['CusID'] := FOrder.FCusID;
+    Values['CusName'] := FOrder.FCusName;
   end;
+
+  FBills := SaveBill(PackerEncodeStr(FListA.Text));
+  //call mit bus
+  if FBills = '' then Exit;
 
   if FBuDanFlag <> sFlag_Yes then
     SetBillCard(FBills, EditTruck.Text, True);

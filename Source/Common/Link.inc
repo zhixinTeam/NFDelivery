@@ -96,8 +96,8 @@
   //汉字喷码支持
   {$DEFINE VerfiyAutoWeight}
   //校验过磅方式
-  {$DEFINE BatchVerifyValue}
-  //批次控制发货量
+  {$DEFINE ORDERVALUE}
+  //显示大票量发货量
 {$ENDIF}
 //江山南方
 
@@ -110,5 +110,7 @@
   //状态栏显示
   {$DEFINE AutoSan}
   //散装允许自动过磅
+  {$DEFINE ORDERVALUE}
+  //显示大票量发货量
 {$ENDIF}
 //永丰南方(永丰、安抚)

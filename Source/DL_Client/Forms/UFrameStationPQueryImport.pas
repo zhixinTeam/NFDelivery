@@ -1,8 +1,8 @@
 {*******************************************************************************
   作者: fendou116688@163.com 2017/3/15
-  描述: 火车衡过磅记录查询
+  描述: 火车衡过磅记录查询(导入)
 *******************************************************************************}
-unit UFrameStationPQuery;
+unit UFrameStationPQueryImport;
 
 interface
 
@@ -17,7 +17,7 @@ uses
   ComCtrls, ToolWin;
 
 type
-  TfFrameStationPQuery = class(TfFrameNormal)
+  TfFrameStationPQueryImport = class(TfFrameNormal)
     cxTextEdit1: TcxTextEdit;
     dxLayout1Item1: TdxLayoutItem;
     EditTruck: TcxButtonEdit;
@@ -51,7 +51,6 @@ type
     procedure Check1Click(Sender: TObject);
     procedure BtnDelClick(Sender: TObject);
     procedure N4Click(Sender: TObject);
-    procedure BtnEditClick(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -75,14 +74,14 @@ implementation
 {$R *.dfm}
 uses
   ShellAPI, ULibFun, UMgrControl, UDataModule, USysBusiness, UFormDateFilter,
-  UFormWait, USysConst, USysDB, USysPopedom, UFormBase, UFormPoundVerify;
+  UFormWait, USysConst, USysDB, USysPopedom;
 
-class function TfFrameStationPQuery.FrameID: integer;
+class function TfFrameStationPQueryImport.FrameID: integer;
 begin
-  Result := cFI_FrameStationPQuery;
+  Result := cFI_FrameStationPQueryImport;
 end;
 
-procedure TfFrameStationPQuery.OnCreateFrame;
+procedure TfFrameStationPQueryImport.OnCreateFrame;
 begin
   inherited;
   FTimeS := Str2DateTime(Date2Str(Now) + ' 00:00:00');
@@ -92,13 +91,13 @@ begin
   InitDateRange(Name, FStart, FEnd);
 end;
 
-procedure TfFrameStationPQuery.OnDestroyFrame;
+procedure TfFrameStationPQueryImport.OnDestroyFrame;
 begin
   SaveDateRange(Name, FStart, FEnd);
   inherited;
 end;
 
-function TfFrameStationPQuery.InitFormDataSQL(const nWhere: string): string;
+function TfFrameStationPQueryImport.InitFormDataSQL(const nWhere: string): string;
 begin
   EditDate.Text := Format('%s 至 %s', [Date2Str(FStart), Date2Str(FEnd)]);
 
@@ -117,8 +116,8 @@ begin
   end;
 
   if Check1.Checked then
-       Result := MacroValue(Result, [MI('$PL', sTable_PoundStatBak)])
-  else Result := MacroValue(Result, [MI('$PL', sTable_PoundStation)]);
+       Result := MacroValue(Result, [MI('$PL', sTable_PoundStatIMPBak)])
+  else Result := MacroValue(Result, [MI('$PL', sTable_PoundStatIMP)]);
 
   Result := MacroValue(Result, [MI('$S', Date2Str(FStart)),
             MI('$E', Date2Str(FEnd+1))]);
@@ -129,20 +128,20 @@ begin
   //xxxxx
 end;
 
-procedure TfFrameStationPQuery.AfterInitFormData;
+procedure TfFrameStationPQueryImport.AfterInitFormData;
 begin
   FJBWhere := '';
 end;
 
 //Desc: 日期筛选
-procedure TfFrameStationPQuery.EditDatePropertiesButtonClick(Sender: TObject;
+procedure TfFrameStationPQueryImport.EditDatePropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 begin
   if ShowDateFilterForm(FStart, FEnd) then InitFormData(FWhere);
 end;
 
 //Desc: 执行查询
-procedure TfFrameStationPQuery.EditTruckPropertiesButtonClick(Sender: TObject;
+procedure TfFrameStationPQueryImport.EditTruckPropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 begin
   if Sender = EditPID then
@@ -184,20 +183,20 @@ begin
   end;
 end;
 
-procedure TfFrameStationPQuery.Check1Click(Sender: TObject);
+procedure TfFrameStationPQueryImport.Check1Click(Sender: TObject);
 begin
   BtnRefresh.Click;
 end;
 
 //------------------------------------------------------------------------------
 //Desc: 权限控制
-procedure TfFrameStationPQuery.PMenu1Popup(Sender: TObject);
+procedure TfFrameStationPQueryImport.PMenu1Popup(Sender: TObject);
 begin
   N3.Enabled := BtnPrint.Enabled and (not Check1.Checked);
 end;
 
 //Desc: 打印磅单
-procedure TfFrameStationPQuery.N3Click(Sender: TObject);
+procedure TfFrameStationPQueryImport.N3Click(Sender: TObject);
 var nStr: string;
 begin
   if cxView1.DataController.GetSelectedCount > 0 then
@@ -213,7 +212,7 @@ begin
 end;
 
 //Desc: 时间段查询
-procedure TfFrameStationPQuery.N2Click(Sender: TObject);
+procedure TfFrameStationPQueryImport.N2Click(Sender: TObject);
 begin
   if ShowDateFilterForm(FTimeS, FTimeE, True) then
   try
@@ -226,7 +225,7 @@ begin
 end;
 
 //Desc: 删除榜单
-procedure TfFrameStationPQuery.BtnDelClick(Sender: TObject);
+procedure TfFrameStationPQueryImport.BtnDelClick(Sender: TObject);
 var nIdx: Integer;
     nStr,nID,nP: string;
 begin
@@ -240,7 +239,7 @@ begin
   nStr := Format('确定要删除编号为[ %s ]的过磅单吗?', [nID]);
   if not QueryDlg(nStr, sAsk) then Exit;
 
-  nStr := Format('Select * From %s Where 1<>1', [sTable_PoundStation]);
+  nStr := Format('Select * From %s Where 1<>1', [sTable_PoundStatIMP]);
   //only for fields
   nP := '';
 
@@ -258,14 +257,14 @@ begin
   try
     nStr := 'Insert Into $PB($FL,P_DelMan,P_DelDate) ' +
             'Select $FL,''$User'',$Now From $PL Where P_ID=''$ID''';
-    nStr := MacroValue(nStr, [MI('$PB', sTable_PoundStatBak),
+    nStr := MacroValue(nStr, [MI('$PB', sTable_PoundStatIMPBak),
             MI('$FL', nP), MI('$User', gSysParam.FUserID),
             MI('$Now', sField_SQLServer_Now),
-            MI('$PL', sTable_PoundStation), MI('$ID', nID)]);
+            MI('$PL', sTable_PoundStatIMP), MI('$ID', nID)]);
     FDM.ExecuteSQL(nStr);
     
     nStr := 'Delete From %s Where P_ID=''%s''';
-    nStr := Format(nStr, [sTable_PoundStation, nID]);
+    nStr := Format(nStr, [sTable_PoundStatIMP, nID]);
     FDM.ExecuteSQL(nStr);
 
     FDM.ADOConn.CommitTrans;
@@ -278,7 +277,7 @@ begin
 end;
 
 //Desc: 查看抓拍
-procedure TfFrameStationPQuery.N4Click(Sender: TObject);
+procedure TfFrameStationPQueryImport.N4Click(Sender: TObject);
 var nStr,nID,nDir: string;
     nPic: TPicture;
 begin
@@ -335,26 +334,6 @@ begin
   end;
 end;
 
-procedure TfFrameStationPQuery.BtnEditClick(Sender: TObject);
-var nP: TFormCommandParam;
-begin
-  inherited;
-  if cxView1.DataController.GetSelectedCount < 1 then
-  begin
-    ShowMsg('请选择需要勘误的记录', sHint);
-    Exit;
-  end;
-
-  nP.FCommand := cCmd_EditData;
-  nP.FParamA  := SQLQuery.FieldByName('P_ID').AsString;
-  nP.FParamB  := sFlag_TypeStation;
-  CreateBaseFormItem(cFI_FormPoundVerify, PopedomItem, @nP);
-  if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
-  begin
-    InitFormData('');
-  end;
-end;
-
 initialization
-  gControlManager.RegCtrl(TfFrameStationPQuery, TfFrameStationPQuery.FrameID);
+  gControlManager.RegCtrl(TfFrameStationPQueryImport, TfFrameStationPQueryImport.FrameID);
 end.

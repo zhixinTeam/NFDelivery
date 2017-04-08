@@ -853,6 +853,7 @@ begin
                                        cPrecision, False);
       end;
 
+      {$IFDEF ShowDaiWC}
       if ((FType = sFlag_Dai) and (
           ((nVal > 0) and (FPoundDaiZ > 0) and (nVal > FPoundDaiZ)) or
           ((nVal < 0) and (FPoundDaiF > 0) and (-nVal > FPoundDaiF)))) or
@@ -882,6 +883,7 @@ begin
           if not QueryDlg(nStr, sAsk) then Exit;
         end;
       end;
+      {$ENDIF}
 
       if (FType = sFlag_San) And (FCardUse = sFlag_Sale) then
       begin

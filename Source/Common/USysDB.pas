@@ -266,6 +266,8 @@ ResourceString
   sTable_Picture      = 'Sys_Picture';               //存放图片
   sTable_PoundStation = 'Sys_PoundStation';          //火车衡过磅数据
   sTable_PoundStatBak = 'Sys_PoundStatBak';          //火车衡作废数据
+  sTable_PoundStatIMP = 'Sys_PoundStatIMP';          //火车衡过磅数据
+  sTable_PoundStatIMPBak = 'Sys_PoundStatIMPBak';    //火车衡作废数据
 
   sTable_Provider     = 'P_Provider';                //客户表
   sTable_Materails    = 'P_Materails';               //物料表
@@ -899,7 +901,6 @@ ResourceString
    *.T_SyncNum, T_SyncDate, T_SyncMemo: 同步次数; 同步完成时间; 同步信息
   -----------------------------------------------------------------------------}
 
-  {$IFDEF BatchVerifyValue}
   sSQL_NewBatcode = 'Create Table $Table(R_ID $Inc, B_Stock varChar(32),' +
        'B_Name varChar(80), B_Prefix varChar(5), B_Base Integer,' +
        'B_Incement Integer, B_Length Integer, B_Type Char(1),' +
@@ -926,25 +927,6 @@ ResourceString
    *.B_HasUse: 已使用
    *.B_Batcode: 当前批次号
   -----------------------------------------------------------------------------}
-  {$ELSE}
-  sSQL_NewBatcode = 'Create Table $Table(R_ID $Inc, B_Stock varChar(32),' +
-       'B_Name varChar(80), B_Prefix varChar(5), B_Base Integer,' +
-       'B_Interval Integer, B_Incement Integer, B_Length Integer,' +
-       'B_UseDate Char(1), B_LastDate DateTime)';
-  {-----------------------------------------------------------------------------
-   批次编码表: Batcode
-   *.R_ID: 编号
-   *.B_Stock: 物料号
-   *.B_Name: 物料名
-   *.B_Prefix: 前缀
-   *.B_Base: 起始编码(基数)
-   *.B_Interval: 有效时长(天)
-   *.B_Incement: 编号增量
-   *.B_Length: 编号长度
-   *.B_UseDate: 使用日期编码
-   *.B_LastDate: 上次基数更新时间
-  -----------------------------------------------------------------------------}
-  {$ENDIF}
   
   sSQL_NewBatcodeDoc = 'Create Table $Table(R_ID $Inc, D_ID varChar(32),' +
        'D_Stock varChar(32),D_Name varChar(80), D_Brand varChar(32), ' +
@@ -1171,6 +1153,8 @@ begin
   AddSysTableItem(sTable_Picture, sSQL_NewPicture);
   AddSysTableItem(sTable_PoundStation, sSQL_NewPoundLog);
   AddSysTableItem(sTable_PoundStatBak, sSQL_NewPoundLog);
+  AddSysTableItem(sTable_PoundStatIMP, sSQL_NewPoundLog);
+  AddSysTableItem(sTable_PoundStatIMPBak, sSQL_NewPoundLog);
 
   AddSysTableItem(sTable_Provider, ssql_NewProvider);
   AddSysTableItem(sTable_Materails, sSQL_NewMaterails);
