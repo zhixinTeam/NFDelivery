@@ -2784,8 +2784,11 @@ begin
 
     if (FPData.FValue > 0) and (FMData.FValue > 0) then
     begin
-      nSQL := 'Select P_PValue, P_MValue, P_Bill From %s Where P_ID=''%s''';
+      nSQL := 'Select P_PValue, P_MValue, P_Bill From %s ' +
+              'Where P_ID=''%s'' And P_MValue Is not NULL';
       nSQL := Format(nSQL, [sTable_PoundStation, FPoundID]);
+      //ÖØ¸´2´Î¹ı°õ
+
       with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
       if RecordCount > 0 then
       begin
