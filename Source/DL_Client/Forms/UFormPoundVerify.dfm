@@ -22,6 +22,7 @@ inherited fFormPoundVerify: TfFormPoundVerify
     object EditPID: TcxButtonEdit [2]
       Left = 81
       Top = 36
+      ParentFont = False
       Properties.Buttons = <
         item
           Default = True
@@ -33,18 +34,21 @@ inherited fFormPoundVerify: TfFormPoundVerify
     object EditStockNO: TcxComboBox [3]
       Left = 81
       Top = 61
+      ParentFont = False
       TabOrder = 1
       Width = 121
     end
     object EditLineGroup: TcxTextEdit [4]
       Left = 81
       Top = 86
+      ParentFont = False
       TabOrder = 2
       Width = 121
     end
     object EditTruck: TcxTextEdit [5]
       Left = 81
       Top = 111
+      ParentFont = False
       TabOrder = 3
       Width = 121
     end
@@ -53,6 +57,7 @@ inherited fFormPoundVerify: TfFormPoundVerify
       Top = 157
       Lines.Strings = (
         '')
+      ParentFont = False
       TabOrder = 5
       Height = 89
       Width = 185
@@ -67,6 +72,7 @@ inherited fFormPoundVerify: TfFormPoundVerify
     object EditPValue: TcxTextEdit [8]
       Left = 81
       Top = 251
+      ParentFont = False
       Properties.ReadOnly = True
       TabOrder = 6
       Width = 121
@@ -74,6 +80,7 @@ inherited fFormPoundVerify: TfFormPoundVerify
     object EditMValue: TcxTextEdit [9]
       Left = 81
       Top = 276
+      ParentFont = False
       Properties.ReadOnly = True
       TabOrder = 7
       Width = 121

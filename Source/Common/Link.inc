@@ -23,7 +23,7 @@
 {.$DEFINE ClientMon}
 //进程守护客户端
 
-{.$DEFINE HardMon}
+{$DEFINE HardMon}
 //编译硬件守护
 
 {.$DEFINE GenRODL}
@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE JSNF}
+{$DEFINE SMNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -114,3 +114,17 @@
   //显示大票量发货量
 {$ENDIF}
 //永丰南方(永丰、安抚)
+
+{$IFDEF SMNF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+{$ENDIF}
+//三明南方

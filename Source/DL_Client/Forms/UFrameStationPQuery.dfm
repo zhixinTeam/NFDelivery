@@ -7,7 +7,6 @@ inherited fFrameStationPQuery: TfFrameStationPQuery
       Visible = False
     end
     inherited BtnEdit: TToolButton
-      Visible = False
       OnClick = BtnEditClick
     end
     inherited BtnDel: TToolButton

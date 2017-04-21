@@ -108,6 +108,7 @@ begin
     begin
       SetCtrlData(EditStockNO, FieldByName('P_MID').AsString);
 
+      EditPID.Text := FieldByName('P_ID').AsString;
       EditLineGroup.Text := FieldByName('P_Order').AsString;
       EditTruck.Text     := FieldByName('P_Truck').AsString;
 
