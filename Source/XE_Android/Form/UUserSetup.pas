@@ -21,10 +21,10 @@ type
     EditUser: TEdit;
     procedure FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char;
       Shift: TShiftState);
-    procedure EditUserChange(Sender: TObject);
     procedure BtnCancelClick(Sender: TObject);
     procedure BtnSaveClick(Sender: TObject);
     procedure FormActivate(Sender: TObject);
+    procedure EditUserChange(Sender: TObject);
   private
     { Private declarations }
   public
@@ -63,11 +63,8 @@ end;
 procedure TFrmSetup.EditUserChange(Sender: TObject);
 begin
   inherited;
-  if Trim(EditUser.Text) = 'admin' then
-  begin
-    EditPort.ReadOnly := False;
-    EditServIP.ReadOnly := False;
-  end;
+  EditServIP.ReadOnly := CompareStr(LowerCase(Trim(EditUser.Text)), 'admin')<>0;
+  EditPort.ReadOnly := CompareStr(LowerCase(Trim(EditUser.Text)), 'admin')<>0;
 end;
 
 procedure TFrmSetup.FormActivate(Sender: TObject);

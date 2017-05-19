@@ -1,23 +1,23 @@
 inherited fFormPoundVerify: TfFormPoundVerify
   Left = 445
   Top = 157
-  ClientHeight = 348
+  ClientHeight = 370
   ClientWidth = 396
   Position = poMainFormCenter
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
     Width = 396
-    Height = 348
+    Height = 370
     inherited BtnOK: TButton
       Left = 250
-      Top = 315
-      TabOrder = 8
+      Top = 337
+      TabOrder = 9
     end
     inherited BtnExit: TButton
       Left = 320
-      Top = 315
-      TabOrder = 9
+      Top = 337
+      TabOrder = 10
     end
     object EditPID: TcxButtonEdit [2]
       Left = 81
@@ -54,35 +54,41 @@ inherited fFormPoundVerify: TfFormPoundVerify
     end
     object EditMemo: TcxMemo [6]
       Left = 23
-      Top = 157
+      Top = 182
       Lines.Strings = (
         '')
       ParentFont = False
-      TabOrder = 5
+      TabOrder = 6
       Height = 89
       Width = 185
     end
     object cxLabel1: TcxLabel [7]
       Left = 23
-      Top = 136
+      Top = 161
       Caption = #22791#27880#21407#22240':'
       ParentFont = False
       Transparent = True
     end
     object EditPValue: TcxTextEdit [8]
       Left = 81
-      Top = 251
-      ParentFont = False
-      Properties.ReadOnly = True
-      TabOrder = 6
-      Width = 121
-    end
-    object EditMValue: TcxTextEdit [9]
-      Left = 81
       Top = 276
       ParentFont = False
       Properties.ReadOnly = True
       TabOrder = 7
+      Width = 121
+    end
+    object EditMValue: TcxTextEdit [9]
+      Left = 81
+      Top = 301
+      ParentFont = False
+      Properties.ReadOnly = True
+      TabOrder = 8
+      Width = 121
+    end
+    object EditBill: TcxTextEdit [10]
+      Left = 81
+      Top = 136
+      TabOrder = 4
       Width = 121
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
@@ -106,6 +112,11 @@ inherited fFormPoundVerify: TfFormPoundVerify
         object dxLayout1Item7: TdxLayoutItem
           Caption = #36710#29260#21495#30721':'
           Control = EditTruck
+          ControlOptions.ShowBorder = False
+        end
+        object dxLayout1Item5: TdxLayoutItem
+          Caption = #25209' '#27425' '#21495':'
+          Control = EditBill
           ControlOptions.ShowBorder = False
         end
         object dxLayout1Item9: TdxLayoutItem

@@ -3,8 +3,8 @@ unit UMainFrom;
 interface
 
 uses
-  Androidapi.JNI.GraphicsContentViewText,
   Androidapi.JNI.Nfc,
+  Androidapi.JNI.GraphicsContentViewText,
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants,
   FMX.Types, FMX.Controls, FMX.Forms, FMX.Graphics, FMX.Dialogs, FMX.StdCtrls,
   FMX.Edit, FMX.Controls.Presentation, FMX.Objects, FMX.Layouts;
@@ -23,7 +23,7 @@ type
     BtnSetup: TSpeedButton;
     Label1: TLabel;
     BtnLogin: TButton;
-    procedure FormActivate(Sender: TObject);
+    TimerRun: TTimer;
     procedure FormCreate(Sender: TObject);
     procedure BtnReadCardClick(Sender: TObject);
     procedure BtnTruckClick(Sender: TObject);
@@ -36,6 +36,7 @@ type
     procedure ScrollBox_MenuClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure BtnLoginClick(Sender: TObject);
+    procedure TimerRunTimer(Sender: TObject);
   private
     { Private declarations }
     function UserLogin: Boolean;
@@ -71,15 +72,21 @@ uses
 
 {$REGION 'JNI setup code and callback'}
 procedure OnNewIntentNative(PEnv: PJNIEnv; This: JNIObject; NewIntent: JNIObject); cdecl;
+var nJIntent: JIntent;
 begin
   Log.d('Queuing native routine to run synchronized');
+  nJIntent := TJIntent.Wrap(NewIntent);
+
   TThread.Queue(nil,
     procedure
     begin
       Log.d('+ThreadSwitcher');
       Log.d('Thread: Main: %.8x, Current: %.8x, Java:%.8d (%2:.8x)', [MainThreadID, TThread.CurrentThread.ThreadID,
         TJThread.JavaClass.CurrentThread.getId]);
-      MainForm.OnNewIntent(TJIntent.Wrap(NewIntent));
+
+      MainForm.OnNewIntent(nJIntent);
+      //xxxxx
+
       Log.d('-ThreadSwitcher');
     end);
 end;
@@ -109,6 +116,28 @@ begin
 end;
 {$ENDREGION}
 
+Function AndroidFirstStarBool:Boolean;
+var
+  nPackageInfo:JPackageInfo;
+  nCurrentVersion,nLastVersion:Integer;
+begin
+  nPackageInfo:=SharedActivityContext.getPackageManager.getPackageInfo(SharedActivityContext.getPackageName, 0);
+  nCurrentVersion:=nPackageInfo.versionCode;
+  nLastVersion:=SharedPrivatePreferences.getInt(StringToJString('VERSION_KEY'), 0);
+  if nCurrentVersion>nLastVersion then
+  begin
+    //第一次启动
+    SharedPrivatePreferences.edit.putInt(StringToJString('VERSION_KEY'),nCurrentVersion);
+    Result:=True;
+  end
+  else
+  begin
+    //不是第一次启动
+    Result:=False;
+  end;
+end;
+
+
 procedure TMainForm.BtnExitClick(Sender: TObject);
 begin
   SaveParamToIni;
@@ -118,6 +147,8 @@ end;
 procedure TMainForm.BtnLoginClick(Sender: TObject);
 begin
   gSysParam.FHasLogin := False;
+  Layout_menu.Visible := false;// 隐藏菜单
+
   if not Assigned(frmLogin) then
      frmLogin := TfrmLogin.Create(Self);
   frmLogin.Show;
@@ -152,34 +183,6 @@ begin
   FrmGetTruck.Show;
 end;
 
-procedure TMainForm.FormActivate(Sender: TObject);
-var
-  nIntent: JIntent;
-begin
-  Log.d('OnActivate');
-
-  if not UserLogin then Exit;
-
-  with gNFCManager do
-  begin
-    if HasNFC then
-    begin
-      if not IsNFCEnabled then
-      begin
-        Toast('请在系统设置中开启NFC功能');
-        SetNFCEnabled;
-      end;
-    end;
-  end;
-
-  nIntent := SharedActivity.getIntent;
-  if not TJIntent.JavaClass.ACTION_MAIN.equals(nIntent.getAction) then
-  begin
-    Log.d('Passing along received intent');
-    OnNewIntent(nIntent);
-  end;
-end;
-
 procedure TMainForm.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   SaveParamToIni;
@@ -189,7 +192,8 @@ procedure TMainForm.FormCreate(Sender: TObject);
 begin
   Log.d('OnCreate');
   LoadParamFromIni;
-  RegisterDelphiNativeMethods;
+
+  TimerRun.Enabled := True;
 end;
 
 procedure TMainForm.FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char;
@@ -237,6 +241,36 @@ begin
   Layout_menu.Visible := false;// 隐藏菜单
 end;
 
+
+procedure TMainForm.TimerRunTimer(Sender: TObject);
+var
+  nIntent: JIntent;
+begin
+  Log.d('TimerRunTimer');
+  TimerRun.Enabled := False;
+  RegisterDelphiNativeMethods;
+
+  if not UserLogin then Exit;
+
+  with gNFCManager do
+  begin
+    if HasNFC then
+    begin
+      if not IsNFCEnabled then
+      begin
+        Toast('请在系统设置中开启NFC功能');
+        SetNFCEnabled;
+      end;
+    end;
+  end;
+
+  nIntent := SharedActivity.getIntent;
+  if not TJIntent.JavaClass.ACTION_MAIN.equals(nIntent.getAction) then
+  begin
+    Log.d('Passing along received intent');
+    OnNewIntent(nIntent);
+  end;
+end;
 
 procedure TMainForm.OnNewIntent(Intent: JIntent);
 begin

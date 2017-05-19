@@ -35,7 +35,8 @@ implementation
 uses
   SysUtils, USysLoger, UHardBusiness, UMgrTruckProbe, UMgrParam, UMITConst,
   UMgrQueue, UMgrLEDCard, UMgrHardHelper, UMgrRemotePrint, U02NReader,
-  UMgrERelay, UMultiJS, UMgrRemoteVoice, UMgrCodePrinter, UMgrLEDDisp,
+  UMgrERelay,   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}
+  UMgrRemoteVoice, UMgrCodePrinter, UMgrLEDDisp,
   UMgrRFID102{$IFDEF HKVDVR}, UMgrCamera{$ENDIF};
 
 class function THardwareWorker.ModuleInfo: TPlugModuleInfo;
@@ -97,22 +98,18 @@ begin
 
     {$IFDEF HYRFID201}
     nStr := '华益RFID102';
-    nCfg := nCfg + 'RFID102.xml';
-
     if not Assigned(gHYReaderManager) then
     begin
       gHYReaderManager := THYReaderManager.Create;
-      gHYReaderManager.LoadConfig(nCfg);
+      gHYReaderManager.LoadConfig(nCfg + 'RFID102.xml');
     end;
     {$ENDIF}
 
     nStr := '车辆检测器';
-    nCfg := nCfg + 'TruckProber.xml';
-    
-    if FileExists(nCfg) then
+    if FileExists(nCfg + 'TruckProber.xml') then
     begin
       gProberManager := TProberManager.Create;
-      gProberManager.LoadConfig(nCfg);
+      gProberManager.LoadConfig(nCfg + 'TruckProber.xml');
     end;
   except
     on E:Exception do
@@ -142,6 +139,10 @@ procedure THardwareWorker.InitSystemObject;
 begin
   gHardwareHelper := THardwareHelper.Create;
   //远距读头
+
+  if not Assigned(gMultiJSManager) then
+    gMultiJSManager := TMultiJSManager.Create;
+  //计数器
 
   gHardShareData := WhenBusinessMITSharedDataIn;
   //hard monitor share
@@ -190,7 +191,11 @@ begin
   gCardManager.StartSender;
   //led display
   gDisplayManager.StartDisplay;
-  //small led 
+  //small led
+
+  {$IFDEF MITTruckProber}
+  gProberManager.StartProber;
+  {$ENDIF}
 end;
 
 procedure THardwareWorker.AfterStopServer;
@@ -234,6 +239,10 @@ begin
 
   gTruckQueueManager.StopQueue;
   //queue
+
+  {$IFDEF MITTruckProber}
+  gProberManager.StopProber;
+  {$ENDIF}
 end;
 
 end.

@@ -10,7 +10,7 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, ZnMD5, ULibFun, UFormCtrl, USysLoger,
-  USysDB, UMITConst;
+  USysDB, UMITConst, UMgrRFID102;
 
 type
   THardwareDBWorker = class(TBusinessWorkerBase)
@@ -71,6 +71,8 @@ type
     function TruckProbe_IsTunnelOK(var nData: string): Boolean;
     function TruckProbe_TunnelOC(var nData: string): Boolean;
     //车辆检测控制器业务
+    function OpenDoorByReader(var nData: string): Boolean;
+    //通过读卡器打开道闸
     {$IFDEF MicroMsg}
     function GetWXQueueList(var nData: string): Boolean;
     {$ENDIF}
@@ -86,7 +88,8 @@ type
 implementation
 
 uses
-  UMgrHardHelper, UMgrCodePrinter, UMgrQueue, UMultiJS, UTaskMonitor,
+  {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}
+  UMgrHardHelper, UMgrCodePrinter, UMgrQueue, UTaskMonitor,
   UMgrTruckProbe;
 
 //Date: 2012-3-13
@@ -248,6 +251,7 @@ begin
 
    cBC_IsTunnelOK           : Result := TruckProbe_IsTunnelOK(nData);
    cBC_TunnelOC             : Result := TruckProbe_TunnelOC(nData);
+   cBC_OpenDoorByReader     : Result := OpenDoorByReader(nData);
 
    {$IFDEF MicroMsg}
    cBC_GetWeiXinQueue       : Result := GetWXQueueList(nData);
@@ -315,14 +319,14 @@ begin
     for nIdx:=0 to FListA.Count - 1 do
     begin
       nPoundID := FListA[nIdx];
-      FListB.Values[nPoundID] := gHardwareHelper.GetPoundCard(nPoundID);
+      FListB.Values[nPoundID] := gHardwareHelper.GetPoundCard(nPoundID, FOut.FExtParam);
     end;
 
     FOut.FData := FListB.Text;
     Exit;
   end;
 
-  FOut.FData := gHardwareHelper.GetPoundCard(FIn.FData);
+  FOut.FData := gHardwareHelper.GetPoundCard(FIn.FData, FOut.FExtParam);
   if FOut.FData = '' then Exit;
 
   nStr := 'Select C_Card From $TB Where C_Card=''$CD'' or ' +
@@ -519,6 +523,13 @@ begin
       nCusCode  := FieldByName('L_CusCode').AsString;
       //xxxxx
 
+      {$IFNDEF USEAUTOBAT}
+      //protocol: yymmdd(开单时间) + 批次号 + 客户代码(区域码) + 交货单号(末3位);
+      nCode := nCode + Copy(nBill, nPrefixLen + 1, 6);
+      nCode := nCode + FillString(nSeal, 6, '0');
+      nCode := nCode + FillString(nCusCode, 2, ' ');
+      nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6);
+      {$ELSE}
       if nUseDate then
       begin
         //protocol: 汉字喷码+客户代码(区域码) + 交货单号(末3位) + 批次号;
@@ -546,6 +557,7 @@ begin
         nCode := nCode + FillString(nCusCode, 2, ' ');
         nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6);
       end;
+      {$ENDIF}
     end;
   end;
 
@@ -753,6 +765,52 @@ begin
   nData := Format('TunnelOC -> %s:%s', [FIn.FData, FIn.FExtParam]);
   WriteLog(nData);
 end;
+
+//Date: 2017/2/8
+//Parm: 读卡器编号[FIn.FData];读卡器类型[FIn.FExtParam]
+//Desc: 读卡器打开道闸
+function THardwareCommander.OpenDoorByReader(var nData: string): Boolean;
+var nReader,nIn: string;
+    nIdx, nInt: Integer;
+    nRItem: PHYReaderItem;
+begin
+  Result := True;
+  {$IFNDEF HYRFID201}
+  Exit;
+  //未启用电子标签读卡器
+  {$ENDIF}
+
+  nIn := StringReplace(FIn.FData, 'V', 'H', [rfReplaceAll]);
+  //如果是虚拟读卡器，则替换成对应的真实读卡器
+
+  nInt := -1;
+  for nIdx:=gHYReaderManager.Readers.Count-1 downto 0 do
+  begin
+    nRItem :=  gHYReaderManager.Readers[nIdx];
+
+    if CompareText(nRItem.FID, nIn) = 0 then
+    begin
+      nInt := nIdx;
+      Break;
+    end;
+  end;
+
+  if nInt < 0 then Exit;
+  //reader not exits
+
+  nReader:= '';
+  nRItem := gHYReaderManager.Readers[nInt];
+  if FIn.FExtParam = sFlag_No then
+  begin
+    if Assigned(nRItem.FOptions) then
+       nReader := nRItem.FOptions.Values['ExtReader'];
+  end
+  else nReader := nIn;
+
+  if Trim(nReader) <> '' then
+    gHYReaderManager.OpenDoor(Trim(nReader));
+end;
+
 
 {$IFDEF MicroMsg}
 type

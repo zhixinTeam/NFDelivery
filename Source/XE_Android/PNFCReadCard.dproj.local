@@ -1,12 +1,13 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <BorlandProject>
 	<Transactions>
-    <Transaction>2015/08/29 17:56:36.000.334,C:\Users\Administrator.QH-20141209UNIE\Documents\RAD Studio\Projects\Unit1.fmx=E:\Workdir2015\NFC_Samples_XE5_2\UMainFrom.fmx</Transaction>
-    <Transaction>2015/08/29 17:56:45.000.486,C:\Users\Administrator.QH-20141209UNIE\Documents\RAD Studio\Projects\Project1.dproj=E:\Workdir2015\NFC_Samples_XE5_2\PNFCReadCard.dproj</Transaction>
-    <Transaction>2015/09/10 15:34:48.000.507,D:\Delphi XE Android\PNFCReadCard\Form\UReadCard.fmx=D:\Delphi XE Android\PNFCReadCard\Unit1.fmx</Transaction>
-    <Transaction>2015/09/10 15:59:20.000.229,D:\Delphi XE Android\PNFCReadCard\Form\UUserSetup.fmx=D:\Delphi XE Android\PNFCReadCard\Unit1.fmx</Transaction>
-    <Transaction>2015/09/10 16:22:09.000.402,D:\Delphi XE Android\PNFCReadCard\Form\UShowOrderInfo.fmx=D:\Delphi XE Android\PNFCReadCard\Unit1.fmx</Transaction>
-    <Transaction>2015/09/11 09:15:20.000.895,D:\Delphi XE Android\PNFCReadCard\Form\ULogin.fmx=D:\Delphi XE Android\PNFCReadCard\Unit1.fmx</Transaction>
+    <Transaction>2015/08/29 17:56:36.000.334,E:\Workdir2015\NFC_Samples_XE5_2\UMainFrom.fmx=C:\Users\Administrator.QH-20141209UNIE\Documents\RAD Studio\Projects\Unit1.fmx</Transaction>
+    <Transaction>2015/08/29 17:56:45.000.486,E:\Workdir2015\NFC_Samples_XE5_2\PNFCReadCard.dproj=C:\Users\Administrator.QH-20141209UNIE\Documents\RAD Studio\Projects\Project1.dproj</Transaction>
+    <Transaction>2015/09/10 15:34:48.000.507,D:\Delphi XE Android\PNFCReadCard\Unit1.fmx=D:\Delphi XE Android\PNFCReadCard\Form\UReadCard.fmx</Transaction>
+    <Transaction>2015/09/10 15:59:20.000.229,D:\Delphi XE Android\PNFCReadCard\Unit1.fmx=D:\Delphi XE Android\PNFCReadCard\Form\UUserSetup.fmx</Transaction>
+    <Transaction>2015/09/10 16:22:09.000.402,D:\Delphi XE Android\PNFCReadCard\Unit1.fmx=D:\Delphi XE Android\PNFCReadCard\Form\UShowOrderInfo.fmx</Transaction>
+    <Transaction>2015/09/11 09:15:20.000.895,D:\Delphi XE Android\PNFCReadCard\Unit1.fmx=D:\Delphi XE Android\PNFCReadCard\Form\ULogin.fmx</Transaction>
   </Transactions>
-	<MobileDevice>32abe60b-Android</MobileDevice>
+	<MobileDevice>32abdc54-Android</MobileDevice>
+	<BT_BuildType>Debug</BT_BuildType>
 </BorlandProject>

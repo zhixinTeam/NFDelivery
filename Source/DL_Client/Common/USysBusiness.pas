@@ -162,7 +162,8 @@ function GetTruckPoundItem(const nTruck: string;
 function SaveTruckPoundItem(const nTunnel: PPTTunnelItem;
  const nData: TLadingBillItems; var nPoundID: string): Boolean;
 //保存车辆过磅记录
-function ReadPoundCard(const nTunnel: string; nReadOnly: string=''): string;
+function ReadPoundCard(var nReader: string;
+  const nTunnel: string; nReadOnly: String = ''): string;
 //读取指定磅站读头上的卡号
 procedure CapturePicture(const nTunnel: PPTTunnelItem; const nList: TStrings);
 //抓拍指定通道
@@ -205,6 +206,8 @@ function GetTruckPValue(var nItem:TPreTruckPItem; const nTruck: string):Boolean;
 //获取车辆预置皮重
 function TruckInFact(nTruck: string):Boolean;
 //验证车辆是否出厂
+function GetPoundSanWuChaStop(const nStock: string): Boolean;
+//超出误差停止业务
 
 function GetTruckNO(const nTruck: String): string;
 function GetOrigin(const nOrigin: String): string;
@@ -216,6 +219,15 @@ procedure ShowCapturePicture(const nID: string);
 
 function GetTruckLastTime(const nTruck: string; var nLast: Integer): Boolean;
 //获取车辆活动间隔
+
+function IsTunnelOK(const nTunnel: string): Boolean;
+//查询通道光栅是否正常
+procedure TunnelOC(const nTunnel: string; const nOpen: Boolean);
+//控制通道红绿灯开合
+function PlayNetVoice(const nText,nCard,nContent: string): Boolean;
+//经中间件播发语音
+function OpenDoorByReader(const nReader: string; nType: string = 'Y'): Boolean;
+//打开道闸
 
 implementation
 
@@ -925,12 +937,19 @@ end;
 //Date: 2014-10-02
 //Parm: 通道号
 //Desc: 读取nTunnel读头上的卡号
-function ReadPoundCard(const nTunnel: string; nReadOnly: String = ''): string;
+function ReadPoundCard(var nReader: string;
+    const nTunnel: string; nReadOnly: String = ''): string;
 var nOut: TWorkerBusinessCommand;
 begin
-  if CallBusinessHardware(cBC_GetPoundCard, nTunnel, nReadOnly, @nOut, False) then
-       Result := nOut.FData
-  else Result := '';
+  Result := '';
+  nReader:= '';
+  //卡号
+
+  if CallBusinessHardware(cBC_GetPoundCard, nTunnel, nReadOnly, @nOut)  then
+  begin
+    Result := Trim(nOut.FData);
+    nReader:= Trim(nOut.FExtParam);
+  end;
 end;
 
 //------------------------------------------------------------------------------
@@ -1765,6 +1784,20 @@ begin
   Result := False;
 end;
 
+//Date: 2017/5/13
+//Parm: 物料编号
+//Desc: 确认是否强制不允许超发
+function GetPoundSanWuChaStop(const nStock: string): Boolean;
+var nSQL: string;
+begin
+  Result := False;
+  if nStock = '' then Exit;
+
+  nSQL := 'Select * From %s Where D_Name=''%s'' And D_Value=''%s''';
+  nSQL := Format(nSQL, [sTable_SysDict, sFlag_PSanWuChaStop, nStock]);
+  Result := FDM.QueryTemp(nSQL).RecordCount > 0;
+end;  
+
 //Date: 2017/2/28
 //Parm: 车厢号[nTruck];过磅数据[nPoundData]
 //Desc: 获取火车衡过磅数据
@@ -1807,5 +1840,57 @@ begin
     nList.Free;
   end;
 end;
+
+//------------------------------------------------------------------------------
+//Date: 2014-07-03
+//Parm: 通道号
+//Desc: 查询nTunnel的光栅状态是否正常
+function IsTunnelOK(const nTunnel: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  if CallBusinessHardware(cBC_IsTunnelOK, nTunnel, '', @nOut) then
+       Result := nOut.FData = sFlag_Yes
+  else Result := False;
+end;
+
+procedure TunnelOC(const nTunnel: string; const nOpen: Boolean);
+var nStr: string;
+    nOut: TWorkerBusinessCommand;
+begin
+  if nOpen then
+       nStr := sFlag_Yes
+  else nStr := sFlag_No;
+
+  CallBusinessHardware(cBC_TunnelOC, nTunnel, nStr, @nOut);
+end;
+
+//Date: 2016-01-06
+//Parm: 文本;语音卡;内容
+//Desc: 用nCard播发nContent模式的nText文本.
+function PlayNetVoice(const nText,nCard,nContent: string): Boolean;
+var nStr: string;
+    nOut: TWorkerBusinessCommand;
+begin
+  nStr := 'Card=' + nCard + #13#10 +
+          'Content=' + nContent + #13#10 + 'Truck=' + nText;
+  //xxxxxx
+
+  Result := CallBusinessHardware(cBC_PlayVoice, nStr, '', @nOut);
+  if not Result then
+    WriteLog(nOut.FBase.FErrDesc);
+  //xxxxx
+end;
+
+//------------------------------------------------------------------------------
+//Date: 2017/5/12
+//Parm: 读卡器编号
+//Desc: 打开道闸
+function OpenDoorByReader(const nReader: string; nType: string = 'Y'): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessHardware(cBC_OpenDoorByReader, nReader, nType,
+            @nOut, False);
+end;  
+
 
 end.

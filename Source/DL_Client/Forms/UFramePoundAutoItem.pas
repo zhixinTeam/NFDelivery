@@ -77,7 +77,7 @@ type
     procedure EditBillKeyPress(Sender: TObject; var Key: Char);
   private
     { Private declarations }
-    FIsWeighting, FIsSaving, FHasReaded: Boolean;
+    FIsWeighting, FIsSaving: Boolean;
     //称重标识,保存标识
     FPoundTunnel: PPTTunnelItem;
     //磅站通道
@@ -89,14 +89,18 @@ type
     FUIData,FInnerData: TLadingBillItem;
     //称重数据
     FLastCardDone: Int64;
-    FLastCard, FCardTmp: string;
-    //上次卡号
+    FLastCard, FCardTmp, FLastReader: string;
+    //上次卡号, 临时卡号, 读卡器编号
     FListA, FListB: TStrings;
     FSampleIndex: Integer;
     FValueSamples: array of Double;
     //数据采样
-    FEmptyPoundInit: Int64;
-    //空磅计时
+    FBarrierGate: Boolean;
+    //是否采用道闸
+    FEmptyPoundInit, FDoneEmptyPoundInit: Int64;
+    //空磅计时,过磅保存后空磅
+    FEmptyPoundIdleLong, FEmptyPoundIdleShort: Int64;
+    //上磅前空磅超时,下磅后空磅超时
     procedure SetUIData(const nReset: Boolean; const nOnlyData: Boolean = False);
     //界面数据
     procedure SetImageStatus(const nImage: TImage; const nOff: Boolean);
@@ -139,7 +143,7 @@ implementation
 {$R *.dfm}
 
 uses
-  ULibFun, UFormBase, {$IFDEF HR1847}UKRTruckProber,{$ELSE}UMgrTruckProbe,{$ENDIF}
+  ULibFun, UFormBase, UMgrTruckProbe,
   UMgrRemoteVoice, UMgrVoiceNet, UDataModule, USysBusiness, UMgrLEDDisp,
   USysLoger, USysConst, USysDB, UBase64;
 
@@ -157,7 +161,6 @@ begin
   inherited;
   FPoundTunnel := nil;
   FIsWeighting := False;
-  FHasReaded   := False;
 
   FListA := TStringList.Create;
   FListB := TStringList.Create;
@@ -237,9 +240,8 @@ begin
 
   Timer2.Tag := 0;
   Timer2.Enabled := False;
-  {$IFDEF HR1847}
-  gKRMgrProber.TunnelOC(FPoundTunnel.FID,False);
-  {$ELSE}
+
+  {$IFNDEF MITTruckProber}
   gProberManager.TunnelOC(FPoundTunnel.FID,False);
   {$ENDIF}
 end;
@@ -247,8 +249,20 @@ end;
 //Desc: 设置通道
 procedure TfFrameAutoPoundItem.SetTunnel(const nTunnel: PPTTunnelItem);
 begin
+  FBarrierGate := False;
+  FEmptyPoundIdleLong := -1;
+  FEmptyPoundIdleShort:= -1;
+
   FPoundTunnel := nTunnel;
   SetUIData(True);
+
+  if Assigned(FPoundTunnel.FOptions) then
+  with FPoundTunnel.FOptions do
+  begin
+    FBarrierGate := Values['BarrierGate'] = sFlag_Yes;
+    FEmptyPoundIdleLong := StrToInt64Def(Values['EmptyIdleLong'], 60);
+    FEmptyPoundIdleShort:= StrToInt64Def(Values['EmptyIdleShort'], 5);
+  end;
 end;
 
 //Desc: 重置界面数据
@@ -277,16 +291,20 @@ begin
     EditValue.Text := '0.00';
     EditBill.Properties.Items.Clear;
 
-    FHasReaded   := False;
     FIsSaving    := False;
-    FIsWeighting := False;
     FEmptyPoundInit := 0;
     if FLastCardDone = 0 then
       FLastCardDone   := GetTickCount;
     //防止49.71天后，系统更新为0
     
-    gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
-    //关闭表头端口
+    if not FIsWeighting then
+    begin
+      gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
+      //关闭表头端口
+
+      Timer_ReadCard.Enabled := True;
+      //启动读卡
+    end;
   end;
 
   with FUIData do
@@ -378,7 +396,7 @@ end;
 //Desc: 读取nCard对应的交货单
 procedure TfFrameAutoPoundItem.LoadBillItems(const nCard: string;
  nUpdateUI: Boolean);
-var nStr,nHint: string;
+var nStr,nHint,nVoice: string;
     nIdx,nInt,nLast: Integer;
     nBills: TLadingBillItems;
 begin
@@ -388,7 +406,10 @@ begin
   if (not GetLadingBills(nCard, sFlag_TruckBFP, nBills)) or
      (Length(nBills) < 1) then
   begin
-    Timer_SaveFail.Enabled := True;
+    nVoice := '读取磁卡信息失败,请联系管理员';
+    PlayVoice(nVoice);
+    WriteLog(nVoice);
+    SetUIData(True);
     Exit;
   end;
 
@@ -398,15 +419,13 @@ begin
   begin
     nStr := '车辆[ %s ]需等待 %d 秒后才能过磅';
     nStr := Format(nStr, [nBills[0].FTruck, FPoundTunnel.FCardInterval - nLast]);
-
     WriteLog(nStr);
-    //PlayVoice(nStr);
 
     nStr := Format('磅站[ %s.%s ]: ',[FPoundTunnel.FID,
             FPoundTunnel.FName]) + nStr;
     WriteSysLog(nStr);
 
-    Timer_SaveFail.Enabled := True;
+    SetUIData(True);
     Exit;
   end;
   
@@ -437,14 +456,15 @@ begin
             TruckStatusToStr(FStatus), TruckStatusToStr(FNextStatus)]);
     nHint := nHint + nStr;
 
-    nStr := '车辆 %s 不能过磅,应该去 %s ';
-    nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
-    PlayVoice(nStr);
-    //LEDDisplay(nStr);
+    nVoice := '车辆 %s 不能过磅,应该去 %s ';
+    nVoice := Format(nVoice, [FTruck, TruckStatusToStr(FNextStatus)]);
   end;
 
   if nInt = 0 then
   begin
+    PlayVoice(nVoice);
+    //车辆状态异常
+
     nHint := '该车辆当前不能过磅,详情如下: ' + #13#10#13#10 + nHint;
     WriteSysLog(nStr);
     SetUIData(True);
@@ -488,10 +508,37 @@ begin
 
   InitSamples;
   //初始化样本
-  
+
   if not FPoundTunnel.FUserInput then
-    gPoundTunnelManager.ActivePort(FPoundTunnel.FID, OnPoundDataEvent, True);
+  if not gPoundTunnelManager.ActivePort(FPoundTunnel.FID,
+         OnPoundDataEvent, True) then
+  begin
+    nHint := '连接地磅表头失败，请联系管理员检查硬件连接';
+    WriteSysLog(nHint);
+    PlayVoice(nHint);
+
+    SetUIData(True);
+    Exit;
+  end;
+
+  Timer_ReadCard.Enabled := False;
+  FDoneEmptyPoundInit := 0;
   FIsWeighting := True;
+  //停止读卡,开始称重
+
+  if FBarrierGate then
+  begin
+    nStr := '[n1]%s刷卡成功请上磅,并熄火停车';
+    nStr := Format(nStr, [FUIData.FTruck]);
+    PlayVoice(nStr);
+    //读卡成功，语音提示
+
+    {$IFNDEF DEBUG}
+    OpenDoorByReader(FLastReader);
+    //打开主道闸
+    {$ENDIF}
+  end;
+  //车辆上磅
 end;
 
 //------------------------------------------------------------------------------
@@ -511,10 +558,9 @@ begin
 
   try
     WriteLog('正在读取磁卡号.');
-    nCard := Trim(ReadPoundCard(FPoundTunnel.FID));
-    if (nCard = '') or FHasReaded then Exit;
+    nCard := Trim(ReadPoundCard(FLastReader, FPoundTunnel.FID));
+    if nCard = '' then Exit;
 
-    FHasReaded := True;
     if nCard <> FLastCard then
          nDoneTmp := 0
     else nDoneTmp := FLastCardDone;
@@ -526,9 +572,7 @@ begin
     begin
       nStr := '磁卡[ %s ]需等待 %d 秒后才能过磅';
       nStr := Format(nStr, [nCard, FPoundTunnel.FCardInterval - nLast]);
-
       WriteLog(nStr);
-      //PlayVoice(nStr);
 
       nStr := Format('磅站[ %s.%s ]: ',[FPoundTunnel.FID,
               FPoundTunnel.FName]) + nStr;
@@ -605,8 +649,9 @@ begin
     begin
       nStr := StringReplace(FListA.Text, #13#10, ',', [rfReplaceAll]);
       nStr := Format('订单[ %s ]信息已丢失.', [nStr]);
+      WriteSysLog(nStr);
 
-      ShowDlg(nStr, sHint);
+      PlayVoice('订单信息已丢失');
       Exit;
     end;
 
@@ -691,7 +736,7 @@ begin
     on E: Exception do
     begin
       FDM.ADOConn.RollbackTrans;
-      ShowDlg(E.Message, sHint);
+      WriteSysLog(E.Message);
       Exit;
     end;
   end;
@@ -787,55 +832,31 @@ end;
 
 //Desc: 保存销售
 function TfFrameAutoPoundItem.SavePoundSale: Boolean;
-var nStr: string;
-    nVal,nNet: Double;
+var nVal,nNet: Double;
+    nStr: string;
 begin
   Result := False;
   //init
 
-  if FBillItems[0].FNextStatus = sFlag_TruckBFP then
-  begin
-    if FUIData.FPData.FValue <= 0 then
-    begin
-      WriteLog('请先称量皮重');
-      Exit;
-    end;
-  end else
-  begin
-    if FUIData.FMData.FValue <= 0 then
-    begin
-      WriteLog('请先称量毛重');
-      Exit;
-    end;
-  end;
-
-  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
+  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) and
+     (FUIData.FYSValid <> sFlag_Yes) then //非空车出厂
   begin
     if FUIData.FPData.FValue > FUIData.FMData.FValue then
     begin
-      WriteLog('皮重应小于毛重');
+      PlayVoice('皮重应小于毛重,请联系管理员处理');
       Exit;
     end;
+
     {$IFNDEF AutoSan}
     if FBillItems[0].FType = sFlag_San then
     begin
       nStr := '散装车辆[%s]不允许在此过磅';
       nStr := Format(nStr, [FBillItems[0].FTruck]);
       PlayVoice(nStr);
-      //LEDDisplay(nStr);
       WriteLog(nStr);
       Exit;
     end;
     {$ENDIF}
-  end;
-
-  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
-  begin
-    if FUIData.FPData.FValue > FUIData.FMData.FValue then
-    begin
-      ShowMsg('皮重应小于毛重', sHint);
-      Exit;
-    end;
 
     nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
     //净重
@@ -856,9 +877,7 @@ begin
       {$IFDEF ShowDaiWC}
       if ((FType = sFlag_Dai) and (
           ((nVal > 0) and (FPoundDaiZ > 0) and (nVal > FPoundDaiZ)) or
-          ((nVal < 0) and (FPoundDaiF > 0) and (-nVal > FPoundDaiF)))) or
-         ((FType = sFlag_San) and (
-          (nVal < 0) and (FPoundSanF > 0) and (-nVal > FPoundSanF))) then
+          ((nVal < 0) and (FPoundDaiF > 0) and (-nVal > FPoundDaiF)))) then
       begin
         nStr := '车辆[%s]实际装车量误差较大，请通知司机检验载重';
         nStr := Format(nStr, [FTruck]);
@@ -884,6 +903,17 @@ begin
         end;
       end;
       {$ENDIF}
+
+      if (FType = sFlag_San) and FloatRelation(nNet, FValue, rtGreater) and
+         GetPoundSanWuChaStop(FStockNo) then
+      begin
+        nStr := '车辆 %s 净重 %.2f 吨超出 %.2f 吨,请去现场卸货';
+        nStr := Format(nStr, [FTruck, nNet, nNet - FValue]);
+        PlayVoice(nStr);
+
+        WriteSysLog(nStr);
+        Exit;
+      end;  
 
       if (FType = sFlag_San) And (FCardUse = sFlag_Sale) then
       begin
@@ -930,20 +960,8 @@ begin
   Result := False;
   //init
 
-  if (FUIData.FPData.FValue <= 0) And (FUIData.FMData.FValue <= 0) then
-  begin
-    ShowMsg('请先称重', sHint);
-    Exit;
-  end;
-
   if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
   begin
-    if FUIData.FPData.FValue > FUIData.FMData.FValue then
-    begin
-      ShowMsg('皮重应小于毛重', sHint);
-      Exit;
-    end;
-
     FListA.Clear;
     FListA.Add(FUIData.FExtID_2);
     nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
@@ -960,8 +978,9 @@ begin
       begin
         nStr := StringReplace(FListA.Text, #13#10, ',', [rfReplaceAll]);
         nStr := Format('订单[ %s ]信息已丢失.', [nStr]);
+        WriteSysLog(nStr);
 
-        ShowDlg(nStr, sHint);
+        PlayVoice('采购订单已无效');
         Exit;
       end;
 
@@ -978,7 +997,8 @@ begin
     if FloatRelation(nVal, nNet, rtLE) then
     begin
       nStr := 'NC订单可用量不足，请联系管理员重新办卡';
-      ShowMsg(nStr, sHint);
+      WriteSysLog(nStr);
+
       PlayVoice(nStr);
       LEDDisplay(nStr);
       Exit;
@@ -990,7 +1010,8 @@ begin
     if (FUIData.FPData.FValue <= 0) or (FUIData.FMData.FValue <= 0) then
     begin
       nStr := '该车辆需要预置皮重，请先联系管理员预置皮重';
-      ShowMsg(nStr, sHint);
+      WriteSysLog(nStr);
+
       PlayVoice(nStr);
       LEDDisplay(nStr);
       Exit;
@@ -1022,34 +1043,6 @@ end;
 //Desc: 短倒业务
 function TfFrameAutoPoundItem.SavePoundDuanDao: Boolean;
 begin
-  Result := False;
-  //init
-
-  if FUIData.FNextStatus = sFlag_TruckBFP then
-  begin
-    if FUIData.FPData.FValue <= 0 then
-    begin
-      WriteLog('请先称量皮重');
-      Exit;
-    end;
-  end else
-  begin
-    if FUIData.FMData.FValue <= 0 then
-    begin
-      WriteLog('请先称量毛重');
-      Exit;
-    end;
-  end;
-
-  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
-  begin
-    if FUIData.FPData.FValue > FUIData.FMData.FValue then
-    begin
-      WriteLog('皮重应小于毛重');
-      Exit;
-    end;
-  end;
-
   SetLength(FBillItems, 1);
   FBillItems[0] := FUIData;
   //复制用户界面数据
@@ -1091,6 +1084,7 @@ end;
 procedure TfFrameAutoPoundItem.OnPoundData(const nValue: Double);
 var nRet: Boolean;
     nStr: string;
+    nInt: Int64;
 begin
   FLastBT := GetTickCount;
   EditValue.Text := Format('%.2f', [nValue]);
@@ -1108,17 +1102,47 @@ begin
   begin
     if FEmptyPoundInit = 0 then
       FEmptyPoundInit := GetTickCount;
-    if GetTickCount - FEmptyPoundInit < 10 * 1000 then Exit;
-    //延迟重置
+    nInt := GetTickCount - FEmptyPoundInit;
 
-    FEmptyPoundInit := 0;
-    Timer_SaveFail.Enabled := True;
+    if (nInt > FEmptyPoundIdleLong * 1000) then
+    begin
+      FIsWeighting :=False;
+      Timer_SaveFail.Enabled := True;
+
+      WriteSysLog('刷卡后司机无响应,退出称重.');
+      Exit;
+    end;
+    //上磅时间,延迟重置
+
+    if (nInt > FEmptyPoundIdleShort * 1000) and   //保证空磅
+       (FDoneEmptyPoundInit>0) and (GetTickCount-FDoneEmptyPoundInit>nInt) then
+    begin
+      FIsWeighting :=False;
+      Timer_SaveFail.Enabled := True;
+
+      WriteSysLog('司机已下磅,退出称重.');
+      Exit;
+    end;
+    //上次保存成功后,空磅超时,认为车辆下磅
+
     Exit;
-  end else FEmptyPoundInit := 0;
+  end else
+  begin
+    FEmptyPoundInit := 0;
+    if FDoneEmptyPoundInit > 0 then
+      FDoneEmptyPoundInit := GetTickCount;
+    //车辆称重完毕后，未下磅
+  end;
 
-  if (Length(FBillItems) > 0) and
-  ((FUIData.FCardUse=sFlag_Sale) or (FUIData.FCardUse = sFlag_SaleNew) or
-   (FUIData.FCardUse=sFlag_DuanDao)) then
+  AddSample(nValue);
+  if not IsValidSamaple then Exit;
+  //样本验证不通过
+
+  if Length(FBillItems) <= 0 then Exit;
+  //退出称重
+
+  if (FUIData.FCardUse=sFlag_Sale) or (FUIData.FCardUse = sFlag_SaleNew) or
+     (FUIData.FCardUse=sFlag_DuanDao) then
   begin
     if FUIData.FNextStatus = sFlag_TruckBFP then
          FUIData.FPData.FValue := nValue
@@ -1146,19 +1170,19 @@ begin
       end;
     end else FUIData.FPData.FValue := nValue;
   end;
-
   SetUIData(False);
-  AddSample(nValue);
-  if not IsValidSamaple then Exit;
-  //样本验证不通过
-  {$IFDEF HR1847}
-  if not gKRMgrProber.IsTunnelOK(FPoundTunnel.FID) then
+  //更新显示信息
+
+  {$IFDEF MITTruckProber}
+    if not IsTunnelOK(FPoundTunnel.FID) then
   {$ELSE}
-  if not gProberManager.IsTunnelOK(FPoundTunnel.FID) then
+    if not gProberManager.IsTunnelOK(FPoundTunnel.FID) then
   {$ENDIF}
   begin
     nStr := '车辆未停到位,请移动车辆.';
     PlayVoice(nStr);
+
+    InitSamples;
     LEDDisplay(nStr);
     Exit;
   end;
@@ -1185,9 +1209,12 @@ begin
     end;
     LEDDisplay(nStr);
 
-    FIsWeighting := False;
     TimerDelay.Enabled := True;
   end else Timer_SaveFail.Enabled := True;
+
+  if FBarrierGate then
+    OpenDoorByReader(FLastReader, sFlag_No);
+  //打开副道闸
 end;
 
 procedure TfFrameAutoPoundItem.TimerDelayTimer(Sender: TObject);
@@ -1195,6 +1222,7 @@ begin
   try
     TimerDelay.Enabled := False;
     FLastCardDone := GetTickCount;
+    FDoneEmptyPoundInit := GetTickCount;
     WriteLog(Format('对车辆[ %s ]称重完毕.', [FUIData.FTruck]));
 
     PlayVoice(#9 + FUIData.FTruck);
@@ -1202,14 +1230,16 @@ begin
 
     FLastCard := FCardTmp;
     Timer2.Enabled := True;
-    {$IFDEF HR1847}
-    gKRMgrProber.TunnelOC(FPoundTunnel.FID, True);
+
+    if not FBarrierGate then
+      FIsWeighting := False;
+    //磅上无道闸时，即时过磅完毕
+
+    {$IFDEF MITTruckProber}
+    TunnelOC(FPoundTunnel.FID, True);
     {$ELSE}
     gProberManager.TunnelOC(FPoundTunnel.FID, True);
-    {$ENDIF}
-    //开红绿灯
-    gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
-    //关闭表头
+    {$ENDIF} //开红绿灯
     SetUIData(True);
   except
     on E: Exception do
@@ -1284,9 +1314,8 @@ procedure TfFrameAutoPoundItem.Timer_SaveFailTimer(Sender: TObject);
 begin
   inherited;
   try
+    FDoneEmptyPoundInit := GetTickCount;
     Timer_SaveFail.Enabled := False;
-    gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
-    //关闭表头
     SetUIData(True);
   except
     on E: Exception do

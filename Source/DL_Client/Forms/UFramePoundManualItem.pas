@@ -708,7 +708,9 @@ begin
 
   Timer2.Tag := 0;
   Timer2.Enabled := False;
-  gProberManager.TunnelOC(FPoundTunnel.FID,False);
+  {$IFNDEF MITTruckProber}
+    gProberManager.TunnelOC(FPoundTunnel.FID,False);
+  {$ENDIF} //中间件华益驱动自带关闭功能
 end;
 
 //Desc: 折叠面板
@@ -775,7 +777,11 @@ procedure TfFrameManualPoundItem.N1Click(Sender: TObject);
 begin
   N1.Checked := not N1.Checked;
   //status change
-  gProberManager.TunnelOC(FPoundTunnel.FID, N1.Checked);
+  {$IFDEF MITTruckProber}
+    TunnelOC(FPoundTunnel.FID, N1.Checked);
+  {$ELSE}
+    gProberManager.TunnelOC(FPoundTunnel.FID, N1.Checked);
+  {$ENDIF}
 end;
 
 //Desc: 关闭称重页面
@@ -913,7 +919,11 @@ begin
   if FloatRelation(nVal, FPoundTunnel.FPort.FMinValue, rtLE, 1000) then Exit;
   //读数小于过磅最低值时,退出
 
-  if not gProberManager.IsTunnelOK(FPoundTunnel.FID) then
+  {$IFDEF MITTruckProber}
+    if not IsTunnelOK(FPoundTunnel.FID) then
+  {$ELSE}
+    if not gProberManager.IsTunnelOK(FPoundTunnel.FID) then
+  {$ENDIF}
   begin
     nStr := '车辆未站稳,请稍后';
     ShowMsg(nStr, sHint);
@@ -971,32 +981,18 @@ begin
     while GetTickCount - nInit < 5 * 1000 do
     begin
       ShowWaitForm(ParentForm, '正在读卡', False);
+      FCardNOSync := gPoundCardReader.GetCardNOSync(FCardReader);
+      if FCardNOSync='' then Continue;
 
-      if Assigned(gPoundCardReader) then
+      nStr := 'Select C_Card From $TB Where C_Card=''$CD'' or ' +
+          'C_Card2=''$CD'' or C_Card3=''$CD''';
+      nStr := MacroValue(nStr, [MI('$TB', sTable_Card), MI('$CD', FCardNOSync)]);
+
+      with FDM.QueryTemp(nStr) do
+      if RecordCount > 0 then
       begin
-        FCardNOSync := gPoundCardReader.GetCardNOSync(FCardReader);
-        if FCardNOSync='' then Continue;
-
-        nStr := 'Select C_Card From $TB Where C_Card=''$CD'' or ' +
-            'C_Card2=''$CD'' or C_Card3=''$CD''';
-        nStr := MacroValue(nStr, [MI('$TB', sTable_Card), MI('$CD', FCardNOSync)]);
-
-        with FDM.QueryTemp(nStr) do
-        if RecordCount > 0 then
-        begin
-          nCard := Fields[0].AsString;
-          Break;
-        end;
-      end
-      else
-      begin
-        nStr := ReadPoundCard(FPoundTunnel.FID);
-
-        if nStr <> '' then
-        begin
-          nCard := nStr;
-          Break;
-        end else Sleep(1000);
+        nCard := Fields[0].AsString;
+        Break;
       end;
     end;
 
@@ -1697,7 +1693,11 @@ procedure TfFrameManualPoundItem.BtnSaveClick(Sender: TObject);
 var nBool: Boolean;
     nPoundID, nStr: string;
 begin
-  if not gProberManager.IsTunnelOK(FPoundTunnel.FID) then
+  {$IFDEF MITTruckProber}
+    if not IsTunnelOK(FPoundTunnel.FID) then
+  {$ELSE}
+    if not gProberManager.IsTunnelOK(FPoundTunnel.FID) then
+  {$ENDIF}
   begin
     ShowMsg('车辆未站稳,请稍后', sHint);
     Exit;
@@ -1720,7 +1720,11 @@ begin
       //播放语音
 
       Timer2.Enabled := True;
+      {$IFDEF MITTruckProber}
+      TunnelOC(FPoundTunnel.FID, True);
+      {$ELSE}
       gProberManager.TunnelOC(FPoundTunnel.FID, True);
+      {$ENDIF}
       //开红绿灯
       gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
       //关闭表头

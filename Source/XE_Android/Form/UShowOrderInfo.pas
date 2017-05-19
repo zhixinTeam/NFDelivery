@@ -23,6 +23,10 @@ type
     lblProvider: TLabel;
     lblID: TLabel;
     Label1: TLabel;
+    Label2: TLabel;
+    LabelNext: TLabel;
+    LabelMValue: TLabel;
+    Label7: TLabel;
     procedure tmrGetOrderTimer(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char;
@@ -61,7 +65,11 @@ begin
   begin
     FKZValue := StrToFloatDef(EditKZValue.Text, 0);
 
-    if SavePurchaseOrders('X', gOrders) then MainForm.Show;
+    if SavePurchaseOrders('X', gOrders) then
+         ShowMessage('验收成功')
+    else ShowMessage('验收失败');
+
+    MainForm.Show;
   end;
 end;
 
@@ -148,6 +156,8 @@ begin
     lblProvider.Text := FCusName;
     lblMate.Text     := FStockName;
     lblTruck.Text    := FTruck;
+    LabelNext.Text   := TruckStatusToStr(FNextStatus);
+    LabelMValue.Text := FloatToStr(FPData.FValue);
 
     EditKZValue.Text := FloatToStr(FKZValue);
   end;

@@ -32,6 +32,8 @@ type
     dxLayout1Item10: TdxLayoutItem;
     EditMValue: TcxTextEdit;
     dxLayout1Item11: TdxLayoutItem;
+    EditBill: TcxTextEdit;
+    dxLayout1Item5: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
   protected
     { Protected declarations }
@@ -58,7 +60,7 @@ begin
   if Assigned(nParam) then
        nP := nParam
   else Exit;
-  
+
   with TfFormPoundVerify.Create(Application) do
   try
     if nP.FCommand = cCmd_EditData then
@@ -109,6 +111,7 @@ begin
       SetCtrlData(EditStockNO, FieldByName('P_MID').AsString);
 
       EditPID.Text := FieldByName('P_ID').AsString;
+      EditBill.Text:= FieldByName('P_Bill').AsString;
       EditLineGroup.Text := FieldByName('P_Order').AsString;
       EditTruck.Text     := FieldByName('P_Truck').AsString;
 
@@ -123,13 +126,14 @@ procedure TfFormPoundVerify.BtnOKClick(Sender: TObject);
 var nStr, nEvent: string;
 begin
   nStr := MakeSQLByStr([SF('P_MID', GetCtrlData(EditStockNO)),
+          SF('P_Bill',  EditBill.Text),
           SF('P_MName', EditStockNO.Text),
           SF('P_Order', EditLineGroup.Text),
           SF('P_Truck', EditTruck.Text)], FPoundTable, SF('P_ID', FRecordID), False);
   FDM.ExecuteSQL(nStr);
 
-  nEvent := '磅单编号[ %s ]已勘误';
-  nEvent := Format(nEvent, [FRecordID]);
+  nEvent := '磅单编号[ %s ]已勘误, 原因为:[ %s ]';
+  nEvent := Format(nEvent, [FRecordID, EditMemo.Text]);
   FDM.WriteSysLog(sFlag_CommonItem, FRecordID, nEvent);
 
 

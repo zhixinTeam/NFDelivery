@@ -143,7 +143,7 @@ procedure TPoundCardReader.Execute;
 var nIdx: Integer;
     nRet: Boolean;
     nPItem: PTCardReadRecord;
-    nTunnels, nReadCard: string;
+    nTunnels, nReadCard, nReader: string;
 begin
   while not Terminated do
   try
@@ -165,7 +165,7 @@ begin
       nTunnels := Copy(nTunnels, 1, Length(nTunnels)-1);
 
       {$IFDEF HardMon}
-      nReadCard := ReadPoundCard(nTunnels, sFlag_Yes);
+      nReadCard := ReadPoundCard(nReader, nTunnels, sFlag_Yes);
       {$ENDIF}
       FCards.Text := nReadCard;
 

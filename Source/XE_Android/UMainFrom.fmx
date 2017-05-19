@@ -7,7 +7,6 @@ object MainForm: TMainForm
   FormFactor.Width = 320
   FormFactor.Height = 480
   FormFactor.Devices = [Desktop]
-  OnActivate = FormActivate
   OnCreate = FormCreate
   OnClose = FormClose
   OnKeyUp = FormKeyUp
@@ -120,5 +119,11 @@ object MainForm: TMainForm
         end
       end
     end
+  end
+  object TimerRun: TTimer
+    Enabled = False
+    OnTimer = TimerRunTimer
+    Left = 24
+    Top = 17
   end
 end

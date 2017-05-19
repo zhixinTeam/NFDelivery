@@ -47,8 +47,7 @@ implementation
 
 uses
   IniFiles, UlibFun, UMgrControl, UMgrPoundTunnels, UFramePoundAutoItem,
-  {$IFDEF HR1847}UKRTruckProber,{$ELSE}UMgrTruckProbe,{$ENDIF} UMgrRemoteVoice,
-  UMgrVoiceNet,USysGrid, USysLoger, USysConst;
+  UMgrTruckProbe, UMgrRemoteVoice, UMgrVoiceNet,USysGrid, USysLoger, USysConst;
 
 class function TfFramePoundAuto.FrameID: integer;
 begin
@@ -85,15 +84,8 @@ begin
     gPoundTunnelManager := TPoundTunnelManager.Create;
     gPoundTunnelManager.LoadConfig(gPath + 'Tunnels.xml');
   end;
-  {$IFDEF HR1847}
-  if not Assigned(gKRMgrProber) then
-  begin
-    gKRMgrProber := TKRMgrProber.Create;
-    gKRMgrProber.LoadConfig(gPath + 'TruckProber.xml');
 
-    Inc(gSysParam.FProberUser);
-  end;
-  {$ELSE}
+  {$IFNDEF MITTruckProber}
   if not Assigned(gProberManager) then
   begin
     gProberManager := TProberManager.Create;
@@ -105,6 +97,7 @@ begin
   gProberManager.StartProber;
   {$ENDIF}
   {$ENDIF}
+
   if gSysParam.FVoiceUser < 1 then
   begin
     Inc(gSysParam.FVoiceUser);
@@ -140,8 +133,8 @@ begin
     //xxxxx
   end;
 
+  {$IFNDEF MITTruckProber}
   Dec(gSysParam.FProberUser);
-  {$IFNDEF HR1847}
   if gSysParam.FProberUser < 1 then
     gProberManager.StopProber;
   //xxxxx

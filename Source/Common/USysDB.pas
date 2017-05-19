@@ -161,6 +161,7 @@ ResourceString
   sFlag_StockIfYS     = 'StockIfYS';                 //现场是否验收
   sFlag_ViaBillCard   = 'ViaBillCard';               //直接制卡
   sFlag_DispatchPound = 'PoundDispatch';             //磅站调度
+  sFlag_PSanWuChaStop = 'PoundSanWuChaStop';         //超出误差停止业务
   
   sFlag_PoundIfDai    = 'PoundIFDai';                //袋装是否过磅
   sFlag_PoundWuCha    = 'PoundWuCha';                //过磅误差分组
@@ -616,7 +617,7 @@ ResourceString
        'P_Type varChar(1), P_Order varChar(20), P_Card varChar(16),' +
        'P_Bill varChar(20), P_Truck varChar(15), P_CusID varChar(32),' +
        'P_CusName varChar(80), P_MID varChar(32),P_MName varChar(80),' +
-       'P_MType varChar(10), P_LimValue $Float,' +
+       'P_MType varChar(10), P_LimValue $Float, P_KZValue $Float,' +
        'P_PValue $Float, P_PDate DateTime, P_PMan varChar(32), ' +
        'P_MValue $Float, P_MDate DateTime, P_MMan varChar(32), ' +
        'P_FactID varChar(32), P_Origin varChar(80),' +

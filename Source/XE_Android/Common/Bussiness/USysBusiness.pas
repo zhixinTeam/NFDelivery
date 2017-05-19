@@ -68,12 +68,25 @@ function LogIn: Boolean;
 function LogOut: Boolean;
 
 function IsStockValid(const nStocks: string): Boolean;
+function TruckStatusToStr(const nStatus: string): string;
 implementation
 
 //Desc: 记录日志
 procedure WriteLog(const nEvent: string);
 begin
   //gSysLoger.AddLog(nEvent);
+end;
+
+//Desc: 将nStatus转成可识别内容
+function TruckStatusToStr(const nStatus: string): string;
+begin
+  if nStatus = 'I' then Result := '进厂' else
+  if nStatus = 'O' then Result := '出厂' else
+  if nStatus = 'P' then Result := '称皮重' else
+  if nStatus = 'M' then Result := '称毛重' else
+  if nStatus = 'X' then Result := '验收处' else
+  if nStatus = 'F' then Result := '放灰处' else
+  if nStatus = 'Z' then Result := '栈台' else Result := '未知';
 end;
 
 //------------------------------------------------------------------------------

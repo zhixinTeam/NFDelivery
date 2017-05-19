@@ -112,7 +112,8 @@ type
     procedure StartRead;
     procedure StopRead;
     //∆ÙÕ£∂¡»°
-    function GetPoundCard(const nPound: string): string;
+    function GetPoundCard(const nPound: string;
+      var nReader: string): string;
     procedure SetPoundCardExt(const nPound,nExtCard: string);
     //∞ı’æø®∫≈
     procedure OpenDoor(const nReader: string);
@@ -194,7 +195,8 @@ begin
 end;
 
 //Desc: ªÒ»°nPoundµ±«∞ø®∫≈
-function THardwareHelper.GetPoundCard(const nPound: string): string;
+function THardwareHelper.GetPoundCard(const nPound: string;
+    var nReader: string): string;
 var nIdx: Integer;
 begin
   FSyncLock.Enter;
@@ -210,7 +212,10 @@ begin
 
       FItems[nIdx].FCard := '';
       if Result <> '' then
+      begin
+        nReader := FItems[nIdx].FID;
         Break;
+      end;
       //loop get card
     end;
   finally

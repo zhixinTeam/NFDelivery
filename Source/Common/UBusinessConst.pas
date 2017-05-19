@@ -84,6 +84,8 @@ const
 
   cBC_IsTunnelOK              = $0075;
   cBC_TunnelOC                = $0076;
+  cBC_PlayVoice               = $0077;
+  cBC_OpenDoorByReader        = $0078;
 
   cBC_GetSQLQueryWeixin       = $0081;   //获取微信信息查询语句
   cBC_SaveWeixinAccount       = $0082;   //保存微信账户

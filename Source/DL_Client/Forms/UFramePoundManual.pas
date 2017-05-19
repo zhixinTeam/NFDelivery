@@ -95,14 +95,15 @@ begin
     gPoundTunnelManager.LoadConfig(gPath + 'Tunnels.xml');
   end;
 
+  {$IFNDEF MITTruckProber}
   if not Assigned(gProberManager) then
   begin
     gProberManager := TProberManager.Create;
     gProberManager.LoadConfig(gPath + 'TruckProber.xml');
   end;
-
   Inc(gSysParam.FProberUser);
   gProberManager.StartProber;
+  {$ENDIF}
 
   if gSysParam.FVoiceUser < 1 then
   begin
@@ -142,10 +143,12 @@ begin
   end;
   //xxxxx
 
+  {$IFNDEF MITTruckProber}
   Dec(gSysParam.FProberUser);
   if gSysParam.FProberUser < 1 then
     gProberManager.StopProber;
   //xxxxx
+  {$ENDIF}
 
   nIni := TIniFile.Create(gPath + sFormConfig);
   try
