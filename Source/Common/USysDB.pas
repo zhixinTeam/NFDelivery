@@ -94,8 +94,12 @@ ResourceString
   sFlag_Sale          = 'S';                         //销售
   sFlag_Returns       = 'R';                         //退货
   sFlag_Other         = 'O';                         //其它
+
   sFlag_DuanDao       = 'D';                         //短倒
   sFlag_SaleNew       = 'N';                         //固定卡销售
+
+  sFlag_ShipPro       = 'A';                         //复磅采购
+  sFlag_ShipTmp       = 'B';                         //复磅临时
 
   sFlag_TiHuo         = 'T';                         //自提
   sFlag_SongH         = 'S';                         //送货
@@ -199,6 +203,11 @@ ResourceString
   sFlag_HardSrvURL    = 'HardMonURL';
   sFlag_MITSrvURL     = 'MITServiceURL';             //服务地址
 
+  sFlag_Departments   = 'Departments';               //部门列表
+  sFlag_DepDaTing     = '大厅';                      //服务大厅
+  sFlag_DepJianZhuang = '监装';                      //监装
+  sFlag_DepBangFang   = '磅房';                      //磅房
+
   sFlag_AutoIn        = 'Truck_AutoIn';              //自动进厂
   sFlag_AutoOut       = 'Truck_AutoOut';             //自动出厂
   sFlag_OtherAutoIn   = 'Truck_OtherAutoIn';         //自动进厂(非销售)
@@ -227,6 +236,7 @@ ResourceString
   sFlag_Transfer      = 'Bus_Transfer';              //短倒单号
   sFlag_BillNewNO     = 'Bus_BillNew';
   sFlag_PStationNo    = 'Bus_PStation';              //火车衡称重记录
+  sFlag_CardProvide   = 'Bus_CardProvide';           //
   
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
@@ -244,6 +254,7 @@ ResourceString
   sTable_SerialBase   = 'Sys_SerialBase';            //编码种子
   sTable_SerialStatus = 'Sys_SerialStatus';          //编号状态
   sTable_WorkePC      = 'Sys_WorkePC';               //验证授权
+  sTable_ManualEvent  = 'Sys_ManualEvent';           //人工干预
 
   sTable_Order        = 'S_Order';                   //销售订单
   sTable_Card         = 'S_Card';                    //销售磁卡
@@ -261,6 +272,7 @@ ResourceString
   sTable_Deduct       = 'S_PoundDeduct';             //过磅暗扣
   sTable_BatcodeDoc   = 'S_BatcodeDoc';              //批次号
   sTable_StationTruck = 'S_StationTruck';            //火车厢
+  sTable_Customer     = 'S_Customer';                //客户信息
   
   sTable_PoundLog     = 'Sys_PoundLog';              //过磅数据
   sTable_PoundBak     = 'Sys_PoundBak';              //过磅作废
@@ -279,13 +291,13 @@ ResourceString
   sTable_Transfer     = 'P_Transfer';                //短倒明细单
   sTable_TransferBak  = 'P_TransferBak';             //短倒明细单
 
+  sTable_CardProvide  = 'P_CardProvide';             //供应卡记录
+  sTable_CardOther    = 'P_CardOther';               //临时称重
+  sTable_CardProvideBak  = 'P_CardProvideBak';       //供应卡记录
+  sTable_CardOtherBak    = 'P_CardOtherBak';         //临时称重
+
   sTable_ChineseBase  = 'Sys_ChineseBase';           //汉字喷码表
   sTable_ChineseDict  = 'Sys_ChineseDict';           //汉字编码字典
-
-  sTable_Customer     = 'S_Customer';                //客户信息
-  sTable_WeixinLog    = 'Sys_WeixinLog';             //微信日志
-  sTable_WeixinMatch  = 'Sys_WeixinMatch';           //账号匹配
-  sTable_WeixinTemp   = 'Sys_WeixinTemplate';        //信息模板
 
   {*新建表*}
   sSQL_NewSysDict = 'Create Table $Table(D_ID $Inc, D_Name varChar(15),' +
@@ -379,7 +391,9 @@ ResourceString
   sSQL_NewWorkePC = 'Create Table $Table(R_ID $Inc, W_Name varChar(100),' +
        'W_MAC varChar(32), W_Factory varChar(32), W_Serial varChar(32),' +
        'W_Departmen varChar(32), W_ReqMan varChar(32), W_ReqTime DateTime,' +
-       'W_RatifyMan varChar(32), W_RatifyTime DateTime, W_Valid Char(1))';
+       'W_RatifyMan varChar(32), W_RatifyTime DateTime,' +
+       'W_PoundID varChar(50), W_MITUrl varChar(128), W_HardUrl varChar(128),' +
+       'W_Valid Char(1))';
   {-----------------------------------------------------------------------------
    工作授权: WorkPC
    *.R_ID: 编号
@@ -390,7 +404,28 @@ ResourceString
    *.W_Serial: 编号
    *.W_ReqMan,W_ReqTime: 接入申请
    *.W_RatifyMan,W_RatifyTime: 批准
+   *.W_PoundID:磅站编号
+   *.W_MITUrl:业务服务
+   *.W_HardUrl:硬件服务
    *.W_Valid: 有效(Y/N)
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewManualEvent = 'Create Table $Table(R_ID $Inc, E_ID varChar(32),' +
+       'E_From varChar(32), E_Key varChar(32), E_Event varChar(200), ' +
+       'E_Solution varChar(100), E_Result varChar(12),E_Departmen varChar(32),' +
+       'E_Date DateTime, E_ManDeal varChar(32), E_DateDeal DateTime)';
+  {-----------------------------------------------------------------------------
+   人工干预事件: ManualEvent
+   *.R_ID: 编号
+   *.E_ID: 流水号
+   *.E_From: 来源
+   *.E_Key: 记录标识
+   *.E_Event: 事件
+   *.E_Solution: 处理方案(格式如: Y=通过;N=禁止) 
+   *.E_Result: 处理结果(Y/N)
+   *.E_Departmen: 处理部门
+   *.E_Date: 发生时间
+   *.E_ManDeal,E_DateDeal: 处理人
   -----------------------------------------------------------------------------}
 
   sSQL_NewCustomer = 'Create Table $Table(R_ID $Inc, C_ID varChar(15), ' +
@@ -620,13 +655,16 @@ ResourceString
        'P_MType varChar(10), P_LimValue $Float, P_KZValue $Float,' +
        'P_PValue $Float, P_PDate DateTime, P_PMan varChar(32), ' +
        'P_MValue $Float, P_MDate DateTime, P_MMan varChar(32), ' +
+       'P_PValue2 $Float, P_PDate2 DateTime, P_PMan2 varChar(32), ' +
+       'P_MValue2 $Float, P_MDate2 DateTime, P_MMan2 varChar(32), ' +
        'P_FactID varChar(32), P_Origin varChar(80),' +
        'P_PStation varChar(10), P_MStation varChar(10),' +
+       'P_PStation2 varChar(10), P_MStation2 varChar(10),' +
        'P_Direction varChar(10), P_PModel varChar(10), P_Status Char(1),' +
-       'P_Valid Char(1), P_PrintNum Integer Default 1,' +
+       'P_Valid Char(1), P_PrintNum Integer Default 1, P_Memo varChar(128),' +
        'P_DelMan varChar(32), P_DelDate DateTime)';
   {-----------------------------------------------------------------------------
-   过磅记录: Materails
+   过磅记录: PoundLog
    *.P_ID: 编号
    *.P_Type: 类型(销售,供应,临时)
    *.P_Order: 订单号,火车衡过磅时保存仓库编号
@@ -715,51 +753,6 @@ ResourceString
    *.T_HKBills: 合卡交货单列表
   -----------------------------------------------------------------------------}
 
-  sSQL_NewWXLog = 'Create Table $Table(R_ID $Inc, L_UserID varChar(50), ' +
-       'L_Data varChar(2000), L_MsgID varChar(20), L_Result varChar(150),' +
-       'L_Count Integer Default 0, L_Status Char(1), ' +
-       'L_Comment varChar(100), L_Date DateTime)';
-  {-----------------------------------------------------------------------------
-   微信发送日志:WeixinLog
-   *.R_ID:记录编号
-   *.L_UserID: 接收者ID
-   *.L_Data:微信数据
-   *.L_Count:发送次数
-   *.L_MsgID: 微信返回标识
-   *.L_Result:发送返回信息
-   *.L_Status:发送状态(N待发送,I发送中,Y已发送)
-   *.L_Comment:备注
-   *.L_Date: 发送时间
-  -----------------------------------------------------------------------------}
-
-  sSQL_NewWXMatch = 'Create Table $Table(R_ID $Inc, M_ID varChar(15), ' +
-       'M_WXID varChar(50), M_WXName varChar(64), M_WXFactory varChar(15), ' +
-       'M_IsValid Char(1), M_Comment varChar(100), ' +
-       'M_AttentionID varChar(32), M_AttentionType Char(1))';
-  {-----------------------------------------------------------------------------
-   微信账户:WeixinMatch
-   *.R_ID:记录编号
-   *.M_ID: 微信编号
-   *.M_WXID:开发ID
-   *.M_WXName:微信名
-   *.M_WXFactory:微信注册工厂编码
-   *.M_IsValid: 是否有效
-   *.M_Comment: 备注             
-   *.M_AttentionID,M_AttentionType: 微信关注客户ID,类型(S、业务员;C、客户;G、管理员)
-  -----------------------------------------------------------------------------}
-
-  sSQL_NewWXTemplate = 'Create Table $Table(R_ID $Inc, W_Type varChar(15), ' +
-       'W_TID varChar(50), W_TFields varChar(64), ' +
-       'W_TComment Char(300), W_IsValid Char(1))';
-  {-----------------------------------------------------------------------------
-   微信账户:WeixinMatch
-   *.R_ID:记录编号
-   *.W_Type:类型
-   *.W_TID:标识
-   *.W_TFields:数据域段
-   *.W_IsValid: 是否有效
-   *.W_TComment: 备注
-  -----------------------------------------------------------------------------}
   sSQL_NewProvider = 'Create Table $Table(R_ID $Inc, P_ID varChar(32),' +
        'P_Name varChar(80),P_PY varChar(80), P_Phone varChar(20),' +
        'P_Saler varChar(32),P_Memo varChar(50))';
@@ -900,6 +893,85 @@ ResourceString
    *.T_Man,T_Date: 单据信息
    *.T_DelMan,T_DelDate: 删除信息
    *.T_SyncNum, T_SyncDate, T_SyncMemo: 同步次数; 同步完成时间; 同步信息
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewCardProvide = 'Create Table $Table(R_ID $Inc, P_Card varChar(16),' +
+       'P_Order varChar(20), P_Truck varChar(15),' +
+       'P_CusID varChar(32), P_CusPY varChar(120), P_CusName varChar(120), ' +
+       'P_Origin varChar(128), P_MID varChar(32), P_MName varChar(80), ' +
+       'P_MType varChar(10), P_LimVal $Float, P_Pound varChar(20),' +
+       'P_Status Char(1), P_NextStatus Char(1),' +
+       'P_InTime DateTime, P_InMan varChar(32),' +
+       'P_OutTime DateTime, P_OutMan varChar(32),' +
+       'P_BFPTime DateTime, P_BFPMan varChar(32), P_BFPValue $Float Default 0,' +
+       'P_BFMTime DateTime, P_BFMMan varChar(32), P_BFMValue $Float Default 0,' +
+       'P_BFPTime2 DateTime, P_BFPMan2 varChar(32), P_BFPValue2 $Float Default 0,' +
+       'P_BFMTime2 DateTime, P_BFMMan2 varChar(32), P_BFMValue2 $Float Default 0,' +
+       'P_KeepCard varChar(1), P_OneDoor Char(1), P_MuiltiPound Char(1), ' +
+       'P_Man varChar(32), P_Date DateTime, P_UsePre Char(1),' +
+       'P_DelMan varChar(32), P_DelDate DateTime, P_Memo varChar(128))';
+  {-----------------------------------------------------------------------------
+   供应磁卡:CardProvide
+   *.R_ID:记录编号
+   *.P_Card:卡号
+   *.P_Truck: 车辆
+   *.P_Order:采购单号
+   *.P_Origin: 矿点
+   *.P_CusID,P_CusName:供应商
+   *.P_MID,P_MName:物料
+   *.P_MType:包,散等
+   *.P_LimVal:票重
+   *.P_Pound: 榜单编号
+   *.P_Status,P_NextStatus: 行车状态
+   *.P_InTime,P_InMan:进厂时间,放行人
+   *.P_OutTime,P_OutMan:出厂时间,放行人
+   *.P_BFPTime,P_BFPMan,P_BFPValue:皮重时间,操作人,皮重
+   *.P_BFMTime,P_BFMMan,P_BFMValue:毛重时间,操作人,毛重
+   *.P_KeepCard: 司机卡(Y/N),出厂时不清理
+   *.P_OneDoor: 单向过磅
+   *.P_MuiltiPound: 系统复磅
+   *.P_UsePre: 预置皮重
+   *.P_Man,P_Date:制卡人
+   *.P_DelMan,P_DelDate: 删除人
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewCardOther = 'Create Table $Table(R_ID $Inc, O_Card varChar(16),' +
+       'O_Truck varChar(15), O_CusID varChar(32), O_CusName varChar(80),' +
+       'O_CusPY varChar(80), O_MID varChar(32), O_MName varChar(80), ' +
+       'O_MType varChar(10), O_Origin varChar(80), O_LimVal $Float, ' +
+       'O_Status Char(1), O_NextStatus Char(1),O_Pound varChar(20),' +
+       'O_InTime DateTime, O_InMan varChar(32),' +
+       'O_OutTime DateTime, O_OutMan varChar(32),' +
+       'O_BFPTime DateTime, O_BFPMan varChar(32), O_BFPValue $Float Default 0,' +
+       'O_BFMTime DateTime, O_BFMMan varChar(32), O_BFMValue $Float Default 0,' +
+       'O_BFPTime2 DateTime, O_BFPMan2 varChar(32), O_BFPValue2 $Float Default 0,' +
+       'O_BFMTime2 DateTime, O_BFMMan2 varChar(32), O_BFMValue2 $Float Default 0,' +
+       'O_KeepCard varChar(1), O_MuiltiPound Char(1), O_Man varChar(32), O_Date DateTime,' +
+       'O_UsePValue Char(1) Default ''N'', O_OneDoor Char(1) Default ''N'', ' +
+       'O_UsePre Char(1), ' +
+       'O_DelMan varChar(32), O_DelDate DateTime, O_Memo varChar(128))';
+  {-----------------------------------------------------------------------------
+   临时磁卡:CardOther
+   *.R_ID:记录编号
+   *.O_Card:卡号
+   *.O_Truck: 车辆
+   *.O_CusID,O_CusName:供应商
+   *.O_Orgin: 矿点
+   *.O_MID,O_MName:物料
+   *.O_MType:包,散等
+   *.O_LimVal:票重
+   *.O_Status,O_NextStatus: 行车状态
+   *.O_InTime,O_InMan:进厂时间,放行人
+   *.O_OutTime,O_OutMan:出厂时间,放行人
+   *.O_BFPTime,O_BFPMan,T_BFPValue:皮重时间,操作人,皮重
+   *.O_BFMTime,O_BFMMan,T_BFMValue:毛重时间,操作人,毛重
+   *.O_KeepCard: 司机卡(Y/N),出厂时不清理
+   *.O_Man,O_Date:制卡人
+   *.O_UsePValue: 以空车为皮重
+   *.O_OneDoor: 单向过磅
+   *.O_MuiltiPound: 系统复磅
+   *.O_UsePre: 预置皮重
+   *.O_DelMan,O_DelDate: 删除人
   -----------------------------------------------------------------------------}
 
   sSQL_NewBatcode = 'Create Table $Table(R_ID $Inc, B_Stock varChar(32),' +
@@ -1101,6 +1173,8 @@ begin
   if nBus = sFlag_Provide    then Result := '供应' else
   if nBus = sFlag_DuanDao    then Result := '内倒' else
   if nBus = sFlag_Returns    then Result := '退货' else
+  if nBus = sFlag_ShipPro    then Result := '供应' else
+  if nBus = sFlag_ShipTmp    then Result := '转运' else
   if nBus = sFlag_Other      then Result := '其它';
 end;
 
@@ -1130,6 +1204,7 @@ begin
   AddSysTableItem(sTable_SerialStatus, sSQL_NewSerialStatus);
   AddSysTableItem(sTable_StockMatch, sSQL_NewStockMatch);
   AddSysTableItem(sTable_WorkePC, sSQL_NewWorkePC);
+  AddSysTableItem(sTable_ManualEvent, sSQL_NewManualEvent);
 
   AddSysTableItem(sTable_Order, sSQL_NewOrder);
   AddSysTableItem(sTable_Customer, sSQL_NewCustomer);
@@ -1166,9 +1241,11 @@ begin
   AddSysTableItem(sTable_Transfer, sSQL_NewTransfer);
   AddSysTableItem(sTable_TransferBak, sSQL_NewTransfer);
 
-  AddSysTableItem(sTable_WeixinLog, sSQL_NewWXLog);
-  AddSysTableItem(sTable_WeixinMatch, sSQL_NewWXMatch);
-  AddSysTableItem(sTable_WeixinTemp, sSQL_NewWXTemplate);
+  AddSysTableItem(sTable_CardProvideBak, sSQL_NewCardProvide);
+  AddSysTableItem(sTable_CardOtherBak, sSQL_NewCardOther);
+  AddSysTableItem(sTable_CardProvide, sSQL_NewCardProvide);
+  AddSysTableItem(sTable_CardOther, sSQL_NewCardOther);
+
   AddSysTableItem(sTable_ChineseBase, sSQL_NewChineseBase);
   AddSysTableItem(sTable_ChineseDict, sSQL_NewChineseDict);
 end;

@@ -82,6 +82,11 @@ const
   cFI_FrameStationPQuery= $0135;                     //火车衡过磅查询
   cFI_FrameStationPQueryImport= $0136;               //动态火车衡过磅查询
 
+  cFI_FrameCardProvide  = $0151;                     //采购档案管理
+  cFI_FrameCardTemp     = $0152;                     //临时档案管理
+  cFI_FrameCardProPQuery= $0153;                     //磅房查询
+  cFI_FrameCardTmpPQuery= $0154;                     //磅房查询
+
   cFI_FormMemo          = $1000;                     //备注窗口
   cFI_FormBackup        = $1001;                     //数据备份
   cFI_FormRestore       = $1002;                     //数据恢复
@@ -132,6 +137,8 @@ const
 
   cFI_FormWXAccount     = $1091;                     //微信账户
   cFI_FormWXSendlog     = $1092;                     //微信日志
+  cFI_FormTodo          = $1093;                     //需干预事件
+  cFI_FormTodoSend      = $1094;                     //推送事件
 
   cFI_FormProvBase      = $1120;                     //采购入厂单
   cFI_FormPurchase      = $1121;                     //采购验收
@@ -139,6 +146,10 @@ const
 
   cFI_FormStationStandard= $1133;                    //火车厢档案
   cFI_FormPoundVerify   = $1134;                     //
+
+  cFI_FormCardProvide   = $1151;                     //供应制卡
+  cFI_FormCardTemp      = $1152;                     //临时制卡
+  cFI_FormReadCard      = $1153;                     //读取卡片
 
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据
@@ -173,10 +184,12 @@ type
     FLocalIP    : string;                            //本机IP
     FLocalMAC   : string;                            //本机MAC
     FLocalName  : string;                            //本机名称
+    FMITServURL : string;                            //业务服务
     FHardMonURL : string;                            //硬件守护
 
     FFactNum    : string;                            //工厂编号
     FSerialID   : string;                            //电脑编号
+    FDepartment : string;                            //所属部门
     FIsManual   : Boolean;                           //手动过磅
     FAutoPound  : Boolean;                           //自动称重
 
@@ -282,6 +295,8 @@ begin
   AddMenuModuleItem('MAIN_A04', cFI_FormRestore, mtForm);
   AddMenuModuleItem('MAIN_A05', cFI_FormChangePwd, mtForm);
   AddMenuModuleItem('MAIN_A07', cFI_FrameAuthorize);
+  AddMenuModuleItem('MAIN_A08', cFI_FormTodo, mtForm);
+  AddMenuModuleItem('MAIN_A09', cFI_FormTodoSend, mtForm);
 
   AddMenuModuleItem('MAIN_B01', cFI_FrameTrucks);
   AddMenuModuleItem('MAIN_B02', cFI_FrameShip);
@@ -319,6 +334,10 @@ begin
   AddMenuModuleItem('MAIN_G01', cFI_FormLadSan, mtForm);
   AddMenuModuleItem('MAIN_G02', cFI_FrameFangHuiQuery);
 
+  AddMenuModuleItem('MAIN_H01', cFI_FormTruckIn, mtForm);
+  AddMenuModuleItem('MAIN_H02', cFI_FormTruckOut, mtForm);
+  AddMenuModuleItem('MAIN_H03', cFI_FrameTruckQuery);
+
   AddMenuModuleItem('MAIN_L01', cFI_FrameTruckQuery);
   AddMenuModuleItem('MAIN_L02', cFI_FrameCusAccountQuery);
   AddMenuModuleItem('MAIN_L03', cFI_FrameCusInOutMoney);
@@ -329,11 +348,9 @@ begin
   AddMenuModuleItem('MAIN_L10', cFI_FrameProvideDetailQuery);
   AddMenuModuleItem('MAIN_L11', cFI_FrameDiapatchDetailQuery);
   AddMenuModuleItem('MAIN_L12', cFI_FrameProvDetail);
+  AddMenuModuleItem('MAIN_L13', cFI_FrameCardProPQuery);
+  AddMenuModuleItem('MAIN_L14', cFI_FrameCardTmpPQuery);
 
-  AddMenuModuleItem('MAIN_H01', cFI_FormTruckIn, mtForm);
-  AddMenuModuleItem('MAIN_H02', cFI_FormTruckOut, mtForm);
-  AddMenuModuleItem('MAIN_H03', cFI_FrameTruckQuery);
-  
   AddMenuModuleItem('MAIN_M01', cFI_FrameProvider);
   AddMenuModuleItem('MAIN_M02', cFI_FrameMaterails);
   AddMenuModuleItem('MAIN_M03', cFI_FormPurchase, mtForm);
@@ -341,6 +358,11 @@ begin
   AddMenuModuleItem('MAIN_M05', cFI_FrameProvBase);
   AddMenuModuleItem('MAIN_M06', cFI_FrameProvTruckQuery);
   AddMenuModuleItem('MAIN_M07', cFI_FrameMine);
+
+  AddMenuModuleItem('MAIN_N01', cFI_FrameCardProvide);
+  AddMenuModuleItem('MAIN_N02', cFI_FormCardProvide, mtForm);
+  AddMenuModuleItem('MAIN_N03', cFI_FrameCardTemp);
+  AddMenuModuleItem('MAIN_N04', cFI_FormCardTemp, mtForm);
 
   AddMenuModuleItem('MAIN_W01', cFI_FrameWXAccount);
   AddMenuModuleItem('MAIN_W02', cFI_FrameWXSendLog);

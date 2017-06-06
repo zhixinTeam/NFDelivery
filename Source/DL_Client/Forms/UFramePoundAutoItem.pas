@@ -480,7 +480,8 @@ begin
   begin
     if FSelected then
     begin
-      FPoundID := '';
+      if (FCardUse = sFlag_Sale) or (FCardUse = sFlag_SaleNew) then
+        FPoundID := '';
       //该标记有特殊用途
       
       if nInt = 0 then
@@ -960,7 +961,8 @@ begin
   Result := False;
   //init
 
-  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
+  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) and
+     (FUIData.FCardUse <> sFlag_ShipTmp) and (FUIData.FMuiltiType <> sFlag_Yes) then
   begin
     FListA.Clear;
     FListA.Add(FUIData.FExtID_2);
@@ -1192,28 +1194,24 @@ begin
   else if FUIData.FCardUse = sFlag_SaleNew then nRet := SavePoundSale
   else if FUIData.FCardUse = sFlag_DuanDao then nRet := SavePoundDuanDao
   else if FUIData.FCardUse = sFlag_Provide then nRet := SavePoundProvide
+  else if FUIData.FCardUse = sFlag_ShipPro then nRet := SavePoundProvide
+  else if FUIData.FCardUse = sFlag_ShipTmp then nRet := SavePoundProvide
   else nRet := False;
 
   if nRet then
   begin
-    if (FUIData.FMData.FValue > 0) and (FUIData.FPData.FValue > 0) then
-    begin
-      nStr := GetTruckNO(FUIData.FTruck) + GetOrigin(FUIData.FOrigin) +
-              '净重: ' + GetValue(FUIData.FMData.FValue-FUIData.FPData.FValue);
-    end else
-
-    if FUIData.FPData.FValue > 0 then
-    begin
-      nStr := GetTruckNO(FUIData.FTruck) + GetOrigin(FUIData.FOrigin) +
-              '毛重: ' + GetValue(FUIData.FPData.FValue);
-    end;
+    nStr := GetTruckNO(FUIData.FTruck) + '重量  ' + GetValue(nValue);
     LEDDisplay(nStr);
 
     TimerDelay.Enabled := True;
   end else Timer_SaveFail.Enabled := True;
 
   if FBarrierGate then
-    OpenDoorByReader(FLastReader, sFlag_No);
+  begin
+    if FUIData.FOneDoor = sFlag_Yes then
+         OpenDoorByReader(FLastReader, sFlag_Yes)
+    else OpenDoorByReader(FLastReader, sFlag_No);
+  end;
   //打开副道闸
 end;
 
@@ -1305,6 +1303,7 @@ end;
 
 procedure TfFrameAutoPoundItem.LEDDisplay(const nStrtext: string);
 begin
+  WriteSysLog(Format('LEDDisplay:%s.%s', [FPoundTunnel.FID, nStrtext]));
   if Assigned(FPoundTunnel.FOptions) And
      (UpperCase(FPoundTunnel.FOptions.Values['LEDEnable'])='Y') then
     gDisplayManager.Display(FPoundTunnel.FID, nStrtext);

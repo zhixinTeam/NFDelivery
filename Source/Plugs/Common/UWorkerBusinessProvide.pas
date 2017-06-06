@@ -987,9 +987,6 @@ begin
         end;
       end;
 
-      nStr := SF('P_Order', FID);
-      //where
-
       nVal := FMData.FValue - FPData.FValue -FKZValue;
       nVal := Float2Float(nVal, cPrecision, False);
       //¾»ÖØ
@@ -1002,6 +999,9 @@ begin
       FListA.Add(nSQL);
       //Ô¤ÖÃÆ¤ÖØ
       {$ENDIF}
+
+      nStr := SF('P_Order', FID);
+      //where
 
       if FNextStatus = sFlag_TruckBFP then
       begin

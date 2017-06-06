@@ -131,6 +131,7 @@ begin
   Result := False;
   ListCustom.Items.Clear; 
   nStr := GetQueryCustomerSQL(EditCus.Text, EditCus.Text);
+  if nStr = '' then Exit;
 
   with FDM.QueryTemp(nStr, True) do
   if RecordCount > 0 then

@@ -18,23 +18,26 @@ uses
   UFormGetCustom, UFormBill, UFrameBill, UFormTruckIn, UFormTruckOut,
   UFormLadingSan, UFormLadingDai, UFrameBillCard, UFormCard, UFramePoundManual,
   UFrameTruckQuery, UFrameQueryDiapatch, UFrameQuerySaleDetail, UFrameZTDispatch,
-  UFormZTLine, UFramePoundQuery, UFormRFIDCard,
+  UFormZTLine, UFramePoundQuery, UFormRFIDCard, UFormCustomer, UFrameCustomer,
   UFormChangeTunnel, UFrameDeduct, UFormDeduct, UFormGetNCStock, UFrameMine,
   UFormMine, UFormGetMine, UFormPoundDispatch, UFrameBatcodeQuery,
   UFormBatcodeEdit, UFramePoundAuto, UFrameQueryProvideDetail,
   UFrameQueryDiapatchDetail, UFormBillNew, UFrameBillNew,
-  UFrameBatcodeJ, UFormBatcodeJ,
+  UFrameBatcodeJ, UFormBatcodeJ, UFormTodo, UFormTodoSend,
 
   UFormProvCard, UFormProvBase, UFrameProvBase, UFrameProvTruckDetail,
   UFrameQueryProvDetail, UFormPurchasing,
   UFormTransfer, UFormTransferCard, UFrameQueryTransferDetail,
+  //原料制卡和临时业务
+
   UFramePoundStation, UFrameStationPQuery, UFrameStationPQueryImport,
-  UFrameStationStandard, UFormStationStandard
-  {$IFDEF MicroMsg},
-  UFormWeiXinAccount, UFrameWeiXinAccount,
-  UFormWeiXinSendlog, UFrameWeiXinSendlog,
-  UFormCustomer, UFrameCustomer
-  {$ENDIF}
+  UFrameStationStandard, UFormStationStandard,
+  //火车衡业务
+
+  UFrameCardProvide, UFormCardProvide, UFrameCardProPQuery,
+  UFrameCardTemp, UFormCardTemp, UFrameCardTmpPQuery,
+  UFormReadCard
+  //码头业务
   {$IFDEF PrintChinese},
   UFrameChineseBase, UFormChineseBase, UFrameChineseDict ,UFormChineseDict
   {$ENDIF};
@@ -47,7 +50,7 @@ implementation
 
 uses
   UMgrChannel, UChannelChooser, UDataModule, USysDB, USysMAC, SysUtils,
-  USysLoger, USysConst, UMemDataPool, UMgrLEDDisp;
+  USysLoger, USysConst, UMemDataPool, UMgrLEDDisp, UFormBase;
 
 //Desc: 初始化系统对象
 procedure InitSystemObject;
@@ -89,6 +92,21 @@ begin
   begin
     gSysParam.FFactNum := Fields[0].AsString;
     gSysParam.FSerialID := Fields[1].AsString;
+  end;
+
+  nStr := 'Select W_Factory,W_Serial,W_Departmen,W_HardUrl,W_MITUrl From %s ' +
+          'Where W_MAC=''%s'' And W_Valid=''%s''';
+  nStr := Format(nStr, [sTable_WorkePC, gSysParam.FLocalMAC, sFlag_Yes]);
+
+  with FDM.QueryTemp(nStr),gSysParam do
+  if RecordCount > 0 then
+  begin
+    FFactNum := Fields[0].AsString;
+    FSerialID := Fields[1].AsString;
+
+    FDepartment := Fields[2].AsString;
+    FHardMonURL := Trim(Fields[3].AsString);
+    FMITServURL := Trim(Fields[4].AsString);
   end;
 
   //----------------------------------------------------------------------------
@@ -158,35 +176,48 @@ begin
   end;
 
   //----------------------------------------------------------------------------
-  nStr := 'Select D_Value From %s Where D_Name=''%s''';
-  nStr := Format(nStr, [sTable_SysDict, sFlag_MITSrvURL]);
-
-  with FDM.QueryTemp(nStr) do
-  if RecordCount > 0 then
+  if gSysParam.FMITServURL = '' then  //使用默认URL
   begin
-    First;
+    nStr := 'Select D_Value From %s Where D_Name=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_MITSrvURL]);
 
-    while not Eof do
+    with FDM.QueryTemp(nStr) do
+    if RecordCount > 0 then
     begin
-      gChannelChoolser.AddChannelURL(Fields[0].AsString);
-      Next;
-    end;
+      First;
 
-    {$IFNDEF DEBUG}
-    gChannelChoolser.StartRefresh;
-    {$ENDIF}//update channel
+      while not Eof do
+      begin
+        gChannelChoolser.AddChannelURL(Fields[0].AsString);
+        Next;
+      end;
+
+      {$IFNDEF DEBUG}
+      //gChannelChoolser.StartRefresh;
+      {$ENDIF}//update channel
+    end;
+  end else
+  begin
+    gChannelChoolser.AddChannelURL(gSysParam.FMITServURL);
+    //电脑专用URL
   end;
 
-  nStr := 'Select D_Value From %s Where D_Name=''%s''';
-  nStr := Format(nStr, [sTable_SysDict, sFlag_HardSrvURL]);
-
-  with FDM.QueryTemp(nStr) do
-  if RecordCount > 0 then
+  if gSysParam.FHardMonURL = '' then //采用系统默认硬件守护
   begin
-    gSysParam.FHardMonURL := Fields[0].AsString;
+    nStr := 'Select D_Value From %s Where D_Name=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_HardSrvURL]);
+
+    with FDM.QueryTemp(nStr) do
+     if RecordCount > 0 then
+      gSysParam.FHardMonURL := Fields[0].AsString;
+    //xxxxx
   end;
 
   gDisplayManager.StartDisplay;
+  //启动显示
+
+  CreateBaseFormItem(cFI_FormTodo);
+  //待处理事项
 end;
 
 //Desc: 释放系统对象

@@ -145,6 +145,70 @@ begin
   end;
 end;
 
+//Date: 2017-06-04
+//Parm: 命令;数据;参数;输出
+//Desc: 调用中间件上的销售单据对象
+function CallBusinessShipPro(const nCmd: Integer;
+  const nData, nExt: string; const nOut: PWorkerBusinessCommand): Boolean;
+var nStr: string;
+    nIn: TWorkerBusinessCommand;
+    nPacker: TBusinessPackerBase;
+    nWorker: TBusinessWorkerBase;
+begin
+  nPacker := nil;
+  nWorker := nil;
+  try
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nExt;
+
+    nPacker := gBusinessPackerManager.LockPacker(sBus_BusinessCommand);
+    nStr := nPacker.PackIn(@nIn);
+    nWorker := gBusinessWorkerManager.LockWorker(sBus_BusinessShipPro);
+    //get worker
+
+    Result := nWorker.WorkActive(nStr);
+    if Result then
+         nPacker.UnPackOut(nStr, nOut)
+    else nOut.FData := nStr;
+  finally
+    gBusinessPackerManager.RelasePacker(nPacker);
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
+//Date: 2017-06-04
+//Parm: 命令;数据;参数;输出
+//Desc: 调用中间件上的销售单据对象
+function CallBusinessShipTmp(const nCmd: Integer;
+  const nData, nExt: string; const nOut: PWorkerBusinessCommand): Boolean;
+var nStr: string;
+    nIn: TWorkerBusinessCommand;
+    nPacker: TBusinessPackerBase;
+    nWorker: TBusinessWorkerBase;
+begin
+  nPacker := nil;
+  nWorker := nil;
+  try
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nExt;
+
+    nPacker := gBusinessPackerManager.LockPacker(sBus_BusinessCommand);
+    nStr := nPacker.PackIn(@nIn);
+    nWorker := gBusinessWorkerManager.LockWorker(sBus_BusinessShipTmp);
+    //get worker
+
+    Result := nWorker.WorkActive(nStr);
+    if Result then
+         nPacker.UnPackOut(nStr, nOut)
+    else nOut.FData := nStr;
+  finally
+    gBusinessPackerManager.RelasePacker(nPacker);
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
 //Date: 2014-10-16
 //Parm: 命令;数据;参数;输出
 //Desc: 调用硬件守护上的业务对象
@@ -272,6 +336,62 @@ begin
     gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
   //xxxxx
 end;
+
+//Date: 2017-06-04
+//Parm: 岗位;码头采购单列表
+//Desc: 保存nPost岗位上的采购入厂单数据
+function GetShipProItems(const nCard,nPost: string;
+ var nData: TLadingBillItems): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessShipPro(cBC_GetPostBills, nCard, nPost, @nOut);
+  if Result then
+       AnalyseBillItems(nOut.FData, nData)
+  else gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
+end;
+
+//Date: 2017-06-04
+//Parm: 岗位;码头采购单列表
+//Desc: 保存nPost岗位上的采购入厂单数据
+function SaveShipProItems(const nPost: string; nData: TLadingBillItems): Boolean;
+var nStr: string;
+    nOut: TWorkerBusinessCommand;
+begin
+  nStr := CombineBillItmes(nData);
+  Result := CallBusinessShipPro(cBC_SavePostBills, nStr, nPost, @nOut);
+
+  if not Result then
+    gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
+  //xxxxx
+end;
+
+//Date: 2017-06-04
+//Parm: 岗位;码头采购单列表
+//Desc: 保存nPost岗位上的采购入厂单数据
+function GetShipTmpItems(const nCard,nPost: string;
+ var nData: TLadingBillItems): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessShipTmp(cBC_GetPostBills, nCard, nPost, @nOut);
+  if Result then
+       AnalyseBillItems(nOut.FData, nData)
+  else gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
+end;
+
+//Date: 2017-06-04
+//Parm: 岗位;码头采购单列表
+//Desc: 保存nPost岗位上的采购入厂单数据
+function SaveShipTmpItems(const nPost: string; nData: TLadingBillItems): Boolean;
+var nStr: string;
+    nOut: TWorkerBusinessCommand;
+begin
+  nStr := CombineBillItmes(nData);
+  Result := CallBusinessShipTmp(cBC_SavePostBills, nStr, nPost, @nOut);
+
+  if not Result then
+    gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
+  //xxxxx
+end;
                                                              
 //------------------------------------------------------------------------------
 //Date: 2013-07-21
@@ -310,13 +430,22 @@ begin
   if not VerifyLadingBill(nCard, nDB) then Exit;
   //如果首次刷卡，则生成明细
 
+  nRet := False;
   if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
     nRet := GetLadingBills(nCard, sFlag_TruckIn, nTrucks) else
   if nCardType = sFlag_Provide then
-    nRet := GetProvideItems(nCard, sFlag_TruckIn, nTrucks) else nRet := False;
+    nRet := GetProvideItems(nCard, sFlag_TruckIn, nTrucks) else
+  if nCardType = sFlag_ShipPro then
+    nRet := GetShipProItems(nCard, sFlag_TruckIn, nTrucks) else
+  if nCardType = sFlag_ShipTmp then
+    nRet := GetShipTmpItems(nCard, sFlag_TruckIn, nTrucks);
 
   if not nRet then
   begin
+    if gTruckQueueManager.IsTruckAutoIn(nCardType=sFlag_Sale) then
+      gHardwareHelper.SetReaderCard(nReader, nCard);
+    //读取不到卡片信息
+
     nStr := '读取磁卡[ %s ]订单信息失败.';
     nStr := Format(nStr, [nCard]);
 
@@ -342,6 +471,10 @@ begin
 
     nStr := '车辆[ %s ]下一状态为:[ %s ],进厂刷卡无效.';
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
+
+    if gTruckQueueManager.IsTruckAutoIn(nCardType=sFlag_Sale) then
+      gHardwareHelper.SetReaderCard(nReader, nCard);
+    //当前非进厂状态
 
     WriteHardHelperLog(nStr, sPost_In);
     Exit;
@@ -373,9 +506,14 @@ begin
   end;
 
   //----------------------------------------------------------------------------
-  if nCardType = sFlag_Provide then //非销售业务,不使用队列
+  if (nCardType <> sFlag_Sale) and (nCardType <> sFlag_SaleNew) then            //非销售业务,不使用队列
   begin
-    nRet := SaveProvideItems(sFlag_TruckIn, nTrucks);
+    if nCardType = sFlag_Provide then
+      nRet := SaveProvideItems(sFlag_TruckIn, nTrucks)  else
+    if nCardType = sFlag_ShipPro then
+      nRet := SaveShipProItems(sFlag_TruckIn, nTrucks)  else
+    if nCardType = sFlag_ShipTmp then
+      nRet := SaveShipTmpItems(sFlag_TruckIn, nTrucks);
 
     if not nRet then
     begin
@@ -491,7 +629,7 @@ end;
 //Parm: 卡号;读头;打印机
 //Desc: 对nCard放行出厂
 procedure MakeTruckOut(const nCard,nReader,nPrinter: string);
-var nStr, nCardType, nPrint: string;
+var nStr, nCardType, nPrint, nID: string;
     nIdx: Integer;
     nRet: Boolean;
     nReaderItem: THHReaderItem;
@@ -502,10 +640,15 @@ var nStr, nCardType, nPrint: string;
 begin
   if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
 
+  nRet := False;
   if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
     nRet := GetLadingBills(nCard, sFlag_TruckOut, nTrucks) else
   if nCardType = sFlag_Provide then
-    nRet := GetProvideItems(nCard, sFlag_TruckOut, nTrucks) else nRet := False;
+    nRet := GetProvideItems(nCard, sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_ShipPro then
+    nRet := GetShipProItems(nCard, sFlag_TruckOut, nTrucks)  else
+  if nCardType = sFlag_ShipTmp then
+    nRet := GetShipTmpItems(nCard, sFlag_TruckOut, nTrucks);
   //xxxxx
 
   if not nRet then
@@ -538,10 +681,15 @@ begin
     Exit;
   end;
 
+  nRet := False;
   if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
     nRet := SaveLadingBills(sFlag_TruckOut, nTrucks) else
   if nCardType = sFlag_Provide then
-    nRet := SaveProvideItems(sFlag_TruckOut, nTrucks) else nRet := False;
+    nRet := SaveProvideItems(sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_ShipPro then
+    nRet := SaveShipProItems(sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_ShipTmp then
+    nRet := SaveShipTmpItems(sFlag_TruckOut, nTrucks);
   //xxxxx
 
   if not nRet then
@@ -586,9 +734,15 @@ begin
       nPrint := nReaderItem.FPrinter;
     end else nPrint := nPrinter;
 
+    if (nCardType = sFlag_ShipPro) or (nCardType = sFlag_ShipTmp) then
+         nID := nTrucks[nIdx].FPoundID
+    else nID := nTrucks[nIdx].FID;
+
     if nPrint = '' then
-         gRemotePrinter.PrintBill(nTrucks[nIdx].FID + nStr)
-    else gRemotePrinter.PrintBill(nTrucks[nIdx].FID + #9 + nPrint + nStr);
+         nStr := nID + nStr
+    else nStr := nID + #9 + nPrint + nStr;
+
+    gRemotePrinter.PrintBill(nStr);
   end; //打印报表
 end;
 
@@ -1428,15 +1582,18 @@ end;
 
 procedure HardOpenDoor(const nReader: String);
 var nIdx: Integer;
+    nStr: string;
 begin
   for nIdx := 0 to 3 do
   begin
     {$IFDEF RFIDOPENDOOR}
-    gHYReaderManager.OpenDoor(nReader);
+    nStr := StringReplace(nReader, 'V', 'H', [rfReplaceAll]);
+    gHYReaderManager.OpenDoor(nStr);
     {$ELSE}
-    gHardwareHelper.OpenDoor(nReader);
+    nStr := StringReplace(nReader, 'V', '1', [rfReplaceAll]);
+    gHardwareHelper.OpenDoor(nStr);
     {$ENDIF}
-  end;  
+  end;
 end;
 
 //Date: 2009-7-4

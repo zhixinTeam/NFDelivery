@@ -49,8 +49,6 @@ type
     dxLayoutControl1Item1: TdxLayoutItem;
     dxLayoutControl1Group13: TdxLayoutGroup;
     dxLayoutControl1Group3: TdxLayoutGroup;
-    EditWX: TcxComboBox;
-    dxLayoutControl1Item22: TdxLayoutItem;
     EditName: TcxButtonEdit;
     dxLayoutControl1Item12: TdxLayoutItem;
     dxLayoutControl1Group7: TdxLayoutGroup;
@@ -65,6 +63,7 @@ type
       Shift: TShiftState);
     procedure EditNamePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
+    procedure EditNameKeyPress(Sender: TObject; var Key: Char);
   private
     { Private declarations }
     FAddFlag: Boolean;
@@ -167,11 +166,6 @@ end;
 procedure TfFormCustomer.FormCreate(Sender: TObject);
 var nIni: TIniFile;
 begin
-  {$IFNDEF MicroMsg}
-  EditWX.Hint := '';
-  EditWX.Visible := False; 
-  {$ENDIF}
-
   nIni := TIniFile.Create(gPath + sFormConfig);
   try
     LoadFormConfig(Self, nIni);
@@ -234,12 +228,6 @@ procedure TfFormCustomer.InitFormData(const nID: string);
 var nStr: string;
 begin
   LoadSysDictItem(sFlag_CustomerItem, InfoItems.Properties.Items);
-
-  nStr := 'M_ID=Select M_ID,M_WXName From %s Order By M_ID DESC';
-  nStr := Format(nStr, [sTable_WeixinMatch]);
-  
-  FDM.FillStringsData(EditWX.Properties.Items, nStr, 6, '.');
-  AdjustStringsItem(EditWX.Properties.Items, False);
 
   if nID <> '' then
   begin
@@ -412,10 +400,7 @@ procedure TfFormCustomer.EditNamePropertiesButtonClick(Sender: TObject;
 var nP: TFormCommandParam;
 begin
   inherited;
-  if EditName.Text <> '' then
-  begin
-    nP.FParamA := EditName.Text;
-  end;
+  nP.FParamA := Trim(EditName.Text);
   CreateBaseFormItem(cFI_FormGetCustom, '', @nP);
 
   if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
@@ -423,6 +408,25 @@ begin
     FCustomerID := nP.FParamB;
     EditName.Text := nP.FParamC;
   end;
+end;
+
+procedure TfFormCustomer.EditNameKeyPress(Sender: TObject; var Key: Char);
+var nP: TFormCommandParam;
+begin
+  inherited;
+  if Key = #13 then
+  begin
+    Key := #0;
+
+    nP.FParamA := Trim(EditName.Text);
+    CreateBaseFormItem(cFI_FormGetCustom, '', @nP);
+
+    if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
+    begin
+      FCustomerID := nP.FParamB;
+      EditName.Text := nP.FParamC;
+    end;
+  end;  
 end;
 
 initialization

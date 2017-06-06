@@ -160,7 +160,7 @@ begin
   end;
 
   nP.FParamA := BuildOrderInfo(nOrder);
-  CreateBaseFormItem(cFI_FormProvBase, PopedomItem, @nP);
+  CreateBaseFormItem(cFI_FormCardProvide, PopedomItem, @nP);
 end;
 
 initialization

@@ -62,6 +62,18 @@ type
     class function FunctionName: string; override;
   end;
 
+  TClientBusinessShipPro = class(TClient2MITWorker)
+  public
+    function GetFlagStr(const nFlag: Integer): string; override;
+    class function FunctionName: string; override;
+  end;
+
+  TClientBusinessShipTmp = class(TClient2MITWorker)
+  public
+    function GetFlagStr(const nFlag: Integer): string; override;
+    class function FunctionName: string; override;
+  end;
+
   TClientBusinessHardware = class(TClient2MITWorker)
   public
     function GetFlagStr(const nFlag: Integer): string; override;
@@ -329,6 +341,38 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+class function TClientBusinessShipPro.FunctionName: string;
+begin
+  Result := sCLI_BusinessShipPro;
+end;
+
+function TClientBusinessShipPro.GetFlagStr(const nFlag: Integer): string;
+begin
+  Result := inherited GetFlagStr(nFlag);
+
+  case nFlag of
+   cWorker_GetPackerName : Result := sBus_BusinessCommand;
+   cWorker_GetMITName    : Result := sBus_BusinessShipPro;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+class function TClientBusinessShipTmp.FunctionName: string;
+begin
+  Result := sCLI_BusinessShipTmp;
+end;
+
+function TClientBusinessShipTmp.GetFlagStr(const nFlag: Integer): string;
+begin
+  Result := inherited GetFlagStr(nFlag);
+
+  case nFlag of
+   cWorker_GetPackerName : Result := sBus_BusinessCommand;
+   cWorker_GetMITName    : Result := sBus_BusinessShipTmp;
+  end;
+end;
+
+//------------------------------------------------------------------------------
 class function TClientBusinessHardware.FunctionName: string;
 begin
   Result := sCLI_HardwareCommand;
@@ -355,5 +399,7 @@ initialization
   gBusinessWorkerManager.RegisteWorker(TClientBusinessSaleBill);
   gBusinessWorkerManager.RegisteWorker(TClientBusinessProvide);
   gBusinessWorkerManager.RegisteWorker(TClientBusinessDuanDao);
+  gBusinessWorkerManager.RegisteWorker(TClientBusinessShipPro);
+  gBusinessWorkerManager.RegisteWorker(TClientBusinessShipTmp);
   gBusinessWorkerManager.RegisteWorker(TClientBusinessHardware);
 end.

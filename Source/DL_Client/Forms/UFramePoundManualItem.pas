@@ -537,8 +537,9 @@ begin
   begin
     if FSelected then
     begin
-      FPoundID := '';
-      //该标记有特殊用途
+      if (FCardUse = sFlag_Sale) or (FCardUse = sFLag_SaleNew) then
+        FPoundID := '';
+      //销售水泥该标记有特殊用途
 
       FNCChanged   := False;
       FChangeValue := 0;
@@ -932,8 +933,8 @@ begin
   end;
 
   if (Length(FBillItems) > 0) and
-  ((FUIData.FCardUse=sFlag_Sale) or (FBillItems[0].FCardUse = sFlag_SaleNew) or
-   (FBillItems[0].FCardUse = sFlag_DuanDao)) then
+  ((FUIData.FCardUse=sFlag_Sale) or (FUIData.FCardUse = sFlag_SaleNew) or
+   (FUIData.FCardUse = sFlag_DuanDao)) then
   begin
     if FBillItems[0].FNextStatus = sFlag_TruckBFP then
          FUIData.FPData.FValue := nVal
@@ -1217,46 +1218,50 @@ begin
       Exit;
     end;
 
-    FListA.Clear;
-    FListA.Add(FUIData.FExtID_2);
-    nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
-
-    FListB.Clear;
-    FListB.Values['MeamKeys'] := nStr;
-    nStr := EncodeBase64(FListB.Text);
-    nStr := GetQueryOrderSQL('203', nStr);
-    if nStr = '' then Exit;
-
-    with FDM.QueryTemp(nStr, True) do
+    if (FUIData.FCardUse <> sFlag_ShipTmp) and (FUIData.FMuiltiType <> sFlag_Yes) then
     begin
-      if RecordCount < 1 then
-      begin
-        nStr := StringReplace(FListA.Text, #13#10, ',', [rfReplaceAll]);
-        nStr := Format('订单[ %s ]信息已丢失.', [nStr]);
+      FListA.Clear;
+      FListA.Add(FUIData.FExtID_2);
+      nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
 
-        ShowDlg(nStr, sHint);
-        Exit;
+      FListB.Clear;
+      FListB.Values['MeamKeys'] := nStr;
+      nStr := EncodeBase64(FListB.Text);
+      nStr := GetQueryOrderSQL('203', nStr);
+      if nStr = '' then Exit;
+
+      with FDM.QueryTemp(nStr, True) do
+      begin
+        if RecordCount < 1 then
+        begin
+          nStr := StringReplace(FListA.Text, #13#10, ',', [rfReplaceAll]);
+          nStr := Format('订单[ %s ]信息已丢失.', [nStr]);
+
+          ShowDlg(nStr, sHint);
+          Exit;
+        end;
+
+        nPlan := FieldByName('NPLANNUM').AsFloat;
       end;
 
-      nPlan := FieldByName('NPLANNUM').AsFloat;
+      FListB.Clear;
+      FListB.Add(FUIData.FExtID_2);
+      if not GetOrderGYValue(FListB) then Exit;
+
+      nVal := nPlan - StrToFloat(FListB.Values[FUIData.FExtID_2]);
+      if FUIData.FPData.FValue > FUIData.FMData.FValue then
+           nNet := FUIData.FPData.FValue - FUIData.FMData.FValue
+      else nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
+
+      if FloatRelation(nVal, nNet, rtLE) then
+      begin
+        nStr := 'NC订单可用量不足，请重新办卡';
+        ShowMsg(nStr, sHint);
+        LEDDisplay(nStr);
+        Exit;
+      end;
     end;
-
-    FListB.Clear;
-    FListB.Add(FUIData.FExtID_2);
-    if not GetOrderGYValue(FListB) then Exit;
-
-    nVal := nPlan - StrToFloat(FListB.Values[FUIData.FExtID_2]);
-    if FUIData.FPData.FValue > FUIData.FMData.FValue then
-         nNet := FUIData.FPData.FValue - FUIData.FMData.FValue
-    else nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
-
-    if FloatRelation(nVal, nNet, rtLE) then
-    begin
-      nStr := 'NC订单可用量不足，请重新办卡';
-      ShowMsg(nStr, sHint);
-      LEDDisplay(nStr);
-      Exit;
-    end;
+    //非二次复磅
   end;  
 
   if FBillItems[0].FPreTruckP then
@@ -1712,6 +1717,8 @@ begin
     else if FUIData.FCardUse = sFlag_SaleNew then nBool := SavePoundSale
     else if FUIData.FCardUse = sFlag_Provide then nBool := SavePoundProvide
     else if FUIData.FCardUse = sFlag_DuanDao then nBool := SavePoundDuanDao
+    else if FUIData.FCardUse = sFlag_ShipPro then nBool := SavePoundProvide
+    else if FUIData.FCardUse = sFlag_ShipTmp then nBool := SavePoundProvide
     else nBool := SavePoundData(nPoundID);
 
     if nBool then
@@ -1743,7 +1750,8 @@ begin
       end;
       LEDDisplay(nStr);
 
-      if (FUIData.FPoundID <> '') or RadioCC.Checked or FPreTruckPFlag then
+      if ((FUIData.FID='') and (FUIData.FPoundID <> '')) or
+         RadioCC.Checked or FPreTruckPFlag then
         PrintPoundReport(nPoundID, True);
       //原料或出厂模式
 

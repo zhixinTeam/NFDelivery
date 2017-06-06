@@ -10,7 +10,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, UFormNormal, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, dxLayoutControl, StdCtrls, cxContainer, cxEdit,
-  cxTextEdit;
+  cxTextEdit, cxMaskEdit, cxDropDownEdit, cxLabel;
 
 type
   TfFormAuthorize = class(TfFormNormal)
@@ -22,11 +22,23 @@ type
     dxLayout1Item5: TdxLayoutItem;
     EditSerial: TcxTextEdit;
     dxLayout1Item6: TdxLayoutItem;
-    EditDepart: TcxTextEdit;
+    EditPoubdID: TcxTextEdit;
+    dxLayout1Item8: TdxLayoutItem;
+    EditDepart: TcxComboBox;
+    dxLayout1Item9: TdxLayoutItem;
+    cxLabel1: TcxLabel;
     dxLayout1Item7: TdxLayoutItem;
+    EditMITURL: TcxComboBox;
+    dxLayout1Item11: TdxLayoutItem;
+    dxLayout1Item12: TdxLayoutItem;
+    EditHardURL: TcxComboBox;
+    dxLayout1Item10: TdxLayoutItem;
+    cxLabel2: TcxLabel;
     procedure BtnOKClick(Sender: TObject);
   private
     { Private declarations }
+    procedure LoadDepartmentList;
+    procedure LoadDefaultURLs;
   public
     { Public declarations }
     class function CreateForm(const nPopedom: string = '';
@@ -40,7 +52,7 @@ implementation
 {$R *.dfm}
 
 uses
-  UMgrControl, UDataModule, UFormBase, UFormCtrl, USysDB, USysConst;
+  UMgrControl, UDataModule, UFormBase, UFormCtrl, USysDB, USysConst,UMgrLang;
 
 class function TfFormAuthorize.CreateForm(const nPopedom: string;
   const nParam: Pointer): TWinControl;
@@ -53,12 +65,16 @@ begin
 
   with TfFormAuthorize.Create(Application) do
   try
+    Caption := 'Ω”»Î…Í«Î';
     with gSysParam do
     begin
       EditMAC.Text := FLocalMAC;
       EditName.Text := FLocalName;
+      ActiveControl := EditSerial;
     end;
 
+    LoadDefaultURLs;
+    LoadDepartmentList;
     nP.FCommand := cCmd_ModalResult;
     nP.FParamA := ShowModal;
   finally
@@ -69,6 +85,73 @@ end;
 class function TfFormAuthorize.FormID: integer;
 begin
   Result := cFI_FormAuthorize;
+end;
+
+procedure TfFormAuthorize.LoadDepartmentList;
+var nStr: string;
+begin
+  EditDepart.Clear;
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_Departments]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+  begin
+    nStr := Fields[0].AsString;
+    nStr := StringReplace(nStr, ';', #13, [rfReplaceAll]);
+    EditDepart.Properties.Items.Text := nStr;
+  end;
+end;
+
+procedure TfFormAuthorize.LoadDefaultURLs;
+var nStr: string;
+begin
+  with EditMITURL.Properties do
+  begin
+    Items.Clear;
+    nStr := 'Select D_Value From %s Where D_Name=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_MITSrvURL]);
+
+    with FDM.QueryTemp(nStr) do
+    if RecordCount > 0 then
+    begin
+      First;
+
+      while not Eof do
+      begin
+        Items.Add(Fields[0].AsString);
+        Next;
+      end;
+    end;
+
+    if (gSysParam.FMITServURL <> '') and
+       (Items.IndexOf(gSysParam.FMITServURL) < 0) then
+      Items.Add(gSysParam.FMITServURL);
+    //xxxxx
+
+    EditMITURL.Text := '';
+    EditMITURL.ItemIndex := -1;
+  end;
+
+  with EditHardURL.Properties do
+  begin
+    Items.Clear;
+    nStr := 'Select D_Value From %s Where D_Name=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_HardSrvURL]);
+
+    with FDM.QueryTemp(nStr) do
+     if RecordCount > 0 then
+      Items.Add(Fields[0].AsString);
+    //xxxxx
+
+    if (gSysParam.FHardMonURL <> '') and
+       (Items.IndexOf(gSysParam.FHardMonURL) < 0) then
+      Items.Add(gSysParam.FHardMonURL);
+    //xxxxx
+
+    EditHardURL.Text := '';
+    EditHardURL.ItemIndex := -1;
+  end;
 end;
 
 function TfFormAuthorize.OnVerifyCtrl(Sender: TObject;
@@ -89,6 +172,13 @@ begin
     Result := EditSerial.Text <> '';
     nHint := '«ÎÃÓ–¥µÁƒ‘±‡∫≈';
   end;
+
+  if Sender = EditPoubdID then
+  begin
+    EditPoubdID.Text := Trim(EditPoubdID.Text);
+    Result := EditPoubdID.Text <> '';
+    nHint := '«ÎÃÓ–¥∞ı’æ±‡∫≈';
+  end;
 end;
 
 procedure TfFormAuthorize.BtnOKClick(Sender: TObject);
@@ -102,7 +192,11 @@ begin
           SF('W_Departmen', EditDepart.Text),
           SF('W_Serial', EditSerial.Text),
           SF('W_ReqMan', gSysParam.FUserID),
-          SF('W_ReqTime', sField_SQLServer_Now, sfVal)
+          SF('W_PoundID', UpperCase(EditPoubdID.Text)),
+          SF('W_ReqTime', sField_SQLServer_Now, sfVal),
+
+          SF('W_MITUrl', EditMITURL.Text),
+          SF('W_HardUrl', EditHardURL.Text)
           ], sTable_WorkePC, nStr, False);
   //xxxxx
 
@@ -118,7 +212,11 @@ begin
           SF('W_Departmen', EditDepart.Text),
           SF('W_Serial', EditSerial.Text),
           SF('W_ReqMan', gSysParam.FUserID),
-          SF('W_ReqTime', sField_SQLServer_Now, sfVal)
+          SF('W_PoundID', UpperCase(EditPoubdID.Text)),
+          SF('W_ReqTime', sField_SQLServer_Now, sfVal),
+
+          SF('W_MITUrl', EditMITURL.Text),
+          SF('W_HardUrl', EditHardURL.Text)
           ], sTable_WorkePC, '', True);
   //xxxxx
 

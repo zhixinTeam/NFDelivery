@@ -133,7 +133,6 @@ type
     FValue      : Double;          //提货量
     FPrice      : Double;          //提货单价
 
-    FCard       : string;          //磁卡号
     FIsVIP      : string;          //通道类型
     FStatus     : string;          //当前状态
     FNextStatus : string;          //下一状态
@@ -156,7 +155,14 @@ type
     FMemo       : string;          //备注
     FExtID_1    : string;          //额外编号
     FExtID_2    : string;          //额外编号
+
+    FCard       : string;          //磁卡号
     FCardUse    : string;          //卡片类型
+    FCardKeep   : string;         //固定卡or临时卡
+
+    FMuiltiPound: string;         //是否为复磅订单
+    FMuiltiType : string;         //是否为复磅操作
+    FOneDoor    : string;         //同一侧上下磅
 
     FNCChanged  : Boolean;         //NC可用量变化
     FChangeValue: Double;          //NC 减少
@@ -228,6 +234,8 @@ resourcestring
   sBus_BusinessCommand        = 'Bus_BusinessCommand';  //业务指令
   sBus_HardwareCommand        = 'Bus_HardwareCommand';  //硬件指令
   sBus_BusinessDuanDao        = 'Bus_BusinessDuanDao';  //短倒业务相关
+  sBus_BusinessShipPro        = 'Bus_BusinessShipPro';  //船运采购指令
+  sBus_BusinessShipTmp        = 'Bus_BusinessShipTmp';  //船运临时指令
 
   {*client function name*}
   sCLI_ServiceStatus          = 'CLI_ServiceStatus';    //服务状态
@@ -238,6 +246,8 @@ resourcestring
   sCLI_BusinessCommand        = 'CLI_BusinessCommand';  //业务指令
   sCLI_HardwareCommand        = 'CLI_HardwareCommand';  //硬件指令
   sCLI_BusinessDuanDao        = 'CLI_BusinessDuanDao';  //短倒业务相关
+  sCLI_BusinessShipPro        = 'CLI_BusinessShipPro';  //船运采购业务
+  sCLI_BusinessShipTmp        = 'CLI_BusinessShipTmp';  //船运临时业务
 
 implementation
 
@@ -276,9 +286,16 @@ begin
         FStockNo    := Values['StockNo'];
         FStockName  := Values['StockName'];
 
+
         FCard       := Values['Card'];
-        FIsVIP      := Values['IsVIP'];
         FCardUse    := Values['CType'];
+        FCardKeep   := Values['CardKeep'];
+
+        FMuiltiPound:= Values['MuiltiPound'];
+        FMuiltiType := Values['MuiltiType'];
+        FOneDoor    := Values['OneDoor'];
+
+        FIsVIP      := Values['IsVIP'];
         FStatus     := Values['Status'];
         FNextStatus := Values['NextStatus'];
 
@@ -388,6 +405,12 @@ begin
 
         Values['Card']       := FCard;
         Values['CType']      := FCardUse;
+        Values['CardKeep']   := FCardKeep;
+
+        Values['MuiltiPound']:= FMuiltiPound;
+        Values['MuiltiType'] := FMuiltiType;
+        Values['OneDoor']    := FOneDoor;
+
         Values['IsVIP']      := FIsVIP;
         Values['Status']     := FStatus;
         Values['NextStatus'] := FNextStatus;

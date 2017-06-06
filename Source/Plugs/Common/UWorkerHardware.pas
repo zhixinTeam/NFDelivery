@@ -73,9 +73,6 @@ type
     //车辆检测控制器业务
     function OpenDoorByReader(var nData: string): Boolean;
     //通过读卡器打开道闸
-    {$IFDEF MicroMsg}
-    function GetWXQueueList(var nData: string): Boolean;
-    {$ENDIF}
   public
     constructor Create; override;
     destructor destroy; override;
@@ -252,10 +249,6 @@ begin
    cBC_IsTunnelOK           : Result := TruckProbe_IsTunnelOK(nData);
    cBC_TunnelOC             : Result := TruckProbe_TunnelOC(nData);
    cBC_OpenDoorByReader     : Result := OpenDoorByReader(nData);
-
-   {$IFDEF MicroMsg}
-   cBC_GetWeiXinQueue       : Result := GetWXQueueList(nData);
-   {$ENDIF}
    else
     begin
       Result := False;
@@ -810,95 +803,6 @@ begin
   if Trim(nReader) <> '' then
     gHYReaderManager.OpenDoor(Trim(nReader));
 end;
-
-
-{$IFDEF MicroMsg}
-type
-  TQueueListItem = record
-    FStockNO   : string;
-    FStockName : string;
-
-    FLineCount : Integer;
-    FTruckCount: Integer;
-  end;
-  TQueueListItems = array of TQueueListItem;
-
-function THardwareCommander.GetWXQueueList(var nData: string): Boolean;
-var nFind: Boolean;
-    nLine: PLineItem;
-    nIdx,nInt, i: Integer;
-    nQueues: TQueueListItems;
-begin
-  gTruckQueueManager.RefreshTrucks(True);
-  Sleep(320);
-  //刷新数据
-
-  with gTruckQueueManager do
-  try
-    SyncLock.Enter;
-    Result := True;
-
-    FListB.Clear;
-    FListC.Clear;
-
-    i := 0;
-    SetLength(nQueues, 0);
-    //保存查询记录
-
-    for nIdx:=0 to Lines.Count - 1 do
-    begin
-      nLine := Lines[nIdx];
-
-      nFind := False;
-      for nInt:=Low(nQueues) to High(nQueues) do
-      begin
-        with nQueues[nInt] do
-          if FStockNo = nLine.FStockNo then
-          begin
-            Inc(FLineCount);
-            FTruckCount := FTruckCount + nLine.FRealCount;
-
-            nFind := True;
-            Break;
-          end;
-      end;
-
-      if not nFind then
-      begin
-        SetLength(nQueues, i+1);
-        with nQueues[i] do
-        begin
-          FStockNO    := nLine.FStockNo;
-          FStockName  := nLine.FStockName;
-
-          FLineCount  := 1;
-          FTruckCount := nLine.FRealCount;
-        end;
-
-        Inc(i);
-      end;
-    end;
-
-    for nIdx:=Low(nQueues) to High(nQueues) do
-    begin
-      with FListB, nQueues[nIdx] do
-      begin
-        Clear;
-
-        Values['StockName'] := FStockName;
-        Values['LineCount'] := IntToStr(FLineCount);
-        Values['TruckCount']:= IntToStr(FTruckCount);
-      end;
-
-      FListC.Add(PackerEncodeStr(FListB.Text));
-    end;
-
-    FOut.FData := PackerEncodeStr(FListC.Text);
-  finally
-    SyncLock.Leave;
-  end;
-end;
-{$ENDIF}
 
 initialization
   gBusinessWorkerManager.RegisteWorker(THardwareCommander, sPlug_ModuleHD);

@@ -34,8 +34,6 @@ type
     PMenu1: TPopupMenu;
     N1: TMenuItem;
     N2: TMenuItem;
-    N3: TMenuItem;
-    N4: TMenuItem;
     procedure EditIDPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnAddClick(Sender: TObject);
@@ -44,7 +42,6 @@ type
     procedure BtnExitClick(Sender: TObject);
     procedure cxView1DblClick(Sender: TObject);
     procedure N2Click(Sender: TObject);
-    procedure PMenu1Popup(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -195,17 +192,6 @@ begin
 end;
 
 //------------------------------------------------------------------------------
-procedure TfFrameCustomer.PMenu1Popup(Sender: TObject);
-begin
-  {$IFDEF SyncRemote}
-  N3.Visible := True;
-  N4.Visible := True;
-  {$ELSE}
-  N3.Visible := False;
-  N4.Visible := False;
-  {$ENDIF}
-end;
-
 //Desc: ¿ì½Ý²Ëµ¥
 procedure TfFrameCustomer.N2Click(Sender: TObject);
 begin

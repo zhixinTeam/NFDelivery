@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE NCNF}
+{$DEFINE TLNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -90,8 +90,6 @@
   //格式化计数器车牌
   {$DEFINE AppAtTaskBar}
   //状态栏显示
-  {.$DEFINE MicroMsg}
-  //微信支持
   {$DEFINE PrintChinese}
   //汉字喷码支持
   {$DEFINE VerfiyAutoWeight}
@@ -148,3 +146,19 @@
   //显示袋装误差提示
 {$ENDIF}
 //南城南方
+
+{$IFDEF TLNF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+  {$DEFINE MITTruckProber}
+  //中间件控制车检
+{$ENDIF}
+//桐庐南方

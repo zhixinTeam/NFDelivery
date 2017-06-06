@@ -229,6 +229,16 @@ function PlayNetVoice(const nText,nCard,nContent: string): Boolean;
 function OpenDoorByReader(const nReader: string; nType: string = 'Y'): Boolean;
 //打开道闸
 
+function SaveCardProvie(const nCardData: string): string;
+//保存采购卡
+function DeleteCardProvide(const nID: string): Boolean;
+//删除采购卡
+
+function SaveCardOther(const nCardData: string): string;
+//保存临时卡
+function DeleteCardOther(const nID: string): Boolean;
+//删除临时卡
+
 implementation
 
 //Desc: 记录日志
@@ -268,7 +278,7 @@ function GetTruckNO(const nTruck: String): string;
 var nStrTmp: string;
 begin
   nStrTmp := '      ' + nTruck;
-  Result := Copy(nStrTmp, Length(nStrTmp)-6 + 1, 6);
+  Result := Copy(nStrTmp, Length(nStrTmp)-6 + 1, 6) + '      ';
 end;
 
 function GetOrigin(const nOrigin: String): string;
@@ -444,6 +454,74 @@ begin
     //自动称重时不提示
     
     nWorker := gBusinessWorkerManager.LockWorker(sCLI_HardwareCommand);
+    //get worker
+    Result := nWorker.WorkActive(@nIn, nOut);
+
+    if not Result then
+      WriteLog(nOut.FBase.FErrDesc);
+    //xxxxx
+  finally
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
+//Date: 2017/6/2
+//Parm: 命令;数据;参数;输出
+//Desc: 船运采购业务
+function CallBusinessShipProItems(const nCmd: Integer; const nData,nExt: string;
+  const nOut: PWorkerBusinessCommand; const nWarn: Boolean = True): Boolean;
+var nIn: TWorkerBusinessCommand;
+    nWorker: TBusinessWorkerBase;
+begin
+  nWorker := nil;
+  try
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nExt;
+
+    if nWarn then
+         nIn.FBase.FParam := ''
+    else nIn.FBase.FParam := sParam_NoHintOnError;
+
+    if gSysParam.FAutoPound and (not gSysParam.FIsManual) then
+      nIn.FBase.FParam := sParam_NoHintOnError;
+    //自动称重时不提示
+
+    nWorker := gBusinessWorkerManager.LockWorker(sCLI_BusinessShipPro);
+    //get worker
+    Result := nWorker.WorkActive(@nIn, nOut);
+
+    if not Result then
+      WriteLog(nOut.FBase.FErrDesc);
+    //xxxxx
+  finally
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
+//Date: 2017/6/2
+//Parm: 命令;数据;参数;输出
+//Desc: 船运临时业务
+function CallBusinessShipTmpItems(const nCmd: Integer; const nData,nExt: string;
+  const nOut: PWorkerBusinessCommand; const nWarn: Boolean = True): Boolean;
+var nIn: TWorkerBusinessCommand;
+    nWorker: TBusinessWorkerBase;
+begin
+  nWorker := nil;
+  try
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nExt;
+
+    if nWarn then
+         nIn.FBase.FParam := ''
+    else nIn.FBase.FParam := sParam_NoHintOnError;
+
+    if gSysParam.FAutoPound and (not gSysParam.FIsManual) then
+      nIn.FBase.FParam := sParam_NoHintOnError;
+    //自动称重时不提示
+
+    nWorker := gBusinessWorkerManager.LockWorker(sCLI_BusinessShipTmp);
     //get worker
     Result := nWorker.WorkActive(@nIn, nOut);
 
@@ -1206,6 +1284,16 @@ begin
   if nStr = sFlag_DuanDao then
   begin
     Result := CallBusinessDuanDao(cBC_GetPostBills, nCard, nPost, @nOut);
+  end else
+
+  if nStr = sFlag_ShipPro then
+  begin
+    Result := CallBusinessShipProItems(cBC_GetPostBills, nCard, nPost, @nOut);
+  end else
+
+  if nStr = sFlag_ShipTmp then
+  begin
+    Result := CallBusinessShipTmpItems(cBC_GetPostBills, nCard, nPost, @nOut);
   end;
 
   if Result then
@@ -1249,6 +1337,20 @@ begin
   begin
     nStr := CombineBillItmes(nData);
     Result := CallBusinessDuanDao(cBC_SavePostBills, nStr, nPost, @nOut);
+	  if (not Result) or (nOut.FData = '') then Exit;
+  end else
+
+  if nStr = sFlag_ShipPro then
+  begin
+    nStr := CombineBillItmes(nData);
+    Result := CallBusinessShipProItems(cBC_SavePostBills, nStr, nPost, @nOut);
+	  if (not Result) or (nOut.FData = '') then Exit;
+  end else
+
+  if nStr = sFlag_ShipTmp then
+  begin
+    nStr := CombineBillItmes(nData);
+    Result := CallBusinessShipTmpItems(cBC_SavePostBills, nStr, nPost, @nOut);
 	  if (not Result) or (nOut.FData = '') then Exit;
   end;
 
@@ -1534,9 +1636,9 @@ begin
   FDR.AddParamItem(nParam);
 
   FDR.Dataset1.DataSet := FDM.SqlTemp;
-  //FDR.ShowReport;
-  //Result := FDR.PrintSuccess;
-  Result := FDR.PrintReport;
+  FDR.ShowReport;
+  Result := FDR.PrintSuccess;
+  //Result := FDR.PrintReport;
 
   if Result  then
   begin
@@ -1892,5 +1994,44 @@ begin
             @nOut, False);
 end;  
 
+//Date: 2017/6/4
+//Parm: 订单数据
+//Desc: 复磅采购业务
+function SaveCardProvie(const nCardData: string): string;
+var nOut: TWorkerBusinessCommand;
+begin
+  if CallBusinessShipProItems(cBC_SaveBills, nCardData, '', @nOut) then
+       Result := nOut.FData
+  else Result := '';
+end;
+
+//Date: 2017/6/4
+//Parm: 订单ID
+//Desc: 删除复磅采购业务订单
+function DeleteCardProvide(const nID: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessShipProItems(cBC_DeleteBill, nID, '', @nOut);
+end;
+
+//Date: 2017/6/4
+//Parm: 订单数据
+//Desc: 复磅临时业务
+function SaveCardOther(const nCardData: string): string;
+var nOut: TWorkerBusinessCommand;
+begin
+  if CallBusinessShipTmpItems(cBC_SaveBills, nCardData, '', @nOut) then
+       Result := nOut.FData
+  else Result := '';
+end;
+
+//Date: 2017/6/4
+//Parm: 订单ID
+//Desc: 删除复磅临时业务订单
+function DeleteCardOther(const nID: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessShipTmpItems(cBC_DeleteBill, nID, '', @nOut);
+end;
 
 end.

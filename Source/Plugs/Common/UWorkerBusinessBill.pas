@@ -10,8 +10,8 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, UWorkerBusinessCommand, ZnMD5, ULibFun,
-  UFormCtrl, USysLoger, USysDB, {$IFDEF MicroMsg}UMgrRemoteWXMsg,{$ENDIF}
-  {$IFDEF HardMon}UMgrHardHelper, {$ENDIF}UMITConst, UBase64;
+  UFormCtrl, USysLoger, USysDB, {$IFDEF HardMon}UMgrHardHelper, {$ENDIF}
+  UMITConst, UBase64;
 
 type
   TStockInfoItem = record
@@ -890,21 +890,6 @@ begin
     FDBConn.FConn.RollbackTrans;
     raise;
   end;
-  
-  {$IFDEF MicroMsg}
-  with FListC do
-  begin
-    Clear;
-    Values['bill'] := FOut.FData;
-    Values['company'] := gSysParam.FHintText;
-  end;
-
-  if FListA.Values['BuDan'] = sFlag_Yes then
-       nStr := cWXBus_OutFact
-  else nStr := cWXBus_MakeCard;
-
-  gWXPlatFormHelper.WXSendMsg(nStr, FListC.Text);
-  {$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
@@ -1793,9 +1778,9 @@ begin
         FListA.Add(nSQL);
 
         nSQL := 'Update %s Set B_HasUse=B_HasUse-(%.2f),B_LastDate=%s ' +
-                'Where B_Stock=''%s'' and B_Type=''%s''';
+                'Where B_Batcode=''%s'' and B_Type=''%s''';
         nSQL := Format(nSQL, [sTable_Batcode, nDec,
-                sField_SQLServer_Now, FStockNo, sFlag_TypeCommon]);
+                sField_SQLServer_Now, FSeal, sFlag_TypeCommon]);
         FListA.Add(nSQL); //更新批次号使用量
 
         nSQL := 'Update %s Set D_Sent=D_Sent-(%.2f) Where D_ID=''%s''';
@@ -2099,25 +2084,6 @@ begin
       gHardShareData('TruckOut:' + nBills[0].FCard);
     //单次过磅自动出厂
   end;
-  
-  {$IFDEF MicroMsg}
-  nStr := '';
-  for nIdx:=Low(nBills) to High(nBills) do
-    nStr := nStr + nBills[nIdx].FID + ',';
-  //xxxxx
-
-  if FIn.FExtParam = sFlag_TruckOut then
-  begin
-    with FListA do
-    begin
-      Clear;
-      Values['bill'] := nStr;
-      Values['company'] := gSysParam.FHintText;
-    end;
-
-    gWXPlatFormHelper.WXSendMsg(cWXBus_OutFact, FListA.Text);
-  end;
-  {$ENDIF}
 end;
 
 function TWorkerBusinessBills.LinkToNCSystem(var nData: string;
@@ -2792,21 +2758,6 @@ begin
     FDBConn.FConn.RollbackTrans;
     raise;
   end;
-
-  {$IFDEF MicroMsg}
-  with FListC do
-  begin
-    Clear;
-    Values['bill'] := FOut.FData;
-    Values['company'] := gSysParam.FHintText;
-  end;
-
-  if FListA.Values['BuDan'] = sFlag_Yes then
-       nStr := cWXBus_OutFact
-  else nStr := cWXBus_MakeCard;
-
-  gWXPlatFormHelper.WXSendMsg(nStr, FListC.Text);
-  {$ENDIF}
 end;
 
 initialization

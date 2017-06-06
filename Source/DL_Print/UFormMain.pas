@@ -38,6 +38,8 @@ type
     { Private declarations }
     FTrayIcon: TTrayIcon;
     {*状态栏图标*}
+    FIsBusy: Boolean;
+    //打印状态
     FBillList: TStrings;
     FSyncLock: TCriticalSection;
     //同步锁
@@ -90,7 +92,8 @@ begin
   FTrayIcon := TTrayIcon.Create(Self);
   FTrayIcon.Hint := Caption;
   FTrayIcon.Visible := True;
-  
+
+  FIsBusy   := False;
   FBillList := TStringList.Create;
   FSyncLock := TCriticalSection.Create;
   //new item 
@@ -280,6 +283,41 @@ begin
   Result := FDR.PrintSuccess;
 end;
 
+function PrintPoundReport(const nPID: string; var nHint: string;
+ const nPrinter: string = ''): Boolean;
+var nStr: string;
+    nDS: TDataSet;
+begin
+  Result := False;
+  nStr := 'Select * From %s Where P_ID=''%s''';
+  nStr := Format(nStr, [sTable_PoundLog, nPID]);
+
+  nDS := FDM.SQLQuery(nStr, FDM.SQLQuery1);
+  if not Assigned(nDS) then Exit;
+
+  if nDS.RecordCount < 1 then
+  begin
+    nHint := '磅单[ %s ] 已无效!!';
+    nHint := Format(nHint, [nPID]);
+    Exit;
+  end;
+
+  nStr := gPath + 'Report\Pound.fr3';
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nHint := '无法正确加载报表文件';
+    Exit;
+  end;
+
+  if nPrinter = '' then
+       FDR.Report1.PrintOptions.Printer := 'My_Default_Printer'
+  else FDR.Report1.PrintOptions.Printer := nPrinter;
+
+  FDR.Dataset1.DataSet := FDM.SQLQuery1;
+  FDR.PrintReport;
+  Result := FDR.PrintSuccess;
+end;
+
 //------------------------------------------------------------------------------
 //Date: 2012-4-1
 //Parm: 交货单号;提示;数据对象;打印机
@@ -343,52 +381,59 @@ procedure TfFormMain.Timer2Timer(Sender: TObject);
 var nPos: Integer;
     nBill,nHint,nPrinter,nMoney, nType: string;
 begin
-  while True do
-  begin
-    FSyncLock.Enter;
-    try
-      if FBillList.Count < 1 then Exit;
-      nBill := FBillList[0];
-      FBillList.Delete(0);
-    finally
-      FSyncLock.Leave;
+    if not FIsBusy then
+    begin
+      FSyncLock.Enter;
+      try
+        if FBillList.Count < 1 then Exit;
+        nBill := FBillList[0];
+        FBillList.Delete(0);
+      finally
+        FSyncLock.Leave;
+      end;
+
+      //bill #9 printer #8 money #7 CardType
+      nPos := Pos(#7, nBill);
+      if nPos > 1 then
+      begin
+        nType := nBill;
+        nBill := Copy(nBill, 1, nPos - 1);
+        System.Delete(nType, 1, nPos);
+      end else nType := '';
+
+      nPos := Pos(#8, nBill);
+      if nPos > 1 then
+      begin
+        nMoney := nBill;
+        nBill := Copy(nBill, 1, nPos - 1);
+        System.Delete(nMoney, 1, nPos);
+
+        if not IsNumber(nMoney, True) then
+          nMoney := '0';
+        //xxxxx
+      end else nMoney := '0';
+
+      nPos := Pos(#9, nBill);
+      if nPos > 1 then
+      begin
+        nPrinter := nBill;
+        nBill := Copy(nBill, 1, nPos - 1);
+        System.Delete(nPrinter, 1, nPos);
+      end else nPrinter := '';
+
+      FIsBusy := True;
+      try
+        WriteLog('开始打印: ' + nBill);
+        if (nType = sFlag_Provide) then
+             PrintOrderReport(nBill, nHint, nPrinter) else
+        if (nType = sFlag_Sale) or (nType = sFlag_SaleNew) then
+             PrintBillReport(nBill, nHint, nPrinter, nMoney)
+        else PrintPoundReport(nBill, nHint, nPrinter);
+        WriteLog('打印结束.' + nHint);
+      finally
+        FIsBusy := False;
+      end;
     end;
-
-    //bill #9 printer #8 money #7 CardType
-    nPos := Pos(#7, nBill);
-    if nPos > 1 then
-    begin
-      nType := nBill;
-      nBill := Copy(nBill, 1, nPos - 1);
-      System.Delete(nType, 1, nPos);
-    end else nType := '';
-
-    nPos := Pos(#8, nBill);
-    if nPos > 1 then
-    begin
-      nMoney := nBill;
-      nBill := Copy(nBill, 1, nPos - 1);
-      System.Delete(nMoney, 1, nPos);
-
-      if not IsNumber(nMoney, True) then
-        nMoney := '0';
-      //xxxxx
-    end else nMoney := '0';
-
-    nPos := Pos(#9, nBill);
-    if nPos > 1 then
-    begin
-      nPrinter := nBill;
-      nBill := Copy(nBill, 1, nPos - 1);
-      System.Delete(nPrinter, 1, nPos);
-    end else nPrinter := '';
-
-    WriteLog('开始打印: ' + nBill);
-    if nType = 'P' then
-         PrintOrderReport(nBill, nHint, nPrinter)
-    else PrintBillReport(nBill, nHint, nPrinter, nMoney);
-    WriteLog('打印结束.' + nHint);
-  end;
 end;
 
 end.
