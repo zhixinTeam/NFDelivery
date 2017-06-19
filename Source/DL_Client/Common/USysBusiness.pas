@@ -239,6 +239,23 @@ function SaveCardOther(const nCardData: string): string;
 function DeleteCardOther(const nID: string): Boolean;
 //删除临时卡
 
+function WebChatGetCustomerInfo: string;
+//获取网上商城客户信息
+function WebChatEditShopCustom(const nData: string; nSale: string = 'Y'): Boolean;
+//修改绑定关系
+
+function AddManualEventRecord(nEID, nKey, nEvent:string;
+    nFrom: string = '磅房'; nSolution: string=sFlag_Solution_YN;
+    nDepartmen: string=sFlag_DepDaTing; nReset: Boolean = False;
+    nMemo: string=''): Boolean;
+//添加待处理事项记录
+function VerifyManualEventRecord(const nEID: string; var nHint: string;
+    const nWant: string = 'Y'): Boolean;
+//检查事件是否通过处理
+
+function GetTruckEmptyValue(nTruck: string): Double;
+//车辆有效皮重
+
 implementation
 
 //Desc: 记录日志
@@ -1950,6 +1967,10 @@ end;
 function IsTunnelOK(const nTunnel: string): Boolean;
 var nOut: TWorkerBusinessCommand;
 begin
+  {$IFNDEF HardMon}
+  Result := True;
+  Exit;
+  {$ENDIF}
   if CallBusinessHardware(cBC_IsTunnelOK, nTunnel, '', @nOut) then
        Result := nOut.FData = sFlag_Yes
   else Result := False;
@@ -1959,6 +1980,10 @@ procedure TunnelOC(const nTunnel: string; const nOpen: Boolean);
 var nStr: string;
     nOut: TWorkerBusinessCommand;
 begin
+  {$IFNDEF HardMon}
+  Exit;
+  {$ENDIF}
+
   if nOpen then
        nStr := sFlag_Yes
   else nStr := sFlag_No;
@@ -1973,6 +1998,10 @@ function PlayNetVoice(const nText,nCard,nContent: string): Boolean;
 var nStr: string;
     nOut: TWorkerBusinessCommand;
 begin
+  {$IFNDEF HardMon}
+  Result := True;
+  Exit;
+  {$ENDIF}
   nStr := 'Card=' + nCard + #13#10 +
           'Content=' + nContent + #13#10 + 'Truck=' + nText;
   //xxxxxx
@@ -2032,6 +2061,117 @@ function DeleteCardOther(const nID: string): Boolean;
 var nOut: TWorkerBusinessCommand;
 begin
   Result := CallBusinessShipTmpItems(cBC_DeleteBill, nID, '', @nOut);
+end;
+
+//获取客户注册信息
+function WebChatGetCustomerInfo: string;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := '';
+  if CallBusinessCommand(cBC_WebChat_getCustomerInfo, '', '', @nOut) then
+    Result := nOut.FData;
+end;
+
+function WebChatEditShopCustom(const nData: string; nSale: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessCommand(cBC_WebChat_EditShopCustom,
+            PackerEncodeStr(nData), nSale, @nOut);
+end;
+
+//Date: 2016/11/27
+//Parm: 参数描述
+//Desc: 添加异常事件处理
+function AddManualEventRecord(nEID, nKey, nEvent:string;
+    nFrom: string; nSolution: string; nDepartmen: string;
+    nReset: Boolean; nMemo: string): Boolean;
+var nSQL, nStr: string;
+    nUpdate: Boolean;
+begin
+  Result := False;
+  //init
+
+  if Trim(nSolution) = '' then
+  begin
+    WriteLog('请选择处理方案.');
+    Exit;
+  end;
+
+  nSQL := 'Select * From %s Where E_ID=''%s''';
+  nSQL := Format(nSQL, [sTable_ManualEvent, nEID]);
+  with FDM.QuerySQL(nSQL) do
+  if RecordCount > 0 then
+  begin
+    nStr := '事件记录:[ %s ]已存在';
+    nStr := Format(nStr, [nEID]);
+    WriteLog(nStr);
+
+    if not nReset then Exit;
+
+    nUpdate := True;
+  end else nUpdate := False;
+
+  nStr := SF('E_ID', nEID);
+  nSQL := MakeSQLByStr([
+          SF('E_ID', nEID),
+          SF('E_Key', nKey),
+          SF('E_Result', ''),
+          SF('E_From', nFrom),
+          SF('E_Memo', nMemo),
+          
+          SF('E_Event', nEvent), 
+          SF('E_Solution', nSolution),
+          SF('E_Departmen', nDepartmen),
+          SF('E_Date', sField_SQLServer_Now, sfVal)
+          ], sTable_ManualEvent, nStr, (not nUpdate));
+  FDM.ExecuteSQL(nSQL);
+end;
+
+//Date: 2016/11/27
+//Parm: 事件ID;预期结果;错误返回
+//Desc: 判断事件是否处理
+function VerifyManualEventRecord(const nEID: string; var nHint: string;
+    const nWant: string): Boolean;
+var nSQL, nStr: string;
+begin
+  Result := False;
+  //init
+
+  nSQL := 'Select E_Result, E_Event, E_ParamB  From %s Where E_ID=''%s''';
+  nSQL := Format(nSQL, [sTable_ManualEvent, nEID]);
+
+  with FDM.QuerySQL(nSQL) do
+  if RecordCount > 0 then
+  begin
+    nStr := Trim(FieldByName('E_Result').AsString);
+    if nStr = '' then
+    begin
+      nHint := FieldByName('E_Event').AsString;
+      Exit;
+    end;
+
+    if nStr <> nWant then
+    begin
+      nHint := '请联系管理员，做换票处理';
+      Exit;
+    end;
+
+    nHint  := FieldByName('E_ParamB').AsString;
+    Result := True;
+  end;
+end;
+
+//Desc: 车辆有效皮重
+function GetTruckEmptyValue(nTruck: string): Double;
+var nStr: string;
+begin
+  nStr := 'Select T_PValue From %s Where T_Truck=''%s''';
+  nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+       Result := Fields[0].AsFloat
+  else Result := 0;
 end;
 
 end.

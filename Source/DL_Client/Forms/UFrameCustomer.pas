@@ -34,6 +34,9 @@ type
     PMenu1: TPopupMenu;
     N1: TMenuItem;
     N2: TMenuItem;
+    N3: TMenuItem;
+    N4: TMenuItem;
+    N5: TMenuItem;
     procedure EditIDPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnAddClick(Sender: TObject);
@@ -42,6 +45,7 @@ type
     procedure BtnExitClick(Sender: TObject);
     procedure cxView1DblClick(Sender: TObject);
     procedure N2Click(Sender: TObject);
+    procedure N4Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -57,7 +61,7 @@ implementation
 {$R *.dfm}
 uses
   ULibFun, UMgrControl, UDataModule, UFormBase, UFormWait, USysBusiness,
-  USysConst, USysDB;
+  USysConst, USysDB, uFormGetWechartAccount;
 
 class function TfFrameCustomer.FrameID: integer;
 begin
@@ -201,6 +205,57 @@ begin
   end;
 
   InitFormData(FWhere);
+end;
+
+procedure TfFrameCustomer.N4Click(Sender: TObject);
+var nP: TFormCommandParam;
+    nList: TStrings;
+begin
+  inherited;
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('请选择要操作的记录', sHint);
+    Exit;
+  end;
+
+  nList := TStringList.Create;
+  try
+    nList.Clear;
+
+    nList.Values['DLCusID'] := SQLQuery.FieldByName('C_ID').AsString;
+    nList.Values['DLCusName'] := SQLQuery.FieldByName('C_Name').AsString;
+
+    case TMenuItem(Sender).Tag of
+    4: //关联商城账号
+    begin
+      nP.FCommand := cCmd_AddData;
+      CreateBaseFormItem(cFI_FormGetWechartAccount, PopedomItem, @nP);
+
+      if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
+      begin
+        nList.Values['Type']     := 'add';
+        nList.Values['WebCusID'] := nP.FParamB;
+        nList.Values['WebUserName'] := nP.FParamC;
+
+        if not WebChatEditShopCustom(nList.Text) then Exit;
+
+        ShowMsg('关联商城账号成功', sHint);
+      end;
+    end;
+    5: //取消关联账号
+    begin
+      nList.Values['Type']     := 'del';
+      nList.Values['WebCusID'] := SQLQuery.FieldByName('C_WeiXin').AsString;
+
+      if not WebChatEditShopCustom(nList.Text) then Exit;
+
+      ShowMsg('解除商城账号成功', sHint);
+    end;
+    end
+  finally
+    InitFormData;
+    nList.Free;
+  end;
 end;
 
 initialization

@@ -10,11 +10,12 @@ interface
 uses
   Windows, Classes, Controls, SysUtils, UMgrDBConn, UMgrParam,
   UBusinessWorker, UBusinessConst, UBusinessPacker, UMgrQueue,
-  UMgrHardHelper, U02NReader, UMgrERelay,
+  UMgrHardHelper, U02NReader, UMgrERelay, UMgrTTCEM100,
   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}UMgrRemotePrint,
   UMgrLEDDisp, UMgrRFID102, {$IFDEF HKVDVR}UMgrCamera, {$ENDIF}Graphics, DB;
 
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
+procedure WhenTTCE_M100_ReadCard(const nItem: PM100ReaderItem);
 procedure WhenHYReaderCardArrived(const nReader: PHYReaderItem);
 //有新卡号到达读头
 procedure WhenReaderCardIn(const nCard: string; const nHost: PReaderHost);
@@ -676,7 +677,7 @@ begin
     if FNextStatus = sFlag_TruckOut then Continue;
     nStr := '车辆[ %s ]下一状态为:[ %s ],无法出厂.';
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
-    
+
     WriteHardHelperLog(nStr, sPost_Out);
     Exit;
   end;
@@ -701,7 +702,8 @@ begin
     Exit;
   end;
 
-  if nReader <> '' then
+  if (nReader <> '') and
+     (not gTruckQueueManager.IsTruckAutoOut(nCardType = sFlag_Sale)) then
     HardOpenDoor(nReader);
   //抬杆
 
@@ -744,6 +746,125 @@ begin
 
     gRemotePrinter.PrintBill(nStr);
   end; //打印报表
+end;
+
+//Date: 2016-5-4
+//Parm: 卡号;读头;打印机
+//Desc: 对nCard放行出
+function MakeTruckOutM100(const nCard,nReader,nPrinter: string): Boolean;
+var nStr,nCardType, nID: string;
+    nIdx: Integer;
+    nRet: Boolean;
+    nTrucks: TLadingBillItems;
+    {$IFDEF PrintBillMoney}
+    nOut: TWorkerBusinessCommand;
+    {$ENDIF}
+begin
+  Result := False;
+  if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
+
+  nRet := False;
+  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
+    nRet := GetLadingBills(nCard, sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_Provide then
+    nRet := GetProvideItems(nCard, sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_ShipPro then
+    nRet := GetShipProItems(nCard, sFlag_TruckOut, nTrucks)  else
+  if nCardType = sFlag_ShipTmp then
+    nRet := GetShipTmpItems(nCard, sFlag_TruckOut, nTrucks);
+  //xxxxx
+
+  if not nRet then
+  begin
+    nStr := '读取磁卡[ %s ]订单信息失败.';
+    nStr := Format(nStr, [nCard]);
+    Result := True;
+    //磁卡已无效
+
+    WriteHardHelperLog(nStr, sPost_Out);
+    Exit;
+  end;
+
+  if Length(nTrucks) < 1 then
+  begin
+    nStr := '磁卡[ %s ]没有需要出厂车辆.';
+    nStr := Format(nStr, [nCard]);
+    Result := True;
+    //磁卡已无效
+
+    WriteHardHelperLog(nStr, sPost_Out);
+    Exit;
+  end;
+
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    if FNextStatus = sFlag_TruckOut then Continue;
+    nStr := '车辆[ %s ]下一状态为:[ %s ],无法出厂.';
+    nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
+
+    WriteHardHelperLog(nStr, sPost_Out);
+    Exit;
+  end;
+
+  nRet := False;
+  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
+    nRet := SaveLadingBills(sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_Provide then
+    nRet := SaveProvideItems(sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_ShipPro then
+    nRet := SaveShipProItems(sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_ShipTmp then
+    nRet := SaveShipTmpItems(sFlag_TruckOut, nTrucks);
+  //xxxxx
+
+  if not nRet then
+  begin
+    nStr := '车辆[ %s ]出厂放行失败.';
+    nStr := Format(nStr, [nTrucks[0].FTruck]);
+
+    WriteHardHelperLog(nStr, sPost_Out);
+    Exit;
+  end;
+
+  HardOpenDoor(nReader);
+  //抬杆
+
+  nStr := '车辆%s已出厂';
+  nStr := Format(nStr, [nTrucks[0].FTruck]);
+  gDisplayManager.Display(nReader, nStr);
+  //LED显示
+
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  begin
+    {$IFDEF HKVDVR}
+    gCameraManager.CapturePicture(nReader, nTrucks[nIdx].FID);
+    //抓拍
+    {$ENDIF}
+
+    {$IFDEF PrintBillMoney}
+    if CallBusinessCommand(cBC_GetZhiKaMoney,nTrucks[nIdx].FZhiKa,'',@nOut) then
+         nStr := #8 + nOut.FData
+    else nStr := #8 + '0';
+    {$ELSE}
+    nStr := '';
+    {$ENDIF}
+
+    nStr := nStr + #7 + nCardType;
+    //磁卡类型
+
+    if (nCardType = sFlag_ShipPro) or (nCardType = sFlag_ShipTmp) then
+         nID := nTrucks[nIdx].FPoundID
+    else nID := nTrucks[nIdx].FID;
+
+    if nPrinter = '' then
+         nStr := nID + nStr
+    else nStr := nID + #9 + nPrinter + nStr;
+
+    gRemotePrinter.PrintBill(nStr);
+  end; //打印报表
+
+  Result := True;
 end;
 
 //Date: 2012-10-19
@@ -1133,7 +1254,7 @@ begin
     //重新定位车辆所在车道
     if IsJSRun then Exit;
   end;
-  
+
   if not IsTruckInQueue(nTrucks[0].FTruck, nTunnel, False, nStr,
          nPTruck, nPLine, sFlag_Dai) then
   begin
@@ -1154,7 +1275,12 @@ begin
     if (FStatus = sFlag_TruckZT) or (FNextStatus = sFlag_TruckZT) then
     begin
       FSelected := Pos(FID, nPTruck.FHKBills) > 0;
-      if FSelected then Inc(nInt); //刷卡通道对应的交货单
+      if FSelected then
+      begin
+        FLineGroup := nPLine.FLineGroup;
+        Inc(nInt);
+      end;
+      //刷卡通道对应的交货单
       Continue;
     end;
 
@@ -1278,14 +1404,14 @@ begin
 
     nStr := '车辆[ %s ]下一状态为:[ %s ],无法放灰.';
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
-    
+
     WriteHardHelperLog(nStr);
     Exit;
   end;
 
   if not IsTruckInQueue(nTrucks[0].FTruck, nTunnel, False, nStr,
          nPTruck, nPLine, sFlag_San) then
-  begin 
+  begin
     WriteNearReaderLog(nStr);
     //loged
 
@@ -1301,11 +1427,12 @@ begin
     nStr := '散装车辆[ %s ]再次刷卡装车.';
     nStr := Format(nStr, [nTrucks[0].FTruck]);
     WriteNearReaderLog(nStr);
-    
+
     TruckStartFH(nPTruck, nTunnel);
     Exit;
   end;
 
+  nTrucks[0].FLineGroup := nPLine.FLineGroup;
   if not SaveLadingBills(sFlag_TruckFH, nTrucks) then
   begin
     nStr := '车辆[ %s ]放灰处提货失败.';
@@ -1324,7 +1451,7 @@ end;
 //Desc: 对nHost.nCard新到卡号作出动作
 procedure WhenReaderCardIn(const nCard: string; const nHost: PReaderHost);
 var nTxt: string;
-begin 
+begin
   if nHost.FType = rtOnce then
   begin
     if nHost.FFun = rfOut then
@@ -1381,6 +1508,36 @@ begin
   end
   else g02NReader.ActiveELabel(nReader.FTunnel, nReader.FCard);
 end;
+
+//------------------------------------------------------------------------------
+//Date: 2017/3/29
+//Parm: 三合一读卡器
+//Desc: 处理三合一读卡器信息
+procedure WhenTTCE_M100_ReadCard(const nItem: PM100ReaderItem);
+var nStr: string;
+    nRetain: Boolean;
+begin
+  nRetain := False;
+  //init
+
+  {$IFDEF DEBUG}
+  nStr := '三合一读卡器卡号'  + nItem.FID + ' ::: ' + nItem.FCard;
+  WriteHardHelperLog(nStr);
+  {$ENDIF}
+
+  try
+    if not nItem.FVirtual then Exit;
+    case nItem.FVType of
+    rtOutM100 :
+      nRetain := MakeTruckOutM100(nItem.FCard, nItem.FVReader, nItem.FVPrinter);
+    else
+      gHardwareHelper.SetReaderCard(nItem.FVReader, nItem.FCard, False);
+    end;
+  finally
+    gM100ReaderManager.DealtWithCard(nItem, nRetain)
+  end;
+end;
+
 
 //------------------------------------------------------------------------------
 //Date: 2012-12-16

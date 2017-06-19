@@ -10,7 +10,7 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, ZnMD5, ULibFun, UFormCtrl, USysLoger,
-  USysDB, UMITConst, UBase64;
+  USysDB, UMITConst, UBase64, UWorkerClientWebChat, UMgrQueue;
 
 type
   TBusWorkerQueryField = class(TBusinessWorkerBase)
@@ -105,6 +105,34 @@ type
     function GetPoundBaseValue(var nData: string): Boolean;
     function IsDeDuctValid:Boolean;
     //使用暗扣规则
+
+    //-------------------由DL向Web商城发起查询----------------------------------
+    function SendEventMsg(var nData:string):boolean;
+    //发送模板消息
+    function GetCustomerInfo(var nData:string):boolean;
+    //获取客户注册信息
+    function EditShopCustom(var nData:string):boolean;
+    //关联(解除关联)商城用户
+    function GetShopOrdersByID(var nData:string):boolean;
+    //根据司机身份证获取订单信息
+    function GetShopOrderByNO(var nData:string):boolean;
+    //根据订单号获取订单信息
+    function EditShopOrderInfo(var nData:string):Boolean;
+    //修改订单信息
+
+    //-------------------由Web商城向DL发起查询----------------------------------
+    function GetOrderList(var nData:string):Boolean;
+    //获取销售订单列表
+    function GetPurchaseList(var nData:string):Boolean;
+    //获取采购订单列表
+    function VerifyPrintCode(var nData: string): Boolean;
+    //验证喷码信息
+    function GetWaitingForloading(var nData:string):Boolean;
+    //工厂待装查询
+
+    //-------------------由DL向DL发起查询---------------------------------------
+    function DLSaveShopInfo(var nData:string):Boolean;
+    //保存同步信息
   public
     constructor Create; override;
     destructor destroy; override;
@@ -353,7 +381,21 @@ begin
    cBC_GetPoundBaseValue   : Result := GetPoundBaseValue(nData);
    cBC_GetStationPoundData : Result := GetStationPoundData(nData);
    cBC_SaveStationPoundData: Result := SaveStationPoundData(nData);
-   
+
+   cBC_WebChat_SendEventMsg     :Result := SendEventMsg(nData);                //微信平台接口：发送模板消息
+    cBC_WebChat_GetCustomerInfo  :Result := GetCustomerInfo(nData);             //微信平台接口：获取商城账户注册信息
+    cBC_WebChat_EditShopCustom   :Result := EditShopCustom(nData);              //微信平台接口：新增商城用户
+
+    cBC_WebChat_GetShopOrdersByID:Result := GetShopOrdersByID(nData);           //微信平台接口：通过司机身份证号获取商城订单信息
+    cBC_WebChat_GetShopOrderByNO :Result := GetShopOrderByNO(nData);            //微信平台接口：通过二维码获取商城订单信息
+    cBC_WebChat_EditShopOrderInfo:Result := EditShopOrderInfo(nData);           //微信平台接口：修改商城订单信息
+
+    cBC_WebChat_GetOrderList     :Result := GetOrderList(nData);                //微信平台接口：获取销售订单列表
+    cBC_WebChat_GetPurchaseList  :Result := GetPurchaseList(nData);             //微信平台接口：获取采购订单列表
+    cBC_WebChat_VerifPrintCode   :Result := VerifyPrintCode(nData);             //微信平台接口：获取防伪码信息
+    cBC_WebChat_WaitingForloading:Result := GetWaitingForloading(nData);        //微信平台接口：获取排队信息
+
+    cBC_WebChat_DLSaveShopInfo   :Result := DLSaveShopInfo(nData);              //微信平台
    else
     begin
       Result := False;
@@ -997,33 +1039,6 @@ begin
   Result := True;
   //xxxxx
 
-  nStr := FListA.Values['BillCode'];
-  if nStr <> '' then
-  begin
-    FOut.FData := FOut.FData + Format('VBILLCODE Like ''%%%s%%''', [nStr]);
-    Exit; //按单号查询
-  end;
-
-  nStr := FListA.Values['MeamKeys'];
-  if nStr <> '' then
-  begin
-    FOut.FData := FOut.FData + Format('pk_meambill_b In (%s)', [nStr]);
-    Exit; //按单号查询
-  end;
-
-  nStr := FListA.Values['NoDate'];
-  if nStr = '' then
-  begin        
-    nStr := '(t1.dbilldate>=''%s'' And t1.dbilldate<''%s'')';
-    FOut.FData := FOut.FData + Format(nStr, [
-                  FListA.Values['DateStart'],
-                  FListA.Values['DateEnd']]);
-    //日期限制
-
-    FOut.FData := FOut.FData + ' And ';
-    //拼接以下条件
-  end;
-
   if Pos('10', FIn.FData) = 1 then   //销售控制发货工厂和库存组织
   begin
     nStr := AdjustListStrFormat(nWHGroup, '''', True, ',');
@@ -1059,16 +1074,59 @@ begin
     //控制收货工厂
   end;
 
-  FOut.FData := FOut.FData + ' (' + nType + ')';
-  //单据类型
-
   nStr := FListA.Values['QueryAll'];
   if nStr = '' then
   begin
-    FOut.FData := FOut.FData + ' And (crowstatus=0 And VBILLSTATUS=1 ' +
-                  'And t1.dr=0 And t2.dr=0)';
+    FOut.FData := FOut.FData + ' (crowstatus=0 And VBILLSTATUS=1 ' +
+                  'And t1.dr=0 And t2.dr=0) And ';
     //当前有效单据
   end;
+
+  nStr := FListA.Values['BillCode'];
+  if nStr <> '' then
+  begin
+    FOut.FData := FOut.FData + Format('VBILLCODE Like ''%%%s%%''', [nStr]);
+
+    nData := Format('GetSQLQueryOrder BillCode -> [ %s ]', [FOut.FData]);
+    WriteLog(nData);
+    Exit; //按单号模糊查询
+  end;
+
+  nStr := FListA.Values['BillCodes'];
+  if nStr <> '' then
+  begin
+    FOut.FData := FOut.FData + Format('VBILLCODE In (%s)', [nStr]);
+
+    nData := Format('GetSQLQueryOrder BillCodes -> [ %s ]', [FOut.FData]);
+    WriteLog(nData);
+    Exit; //按单号批量查询
+  end;
+
+  nStr := FListA.Values['MeamKeys'];
+  if nStr <> '' then
+  begin
+    FOut.FData := FOut.FData + Format('pk_meambill_b In (%s)', [nStr]);
+
+    nData := Format('GetSQLQueryOrder MeamKeys -> [ %s ]', [FOut.FData]);
+    WriteLog(nData);
+    Exit; //按单号查询
+  end;
+
+  nStr := FListA.Values['NoDate'];
+  if nStr = '' then
+  begin
+    nStr := '(t1.dbilldate>=''%s'' And t1.dbilldate<''%s'')';
+    FOut.FData := FOut.FData + Format(nStr, [
+                  FListA.Values['DateStart'],
+                  FListA.Values['DateEnd']]);
+    //日期限制
+
+    FOut.FData := FOut.FData + ' And ';
+    //拼接以下条件
+  end;
+
+  FOut.FData := FOut.FData + ' (' + nType + ')';
+  //单据类型
 
   nStr := FListA.Values['CustomerID'];
   if nStr <> '' then
@@ -1097,6 +1155,9 @@ begin
     FOut.FData := FOut.FData + ' Order By ' + nStr;
     //排序条件
   end;
+
+  nData := Format('GetSQLQueryOrder End -> [ %s ]', [FOut.FData]);
+  WriteLog(nData);
 end;
 
 //Date: 2015-01-08
@@ -1124,6 +1185,9 @@ begin
   if nStr <> '' then
   begin
     FOut.FData := FOut.FData + Format(' And VBILLCODE Like ''%%%s%%''', [nStr]);
+
+    nData := Format('GetSQLQueryDispatch BillCode -> [ %s ]', [FOut.FData]);
+    WriteLog(nData);
     Exit; //按单号查询
   end;
 
@@ -1131,6 +1195,9 @@ begin
   if nStr <> '' then
   begin
     FOut.FData := FOut.FData + Format(' And pk_meambill_b In (%s)', [nStr]);
+
+    nData := Format('GetSQLQueryDispatch MeamKeys -> [ %s ]', [FOut.FData]);
+    WriteLog(nData);
     Exit; //按单号查询
   end;
 
@@ -1179,6 +1246,9 @@ begin
     FOut.FData := FOut.FData + ' Order By ' + nStr;
     //排序条件
   end;
+
+  nData := Format('GetSQLQueryDispatch End -> [ %s ]', [FOut.FData]);
+  WriteLog(nData);
 end;
 
 //Date: 2014-12-18
@@ -1211,6 +1281,9 @@ begin
   end;
 
   FOut.FData := FOut.FData + ' Group By custcode,custname,cmnecode';
+
+  nData := Format('GetSQLQueryCustomer -> [ %s ]', [FOut.FData]);
+  WriteLog(nData);
 end;
 
 //Date: 2014-12-24
@@ -1243,7 +1316,11 @@ begin
     nID := AdjustListStrFormat2(FListA, '''', True, ',', False);
     nStr := ' and pk_sourcebill_b in (%s) group by poundb.pk_sourcebill_b';
     nStr := nSQL + Format(nStr, [nID]);
-    //执行数     
+    //执行数
+
+    nData := Format('GetOrderFHValue -> [ %s ] => [ %s ]', [
+             '发货量', nStr]);
+    WriteLog(nData);
 
     with gDBConnManager.SQLQuery(nStr, nWorker, sFlag_DB_NC) do
     if RecordCount > 0 then
@@ -1264,6 +1341,10 @@ begin
             'group by poundb.pk_sourcebill_b';
     nStr := nSQL + Format(nStr, [nID]);
     //退货量
+
+    nData := Format('GetOrderFHValue -> [ %s ] => [ %s ]', [
+             '退货量', nStr]);
+    WriteLog(nData);
 
     with gDBConnManager.WorkerQuery(nWorker, nStr) do
     if RecordCount > 0 then
@@ -1358,7 +1439,10 @@ begin
     nID := AdjustListStrFormat2(FListA, '''', True, ',', False);
     nStr := ' and pk_sourcebill_b in (%s) group by poundb.pk_sourcebill_b';
     nStr := nSQL + Format(nStr, [nID]);
-    //执行数     
+    //执行数
+
+    nData := Format('GetOrderGYValue -> [ %s ]', [nStr]);
+    WriteLog(nData);
 
     with gDBConnManager.SQLQuery(nStr, nWorker, sFlag_DB_NC) do
     if RecordCount > 0 then
@@ -1768,10 +1852,19 @@ begin
   nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
 
   nSQL := 'Select L_ID,L_ZhiKa,L_SaleMan,L_Truck,L_Value,L_PValue,L_PDate,' +
-          'L_PMan,L_MValue,L_MDate,L_MMan,L_OutFact,L_Date,L_Seal,P_ID From %s ' +
-          '  Left Join %s On P_Bill=L_ID ' +
-          'Where L_ID In (%s)';
-  nSQL := Format(nSQL, [sTable_Bill, sTable_PoundLog, nStr]);
+          {$IFDEF LineGroup}
+          'dict.D_ParamC As ncLineID, '      +    //NC生产线编号
+          {$ENDIF}
+          'L_PMan,L_MValue,L_MDate,L_MMan,L_OutFact,L_Date,L_Seal,P_ID From $Bill ' +
+          '  Left Join $PLOG On P_Bill=L_ID ' +
+          {$IFDEF LineGroup}
+          '  Left Join $Dict dict On D_Value=L_LineGroup ' +
+          '       And dict.D_Name=''$GROUP'' ' +
+          {$ENDIF}
+          'Where L_ID In ($ID)';
+  nSQL := MacroValue(nSQL, [MI('$BILL', sTable_Bill),
+          MI('$PLOG', sTable_PoundLog), MI('$ID', nStr),
+          MI('$Dict', sTable_SysDict),MI('$GROUP', sFlag_ZTLineGroup)]);
 
   with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
   begin
@@ -1849,6 +1942,10 @@ begin
             FDate := Date();
           //xxxxx
         end;
+
+        {$IFDEF LineGroup}
+        FLineGroup := FieldByName('ncLineID').AsString;
+        {$ENDIF}
       end;
 
       Inc(nIdx);
@@ -1952,6 +2049,7 @@ begin
                 SF('pk_poundbill', nBills[nIdx].FPoundID),
                 SF('ts', DateTime2Str(nBills[nIdx].FMData.FDate)),
                 SF('vbillcode', nBills[nIdx].FPoundID),
+                SF('vdef7', nBills[nIdx].FLineGroup),
                 MakeField(nDS, 'vdef1', 0),
                 MakeField(nDS, 'vdef10', 0),
                 MakeField(nDS, 'vdef11', 0),
@@ -1969,7 +2067,6 @@ begin
                 MakeField(nDS, 'vdef4', 0),
                 MakeField(nDS, 'vdef5', 0),
                 MakeField(nDS, 'vdef6', 0),
-                MakeField(nDS, 'vdef7', 0),
                 MakeField(nDS, 'vdef8', 0),
                 MakeField(nDS, 'vdef9', 0),
                 SF('vsourcebillcode', FieldByName('vbillcode').AsString),
@@ -1995,6 +2092,7 @@ begin
                 SF('pk_sourcebill_b', FieldByName('pk_meambill_b').AsString),
                 SF('ts', DateTime2Str(nBills[nIdx].FMData.FDate)),
                 SF('vbatchcode', nBills[nIdx].FMemo),
+                SF('vdef7', nBills[nIdx].FLineGroup),
                 MakeField(nDS, 'vdef1', 1),
                 MakeField(nDS, 'vdef10', 1),
                 MakeField(nDS, 'vdef11', 1),
@@ -2012,7 +2110,6 @@ begin
                 MakeField(nDS, 'vdef4', 1),
                 MakeField(nDS, 'vdef5', 1),
                 MakeField(nDS, 'vdef6', 1),
-                MakeField(nDS, 'vdef7', 1),
                 MakeField(nDS, 'vdef8', 1),
                 MakeField(nDS, 'vdef9', 1),
                 SF('vsourcebillcode', FieldByName('vbillcode').AsString)
@@ -2074,6 +2171,7 @@ begin
       FZhiKa   := FieldByName('P_Order').AsString;
       FTruck   := FieldByName('P_Truck').AsString;
       FPoundID := FieldByName('P_ID').AsString;
+      FMemo    := FieldByName('P_Memo').AsString;
 
       if FZhiKa = '' then
       begin
@@ -2176,9 +2274,9 @@ begin
               SF('pk_poundbill', nBills[nIdx].FPoundID),
               SF('ts', DateTime2Str(nBills[nIdx].FMData.FDate)),
               SF('vbillcode', nBills[nIdx].FPoundID),
+              SF('vdef11', nBills[nIdx].FMemo),                                 //备注;堆场
               MakeField(nDS, 'vdef1', 0),
               MakeField(nDS, 'vdef10', 0),
-              MakeField(nDS, 'vdef11', 0),
               MakeField(nDS, 'vdef12', 0),
               MakeField(nDS, 'vdef13', 0),
               MakeField(nDS, 'vdef14', 0),
@@ -2216,9 +2314,10 @@ begin
               SF('pk_sourcebill_b', FieldByName('pk_meambill_b').AsString),
               SF('ts', DateTime2Str(nBills[nIdx].FMData.FDate)),
               SF('vbatchcode', FieldByName('vbatchcode').AsString),
+              SF('vdef11', nBills[nIdx].FMemo),                                 //备注;堆场
               MakeField(nDS, 'vdef1', 1),
               MakeField(nDS, 'vdef10', 1),
-              MakeField(nDS, 'vdef11', 1),
+              //MakeField(nDS, 'vdef11', 1),
               MakeField(nDS, 'vdef12', 1),
               MakeField(nDS, 'vdef13', 1),
               MakeField(nDS, 'vdef14', 1),
@@ -2245,7 +2344,7 @@ begin
         for nIdx:=0 to FListA.Count - 1 do
           gDBConnManager.WorkerExec(nWorker, FListA[nIdx]);
         //xxxxx
-        
+
         nWorker.FConn.CommitTrans;
         Result := True;
       except
@@ -2710,6 +2809,756 @@ begin
     Exit;
   end;
   //前缀优先
+end;
+
+//Date: 2017/6/7
+//Parm: NULL
+//Desc: 获取商城账号信息
+function TWorkerBusinessCommander.GetCustomerInfo(var nData:string):Boolean;
+var nOut: TWorkerBusinessCommand;
+    nXmlStr: string;
+begin
+  nXmlStr:= '<?xml version="1.0" encoding="UTF-8"?>' +
+            '<DATA>'                                 +
+            '  <head>'                               +
+            '    <Factory>$Factory</Factory>'        +
+            '  </head>'                              +
+            '</DATA>';
+  nXmlStr:= MacroValue(nXmlStr,[
+            MI('$Factory', gSysParam.FFactory)]);
+  //xxxxx
+
+  Result := CallRemoteWorker(sCLI_BusinessWebchat, PackerEncodeStr(nXmlStr), '', @nOut,
+            cBC_WebChat_GetCustomerInfo);
+  if Result then
+       FOut.FData := nOut.FData
+  else nData := nOut.FData;
+end;
+
+//发送消息
+function TWorkerBusinessCommander.SendEventMsg(var nData:string):Boolean;
+var nOut: TWorkerBusinessCommand;
+    nXmlStr: string;
+begin
+  FListA.Text := PackerDecodeStr(FIn.FData);
+  nXmlStr :='<?xml version="1.0" encoding="UTF-8"?>'	+
+            '<DATA>'                                  +
+            '<head>'                                  +
+            '  <Factory>$Factory</Factory>'           +
+            '  <ToUser>$User</ToUser>'                +
+            '  <MsgType>$MsgType</MsgType>'           +
+            '</head>'                                 +
+            '<Items>'                                 +
+            '	  <Item>'                               +
+            '	      <BillID>$BillID</BillID>'         +
+            '	      <Card>$Card</Card>'               +
+            '	      <Truck>$Truck</Truck>'            +
+            '	      <StockNo>$StockNO</StockNo>'      +
+            '	      <StockName>$StockName</StockName>'+
+            '	      <CusID>$CusID</CusID>'            +
+            '	      <CusName>$CusName</CusName>'      +
+            '	      <CusAccount>0</CusAccount>'       +
+            '	      <MakeDate></MakeDate>'            +
+            '	      <MakeMan></MakeMan>'              +
+            '	      <TransID></TransID>'              +
+            '	      <TransName></TransName>'          +
+            '	      <NetWeight>$Value</NetWeight>'    +
+            '	      <Searial></Searial>'              +
+            '	      <OutFact></OutFact>'              +
+            '	      <OutMan></OutMan>'                +
+            '	  </Item>	'                             +
+            '</Items>'                                +
+            '   <remark/>'                            +
+            '</DATA>';
+  nXmlStr:= MacroValue(nXmlStr, [MI('$Factory', gSysParam.FFactory),
+            MI('$User', FListA.Values['CusID']),
+            MI('$MsgType', FListA.Values['MsgType']),
+            MI('$BillID', FListA.Values['BillID']),
+            MI('$Card', FListA.Values['Card']),
+            MI('$Truck', FListA.Values['Truck']),
+            MI('$StockNO', FListA.Values['StockNO']),
+            MI('$StockName', FListA.Values['StockName']),
+            MI('$CusID', FListA.Values['CusID']),
+            MI('$CusName', FListA.Values['CusName']),
+            MI('$Value', FListA.Values['Value'])]);
+  Result := CallRemoteWorker(sCLI_BusinessWebchat, PackerEncodeStr(nXmlStr), '',
+            @nOut,cBC_WebChat_SendEventMsg);
+  if Result then
+       FOut.FData := sFlag_Yes
+  else nData := nOut.FData;
+end;
+
+//Date: 2017/6/7
+//Parm: NULL
+//Desc: 关联(解除关联)商城账号信息
+function TWorkerBusinessCommander.EditShopCustom(var nData:string):Boolean;
+var nOut: TWorkerBusinessCommand;
+    nXmlStr, nSQL: string;
+begin
+  FListA.Text := PackerDecodeStr(FIn.FData);
+  //xxxxx
+
+  nXmlStr:= '<?xml version="1.0" encoding="UTF-8" ?>'  +
+            '<DATA>'                                   +
+            '<head>'                                   +
+            '  <type>$Type</type>'                     +
+            '  <Factory>$Factory</Factory>'            +
+            '  <Customer>$WebCusID</Customer>'         +                        //商城账号
+            '  <Provider>$WebProID</Provider>'         +                        //商城账号
+            '</head>'                                  +
+            '<Items>'                                  +
+            '  <Item>'                                 +
+            '    <cash>0</cash>'                       +
+            '    <clientname>$DLCusName</clientname>'  +                        //DL系统客户名称
+            '    <clientnumber>$DLCusID</clientnumber>'+                        //DL系统客户编号
+            '    <providername>$DLPName</providername>'+                        //DL供应商名
+            '    <providernumber>$DLPID</providernumber>' +                     //DL供应商编号
+            '  </Item>'                                +
+            '</Items>'                                 +
+            '<remark>$Remark</remark>'                 +
+            '</DATA>';
+  nXmlStr:= MacroValue(nXmlStr,[
+            MI('$Type', FListA.Values['Type']),
+            MI('$Factory', gSysParam.FFactory),
+            MI('$WebCusID', FListA.Values['WebCusID']),
+            MI('$WebProID', FListA.Values['WebProID']),
+            MI('$DLCusName', FListA.Values['DLCusName']),
+            MI('$DLCusID', FListA.Values['DLCusID']),
+            MI('$DLPName', FListA.Values['DLPName']),
+            MI('$DLPID', FListA.Values['DLPID']),
+            MI('$Remark', FListA.Values['Remark'])]);
+  //去掉空格
+
+  Result := CallRemoteWorker(sCLI_BusinessWebchat, PackerEncodeStr(nXmlStr), '', @nOut,
+            cBC_WebChat_EditShopCustom);
+  if Result then
+  begin
+
+
+    if FIn.FExtParam = sFlag_Yes then      //销售客户
+    begin
+      nSQL := 'Update %s Set C_WeiXin=''%s'' Where C_ID=''%s''';
+      nSQL := Format(nSQL, [sTable_Customer, FListA.Values['WebUserName'],
+              FListA.Values['DLCusID']]);
+    end else
+
+    begin
+      nSQL := 'Update %s Set P_WeiXin=''%s'' Where P_ID=''%s''';
+      nSQL := Format(nSQL, [sTable_Provider, FListA.Values['WebUserName'],
+              FListA.Values['DLPID']]); //供应商
+    end;
+
+    gDBConnManager.WorkerExec(FDBConn, nSQL);
+  end;
+end;
+
+//Date: 2017/6/12
+//Parm: 客户ID
+//Desc: 获取可用订单列表
+function TWorkerBusinessCommander.GetOrderList(var nData:string):Boolean;
+var nSQL: string;
+    nVal: Double;
+    nIdx: Integer;
+    nWorker: PDBWorker;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
+  if Trim(FIn.FData) = '' then Exit;
+
+  FListA.Clear;
+  FListA.Values['NoDate'] := sFlag_Yes;
+  FListA.Values['CustomerID'] := FIn.FData;
+  if not CallMe(cBC_GetSQLQueryOrder, '101', PackerEncodeStr(FListA.Text), @nOut) then
+  begin
+    nData := 'GetOrderList获取NC销售订单语句失败';
+    Exit;
+  end;
+
+  nWorker := nil;
+  try
+    with gDBConnManager.SQLQuery(nOut.FData, nWorker, sFlag_DB_NC) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nData := Format('未查询到客户编号[ %s ]对应的订单信息1.', [FIn.FData]);
+        Exit;
+      end;
+
+      First;
+      FListA.Clear;
+      FListC.Clear;
+      //剩余量信息
+
+      while not Eof do
+      try
+        with FListB do
+        begin
+          Values['CusID'] := FieldByName('custcode').AsString;
+          Values['CusName'] := FieldByName('custname').AsString;
+          Values['PK']    := FieldByName('pk_meambill').AsString;
+
+          Values['ZhiKa'] := FieldByName('VBILLCODE').AsString;
+          Values['ZKDate']:= FieldByName('TMakeTime').AsString;
+
+          Values['StockNo']   := FieldByName('invcode').AsString;
+          Values['StockName'] := FieldByName('invname').AsString;
+          Values['Maxnumber'] := FieldBYName('NPLANNUM').AsString;
+
+          Values['SaleArea']  := FieldByName('areaclname').AsString;
+        end;
+
+        FListC.Add(FListB.Values['PK']);
+        FListA.Add(PackerEncodeStr(FListB.Text));
+      finally
+        Next;
+      end;
+    end;
+
+    if not CallMe(cBC_GetOrderFHValue, PackerEncodeStr(FListC.Text),
+       sFlag_Yes, @nOut) then
+    begin
+      nData := '获取订单[ %s ]已发量失败.';
+      nData := Format(nData, [FListC.Text]);
+      Exit;
+    end;
+
+    FListC.Clear;
+    FListC.Text := PackerDecodeStr(nOut.FData);
+    //订单已发货量
+
+    for nIdx := FListA.Count - 1 downto 0 do
+    begin
+      FListB.Text := PackerDecodeStr(FListA[nIdx]);
+      nSQL := FListC.Values[FListB.Values['PK']];
+      if not IsNumber(nSQL, True) then Continue;
+
+      nVal := Float2Float(StrToFloat(FListB.Values['Maxnumber']) -
+              StrToFloat(nSQL), cPrecision, False);
+      FListB.Values['Maxnumber'] := FloatToStr(nVal);
+      if FloatRelation(nVal, 0, rtLE) then
+            FListA.Delete(nIdx)
+      else  FListA[nIdx] := PackerEncodeStr(FListB.Text);
+    end;
+
+    FOut.FData := PackerEncodeStr(FListA.Text);
+    Result := True;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+end;
+
+function TWorkerBusinessCommander.GetPurchaseList(var nData:string):Boolean;
+var nSQL: string;
+    nVal: Double;
+    nIdx: Integer;
+    nWorker: PDBWorker;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
+  if Trim(FIn.FData) = '' then Exit;
+
+  FListA.Clear;
+  FListA.Values['NoDate'] := sFlag_Yes;
+  FListA.Values['CustomerID'] := FIn.FData;
+  if not CallMe(cBC_GetSQLQueryOrder, '201', PackerEncodeStr(FListA.Text), @nOut) then
+  begin
+    nData := 'GetOrderList获取NC采购订单语句失败';
+    Exit;
+  end;
+
+  nWorker := nil;
+  try
+    with gDBConnManager.SQLQuery(nOut.FData, nWorker, sFlag_DB_NC) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nData := Format('未查询到客户编号[ %s ]对应的采购订单信息.', [FIn.FData]);
+        Exit;
+      end;
+
+      First;
+      FListA.Clear;
+      FListC.Clear;
+      //剩余量信息
+
+      while not Eof do
+      try
+        with FListB do
+        begin
+          Values['ProvID'] := FieldByName('custcode').AsString;
+          Values['ProvName'] := FieldByName('custname').AsString;
+          Values['PK']    := FieldByName('pk_meambill').AsString;
+
+          Values['ZhiKa'] := FieldByName('VBILLCODE').AsString;
+          Values['ZKDate']:= FieldByName('TMakeTime').AsString;
+
+          Values['StockNo']   := FieldByName('invcode').AsString;
+          Values['StockName'] := FieldByName('invname').AsString;
+          Values['Maxnumber'] := FieldBYName('NPLANNUM').AsString;
+
+          Values['SaleArea']  := FieldByName('vdef10').AsString;
+        end;
+
+        FListC.Add(FListB.Values['PK']);
+        FListA.Add(PackerEncodeStr(FListB.Text));
+      finally
+        Next;
+      end;
+    end;
+
+    if not CallMe(cBC_GetOrderGYValue, PackerEncodeStr(FListC.Text),
+       sFlag_Yes, @nOut) then
+    begin
+      nData := '获取订单[ %s ]已收量失败.';
+      nData := Format(nData, [FListC.Text]);
+      Exit;
+    end;
+
+    FListC.Clear;
+    FListC.Text := PackerDecodeStr(nOut.FData);
+    //订单已发货量
+
+    for nIdx := FListA.Count - 1 downto 0 do
+    begin
+      FListB.Text := PackerDecodeStr(FListA[nIdx]);
+      nSQL := FListC.Values[FListB.Values['PK']];
+      if not IsNumber(nSQL, True) then Continue;
+
+      nVal := Float2Float(StrToFloat(FListB.Values['Maxnumber']) -
+              StrToFloat(nSQL), cPrecision, False);
+      FListB.Values['Maxnumber'] := FloatToStr(nVal);
+      if FloatRelation(nVal, 0, rtLE) then
+            FListA.Delete(nIdx)
+      else  FListA[nIdx] := PackerEncodeStr(FListB.Text);
+    end;
+
+    FOut.FData := PackerEncodeStr(FListA.Text);
+    Result := True;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+end;
+
+function TWorkerBusinessCommander.GetShopOrdersByID(var nData:string):Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallRemoteWorker(sCLI_BusinessWebchat, FIn.FData, FIn.FExtParam, @nOut,
+            cBC_WebChat_GetShopOrdersByID);
+  if Result then
+       FOut.FData := nOut.FData
+  else nData := nOut.FData;
+end;
+
+function TWorkerBusinessCommander.GetShopOrderByNO(var nData:string):Boolean;
+var nOut: TWorkerBusinessCommand;
+    nXmlStr, nSQL: string;
+    nWorker: PDBWorker;
+    nIdx: Integer;
+begin
+  Result := False;
+  nXmlStr:= '<?xml version="1.0" encoding="UTF-8"?>' +
+            '<DATA>'                                 +
+            '  <head>'                               +
+            '    <Factory>$Factory</Factory>'        +
+            '    <NO>$No</NO>'        +
+            '  </head>'                              +
+            '</DATA>';
+  nXmlStr:= MacroValue(nXmlStr,[
+            MI('$Factory', gSysParam.FFactory),
+            MI('$No', FIn.FData)]);
+  //xxxxx
+
+  if (not CallRemoteWorker(sCLI_BusinessWebchat, PackerEncodeStr(nXmlStr), '', @nOut,
+      cBC_WebChat_GetShopOrderByNO)) or (nOut.FData = '') then
+  begin
+    nData := '未获取到对应的订单信息.';
+    Exit;
+  end;
+
+  nWorker := nil;
+  try
+    nWorker := gDBConnManager.GetConnection(sFlag_DB_NC, nIdx);
+
+    if not Assigned(nWorker) then
+    begin
+      nData := Format('连接[ %s ]数据库失败(ErrCode: %d).', [sFlag_DB_NC, nIdx]);
+      WriteLog(nData);
+      Exit;
+    end;
+
+    if not nWorker.FConn.Connected then
+      nWorker.FConn.Connected := True;
+    //conn db
+
+    FListA.Clear;
+    FListB.Clear;
+    FListC.Clear;
+
+    FListA.Text := PackerDecodeStr(nOut.FData);
+    for nIdx := 0 to FListA.Count - 1 do
+    begin
+      FListB.Text := PackerDecodeStr(FListA[nIdx]);
+
+      if FListB.Values['OrderNO'] = '' then Continue;
+
+      if FListB.Values['OrderType'] = sFlag_Sale then
+      if FListC.IndexOf(FListB.Values['OrderNO']) < 0 then
+        FListC.Add(FListB.Values['OrderNO']);
+    end;
+    //查看销售订单
+
+    if FListC.Count > 0 then
+    begin
+      FListB.Clear;
+      FListB.Values['BillCodes'] := AdjustListStrFormat2(FListC, '''', True, ',', False, False);
+      if (not CallMe(cBC_GetSQLQueryOrder, '103', PackerEncodeStr(FListB.Text),
+          @nOut)) or (nOut.FData = '') then
+      begin
+        nData := '未获取到[ %s ]对应的数据库查询语句.';
+        nData := Format(nData, [FListC.Text]);
+        Exit;
+      end;
+
+      nSQL := nOut.FData;
+      with gDBConnManager.WorkerQuery(nWorker, nSQL) do
+      begin
+        if RecordCount < 1 then
+        begin
+          nData := '订单号[ %s ]已无效,请联系管理员重新开单.';
+          nData := Format(nData, [FListC.Text]);
+          Exit;
+        end;
+
+        First;
+
+        while not Eof do
+        try
+          nSQL := Trim(FieldByName('VBillCode').AsString);
+          if nSQL = '' then Continue;
+
+          for nIdx := 0 to FListA.Count - 1 do
+          begin
+            FListB.Text := PackerDecodeStr(FListA[nIdx]);
+
+            if CompareStr(FListB.Values['OrderNo'], nSQL) = 0 then
+            begin
+              FListB.Values['Orders']:= FieldByName('pk_meambill').AsString;
+              FListB.Values['CusID'] := FieldByName('custcode').AsString;
+              FListB.Values['CusName'] := FieldByName('custname').AsString;
+              FListB.Values['SendArea']:= FieldByName('areaclname').AsString;
+            end;
+
+            FListA[nIdx] := PackerEncodeStr(FListB.Text);
+          end;
+        finally
+          Next;
+        end;
+      end;
+    end;
+
+    FListC.Clear;
+    for nIdx := 0 to FListA.Count - 1 do
+    begin
+      FListB.Text := PackerDecodeStr(FListA[nIdx]);
+
+      if FListB.Values['OrderNO'] = '' then Continue;
+
+      if FListB.Values['OrderType'] = sFlag_Provide then
+      if FListC.IndexOf(FListB.Values['OrderNO']) < 0 then
+        FListC.Add(FListB.Values['OrderNO']);
+    end;
+    //查看采购订单
+
+    if FListC.Count > 0 then
+    begin
+      FListB.Clear;
+      FListB.Values['BillCodes'] := AdjustListStrFormat2(FListC, '''', True, ',', False, False);
+      if (not CallMe(cBC_GetSQLQueryOrder, '203', PackerEncodeStr(FListB.Text),
+          @nOut)) or (nOut.FData = '') then
+      begin
+        nData := '未获取到[ %s ]对应的数据库查询语句.';
+        nData := Format(nData, [FListC.Text]);
+        Exit;
+      end;
+
+      nSQL := nOut.FData;
+      with gDBConnManager.WorkerQuery(nWorker, nSQL) do
+      begin
+        if RecordCount < 1 then
+        begin
+          nData := '订单号[ %s ]已无效,请联系管理员重新开单.';
+          nData := Format(nData, [FListC.Text]);
+          Exit;
+        end;
+
+        First;
+
+        while not Eof do
+        try
+          nSQL := Trim(FieldByName('VBillCode').AsString);
+          if nSQL = '' then Continue;
+
+          for nIdx := 0 to FListA.Count - 1 do
+          begin
+            FListB.Text := PackerDecodeStr(FListA[nIdx]);
+
+            if CompareStr(FListB.Values['OrderNo'], nSQL) = 0 then
+            begin
+              FListB.Values['Orders']:= FieldByName('pk_meambill').AsString;
+              FListB.Values['CusID'] := FieldByName('custcode').AsString;
+              FListB.Values['CusName'] := FieldByName('custname').AsString;
+              FListB.Values['SendArea']:= FieldByName('vdef10').AsString;
+            end;
+
+            FListA[nIdx] := PackerEncodeStr(FListB.Text);
+          end;
+        finally
+          Next;
+        end;
+      end;
+    end;
+
+    FOut.FData := PackerEncodeStr(FListA.Text);
+    Result := True;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+end;
+
+function TWorkerBusinessCommander.EditShopOrderInfo(var nData:string):Boolean;
+var nOut: TWorkerBusinessCommand;
+    nXmlStr: string;
+begin
+  FListA.Text := PackerDecodeStr(FIn.FData);
+  //解析信息
+  nXmlStr:= '<?xml version="1.0" encoding="UTF-8"?>'  +
+            '<DATA>'                                  +
+            '  <head>'                                +
+            '    <ordernumber>$WebID</ordernumber>'   +
+            '    <status>$Status</status>'            +
+            '    <NetWeight>$Value</NetWeight>'       +
+            '  </head>'                               +
+            '</DATA>';
+  nXmlStr:= MacroValue(nXmlStr,[
+            MI('$WebID', FListA.Values['WebID']),
+            MI('$Value', FListA.Values['Value']),
+            MI('$Status', FListA.Values['Status'])]);
+  //xxxxx
+
+  Result := CallRemoteWorker(sCLI_BusinessWebchat, PackerEncodeStr(nXmlStr), '',
+            @nOut, cBC_WebChat_EditShopOrderInfo);
+  if Result then
+       FOut.FData := sFlag_Yes
+  else nData := nOut.FData;
+end;
+
+function TWorkerBusinessCommander.GetWaitingForloading(var nData:string):Boolean;
+var nFind: Boolean;
+    nLine: PLineItem;
+    nIdx,nInt, i: Integer;
+    nQueues: TQueueListItems;
+begin
+  gTruckQueueManager.RefreshTrucks(True);
+  Sleep(320);
+  //刷新数据
+
+  with gTruckQueueManager do
+  try
+    SyncLock.Enter;
+    Result := True;
+
+    FListB.Clear;
+    FListC.Clear;
+
+    i := 0;
+    SetLength(nQueues, 0);
+    //保存查询记录
+
+    for nIdx:=0 to Lines.Count - 1 do
+    begin
+      nLine := Lines[nIdx];
+      if not nLine.FIsValid then Continue;
+      //通道无效
+
+      nFind := False;
+      for nInt:=Low(nQueues) to High(nQueues) do
+      begin
+        with nQueues[nInt] do
+        if FStockNo = nLine.FStockNo then
+        begin
+          Inc(FLineCount);
+          FTruckCount := FTruckCount + nLine.FRealCount;
+
+          nFind := True;
+          Break;
+        end;
+      end;
+
+      if not nFind then
+      begin
+        SetLength(nQueues, i+1);
+        with nQueues[i] do
+        begin
+          FStockNO    := nLine.FStockNo;
+          FStockName  := nLine.FStockName;
+
+          FLineCount  := 1;
+          FTruckCount := nLine.FRealCount;
+        end;
+
+        Inc(i);
+      end;
+    end;
+
+    for nIdx:=Low(nQueues) to High(nQueues) do
+    begin
+      with FListB, nQueues[nIdx] do
+      begin
+        Clear;
+
+        Values['StockName'] := FStockName;
+        Values['LineCount'] := IntToStr(FLineCount);
+        Values['TruckCount']:= IntToStr(FTruckCount);
+      end;
+
+      FListC.Add(PackerEncodeStr(FListB.Text));
+    end;
+
+    FOut.FData := PackerEncodeStr(FListC.Text);
+  finally
+    SyncLock.Leave;
+  end;
+end;
+
+function TWorkerBusinessCommander.VerifyPrintCode(var nData:string):Boolean;
+begin
+  Result := True;
+end;
+
+function TWorkerBusinessCommander.DLSaveShopInfo(var nData:string):Boolean;
+var nSQL, nStr: string;
+    nIdx, nStatusCmd, nBillCmd: Integer;
+begin
+  Result := True;
+  FListA.Text := PackerDecodeStr(FIn.FData);
+
+  nBillCmd := StrToIntDef(FListA.Values['BillType'], cMsg_WebChat_BillNew);
+  case nBillCmd of
+  cMsg_WebChat_BillNew: nStatusCmd := cStatus_WeChat_CreateCard;
+  cMsg_WebChat_BillFinished: nStatusCmd := cStatus_WeChat_Finished;
+  else
+    nStatusCmd := -1;
+  end;
+
+  if FListA.Values['DLEncode'] = sFlag_No then
+       nStr := FListA.Values['DLID']
+  else nStr := AdjustListStrFormat(FListA.Values['DLID'], '''', True, ',', False);
+
+  if FListA.Values['MType'] = sFlag_Sale then
+  begin
+    nSQL := 'Select * From %s Where L_ID In (%s)';
+    nSQL := Format(nSQL, [sTable_Bill, nStr]);
+
+    with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+    begin
+      if RecordCount < 1 then Exit;
+
+      First;
+      FListC.Clear;
+
+      while not Eof do
+      try
+        nSQL := MakeSQLByStr([
+                SF('E_DLID', FieldByName('L_ID').AsString),
+                SF('E_MsgType', nBillCmd, sfVal),
+                SF('E_Card', FieldByName('L_ID').AsString),
+                SF('E_Truck', FieldByName('L_Truck').AsString),
+                SF('E_StockNO', FieldByName('L_StockNo').AsString),
+                SF('E_StockName', FieldByName('L_StockName').AsString),
+                SF('E_CusID', FieldByName('L_CusID').AsString),
+                SF('E_CusName', FieldByName('L_CusName').AsString),
+                SF('E_Upload', sFlag_No),
+                SF('E_Value', FieldByName('L_Value').AsFloat, sfVal),
+                SF('E_Date', sField_SQLServer_Now, sfVal),
+                SF('E_Man', FIn.FBase.FFrom.FUser)
+                ], sTable_WebSendMsgInfo, '', True);
+        FListC.Add(nSQL);
+
+        nSQL := MakeSQLByStr([
+                SF('S_ID', FieldByName('L_ID').AsString),
+                SF('S_Status', nStatusCmd, sfVal),
+                SF('S_Value', FieldByName('L_Value').AsFloat, sfVal),
+                SF('S_Upload', sFlag_No),
+                SF('S_Type', sFlag_Sale),
+
+                SF('S_Date', sField_SQLServer_Now, sfVal),
+                SF('S_Man', FIn.FBase.FFrom.FUser)
+                ], sTable_WebSyncStatus, '', True);
+         FListC.Add(nSQL);
+      finally
+        Next;
+      end;
+    end;
+  end else
+
+  if FListA.Values['MType'] = sFlag_Provide then
+  begin
+    nSQL := 'Select * From %s Where P_ID In (%s)';
+    nSQL := Format(nSQL, [sTable_PoundLog, nStr]);
+
+    with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+    begin
+      if RecordCount < 1 then Exit;
+
+      First;
+      FListC.Clear;
+
+      while not Eof do
+      try
+        nSQL := MakeSQLByStr([
+                SF('E_DLID', FieldByName('P_ID').AsString),
+                SF('E_MsgType', nBillCmd, sfVal),
+                SF('E_Card', FieldByName('P_Card').AsString),
+                SF('E_Truck', FieldByName('P_Truck').AsString),
+                SF('E_StockNO', FieldByName('P_MID').AsString),
+                SF('E_StockName', FieldByName('P_MName').AsString),
+                SF('E_CusID', FieldByName('P_CusID').AsString),
+                SF('E_CusName', FieldByName('P_CusName').AsString),
+                SF('E_Upload', sFlag_No),
+                SF('E_Value', Float2Float(FieldByName('P_MValue').AsFloat -
+                  FieldByName('P_PValue').AsFloat, cPrecision, False), sfVal),
+                SF('E_Date', sField_SQLServer_Now, sfVal),
+                SF('E_Man', FIn.FBase.FFrom.FUser)
+                ], sTable_WebSendMsgInfo, '', True);
+        FListC.Add(nSQL);
+
+        nSQL := MakeSQLByStr([
+                SF('S_ID', FieldByName('P_ID').AsString),
+                SF('S_Status', nStatusCmd, sfVal),
+                SF('S_Value', Float2Float(FieldByName('P_MValue').AsFloat -
+                  FieldByName('P_PValue').AsFloat, cPrecision, False), sfVal),
+                SF('S_Upload', sFlag_No),
+                SF('S_Type', sFlag_Provide),
+
+                SF('S_Date', sField_SQLServer_Now, sfVal),
+                SF('S_Man', FIn.FBase.FFrom.FUser)
+                ], sTable_WebSyncStatus, '', True);
+         FListC.Add(nSQL);
+      finally
+        Next;
+      end;
+    end;
+  end;
+
+  FDBConn.FConn.BeginTrans;
+  try
+    for nIdx := 0 to FListC.Count - 1 do
+      gDBConnManager.WorkerExec(FDBConn, FListC[nIdx]);
+
+    FDBConn.FConn.CommitTrans;
+  except
+    FDBConn.FConn.RollbackTrans;
+  end;
 end;
 
 initialization

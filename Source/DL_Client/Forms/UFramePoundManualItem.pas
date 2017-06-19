@@ -1496,7 +1496,11 @@ begin
     end;
   end;
 
-  if nBillValue <= 0 then Exit;
+  if nBillValue <= 0 then
+  begin
+    Result := True;
+    Exit;
+  end;
   //已开单完毕
 
   //----------------------------------------------------------------------------

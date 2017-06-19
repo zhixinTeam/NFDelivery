@@ -287,7 +287,7 @@ begin
     end else
     begin
       nSQL := Format('C_Card=''%s''', [nCard]);
-      nSQL := MakeSQLByStr([SF('C_Status', sFlag_CardUsed),
+      nSQL := MakeSQLByStr([
               SF('C_Group', nCardKeep),
               SF('C_Status', sFlag_CardUsed),
               SF('C_Used', sFlag_ShipPro),

@@ -16,6 +16,7 @@ uses
   UWorkerBusinessCommand, UWorkerBusinessBill,
   UWorkerBusinessProvide, UWorkerBusinessDuanDao, 
   UWorkerBusinessShipPro, UWorkerBusinessShipTmp,
+  UWorkerClientWebChat, UWebChatUploader,
   UMgrDBConn, UMgrParam, UMgrPlug, UMgrChannel, UChannelChooser, USAPConnection;
 
 procedure InitSystemObject(const nMainForm: THandle);
@@ -98,6 +99,8 @@ begin
   gChannelChoolser.StartRefresh;
   {$ENDIF} //channel auto select
 
+  gWebChatUploader.Start(gParamManager.ActiveParam.FDB.FID);
+
   gTaskMonitor.StartMon;
   //mon task start
 end;
@@ -119,6 +122,8 @@ begin
   {$IFDEF DBPool}
   gDBConnManager.Disconnection();
   {$ENDIF} //db
+
+  gWebChatUploader.Stop;
 end;
 
 //------------------------------------------------------------------------------

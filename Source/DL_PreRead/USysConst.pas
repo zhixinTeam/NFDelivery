@@ -8,7 +8,7 @@ interface
 
 uses
   Windows, Classes, SysUtils, UBusinessPacker, UBusinessWorker, UBusinessConst,
-  UClientWorker, UMITPacker, UWaitItem, ULibFun, UMultiJS, USysDB, USysLoger,
+  UClientWorker, UMITPacker, UWaitItem, ULibFun, USysDB, USysLoger,
   UMgrChannel, UChannelChooser, U02NReader, UMgrLEDDisp,UDataModule, IniFiles;
 {$DEFINE DEBUG}
 type
@@ -81,8 +81,8 @@ procedure RunSystemObject;
 //Desc: 释放系统对象
 procedure FreeSystemObject;
 
-procedure WhenReaderCardIn(nHost: TReaderHost; nCard: TReaderCard);
-procedure WhenReaderCardOut(nHost: TReaderHost; nCard: TReaderCard);
+procedure WhenReaderCardIn(const nCard: string; const nHost: PReaderHost);
+procedure WhenReaderCardOut(const nCard: string; const nHost: PReaderHost);
 //------------------------------------------------------------------------------
 resourceString
   sHint               = '提示';                      //对话框标题
@@ -532,29 +532,24 @@ begin
 end;
 
 //现场读头有新卡号
-procedure WhenReaderCardIn(nHost: TReaderHost; nCard: TReaderCard);
+procedure WhenReaderCardIn(const nCard: string; const nHost: PReaderHost);
 var nTxt, nStrLog: string;
+    nPrepare: Boolean;
 begin
   {$IFDEF DEBUG}
   nStrLog := '读卡信息: 车道编号[%s]，卡号[%s]';
-  nStrLog := Format(nStrLog, [nHost.FTunnel, nCard.FCard]);
+  nStrLog := Format(nStrLog, [nHost.FTunnel, nCard]);
   WriteLog(nStrLog);
   {$ENDIF}
-  if (nHost.FType = rtKeep) and nHost.FPrepare then
-  begin
-    nTxt := PrepareShowInfo(nCard.FCard, nHost.FTunnel);
-    if nTxt<>'' then gDisplayManager.Display(nHost.FID, nTxt);     
-  end;
+  nTxt := PrepareShowInfo(nCard, nHost.FTunnel);
+  if nTxt<>'' then gDisplayManager.Display(nHost.FID, nTxt);
 end;
 
-procedure WhenReaderCardOut(nHost: TReaderHost; nCard: TReaderCard);
+procedure WhenReaderCardOut(const nCard: string; const nHost: PReaderHost);
 begin
-  if nHost.FPrepare then
-  begin
-    gDisplayManager.Display(nHost.FID, nHost.FLEDText);
-    Sleep(100);
-    Exit;
-  end;
+  gDisplayManager.Display(nHost.FID, nHost.FLEDText);
+  Sleep(100);
+  Exit;
 end;
 
 end.

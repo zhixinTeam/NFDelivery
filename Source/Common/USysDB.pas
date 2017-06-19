@@ -157,6 +157,12 @@ ResourceString
   sFlag_BatchOutUse   = 'N';                         //批次号已封存
   sFlag_BatchDel      = 'D';                         //批次号已删除
 
+  sFlag_ManualA       = 'A';                         //皮重预警(错误事件类型)
+  sFlag_ManualB       = 'B';                         //皮重超出范围
+  sFlag_ManualC       = 'C';                         //净重超出误差范围
+  sFlag_ManualD       = 'D';                         //散装超出大票量
+  sFlag_ManualE       = 'E';                         //批次号获取失败
+
   sFlag_SysParam      = 'SysParam';                  //系统参数
   sFlag_EnableBakdb   = 'Uses_BackDB';               //备用库
   sFlag_ValidDate     = 'SysValidDate';              //有效期
@@ -189,6 +195,7 @@ ResourceString
   sFlag_FactoryItem   = 'FactoryItem';               //工厂信息项
   sFlag_DuctTimeItem  = 'DuctTimeItem';              //暗扣时间段项
   sFlag_TiHuoTypeItem = 'TiHuoTypeItem';             //提货类型
+  sFlag_ZTLineGroup   = 'ZTLineGroup';               //栈台分组
 
   sFlag_InWHouse      = 'Warehouse';                 //库存可发(收)货订单
   sFlag_InWHID        = 'WarehouseID';               //仓库可发(收)货订单
@@ -202,12 +209,7 @@ ResourceString
 
   sFlag_HardSrvURL    = 'HardMonURL';
   sFlag_MITSrvURL     = 'MITServiceURL';             //服务地址
-
-  sFlag_Departments   = 'Departments';               //部门列表
-  sFlag_DepDaTing     = '大厅';                      //服务大厅
-  sFlag_DepJianZhuang = '监装';                      //监装
-  sFlag_DepBangFang   = '磅房';                      //磅房
-
+            
   sFlag_AutoIn        = 'Truck_AutoIn';              //自动进厂
   sFlag_AutoOut       = 'Truck_AutoOut';             //自动出厂
   sFlag_OtherAutoIn   = 'Truck_OtherAutoIn';         //自动进厂(非销售)
@@ -298,6 +300,21 @@ ResourceString
 
   sTable_ChineseBase  = 'Sys_ChineseBase';           //汉字喷码表
   sTable_ChineseDict  = 'Sys_ChineseDict';           //汉字编码字典
+
+  sTable_WebOrderInfo = 'S_WebOrderInfo';            //微信订单信息
+  sTable_WebSyncStatus= 'S_WebSyncStatus';           //订单状态同步
+  sTable_WebSendMsgInfo = 'S_WebSendMsgInfo';        //发送模板消息
+
+const
+  sFlag_Departments   = 'Departments';               //部门列表
+  sFlag_DepDaTing     = '大厅';                      //服务大厅
+  sFlag_DepJianZhuang = '监装';                      //监装
+  sFlag_DepBangFang   = '磅房';                      //磅房
+  sFlag_Solution_YN   = 'Y=通过;N=禁止';
+  sFlag_Solution_YNI  = 'Y=通过;N=禁止;I=忽略';
+
+  sFlag_Solution_NP   = 'P=回空;N=禁止';
+  sFlag_Solution_YNP  = 'Y=通过;P=回空;N=禁止';
 
   {*新建表*}
   sSQL_NewSysDict = 'Create Table $Table(D_ID $Inc, D_Name varChar(15),' +
@@ -521,7 +538,7 @@ ResourceString
        'L_PValue $Float, L_PDate DateTime, L_PMan varChar(32),' +
        'L_MValue $Float, L_MDate DateTime, L_MMan varChar(32),' +
        'L_LadeTime DateTime, L_LadeMan varChar(32), ' +
-       'L_LadeLine varChar(15), L_LineName varChar(32), ' +
+       'L_LadeLine varChar(15), L_LineName varChar(32), L_LineGroup varChar(15),' +
        'L_DaiTotal Integer , L_DaiNormal Integer, L_DaiBuCha Integer,' +
        'L_OutFact DateTime, L_OutMan varChar(32),' +
        'L_Lading Char(1), L_IsVIP varChar(1), L_Seal varChar(100),' +
@@ -549,7 +566,7 @@ ResourceString
    *.L_PValue,L_PDate,L_PMan: 称皮重
    *.L_MValue,L_MDate,L_MMan: 称毛重
    *.L_LadeTime,L_LadeMan: 发货时间,发货人
-   *.L_LadeLine,L_LineName: 发货通道
+   *.L_LadeLine,L_LineName, L_LineGroup: 发货通道
    *.L_DaiTotal,L_DaiNormal,L_DaiBuCha:总装,正常,补差
    *.L_OutFact,L_OutMan: 出厂放行
    *.L_Lading: 提货方式(自提,送货)
@@ -702,7 +719,7 @@ ResourceString
 
   sSQL_NewZTLines = 'Create Table $Table(R_ID $Inc, Z_ID varChar(15),' +
        'Z_Name varChar(32), Z_StockNo varChar(20), Z_Stock varChar(80),' +
-       'Z_StockType Char(1), Z_PeerWeight Integer,' +
+       'Z_StockType Char(1), Z_PeerWeight Integer, Z_Group Char(15),' +
        'Z_QueueMax Integer, Z_VIPLine Char(1), Z_Valid Char(1), Z_Index Integer)';
   {-----------------------------------------------------------------------------
    装车线配置: ZTLines
@@ -721,7 +738,7 @@ ResourceString
 
   sSQL_NewZTTrucks = 'Create Table $Table(R_ID $Inc, T_Truck varChar(15),' +
        'T_StockNo varChar(20), T_Stock varChar(80), T_Type Char(1),' +
-       'T_Line varChar(15), T_Index Integer, ' +
+       'T_Line varChar(15), T_LineGroup varChar(15), T_Index Integer, ' +
        'T_InTime DateTime, T_InFact DateTime, T_InQueue DateTime,' +
        'T_InLade DateTime, T_VIP Char(1), T_Valid Char(1), T_Bill varChar(15),' +
        'T_Value $Float, T_PeerWeight Integer, T_Total Integer Default 0,' +
@@ -735,6 +752,7 @@ ResourceString
    *.T_Stock: 品种名称
    *.T_Type: 品种类型(D,S)
    *.T_Line: 所在道
+   *.T_LineGroup: 通道分组
    *.T_Index: 顺序索引
    *.T_InTime: 入队时间
    *.T_InFact: 进厂时间
@@ -755,13 +773,14 @@ ResourceString
 
   sSQL_NewProvider = 'Create Table $Table(R_ID $Inc, P_ID varChar(32),' +
        'P_Name varChar(80),P_PY varChar(80), P_Phone varChar(20),' +
-       'P_Saler varChar(32),P_Memo varChar(50))';
+       'P_WeiXin varChar(32), P_Saler varChar(32),P_Memo varChar(50))';
   {-----------------------------------------------------------------------------
    供应商: Provider
    *.P_ID: 编号
    *.P_Name: 名称
    *.P_PY: 拼音简写
    *.P_Phone: 联系方式
+   *.P_Weixin: 商城账号
    *.P_Saler: 业务员
    *.P_Memo: 备注
   -----------------------------------------------------------------------------}
@@ -975,7 +994,7 @@ ResourceString
   -----------------------------------------------------------------------------}
 
   sSQL_NewBatcode = 'Create Table $Table(R_ID $Inc, B_Stock varChar(32),' +
-       'B_Name varChar(80), B_Prefix varChar(5), B_Base Integer,' +
+       'B_Name varChar(80), B_Prefix varChar(15), B_Base Integer,' +
        'B_Incement Integer, B_Length Integer, B_Type Char(1),' +
        'B_Value $Float, B_Low $Float, B_High $Float, B_Interval Integer,' +
        'B_AutoNew Char(1), B_UseDate Char(1), B_FirstDate DateTime,' +
@@ -1090,6 +1109,56 @@ ResourceString
    *.D_Value：喷码值
    *.D_Valid：是否有效(Y/N)
    *.D_Memo：备注
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewWebOrderInfo = 'Create Table $Table(R_ID $Inc, W_WebID varChar(32),' +
+       'W_DLID varChar(15), W_Date DateTime, W_Man varChar(80),' +
+       'W_Memo varChar(80))';
+  {-----------------------------------------------------------------------------
+   商城订单映射表: WebOrderInfo
+   *.R_ID: 编号
+   *.W_WebID: 商城订单ID
+   *.W_DLID: DL系统ID
+   *.W_Date: 开单时间
+   *.W_Man: 开单人
+   *.W_Memo: 备注
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewWebSyncStatus = 'Create Table $Table(R_ID $Inc, ' +
+       'S_ID varChar(15), S_Status Integer, S_Value $Float, S_Type Char(1),' +
+       'S_Upload Char(1), S_UpCount Integer Default 0, ' +
+       'S_Date DateTime, S_Man varChar(80), S_Memo varChar(80))';
+  {-----------------------------------------------------------------------------
+   商城订单状态同步表: WebSyncStatus
+   *.R_ID: 编号
+   *.S_ID: DL系统ID
+   *.S_Status: 订单状态
+   *.S_Value: 订单量
+   *.S_Type: 订单类型
+   *.S_Upload: 订单同步状态
+   *.S_Date: 开单时间
+   *.S_Man: 开单人
+   *.S_Memo: 备注
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewWebSendMsgInfo = 'Create Table $Table(R_ID $Inc, ' +
+       'E_Value $Float, E_DLID varChar(20), E_MsgType Integer, ' +
+       'E_Card varChar(32), E_Truck varChar(15), E_StockNO varChar(20),' +
+       'E_StockName varChar(128), E_CusID varChar(20), E_CusName varChar(128),'+
+       'E_Upload Char(1), E_UpCount Integer Default 0, ' +
+       'E_Date DateTime, E_Man varChar(80), E_Memo varChar(80))';
+  {-----------------------------------------------------------------------------
+   商城发送模板消息表: WebSendMsgInfo
+   *.R_ID: 编号
+   *.E_ID: DL系统ID
+   *.E_MsgType: 订单状态
+   *.E_Value: 订单量
+   *.E_Type: 订单类型
+   *.E_Upload: 订单同步状态
+   *.E_UpCount: 同步次数
+   *.E_Date: 开单时间
+   *.E_Man: 开单人
+   *.E_Memo: 备注
   -----------------------------------------------------------------------------}
 
 //------------------------------------------------------------------------------
@@ -1248,6 +1317,9 @@ begin
 
   AddSysTableItem(sTable_ChineseBase, sSQL_NewChineseBase);
   AddSysTableItem(sTable_ChineseDict, sSQL_NewChineseDict);
+  AddSysTableItem(sTable_WebOrderInfo, sSQL_NewWebOrderInfo);
+  AddSysTableItem(sTable_WebSyncStatus, sSQL_NewWebSyncStatus);
+  AddSysTableItem(sTable_WebSendMsgInfo, sSQL_NewWebSendMsgInfo);
 end;
 
 //Desc: 清理系统表

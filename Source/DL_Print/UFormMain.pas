@@ -421,6 +421,9 @@ begin
         System.Delete(nPrinter, 1, nPos);
       end else nPrinter := '';
 
+      if Length(nPrinter) < 1 then Exit;
+      //未指定打印机则禁止打印
+
       FIsBusy := True;
       try
         WriteLog('开始打印: ' + nBill);

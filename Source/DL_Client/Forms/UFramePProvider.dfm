@@ -22,13 +22,14 @@ inherited fFrameProvider: TfFrameProvider
     Top = 202
     Width = 686
     Height = 165
+    PopupMenu = PopupMenu1
   end
   inherited dxLayout1: TdxLayoutControl
     Width = 686
     Height = 135
     object cxTextEdit1: TcxTextEdit [0]
       Left = 69
-      Top = 96
+      Top = 93
       Hint = 'T.P_Name'
       ParentFont = False
       TabOrder = 1
@@ -50,7 +51,7 @@ inherited fFrameProvider: TfFrameProvider
     end
     object cxTextEdit2: TcxTextEdit [2]
       Left = 257
-      Top = 96
+      Top = 93
       Hint = 'T.P_Memo'
       ParentFont = False
       TabOrder = 2
@@ -97,5 +98,19 @@ inherited fFrameProvider: TfFrameProvider
   end
   inherited DataSource1: TDataSource
     Top = 234
+  end
+  object PopupMenu1: TPopupMenu
+    Left = 61
+    Top = 234
+    object N1: TMenuItem
+      Tag = 4
+      Caption = #20851#32852#21830#22478#36134#25143
+      OnClick = N1Click
+    end
+    object N2: TMenuItem
+      Tag = 5
+      Caption = #21462#28040#20851#32852#21830#22478
+      OnClick = N1Click
+    end
   end
 end

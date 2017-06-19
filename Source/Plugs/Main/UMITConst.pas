@@ -63,6 +63,9 @@ type
 
     FDisplayDPI : Integer;                           //屏幕分辨率
     FAutoMin    : Boolean;                           //自动最小化
+
+    FFactory    : string;                            //商城分配工厂ID
+    FGPWSURL    : string;                            //集团公共web服务平台地址
   end;
   //系统参数
 
@@ -146,6 +149,9 @@ begin
         FParam     := ParamStr(1);
         FIconFile  := ReadString(FProgID, 'IconFile', gPath + 'Icons\Icon.ini');
         FIconFile  := StringReplace(FIconFile, '$Path\', gPath, [rfIgnoreCase]);
+
+        FGPWSURL   := ReadString(FProgID, 'GPWSURL', '');
+        FFactory   := ReadString(FProgID, 'FactoryId', '');
 
         FLocalMAC   := MakeActionID_MAC;
         GetLocalIPConfig(FLocalName, FLocalIP);

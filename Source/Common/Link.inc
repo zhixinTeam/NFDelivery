@@ -36,7 +36,7 @@
 {$IFDEF COM_MIT}
   {$DEFINE DBPool}
   //启用数据库支持
-  {.$DEFINE ChannelPool}
+  {$DEFINE ChannelPool}
   //启用通道支持
   {.$DEFINE AutoChannel}
   //启用通道平衡
@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE TLNF}
+{$DEFINE SYNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -160,5 +160,27 @@
   //批次控制发货量
   {$DEFINE MITTruckProber}
   //中间件控制车检
+  {$DEFINE CardProvide}
+  //采用复磅模式
+  {$DEFINE LineGroup}
+  //通道进行分组
 {$ENDIF}
 //桐庐南方
+
+{$IFDEF SYNF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+  {$DEFINE MITTruckProber}
+  //中间件控制车检
+  {$DEFINE CardProvide}
+  //采用复磅模式
+{$ENDIF}
+//山亚南方

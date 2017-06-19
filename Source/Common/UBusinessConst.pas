@@ -20,6 +20,15 @@ const
   {*query field define*}
   cQF_Bill                    = $0001;
 
+  {*webshat status define*}
+  cMsg_WebChat_BillNew        = $0001; //开提货单
+  cMsg_WebChat_BillFinished   = $0002; //车辆出厂
+  cMsg_WebChat_ShowReport     = $0003; //报表
+  cMsg_WebChat_BillDel        = $0004; //删提货单
+
+  cStatus_WeChat_CreateCard   = $0000;  //订单已办卡
+  cStatus_WeChat_Finished     = $0001;  //订单已完成
+
   {*business command*}
   cBC_GetSerialNO             = $0001;   //获取串行编号
   cBC_ServerNow               = $0002;   //服务器当前时间
@@ -40,15 +49,6 @@ const
 
   cBC_GetOrderFHValue         = $0018;   //获取订单发货量
   cBC_GetOrderGYValue         = $0019;   //获取订单供应量
-  cBC_SyncME25                = $0100;   //同步发货单到榜单
-  cBC_SyncME03                = $0101;   //同步供应到磅单
-  cBC_GetSQLQueryOrder        = $0102;   //查询订单语句
-  cBC_GetSQLQueryCustomer     = $0103;   //查询客户语句
-  cBC_GetSQLQueryDispatch     = $0104;   //查询调拨订单
-  cBC_SyncDuanDao             = $0105;   //同步短倒
-
-  cBC_GetStationPoundData     = $0115;   //获取车辆称重数据
-  cBC_SaveStationPoundData    = $0116;   //保存车辆称重数据
 
   cBC_SaveBills               = $0020;   //保存交货单列表
   cBC_DeleteBill              = $0021;   //删除交货单
@@ -96,6 +96,30 @@ const
   cBC_GetTruckPValue          = $0091;   //获取车辆预置皮重
   cBC_SaveTruckPValue         = $0092;   //保存车辆预置皮重
   cBC_GetPoundBaseValue       = $0093;   //获取地磅表头跳动基数
+
+  cBC_SyncME25                = $0100;   //同步发货单到榜单
+  cBC_SyncME03                = $0101;   //同步供应到磅单
+  cBC_GetSQLQueryOrder        = $0102;   //查询订单语句
+  cBC_GetSQLQueryCustomer     = $0103;   //查询客户语句
+  cBC_GetSQLQueryDispatch     = $0104;   //查询调拨订单
+  cBC_SyncDuanDao             = $0105;   //同步短倒
+
+  cBC_GetStationPoundData     = $0115;   //获取车辆称重数据
+  cBC_SaveStationPoundData    = $0116;   //保存车辆称重数据
+
+  cBC_WebChat_SendEventMsg     = $0120;   //微信平台接口：发送消息
+  cBC_WebChat_GetCustomerInfo  = $0121;   //微信平台接口：获取Web上的客户注册信息
+  cBC_WebChat_EditShopCustom   = $0122;   //微信平台接口：工厂客户与Web账号绑定/解绑
+  cBC_WebChat_GetShopOrdersByID= $0123;   //微信平台接口：通过司机身份证号获取商城订单信息
+  cBC_WebChat_GetShopOrderByNO = $0124;   //微信平台接口：通过二维码获取商城订单信息
+  cBC_WebChat_EditShopOrderInfo= $0125;   //微信平台接口：修改商城订单信息
+
+  cBC_WebChat_GetOrderList     = $0126;   //微信平台接口：获取可用订单列表
+  cBC_WebChat_GetPurchaseList  = $0127;   //微信平台接口：获取采购订单列表
+  cBC_WebChat_VerifPrintCode   = $0128;   //微信平台接口：获取防伪码信息
+  cBC_WebChat_WaitingForloading= $0129;   //微信平台接口：获取工厂待装车辆信息
+  cBC_WebChat_DLSaveShopInfo   = $0130;   //微信平台接口：发起同步
+
 type
   PWorkerQueryFieldData = ^TWorkerQueryFieldData;
   TWorkerQueryFieldData = record
@@ -118,6 +142,16 @@ type
     FDate     : TDateTime;        //称重日期
     FOperator : string;           //操作员
   end;
+
+  TQueueListItem = record
+    FStockNO   : string;
+    FStockName : string;
+
+    FLineCount : Integer;
+    FTruckCount: Integer;
+  end;
+  //待装车辆排队列表
+  TQueueListItems = array of TQueueListItem;
 
   PLadingBillItem = ^TLadingBillItem;
   TLadingBillItem = record
@@ -164,6 +198,7 @@ type
     FMuiltiType : string;         //是否为复磅操作
     FOneDoor    : string;         //同一侧上下磅
 
+    FLineGroup  : string;         //通道分组
     FNCChanged  : Boolean;         //NC可用量变化
     FChangeValue: Double;          //NC 减少
   end;
@@ -236,6 +271,7 @@ resourcestring
   sBus_BusinessDuanDao        = 'Bus_BusinessDuanDao';  //短倒业务相关
   sBus_BusinessShipPro        = 'Bus_BusinessShipPro';  //船运采购指令
   sBus_BusinessShipTmp        = 'Bus_BusinessShipTmp';  //船运临时指令
+  sBus_BusinessWebchat        = 'Bus_BusinessWebchat';  //Web平台服务
 
   {*client function name*}
   sCLI_ServiceStatus          = 'CLI_ServiceStatus';    //服务状态
@@ -248,6 +284,7 @@ resourcestring
   sCLI_BusinessDuanDao        = 'CLI_BusinessDuanDao';  //短倒业务相关
   sCLI_BusinessShipPro        = 'CLI_BusinessShipPro';  //船运采购业务
   sCLI_BusinessShipTmp        = 'CLI_BusinessShipTmp';  //船运临时业务
+  sCLI_BusinessWebchat        = 'CLI_BusinessWebchat';  //Web平台服务
 
 implementation
 
@@ -357,6 +394,7 @@ begin
         FYSValid:= Values['YSValid'];
         FMemo   := Values['Memo'];
         FSeal   := Values['Seal'];
+        FLineGroup := Values['LineGroup'];
       end;
 
       Inc(nInt);
@@ -460,6 +498,7 @@ begin
         Values['YSValid']    := FYSValid;
         Values['Memo']       := FMemo;
         Values['Seal']       := FSeal;
+        Values['LineGroup']  := FLineGroup;
       end;
 
       nListA.Add(PackerEncodeStr(nListB.Text));

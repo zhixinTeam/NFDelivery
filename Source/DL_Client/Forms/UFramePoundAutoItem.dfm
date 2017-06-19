@@ -32,28 +32,6 @@ inherited fFrameAutoPoundItem: TfFrameAutoPoundItem
     Height = 55
     Caption = #36816#34892#29366#24577
     TabOrder = 1
-    object ImageGS: TImage
-      Left = 12
-      Top = 25
-      Width = 16
-      Height = 16
-      AutoSize = True
-      ParentShowHint = False
-      ShowHint = False
-    end
-    object Label16: TLabel
-      Left = 32
-      Top = 25
-      Width = 72
-      Height = 18
-      Caption = #32418#22806#20809#26629
-      Font.Charset = GB2312_CHARSET
-      Font.Color = clGreen
-      Font.Height = -18
-      Font.Name = #23435#20307
-      Font.Style = []
-      ParentFont = False
-    end
     object Label17: TLabel
       Left = 145
       Top = 25
@@ -153,6 +131,20 @@ inherited fFrameAutoPoundItem: TfFrameAutoPoundItem
         272727272727272603555555152B2D2D2D2D2E2E2E2E29145555555555020202
         0202020202020255555555555555555555555555555555555555}
       Visible = False
+    end
+    object CheckGS: TCheckBox
+      Left = 16
+      Top = 24
+      Width = 97
+      Height = 17
+      Caption = #32418#22806#36890#36807
+      Font.Charset = GB2312_CHARSET
+      Font.Color = clGreen
+      Font.Height = -19
+      Font.Name = #23435#20307
+      Font.Style = []
+      ParentFont = False
+      TabOrder = 0
     end
   end
   object HintLabel: TcxLabel

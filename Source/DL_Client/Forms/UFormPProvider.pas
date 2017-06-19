@@ -11,7 +11,7 @@ uses
   UDataModule, UFormBase, cxGraphics, dxLayoutControl, StdCtrls,
   cxMaskEdit, cxDropDownEdit, cxMCListBox, cxMemo, cxContainer, cxEdit,
   cxTextEdit, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
-  dxSkinsCore, dxSkinsDefaultPainters;
+  dxSkinsCore, dxSkinsDefaultPainters, cxButtonEdit;
 
 type
   TfFormProvider = class(TBaseForm)
@@ -19,8 +19,6 @@ type
     dxLayoutControl1: TdxLayoutControl;
     dxLayoutControl1Group1: TdxLayoutGroup;
     dxLayoutControl1Group2: TdxLayoutGroup;
-    EditName: TcxTextEdit;
-    dxLayoutControl1Item2: TdxLayoutItem;
     EditMemo: TcxMemo;
     dxLayoutControl1Item4: TdxLayoutItem;
     InfoList1: TcxMCListBox;
@@ -49,6 +47,8 @@ type
     dxLayoutControl1Group6: TdxLayoutGroup;
     dxLayoutControl1Item3: TdxLayoutItem;
     EditID: TcxTextEdit;
+    EditName: TcxButtonEdit;
+    dxLayoutControl1Item2: TdxLayoutItem;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure BtnAddClick(Sender: TObject);
@@ -57,6 +57,9 @@ type
     procedure BtnExitClick(Sender: TObject);
     procedure FormKeyDown(Sender: TObject; var Key: Word;
       Shift: TShiftState);
+    procedure EditNamePropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
+    procedure EditNameKeyPress(Sender: TObject; var Key: Char);
   private
     { Private declarations }
     FRecordID: string;
@@ -356,6 +359,40 @@ begin
     nList.Free;
     FDM.ADOConn.RollbackTrans;
     ShowMsg('数据保存失败', '未知原因');
+  end;
+end;
+
+procedure TfFormProvider.EditNamePropertiesButtonClick(Sender: TObject;
+  AButtonIndex: Integer);
+var nP: TFormCommandParam;
+begin
+  inherited;
+  nP.FParamA := Trim(EditName.Text);
+  CreateBaseFormItem(cFI_FormGetCustom, '', @nP);
+
+  if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
+  begin
+    EditID.Text := nP.FParamB;
+    EditName.Text := nP.FParamC;
+  end;
+end;
+
+procedure TfFormProvider.EditNameKeyPress(Sender: TObject; var Key: Char);
+var nP: TFormCommandParam;
+begin
+  inherited;
+  if Key = #13 then
+  begin
+    Key := #0;
+
+    nP.FParamA := Trim(EditName.Text);
+    CreateBaseFormItem(cFI_FormGetCustom, '', @nP);
+
+    if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
+    begin
+      EditID.Text := nP.FParamB;
+      EditName.Text := nP.FParamC;
+    end;
   end;
 end;
 

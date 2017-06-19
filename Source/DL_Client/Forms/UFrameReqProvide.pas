@@ -4,6 +4,7 @@
 *******************************************************************************}
 unit UFrameReqProvide;
 
+{$I Link.Inc}
 interface
 
 uses
@@ -160,7 +161,11 @@ begin
   end;
 
   nP.FParamA := BuildOrderInfo(nOrder);
+  {$IFDEF CardProvide}
   CreateBaseFormItem(cFI_FormCardProvide, PopedomItem, @nP);
+  {$ELSE}
+  CreateBaseFormItem(cFI_FormProvBase, PopedomItem, @nP);
+  {$ENDIF}
 end;
 
 initialization

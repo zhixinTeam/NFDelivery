@@ -32,7 +32,7 @@ inherited fFormBatcode: TfFormBatcode
       Left = 81
       Top = 86
       ParentFont = False
-      Properties.MaxLength = 5
+      Properties.MaxLength = 15
       TabOrder = 2
       Width = 135
     end
@@ -159,6 +159,7 @@ inherited fFormBatcode: TfFormBatcode
     object EditBatcode: TcxTextEdit [19]
       Left = 81
       Top = 319
+      ParentFont = False
       TabOrder = 15
       Width = 121
     end

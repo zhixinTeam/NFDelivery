@@ -151,6 +151,8 @@ const
   cFI_FormCardTemp      = $1152;                     //临时制卡
   cFI_FormReadCard      = $1153;                     //读取卡片
 
+  cFI_FormGetWechartAccount = $1158;                 //获取商城注册信息
+
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据
   cCmd_ViewSysLog       = $0003;                     //系统日志

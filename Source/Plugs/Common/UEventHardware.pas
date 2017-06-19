@@ -36,7 +36,7 @@ uses
   SysUtils, USysLoger, UHardBusiness, UMgrTruckProbe, UMgrParam, UMITConst,
   UMgrQueue, UMgrLEDCard, UMgrHardHelper, UMgrRemotePrint, U02NReader,
   UMgrERelay,   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}
-  UMgrRemoteVoice, UMgrCodePrinter, UMgrLEDDisp,
+  UMgrRemoteVoice, UMgrCodePrinter, UMgrLEDDisp, UMgrTTCEM100,
   UMgrRFID102{$IFDEF HKVDVR}, UMgrCamera{$ENDIF};
 
 class function THardwareWorker.ModuleInfo: TPlugModuleInfo;
@@ -104,6 +104,13 @@ begin
       gHYReaderManager.LoadConfig(nCfg + 'RFID102.xml');
     end;
     {$ENDIF}
+
+    nStr := '三合一读卡器';
+    if not Assigned(gM100ReaderManager) then
+    begin
+      gM100ReaderManager := TM100ReaderManager.Create;
+      gM100ReaderManager.LoadConfig(nCfg + cTTCE_M100_Config);
+    end;
 
     nStr := '车辆检测器';
     if FileExists(nCfg + 'TruckProber.xml') then
@@ -196,6 +203,13 @@ begin
   {$IFDEF MITTruckProber}
   gProberManager.StartProber;
   {$ENDIF}
+
+  if Assigned(gM100ReaderManager) then
+  begin
+    gM100ReaderManager.OnCardProc := WhenTTCE_M100_ReadCard;
+    gM100ReaderManager.StartReader;
+  end;
+  //三合一读卡器
 end;
 
 procedure THardwareWorker.AfterStopServer;
@@ -243,6 +257,13 @@ begin
   {$IFDEF MITTruckProber}
   gProberManager.StopProber;
   {$ENDIF}
+
+  if Assigned(gM100ReaderManager) then
+  begin
+    gM100ReaderManager.StopReader;
+    gM100ReaderManager.OnCardProc := nil;
+  end;
+  //三合一读卡器
 end;
 
 end.

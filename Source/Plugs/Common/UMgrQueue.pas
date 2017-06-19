@@ -16,6 +16,7 @@ type
   TLineItem = record
     FEnable     : Boolean;
     FLineID     : string;
+    FLineGroup  : string;
     FName       : string;
     FStockNo    : string;
     FStockName  : string;
@@ -39,6 +40,7 @@ type
     FStockName  : string;      //品种名
     FStockGroup : string;      //品种分组
     FLine       : string;      //装车线
+    FLineGroup  : string;      //装车线分组
     FBill       : string;      //交货单
     FHKBills    : string;      //合卡单
     FInTime     : Int64;       //进队时间
@@ -917,6 +919,9 @@ begin
         FEnable     := True;
         FLineID     := FieldByName('Z_ID').AsString;
         FName       := FieldByName('Z_Name').AsString;
+        {$IFDEF LineGroup}
+        FLineGroup  := FieldByName('Z_Group').AsString;
+        {$ENDIF}
 
         FStockNo    := FieldByName('Z_StockNo').AsString;
         FStockName  := FieldByName('Z_Stock').AsString;
@@ -1042,6 +1047,9 @@ begin
         FStockGroup := GetStockMatchGroup(FStockNo);
 
         FLine       := FieldByName('T_Line').AsString;
+        {$IFDEF LineGroup}
+        FLineGroup  := FieldByName('T_LineGroup').AsString;
+        {$ENDIF}
         FBill       := FieldByName('T_Bill').AsString;
         FHKBills    := FieldByName('T_HKBills').AsString;
         FIsVIP      := FieldByName('T_VIP').AsString;
@@ -1222,6 +1230,13 @@ begin
 
       if BillInLine(FTruckPool[i].FBill, FTrucks, True) >= 0 then Continue;
       //6.交货单已经在队列中
+
+      if (FTruckPool[i].FLineGroup <> '') and (FTruckPool[i].FLineGroup <> 'Z') then
+      begin
+        if (FLineGroup <> '') and (FLineGroup <> 'Z') and
+           (FLineGroup <> FTruckPool[i].FLineGroup) then Continue;
+      end;
+      //7.车辆指定通道类型不匹配
 
       MakePoolTruckIn(i, FOwner.Lines[nIdx]);
       //车辆进队列
@@ -1458,6 +1473,13 @@ begin
 
     if not IsStockMatch(FStockNo, nLine) then Continue;
     //5.两个通道品种不匹配
+
+    if (nLine.FLineGroup <> '') and (nLine.FLineGroup <> 'Z') then
+    begin
+      if ((FLineGroup <> '') And (FLineGroup <> 'Z')) And
+         (nLine.FLineGroup <> FLineGroup) then Continue;
+    end;
+    //6.分组不同
 
     Result := False;
     Break;

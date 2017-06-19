@@ -24,6 +24,7 @@ const
   { Service Interface ID's }
   ISrvConnection_IID : TGUID = '{3E08D66D-DFBE-485E-A65C-F5EC6DC9F7CF}';
   ISrvBusiness_IID : TGUID = '{6173318C-3ECB-4FA8-A32A-4FC64D22AFF5}';
+  ISrvWebchat_IID : TGUID = '{3FE68845-E146-4F43-98E7-D5B127946F5D}';
 
   { Event ID's }
 
@@ -31,6 +32,7 @@ type
   { Forward declarations }
   ISrvConnection = interface;
   ISrvBusiness = interface;
+  ISrvWebchat = interface;
 
 
   { ISrvConnection }
@@ -71,6 +73,28 @@ type
 
   { TSrvBusiness_Proxy }
   TSrvBusiness_Proxy = class(TROProxy, ISrvBusiness)
+  protected
+    function __GetInterfaceName:string; override;
+
+    function Action(const nFunName: AnsiString; var nData: AnsiString): Boolean;
+  end;
+
+  { ISrvWebchat }
+
+  { Description:
+      Service For Webchat }
+  ISrvWebchat = interface
+    ['{3FE68845-E146-4F43-98E7-D5B127946F5D}']
+    function Action(const nFunName: AnsiString; var nData: AnsiString): Boolean;
+  end;
+
+  { CoSrvWebchat }
+  CoSrvWebchat = class
+    class function Create(const aMessage: IROMessage; aTransportChannel: IROTransportChannel): ISrvWebchat;
+  end;
+
+  { TSrvWebchat_Proxy }
+  TSrvWebchat_Proxy = class(TROProxy, ISrvWebchat)
   protected
     function __GetInterfaceName:string; override;
 
@@ -147,13 +171,47 @@ begin
   end
 end;
 
+{ CoSrvWebchat }
+
+class function CoSrvWebchat.Create(const aMessage: IROMessage; aTransportChannel: IROTransportChannel): ISrvWebchat;
+begin
+  result := TSrvWebchat_Proxy.Create(aMessage, aTransportChannel);
+end;
+
+{ TSrvWebchat_Proxy }
+
+function TSrvWebchat_Proxy.__GetInterfaceName:string;
+begin
+  result := 'SrvWebchat';
+end;
+
+function TSrvWebchat_Proxy.Action(const nFunName: AnsiString; var nData: AnsiString): Boolean;
+begin
+  try
+    __Message.InitializeRequestMessage(__TransportChannel, 'MIT_Service', __InterfaceName, 'Action');
+    __Message.Write('nFunName', TypeInfo(AnsiString), nFunName, []);
+    __Message.Write('nData', TypeInfo(AnsiString), nData, []);
+    __Message.Finalize;
+
+    __TransportChannel.Dispatch(__Message);
+
+    __Message.Read('Result', TypeInfo(Boolean), result, []);
+    __Message.Read('nData', TypeInfo(AnsiString), nData, []);
+  finally
+    __Message.UnsetAttributes(__TransportChannel);
+    __Message.FreeStream;
+  end
+end;
+
 initialization
   RegisterProxyClass(ISrvConnection_IID, TSrvConnection_Proxy);
   RegisterProxyClass(ISrvBusiness_IID, TSrvBusiness_Proxy);
+  RegisterProxyClass(ISrvWebchat_IID, TSrvWebchat_Proxy);
 
 
 finalization
   UnregisterProxyClass(ISrvConnection_IID);
   UnregisterProxyClass(ISrvBusiness_IID);
+  UnregisterProxyClass(ISrvWebchat_IID);
 
 end.

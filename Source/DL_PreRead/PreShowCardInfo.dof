@@ -91,10 +91,10 @@ ImageBase=4194304
 ExeDescription=
 [Directories]
 OutputDir=..\..\Bin\DL_PreRead
-UnitOutputDir=
+UnitOutputDir=..\..\DCU\DL_PreRead
 PackageDLLOutputDir=
 PackageDCPOutputDir=
-SearchPath=..\..\Source\Common;D:\WorkDir2015\NFSystemSvn\Source\DL_Client\Common;D:\WorkDir2015\NFSystemSvn\Source\Plugs\Common
+SearchPath=..\..\Source\Common;..\DL_Client\Common;..\Plugs\Common
 Packages=vcl;rtl;vclx;inet;xmlrtl;vclie;inetdbbde;inetdbxpress;dbrtl;dsnap;dsnapcon;vcldb;soaprtl;VclSmp;dbexpress;dbxcds;inetdb;bdertl;vcldbx;webdsnap;websnap;adortl;ibxpress;teeui;teedb;tee;dss;visualclx;visualdbclx;vclactnband;vclshlctrls;dclOfficeXP;IndyCore70;IndySystem70;IndyProtocols70;dxCoreD7;dxGDIPlusD7;cxLibraryVCLD7;cxPageControlVCLD7;dxBarD7;dxBarExtItemsD7;dxdborD7;cxEditorsVCLD7;dxThemeD7;cxDataD7;cxExtEditorsVCLD7;dxNavBarD7;cxPivotGridD7;dxComnD7;dxPSCoreD7;dxPScxPCProdD7;dxPScxCommonD7;dxPScxExtCommonD7;dxPSdxDBTVLnkD7;dxPSdxLC2LnkD7;dxPScxPivotGrid2LnkD7;dxPScxGrid6LnkD7;dxPScxTL5LnkD7;dxPScxScheduler3LnkD7;dxPScxSSLnkD7;dxPScxVGridLnkD7;dxPSTeeChartD7;dxPSLnksD7;dxPSdxDBOCLnkD7;dxPSdxFCLnkD7;dxPSdxOCLnkD7;dxPSPrVwRibbonD7;dxRibbonD7;dxPSDBTeeChartD7;cxGridD7;dxSkinsCoreD7;frx7;frxDB7;fs7;fsDB7;JclDeveloperTools;Jcl;JclContainers
 Conditionals=
 DebugSourceDirs=
@@ -135,36 +135,23 @@ ProductName=
 ProductVersion=1.0.0.0
 Comments=
 [Excluded Packages]
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dxPScxPCProdD7.bpl=ExpressPrinting System 4 ContainerProducer for ExpressPageControl 2 by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPScxCommonD7.bpl=ExpressPrinting System 4 Cross Platform Library by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPScxExtCommonD7.bpl=ExpressPrinting System 4 Extended Cross Platform Library by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPSdxDBTVLnkD7.bpl=ExpressPrinting System 4 ReportLink for ExpressDBTree by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPScxGrid6LnkD7.bpl=ExpressPrinting System 4 ReportLink for ExpressQuantumGrid 6 by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPScxPivotGrid2LnkD7.bpl=ExpressPrinting System 4 ReportLink for ExpressPivotGrid 2 by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPScxScheduler3LnkD7.bpl=ExpressPrinting System 4 ReportLink for ExpressScheduler 3 by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPScxTL5LnkD7.bpl=ExpressPrinting System 4 ReportLink for ExpressQuantumTreeList 5 by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPScxSSLnkD7.bpl=ExpressPrinting System 4 ReportLink for ExpressSpreadSheet by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPScxVGridLnkD7.bpl=ExpressPrinting System 4 ReportLink for ExpressVerticalGrid by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dxPSPrVwRibbonD7.bpl=ExpressPrinting System 4 Ribbon Preview Window by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPSLnksD7.bpl=ExpressPrinting System 4 ReportLinks (Standard) by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPSTeeChartD7.bpl=ExpressPrinting System 4 ReportLink for TeeChart by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPSDBTeeChartD7.bpl=ExpressPrinting System ReportLink for DBTeeChart by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPSdxOCLnkD7.bpl=ExpressPrinting System 4 ReportLinks for ExpressOrgChart by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPSdxDBOCLnkD7.bpl=ExpressPrinting System 4 ReportLinks for ExpressDBOrgChart by Developer Express Inc.
-c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxPSdxFCLnkD7.bpl=ExpressPrinting System 4 ReportLinks for ExpressFlowChart by Developer Express Inc.
 c:\program files (x86)\borland\delphi7\Projects\Bpl\dcldxLayoutControlD7.bpl=ExpressLayout Control by Developer Express Inc.
 [HistoryLists\hlUnitAliases]
 Count=1
 Item0=WinTypes=Windows;WinProcs=Windows;DbiTypes=BDE;DbiProcs=BDE;DbiErrs=BDE;
 [HistoryLists\hlSearchPath]
-Count=7
-Item0=..\..\Source\Common;D:\WorkDir2015\NFSystemSvn\Source\DL_Client\Common;D:\WorkDir2015\NFSystemSvn\Source\Plugs\Common
-Item1=..\..\Source\Common;D:\WorkDir2015\NFSystemSvn\Source\DL_Client\Common
-Item2=..\..\Source\Common;..\..\Source\Plugs\Common;..\..\Source\Plugs\Main;D:\WorkDir2015\NFSystemSvn\Source\DL_Client\Common
-Item3=..\..\Source\Common;..\..\Source\Plugs\Common;..\..\Source\Plugs\Main
-Item4=..\..\Source\Common;..\..\Source\Plugs\Common
-Item5=..\..\Source\Common
-Item6=..\Source\Common
+Count=8
+Item0=..\..\Source\Common;..\DL_Client\Common;..\Plugs\Common
+Item1=..\..\Source\Common;D:\WorkDir2015\NFSystemSvn\Source\DL_Client\Common;D:\WorkDir2015\NFSystemSvn\Source\Plugs\Common
+Item2=..\..\Source\Common;D:\WorkDir2015\NFSystemSvn\Source\DL_Client\Common
+Item3=..\..\Source\Common;..\..\Source\Plugs\Common;..\..\Source\Plugs\Main;D:\WorkDir2015\NFSystemSvn\Source\DL_Client\Common
+Item4=..\..\Source\Common;..\..\Source\Plugs\Common;..\..\Source\Plugs\Main
+Item5=..\..\Source\Common;..\..\Source\Plugs\Common
+Item6=..\..\Source\Common
+Item7=..\Source\Common
+[HistoryLists\hlUnitOutputDirectory]
+Count=1
+Item0=..\..\DCU\DL_PreRead
 [HistoryLists\hlOutputDirectorry]
 Count=1
 Item0=..\..\Bin\DL_PreRead

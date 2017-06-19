@@ -28,8 +28,6 @@ type
     GroupBox1: TGroupBox;
     EditValue: TLEDFontNum;
     GroupBox3: TGroupBox;
-    ImageGS: TImage;
-    Label16: TLabel;
     Label17: TLabel;
     ImageBT: TImage;
     Label18: TLabel;
@@ -68,6 +66,7 @@ type
     MemoLog: TZnTransMemo;
     Timer_SaveFail: TTimer;
     ckCloseAll: TCheckBox;
+    CheckGS: TCheckBox;
     procedure Timer1Timer(Sender: TObject);
     procedure Timer2Timer(Sender: TObject);
     procedure Timer_ReadCardTimer(Sender: TObject);
@@ -81,7 +80,7 @@ type
     //称重标识,保存标识
     FPoundTunnel: PPTTunnelItem;
     //磅站通道
-    FLastGS,FLastBT,FLastBQ: Int64;
+    FLastBT,FLastBQ: Int64;
     //上次活动
     FOrderItems: TOrderItems;
     //订单列表
@@ -227,7 +226,6 @@ end;
 //Desc: 更新运行状态
 procedure TfFrameAutoPoundItem.Timer1Timer(Sender: TObject);
 begin
-  SetImageStatus(ImageGS, GetTickCount - FLastGS > 5 * 1000);
   SetImageStatus(ImageBT, GetTickCount - FLastBT > 5 * 1000);
   SetImageStatus(ImageBQ, GetTickCount - FLastBQ > 5 * 1000);
 end;
@@ -285,6 +283,7 @@ begin
 
     FUIData := nItem;
     FInnerData := nItem;
+    CheckGS.Checked := False;
     if nOnlyData then Exit;
 
     SetLength(FBillItems, 0);
@@ -296,7 +295,7 @@ begin
     if FLastCardDone = 0 then
       FLastCardDone   := GetTickCount;
     //防止49.71天后，系统更新为0
-    
+
     if not FIsWeighting then
     begin
       gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
@@ -642,7 +641,12 @@ begin
 
   nStr := EncodeBase64(FListB.Text);
   nStr := GetQueryOrderSQL('103', nStr);
-  if nStr = '' then Exit;
+
+  if nStr = '' then
+  begin
+    PlayVoice('获取订单信息失败,请联系管理员');
+    Exit;
+  end;
 
   with FDM.QueryTemp(nStr, True) do
   begin
@@ -674,7 +678,11 @@ begin
     end;
   end;
 
-  if not GetOrderFHValue(FListA) then Exit;
+  if not GetOrderFHValue(FListA) then
+  begin
+    PlayVoice('获取订单剩余量失败,请联系管理员');
+    Exit;
+  end;  
   //获取已发货量
 
   for nIdx:=Low(FOrderItems) to High(FOrderItems) do
@@ -761,7 +769,11 @@ begin
     end;
   end;
 
-  if nBillValue <= 0 then Exit;
+  if nBillValue <= 0 then
+  begin
+    Result := True;
+    Exit;
+  end;
   //已开单完毕
 
   //----------------------------------------------------------------------------
@@ -834,10 +846,53 @@ end;
 //Desc: 保存销售
 function TfFrameAutoPoundItem.SavePoundSale: Boolean;
 var nVal,nNet: Double;
-    nStr: string;
+    nStr, nHint: string;
 begin
   Result := False;
   //init
+
+  {$IFNDEF AutoSan}
+  if FUIData.FType = sFlag_San then
+  begin
+    nStr := '散装车辆[%s]不允许在此过磅';
+    nStr := Format(nStr, [FBillItems[0].FTruck]);
+    PlayVoice(nStr);
+    WriteLog(nStr);
+    Exit;
+  end;
+  {$ENDIF}
+
+  with FUIData, gSysParam do
+  if (FType = sFlag_San) and (FNextStatus = sFlag_TruckBFP) then
+  begin
+    nNet := GetTruckEmptyValue(FTruck);
+    nVal := nNet * 1000 - FPData.FValue * 1000;
+
+    if (nNet > 0) and
+       (((nVal > 0) and (FPoundPZ > 0) and (nVal > FPoundPZ)) or
+        ((nVal < 0) and (FPoundPF > 0) and (-nVal > FPoundPF))) then
+    begin
+      nHint := '车辆[ %s ]实时皮重误差较大,详情如下:' + #13#10 +
+              '※.实时皮重: %.2f吨' + #13#10 +
+              '※.历史皮重: %.2f吨' + #13#10 +
+              '※.误差量: %.2f公斤' + #13#10 +
+              '允许过磅,请选是;禁止过磅,请选否;启用回空业务,请选回空.';
+      nHint := Format(nHint, [FTruck, FPData.FValue, nNet, nVal]);
+
+      if not VerifyManualEventRecord(FID + sFlag_ManualB, nHint) then
+      begin
+        AddManualEventRecord(FID + sFlag_ManualB, FTruck, nHint,
+            sFlag_DepBangFang, sFlag_Solution_YNP, sFlag_DepDaTing);
+        WriteSysLog(nHint);
+
+        nHint := '[n1]%s皮重超出预警,请下磅联系开票员处理后再次过磅';
+        nHint := Format(nHint, [FTruck]);
+        PlayVoice(nHint);
+        Exit;
+      end;
+      //判断皮重是否超差
+    end;
+  end;
 
   if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) and
      (FUIData.FYSValid <> sFlag_Yes) then //非空车出厂
@@ -847,17 +902,6 @@ begin
       PlayVoice('皮重应小于毛重,请联系管理员处理');
       Exit;
     end;
-
-    {$IFNDEF AutoSan}
-    if FBillItems[0].FType = sFlag_San then
-    begin
-      nStr := '散装车辆[%s]不允许在此过磅';
-      nStr := Format(nStr, [FBillItems[0].FTruck]);
-      PlayVoice(nStr);
-      WriteLog(nStr);
-      Exit;
-    end;
-    {$ENDIF}
 
     nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
     //净重
@@ -875,35 +919,30 @@ begin
                                        cPrecision, False);
       end;
 
-      {$IFDEF ShowDaiWC}
       if ((FType = sFlag_Dai) and (
           ((nVal > 0) and (FPoundDaiZ > 0) and (nVal > FPoundDaiZ)) or
           ((nVal < 0) and (FPoundDaiF > 0) and (-nVal > FPoundDaiF)))) then
       begin
-        nStr := '车辆[%s]实际装车量误差较大，请通知司机检验载重';
-        nStr := Format(nStr, [FTruck]);
-        PlayVoice(nStr);
-
-        nStr := '车辆[ %s ]实际装车量误差较大,详情如下:' + #13#10#13#10 +
+        nHint := '车辆[ %s ]实际装车量误差较大,详情如下:' + #13#10 +
                 '※.开单量: %.2f吨' + #13#10 +
                 '※.装车量: %.2f吨' + #13#10 +
-                '※.误差量: %.2f公斤';
+                '※.误差量: %.2f公斤' + #13#10 +
+                '检测完毕后,请点确认重新过磅.';
+        nHint := Format(nHint, [FTruck, FInnerData.FValue, nNet, nVal]);
 
-        if FDaiWCStop and (FType = sFlag_Dai) then
+        if not VerifyManualEventRecord(FID + sFlag_ManualC, nHint) then
         begin
-          nStr := nStr + #13#10#13#10 + '请通知司机点验包数.';
-          nStr := Format(nStr, [FTruck, FInnerData.FValue, nNet, nVal]);
+          AddManualEventRecord(FID + sFlag_ManualC, FTruck, nHint,
+            sFlag_DepBangFang, sFlag_Solution_YN, sFlag_DepJianZhuang);
+          WriteSysLog(nHint);
 
-          ShowDlg(nStr, sHint);
+          nHint := '车辆[n1]%s净重[n2]%.2f吨,开票量[n2]%.2f吨,'+
+                   '误差量[n2]%.2f公斤,请去包装点包';
+          nHint := Format(nHint, [FTruck,nNet,FInnerData.FValue,nVal]);
+          PlayVoice(nHint);
           Exit;
-        end else
-        begin
-          nStr := nStr + #13#10#13#10 + '是否继续保存?';
-          nStr := Format(nStr, [FTruck, FInnerData.FValue, nNet, nVal]);
-          if not QueryDlg(nStr, sAsk) then Exit;
         end;
       end;
-      {$ENDIF}
 
       if (FType = sFlag_San) and FloatRelation(nNet, FValue, rtGreater) and
          GetPoundSanWuChaStop(FStockNo) then
@@ -1176,9 +1215,9 @@ begin
   //更新显示信息
 
   {$IFDEF MITTruckProber}
-    if not IsTunnelOK(FPoundTunnel.FID) then
+    if (not CheckGS.Checked) and (not IsTunnelOK(FPoundTunnel.FID)) then
   {$ELSE}
-    if not gProberManager.IsTunnelOK(FPoundTunnel.FID) then
+    if (not CheckGS.Checked) and (not gProberManager.IsTunnelOK(FPoundTunnel.FID)) then
   {$ENDIF}
   begin
     nStr := '车辆未停到位,请移动车辆.';

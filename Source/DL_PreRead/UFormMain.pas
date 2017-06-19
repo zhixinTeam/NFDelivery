@@ -50,7 +50,7 @@ implementation
 {$R *.dfm}
 uses
   IniFiles, Registry, ULibFun, UDataModule, UFormConn, USysLoger, U02NReader,
-  UMgrLEDDisp, UBusinessConst, USysConst, USysDB;
+  UMgrLEDDisp, UBusinessConst, USysConst, USysDB, UMemDataPool;
 
 resourcestring
   sHint               = 'ÌáÊ¾';
@@ -113,6 +113,10 @@ begin
   gSysLoger := TSysLoger.Create(gPath + 'Logs\');
   gSysLoger.LogEvent := ShowLog;
 
+  gMemDataManager := TMemDataManager.Create;
+  //ÄÚ´æ³Ø
+
+  g02NReader := T02NReader.Create;
   g02NReader.LoadConfig(gPath + 'Readers.xml');
   g02NReader.OnCardIn := WhenReaderCardIn;
   g02NReader.OnCardOut:= WhenReaderCardOut;

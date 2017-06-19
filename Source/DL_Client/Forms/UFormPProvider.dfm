@@ -21,16 +21,6 @@ inherited fFormProvider: TfFormProvider
     TabStop = False
     AutoContentSizes = [acsWidth, acsHeight]
     LookAndFeel = FDM.dxLayoutWeb1
-    object EditName: TcxTextEdit
-      Left = 81
-      Top = 61
-      Hint = 'T.P_Name'
-      ParentFont = False
-      Properties.MaxLength = 80
-      TabOrder = 1
-      OnKeyDown = FormKeyDown
-      Width = 138
-    end
     object EditMemo: TcxMemo
       Left = 81
       Top = 111
@@ -146,6 +136,20 @@ inherited fFormProvider: TfFormProvider
       OnKeyDown = FormKeyDown
       Width = 278
     end
+    object EditName: TcxButtonEdit
+      Left = 81
+      Top = 61
+      Hint = 'T.P_Name'
+      Properties.Buttons = <
+        item
+          Default = True
+          Kind = bkEllipsis
+        end>
+      Properties.OnButtonClick = EditNamePropertiesButtonClick
+      TabOrder = 1
+      OnKeyPress = EditNameKeyPress
+      Width = 121
+    end
     object dxLayoutControl1Group_Root: TdxLayoutGroup
       ShowCaption = False
       Hidden = True
@@ -162,9 +166,7 @@ inherited fFormProvider: TfFormProvider
             ControlOptions.ShowBorder = False
           end
           object dxLayoutControl1Item2: TdxLayoutItem
-            AutoAligns = [aaVertical]
-            AlignHorz = ahClient
-            Caption = #20379#24212#21517#31216':'
+            Caption = #20379' '#24212' '#21830':'
             Control = EditName
             ControlOptions.ShowBorder = False
           end

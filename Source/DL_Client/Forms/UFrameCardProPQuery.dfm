@@ -186,7 +186,7 @@ inherited fFrameCardProPQuery: TfFrameCardProPQuery
   inherited TitlePanel1: TZnBitmapPanel
     Width = 976
     inherited TitleBar: TcxLabel
-      Caption = #22797#30917#20379#24212#19994#21153#26126#32454#26597#35810
+      Caption = #20379#24212#19994#21153#26126#32454#26597#35810
       Style.IsFontAssigned = True
       Width = 976
       AnchorX = 488

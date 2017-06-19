@@ -933,11 +933,18 @@ begin
         FListA.Add(nSQL);
       end;
 
-
       if not TWorkerBusinessCommander.CallMe(cBC_SyncME03,
           FPoundID, '', @nOut) then
         raise Exception.Create(nOut.FData);
       //同步供应到NC榜单
+
+      FListC.Clear;
+      FListC.Values['DLID']  := FPoundID;
+      FListC.Values['MType'] := sFlag_Provide;
+      FListC.Values['BillType'] := IntToStr(cMsg_WebChat_BillFinished);
+      TWorkerBusinessCommander.CallMe(cBC_WebChat_DLSaveShopInfo,
+       PackerEncodeStr(FListC.Text), '', @nOut);
+      //保存同步信息
     end;
   end;
 

@@ -14,7 +14,7 @@ uses
   cxSplitter, cxGridLevel, cxClasses, cxControls, cxGridCustomView,
   cxGridCustomTableView, cxGridTableView, cxGridDBTableView, cxGrid,
   ComCtrls, ToolWin, cxLookAndFeels, cxLookAndFeelPainters, dxSkinsCore,
-  dxSkinsDefaultPainters;
+  dxSkinsDefaultPainters, Menus;
 
 type
   TfFrameProvider = class(TfFrameNormal)
@@ -24,11 +24,15 @@ type
     dxLayout1Item2: TdxLayoutItem;
     cxTextEdit2: TcxTextEdit;
     dxLayout1Item4: TdxLayoutItem;
+    PopupMenu1: TPopupMenu;
+    N1: TMenuItem;
+    N2: TMenuItem;
     procedure EditNamePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnAddClick(Sender: TObject);
     procedure BtnEditClick(Sender: TObject);
     procedure BtnDelClick(Sender: TObject);
+    procedure N1Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -43,7 +47,7 @@ implementation
 
 {$R *.dfm}
 uses
-  ULibFun, UMgrControl, USysConst, USysDB, UDataModule, UFormBase;
+  ULibFun, UMgrControl, USysConst, USysDB, UDataModule, UFormBase, USysBusiness;
 
 class function TfFrameProvider.FrameID: integer;
 begin
@@ -117,6 +121,57 @@ begin
 
     FWhere := Format('P_Name Like ''%%%s%%''', [EditName.Text]);
     InitFormData(FWhere);
+  end;
+end;
+
+procedure TfFrameProvider.N1Click(Sender: TObject);
+var nP: TFormCommandParam;
+    nList: TStrings;
+begin
+  inherited;
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('请选择要操作的记录', sHint);
+    Exit;
+  end;
+
+  nList := TStringList.Create;
+  try
+    nList.Clear;
+
+    nList.Values['DLPID'] := SQLQuery.FieldByName('P_ID').AsString;
+    nList.Values['DLPName'] := SQLQuery.FieldByName('P_Name').AsString;
+
+    case TMenuItem(Sender).Tag of
+    4: //关联商城账号
+    begin
+      nP.FCommand := cCmd_AddData;
+      CreateBaseFormItem(cFI_FormGetWechartAccount, PopedomItem, @nP);
+
+      if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
+      begin
+        nList.Values['Type']     := 'add';
+        nList.Values['WebProID'] := nP.FParamB;
+        nList.Values['WebUserName'] := nP.FParamC;
+
+        if not WebChatEditShopCustom(nList.Text, sFlag_No) then Exit;
+
+        ShowMsg('关联商城账号成功', sHint);
+      end;
+    end;
+    5: //取消关联账号
+    begin
+      nList.Values['Type']     := 'del';
+      nList.Values['WebProID'] := SQLQuery.FieldByName('P_WeiXin').AsString;
+
+      if not WebChatEditShopCustom(nList.Text, sFlag_No) then Exit;
+
+      ShowMsg('解除商城账号成功', sHint);
+    end;
+    end
+  finally
+    InitFormData;
+    nList.Free;
   end;
 end;
 

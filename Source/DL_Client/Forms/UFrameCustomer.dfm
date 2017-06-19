@@ -172,5 +172,19 @@ inherited fFrameCustomer: TfFrameCustomer
       Caption = #26597#35810#20840#37096#23458#25143
       OnClick = N2Click
     end
+    object N3: TMenuItem
+      Caption = '-'
+      Enabled = False
+    end
+    object N4: TMenuItem
+      Tag = 4
+      Caption = #20851#32852#21830#22478#36134#21495
+      OnClick = N4Click
+    end
+    object N5: TMenuItem
+      Tag = 5
+      Caption = #21462#28040#20851#32852#36134#21495
+      OnClick = N4Click
+    end
   end
 end
