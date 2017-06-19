@@ -1066,7 +1066,13 @@ begin
 
   with FOwner, nReader^ do
   try
-    if not FClient.Connected then FClient.Connect;
+    if not FClient.Connected then
+    begin
+      FClient.Connect;
+      InitReader($31, FClient);
+    end;
+    //读卡器初次连接,复位并弹出卡片
+
     if HasCard(FClient) then
     begin
       nCard := GetCardSerial(FClient);

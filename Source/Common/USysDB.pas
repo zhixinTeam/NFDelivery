@@ -669,7 +669,7 @@ const
        'P_Type varChar(1), P_Order varChar(20), P_Card varChar(16),' +
        'P_Bill varChar(20), P_Truck varChar(15), P_CusID varChar(32),' +
        'P_CusName varChar(80), P_MID varChar(32),P_MName varChar(80),' +
-       'P_MType varChar(10), P_LimValue $Float, P_KZValue $Float,' +
+       'P_MType varChar(10), P_LimValue $Float, P_KZValue $Float Default 0,' +
        'P_PValue $Float, P_PDate DateTime, P_PMan varChar(32), ' +
        'P_MValue $Float, P_MDate DateTime, P_MMan varChar(32), ' +
        'P_PValue2 $Float, P_PDate2 DateTime, P_PMan2 varChar(32), ' +

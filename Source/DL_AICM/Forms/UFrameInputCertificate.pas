@@ -94,6 +94,8 @@ begin
   FListA.Free;
   FListB.Free;
   FListC.Free;
+
+  gSDTReaderManager.OnSDTEvent := nil;
 end;
 
 procedure TfFrameInputCertificate.OnShowFrame;
@@ -186,8 +188,10 @@ var nStr: string;
 begin
   nStr := '读取到身份证信息: [ %s ]=>[ %s.%s ]';
   nStr := Format(nStr, [nReader.FID, nCard.FName, nCard.FIdSN]);
+  WriteLog(nStr);
+  
   EditID.Text := nCard.FIdSN;
-  BtnEnterClick(nil);
+  //BtnEnterClick(nil);
 end;
 
 procedure TfFrameInputCertificate.LoadOrderInfo(nID: string);

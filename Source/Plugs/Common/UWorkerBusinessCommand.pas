@@ -3526,7 +3526,8 @@ begin
                 SF('E_CusName', FieldByName('P_CusName').AsString),
                 SF('E_Upload', sFlag_No),
                 SF('E_Value', Float2Float(FieldByName('P_MValue').AsFloat -
-                  FieldByName('P_PValue').AsFloat, cPrecision, False), sfVal),
+                  FieldByName('P_PValue').AsFloat - FieldByName('P_KZValue').AsFloat,
+                  cPrecision, False), sfVal),
                 SF('E_Date', sField_SQLServer_Now, sfVal),
                 SF('E_Man', FIn.FBase.FFrom.FUser)
                 ], sTable_WebSendMsgInfo, '', True);
@@ -3536,7 +3537,8 @@ begin
                 SF('S_ID', FieldByName('P_ID').AsString),
                 SF('S_Status', nStatusCmd, sfVal),
                 SF('S_Value', Float2Float(FieldByName('P_MValue').AsFloat -
-                  FieldByName('P_PValue').AsFloat, cPrecision, False), sfVal),
+                  FieldByName('P_PValue').AsFloat - FieldByName('P_KZValue').AsFloat,
+                  cPrecision, False), sfVal),
                 SF('S_Upload', sFlag_No),
                 SF('S_Type', sFlag_Provide),
 

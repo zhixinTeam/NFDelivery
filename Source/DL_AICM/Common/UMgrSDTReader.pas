@@ -247,15 +247,15 @@ begin
       if nRet = cReader_FindCardOK then Break;
     end;  
 
-//    if nRet <> cReader_FindCardOK then
-//    begin
-//      SDT_ClosePort(FPort);
-//      nErr := TIP_ICREADER_NO_CARD;
-//      {$IFDEF DEBUG}
-//      WriteLog(nErr);
-//      {$ENDIF}
-//      Exit;
-//    end;
+    if nRet <> cReader_FindCardOK then
+    begin
+      SDT_ClosePort(FPort);
+      nErr := TIP_ICREADER_NO_CARD;
+      {$IFDEF DEBUG}
+      WriteLog(nErr);
+      {$ENDIF}
+      Exit;
+    end;
 
     //选卡
     for nIdx := 0 to cTry_Times -1 do
@@ -265,15 +265,15 @@ begin
       if nRet = cReader_OperateOK then Break;
     end;  
 
-//    if nRet <> cReader_OperateOK then
-//    begin
-//      SDT_ClosePort(FPort);
-//      nErr := TIP_ICREADER_READ_FAILED;
-//      {$IFDEF DEBUG}
-//      WriteLog(nErr);
-//      {$ENDIF}
-//      Exit;
-//    end;
+    if nRet <> cReader_OperateOK then
+    begin
+      SDT_ClosePort(FPort);
+      nErr := TIP_ICREADER_READ_FAILED;
+      {$IFDEF DEBUG}
+      WriteLog(nErr);
+      {$ENDIF}
+      Exit;
+    end;
 
     if FOwner.TempDir = '' then FOwner.TempDir := 'D:\身份证读卡列表\';
     if not DirectoryExists(FOwner.TempDir) then
