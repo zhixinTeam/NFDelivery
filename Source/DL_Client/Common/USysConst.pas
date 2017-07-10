@@ -86,6 +86,7 @@ const
   cFI_FrameCardTemp     = $0152;                     //临时档案管理
   cFI_FrameCardProPQuery= $0153;                     //磅房查询
   cFI_FrameCardTmpPQuery= $0154;                     //磅房查询
+  cFI_FrameBillHaulback = $0155;                     //回空查询
 
   cFI_FormMemo          = $1000;                     //备注窗口
   cFI_FormBackup        = $1001;                     //数据备份
@@ -150,8 +151,12 @@ const
   cFI_FormCardProvide   = $1151;                     //供应制卡
   cFI_FormCardTemp      = $1152;                     //临时制卡
   cFI_FormReadCard      = $1153;                     //读取卡片
+  cFI_FormBillHaulback  = $1155;                     //回空制卡
 
   cFI_FormGetWechartAccount = $1158;                 //获取商城注册信息
+  cFI_FormGetAreaTo     = $1159;                     //获取区域流向(NC)
+  cFI_FormGetPoundHis   = $1161;                     //获取历史已完成磅单
+  cFI_FormSelPoundSta   = $1162;                     //选择指定地磅编号
 
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据
@@ -318,6 +323,7 @@ begin
   AddMenuModuleItem('MAIN_C03', cFI_FrameStationPQueryImport);
   AddMenuModuleItem('MAIN_C05', cFI_FrameStationStandard);
 
+  AddMenuModuleItem('MAIN_D01', cFI_FrameBillHaulback);
   AddMenuModuleItem('MAIN_D02', cFI_FrameMakeCard);
   AddMenuModuleItem('MAIN_D03', cFI_FormMakeBill, mtForm);
   AddMenuModuleItem('MAIN_D06', cFI_FrameBill);

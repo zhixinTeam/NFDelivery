@@ -196,6 +196,36 @@ begin
   end;
 end;
 
+//Date: 2017/6/2
+//Parm:
+//Desc:
+function CallBusinessShipProItems(const nCmd: Integer; const nData,nExt: string;
+  const nOut: PWorkerBusinessCommand; const nWarn: Boolean = True): Boolean;
+var nIn: TWorkerBusinessCommand;
+    nWorker: TBusinessWorkerBase;
+begin
+  nWorker := nil;
+  try
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nExt;
+
+    if nWarn then
+         nIn.FBase.FParam := ''
+    else nIn.FBase.FParam := sParam_NoHintOnError;
+
+    nWorker := gBusinessWorkerManager.LockWorker(sCLI_BusinessShipPro);
+    //get worker
+    Result := nWorker.WorkActive(@nIn, nOut);
+
+    if not Result then
+      WriteLog(nOut.FBase.FErrDesc);
+    //xxxxx
+  finally
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
 //Date: 2014-10-01
 //Parm: 命令;数据;参数;输出
 //Desc: 调用中间件上的销售单据对象
@@ -337,10 +367,22 @@ end;
 function GetPurchaseOrders(const nCard,nPost: string;
  var nBills: TLadingBillItems): Boolean;
 var nOut: TWorkerBusinessCommand;
+    nCardType: string;
 begin
-  Result := CallBusinessPurchaseOrder(cBC_GetPostBills, nCard, nPost, @nOut);
+  nCardType := GetCardUsed(nCard);
+
+  if nCardType = 'P' then
+    Result := CallBusinessPurchaseOrder(cBC_GetPostBills, nCard, nPost, @nOut)
+  else
+  if nCardType = 'A' then
+    Result := CallBusinessShipProItems(cBC_GetPostBills, nCard, nPost, @nOut)
+  else Result := False;
+
   if Result then
+  begin
     AnalyseBillItems(nOut.FData, nBills);
+    nBills[0].FCardType := nCardType;
+  end;
   //xxxxx
 end;
 
@@ -352,7 +394,14 @@ var nStr: string;
     nOut: TWorkerBusinessCommand;
 begin
   nStr := CombineBillItmes(nData);
-  Result := CallBusinessPurchaseOrder(cBC_SavePostBills, nStr, nPost, @nOut);
+
+  if nData[0].FCardType = 'P' then
+    Result := CallBusinessPurchaseOrder(cBC_SavePostBills, nStr, nPost, @nOut)
+  else
+  if nData[0].FCardType = 'A' then
+    Result := CallBusinessShipProItems(cBC_SavePostBills, nStr, nPost, @nOut)
+  else Result := False;
+
   if (not Result) or (nOut.FData = '') then Exit;
 end;
 

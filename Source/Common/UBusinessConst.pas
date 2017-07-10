@@ -103,6 +103,7 @@ const
   cBC_GetSQLQueryCustomer     = $0103;   //查询客户语句
   cBC_GetSQLQueryDispatch     = $0104;   //查询调拨订单
   cBC_SyncDuanDao             = $0105;   //同步短倒
+  cBC_SyncHaulBack            = $0106;   //同步回空磅单到磅单
 
   cBC_GetStationPoundData     = $0115;   //获取车辆称重数据
   cBC_SaveStationPoundData    = $0116;   //保存车辆称重数据
@@ -185,6 +186,8 @@ type
 
     FYSValid    : string;          //验收结果
     FKZValue    : Double;          //扣杂量
+    FKZComment  : string;          //扣杂原因
+    FPDValue    : Double;          //暗扣数量
     FSeal       : string;          //批次号
     FMemo       : string;          //备注
     FExtID_1    : string;          //额外编号
@@ -199,8 +202,8 @@ type
     FOneDoor    : string;         //同一侧上下磅
 
     FLineGroup  : string;         //通道分组
-    FNCChanged  : Boolean;         //NC可用量变化
-    FChangeValue: Double;          //NC 减少
+    FPoundStation: string;        //磅站编号
+    FPoundSName  : string;        //地磅名称
   end;
 
   TLadingBillItems = array of TLadingBillItem;
@@ -272,6 +275,7 @@ resourcestring
   sBus_BusinessShipPro        = 'Bus_BusinessShipPro';  //船运采购指令
   sBus_BusinessShipTmp        = 'Bus_BusinessShipTmp';  //船运临时指令
   sBus_BusinessWebchat        = 'Bus_BusinessWebchat';  //Web平台服务
+  sBus_BusinessHaulback       = 'Bus_BusinessHaulback'; //回空业务指令
 
   {*client function name*}
   sCLI_ServiceStatus          = 'CLI_ServiceStatus';    //服务状态
@@ -285,6 +289,7 @@ resourcestring
   sCLI_BusinessShipPro        = 'CLI_BusinessShipPro';  //船运采购业务
   sCLI_BusinessShipTmp        = 'CLI_BusinessShipTmp';  //船运临时业务
   sCLI_BusinessWebchat        = 'CLI_BusinessWebchat';  //Web平台服务
+  sCLI_BusinessHaulback       = 'CLI_BusinessHaulback'; //回空业务指令
 
 implementation
 
@@ -345,7 +350,6 @@ begin
 
         FLocked     := Values['Locked'] = sFlag_Yes;
         FPreTruckP  := Values['PreTruckP'] = sFlag_Yes;
-        FNCChanged  := Values['NCChanged'] = sFlag_Yes;
 
         with FPData do
         begin
@@ -381,20 +385,23 @@ begin
              FPrice := StrToFloat(nStr)
         else FPrice := 0;
 
-        nStr := Trim(Values['NCChangeValue']);
-        if (nStr <> '') and IsNumber(nStr, True) then
-             FChangeValue := StrToFloat(nStr)
-        else FChangeValue := 0;
-
         nStr := Trim(Values['KZValue']);
         if (nStr <> '') and IsNumber(nStr, True) then
              FKZValue := StrToFloat(nStr)
         else FKZValue := 0;
 
+        FKZComment := Trim(Values['KZComment']);
+        nStr := Trim(Values['PDValue']);
+        if (nStr <> '') and IsNumber(nStr, True) then
+             FPDValue := StrToFloat(nStr)
+        else FPDValue := 0;
+
         FYSValid:= Values['YSValid'];
         FMemo   := Values['Memo'];
         FSeal   := Values['Seal'];
         FLineGroup := Values['LineGroup'];
+        FPoundStation := Values['PoundStation'];
+        FPoundSName   := Values['PoundSName'];
       end;
 
       Inc(nInt);
@@ -489,16 +496,15 @@ begin
              Values['PreTruckP'] := sFlag_Yes
         else Values['PreTruckP'] := sFlag_No;
 
-        if FNCChanged then
-             Values['NCChanged'] := sFlag_Yes
-        else Values['NCChanged'] := sFlag_No;
-
-        Values['NCChangeValue']  := FloatToStr(FChangeValue); 
         Values['KZValue']    := FloatToStr(FKZValue);
+        Values['PDValue']    := FloatToStr(FPDValue);
+        Values['KZComment']  := FKZComment;
         Values['YSValid']    := FYSValid;
         Values['Memo']       := FMemo;
         Values['Seal']       := FSeal;
         Values['LineGroup']  := FLineGroup;
+        Values['PoundStation']:= FPoundStation;
+        Values['PoundSName'] := FPoundSName;
       end;
 
       nListA.Add(PackerEncodeStr(nListB.Text));

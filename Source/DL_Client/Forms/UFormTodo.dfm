@@ -10,17 +10,17 @@ inherited fFormTodo: TfFormTodo
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 440
-    Height = 487
+    Width = 432
+    Height = 476
     inherited BtnOK: TButton
-      Left = 294
-      Top = 454
+      Left = 286
+      Top = 443
       Caption = #30830#23450
       TabOrder = 6
     end
     inherited BtnExit: TButton
-      Left = 364
-      Top = 454
+      Left = 356
+      Top = 443
       Caption = #20851#38381
       TabOrder = 7
     end
@@ -59,7 +59,7 @@ inherited fFormTodo: TfFormTodo
     end
     object EditDate: TcxTextEdit [4]
       Left = 57
-      Top = 267
+      Top = 256
       ParentFont = False
       Properties.ReadOnly = True
       TabOrder = 2
@@ -67,7 +67,7 @@ inherited fFormTodo: TfFormTodo
     end
     object EditFrom: TcxTextEdit [5]
       Left = 57
-      Top = 292
+      Top = 281
       ParentFont = False
       Properties.ReadOnly = True
       TabOrder = 3
@@ -75,7 +75,7 @@ inherited fFormTodo: TfFormTodo
     end
     object EditEvent: TcxMemo [6]
       Left = 57
-      Top = 317
+      Top = 306
       ParentFont = False
       Properties.ReadOnly = True
       Properties.ScrollBars = ssVertical
@@ -86,7 +86,7 @@ inherited fFormTodo: TfFormTodo
     end
     object cxRadio1: TcxRadioGroup [7]
       Left = 23
-      Top = 372
+      Top = 361
       Caption = #22788#29702#26041#26696':'
       ParentFont = False
       Properties.Items = <>

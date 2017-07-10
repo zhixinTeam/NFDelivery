@@ -1,8 +1,8 @@
 {*******************************************************************************
   作者: fendou116688@163.com 2017/6/2
-  描述: 采购业务办卡(复磅模式)
+  描述: 回空业务办卡
 *******************************************************************************}
-unit UFrameCardProvide;
+unit UFrameBillHaulBack;
 
 interface
 
@@ -17,7 +17,7 @@ uses
   ComCtrls, ToolWin;
 
 type
-  TfFrameCardProvide = class(TfFrameNormal)
+  TfFrameBillHaulBack = class(TfFrameNormal)
     EditTruck: TcxButtonEdit;
     dxLayout1Item2: TdxLayoutItem;
     cxTextEdit1: TcxTextEdit;
@@ -37,10 +37,6 @@ type
     dxLayout1Item1: TdxLayoutItem;
     cxTextEdit2: TcxTextEdit;
     dxLayout1Item4: TdxLayoutItem;
-    N3: TMenuItem;
-    N4: TMenuItem;
-    N5: TMenuItem;
-    N6: TMenuItem;
     procedure EditIDPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnDelClick(Sender: TObject);
@@ -50,8 +46,6 @@ type
     procedure CheckDeleteClick(Sender: TObject);
     procedure N2Click(Sender: TObject);
     procedure N1Click(Sender: TObject);
-    procedure N4Click(Sender: TObject);
-    procedure N6Click(Sender: TObject);
   protected
     FStart,FEnd: TDate;
     //时间区间
@@ -75,36 +69,36 @@ uses
   UFormDateFilter, USysPopedom, USysConst, USysDB, USysBusiness, UFormCtrl;
 
 //------------------------------------------------------------------------------
-class function TfFrameCardProvide.FrameID: integer;
+class function TfFrameBillHaulBack.FrameID: integer;
 begin
-  Result := cFI_FrameCardProvide;
+  Result := cFI_FrameBillHaulback;
 end;
 
-procedure TfFrameCardProvide.OnCreateFrame;
+procedure TfFrameBillHaulBack.OnCreateFrame;
 begin
   inherited;
   FUseDate := True;
   InitDateRange(Name, FStart, FEnd);
 end;
 
-procedure TfFrameCardProvide.OnDestroyFrame;
+procedure TfFrameBillHaulBack.OnDestroyFrame;
 begin
   SaveDateRange(Name, FStart, FEnd);
   inherited;
 end;
 
 //Desc: 数据查询SQL
-function TfFrameCardProvide.InitFormDataSQL(const nWhere: string): string;
+function TfFrameBillHaulBack.InitFormDataSQL(const nWhere: string): string;
 var nStr: string;
 begin
   EditDate.Text := Format('%s 至 %s', [Date2Str(FStart), Date2Str(FEnd)]);
-  Result := 'Select * From $DD ';
+  Result := 'Select * From $HK ';
 
   if (nWhere = '') or FUseDate then
   begin
     if CheckDelete.Checked then
-         Result := Result + 'Where (P_DelDate>=''$ST'' and P_DelDate <''$End'')'
-    else Result := Result + 'Where (P_Date>=''$ST'' and P_Date <''$End'')';
+         Result := Result + 'Where (H_DelDate>=''$ST'' and H_DelDate <''$End'')'
+    else Result := Result + 'Where (H_Date>=''$ST'' and H_Date <''$End'')';
     nStr := ' And ';
   end else nStr := ' Where ';
 
@@ -117,17 +111,17 @@ begin
   //xxxxx
 
   if CheckDelete.Checked then
-       Result := MacroValue(Result, [MI('$DD', sTable_CardProvideBak)])
-  else Result := MacroValue(Result, [MI('$DD', sTable_CardProvide)]);
+       Result := MacroValue(Result, [MI('$HK', sTable_BillHaulBak)])
+  else Result := MacroValue(Result, [MI('$HK', sTable_BillHaulBack)]);
 end;
 
-procedure TfFrameCardProvide.AfterInitFormData;
+procedure TfFrameBillHaulBack.AfterInitFormData;
 begin
   FUseDate := True;
 end;
 
 //Desc: 执行查询
-procedure TfFrameCardProvide.EditIDPropertiesButtonClick(Sender: TObject;
+procedure TfFrameBillHaulBack.EditIDPropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 begin
   if Sender = EditTruck then
@@ -136,7 +130,7 @@ begin
     if EditTruck.Text = '' then Exit;
 
     FUseDate := Length(EditTruck.Text) <= 3;
-    FWhere := Format('P_Truck like ''%%%s%%''', [EditTruck.Text]);
+    FWhere := Format('H_Truck like ''%%%s%%''', [EditTruck.Text]);
     InitFormData(FWhere);
 
   end else
@@ -146,32 +140,32 @@ begin
     EditCusName.Text := Trim(EditCusName.Text);
     if EditCusName.Text = '' then Exit;
 
-    FWhere := Format('P_CusPY like ''%%%s%%'' or P_CusName Like''%%%s%%''',
+    FWhere := Format('H_CusPY like ''%%%s%%'' or H_CusName Like''%%%s%%''',
               [EditTruck.Text, EditTruck.Text]);
     InitFormData(FWhere);
   end;
 end;
 
 //Desc: 日期筛选
-procedure TfFrameCardProvide.EditDatePropertiesButtonClick(Sender: TObject;
+procedure TfFrameBillHaulBack.EditDatePropertiesButtonClick(Sender: TObject;
   AButtonIndex: Integer);
 begin
   if ShowDateFilterForm(FStart, FEnd) then InitFormData('');
 end;
 
 //Desc: 查询删除
-procedure TfFrameCardProvide.CheckDeleteClick(Sender: TObject);
+procedure TfFrameBillHaulBack.CheckDeleteClick(Sender: TObject);
 begin
   InitFormData('');
 end;
 
 //------------------------------------------------------------------------------
 //Desc: 开提货单
-procedure TfFrameCardProvide.BtnAddClick(Sender: TObject);
+procedure TfFrameBillHaulBack.BtnAddClick(Sender: TObject);
 var nP: TFormCommandParam;
 begin
   nP.FCommand := cCmd_AddData;
-  CreateBaseFormItem(cFI_FormCardProvide, PopedomItem, @nP);
+  CreateBaseFormItem(cFI_FormBillHaulback, PopedomItem, @nP);
   if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
   begin
     InitFormData('');
@@ -179,7 +173,7 @@ begin
 end;
 
 //Desc: 删除
-procedure TfFrameCardProvide.BtnDelClick(Sender: TObject);
+procedure TfFrameBillHaulBack.BtnDelClick(Sender: TObject);
 var nStr: string;
 begin
   if cxView1.DataController.GetSelectedCount < 1 then
@@ -188,28 +182,28 @@ begin
   end;
 
   nStr := '确定要删除编号为[ %s ]的单据吗?';
-  nStr := Format(nStr, [SQLQuery.FieldByName('R_ID').AsString]);
+  nStr := Format(nStr, [SQLQuery.FieldByName('H_ID').AsString]);
   if not QueryDlg(nStr, sAsk) then Exit;
 
-  if DeleteCardProvide(SQLQuery.FieldByName('R_ID').AsString) then
+  if DeleteBillHaulBack(SQLQuery.FieldByName('H_ID').AsString) then
   begin
     InitFormData(FWhere);
-    ShowMsg('采购单已删除', sHint);
+    ShowMsg('回空单据已删除', sHint);
   end;
 end;
 
 //注销磁卡
-procedure TfFrameCardProvide.N1Click(Sender: TObject);
+procedure TfFrameBillHaulBack.N1Click(Sender: TObject);
 var nStr,nCard: string;
 begin
-  nCard := SQLQuery.FieldByName('P_Card').AsString;
+  nCard := SQLQuery.FieldByName('H_Card').AsString;
   nStr := Format('确定要对卡[ %s ]执行销卡操作吗?', [nCard]);
   if not QueryDlg(nStr, sAsk) then Exit;
 
   FDM.ADOConn.BeginTrans;
   try
-    nStr := 'Update %s Set P_Card=NULL Where R_ID=%s';
-    nStr := Format(nStr, [sTable_CardProvide, SQLQuery.FieldByName('R_ID').AsString]);
+    nStr := 'Update %s Set H_Card=NULL Where H_ID=''%s''';
+    nStr := Format(nStr, [sTable_BillHaulBack, SQLQuery.FieldByName('H_ID').AsString]);
     FDM.ExecuteSQL(nStr);
 
     nStr := 'Update %s Set C_Status=''%s'' Where C_Card=''%s''';
@@ -226,14 +220,14 @@ begin
 end;
 
 //办理磁卡
-procedure TfFrameCardProvide.N2Click(Sender: TObject);
+procedure TfFrameBillHaulBack.N2Click(Sender: TObject);
 var nP: TFormCommandParam;
-    nSQL, nStr, nCard, nCardKeep, nTruck: string;
+    nSQL, nStr, nCard, nTruck: string;
 begin
   inherited;
   if cxView1.DataController.GetSelectedCount < 1 then Exit;
 
-  nStr := SQLQuery.FieldByName('P_Card').AsString;
+  nStr := SQLQuery.FieldByName('H_Card').AsString;
   if nStr <> '' then
   begin
     ShowMsg('请先注销磁卡', sHint);
@@ -244,13 +238,12 @@ begin
   if (nP.FCommand <> cCmd_ModalResult) or (nP.FParamA <> mrOK) then Exit;
   nCard := nP.FParamB;
 
-  nStr := SQLQuery.FieldByName('R_ID').AsString;
-  nTruck := SQLQuery.FieldByName('P_Truck').AsString;
-  nCardKeep := SQLQuery.FieldByName('P_KeepCard').AsString;
+  nStr := SQLQuery.FieldByName('H_ID').AsString;
+  nTruck := SQLQuery.FieldByName('H_Truck').AsString;
 
   FDM.ADOConn.BeginTrans;
   try
-    nSQL := 'Update %s Set P_Card=NULL, P_CType=NULL Where P_Card=''%s''';
+    nSQL := 'Update %s Set P_Card=NULL Where P_Card=''%s''';
     nSQL := Format(nSQL, [sTable_ProvBase, nCard]);
     FDM.ExecuteSQL(nSQL);
     //正在使用的采购订单
@@ -270,8 +263,8 @@ begin
     FDM.ExecuteSQL(nSQL);
     //正在使用的采购业务卡
 
-    nSQL := 'Update %s Set P_Card=''%s'' Where R_ID=%s';
-    nSQL := Format(nSQL, [sTable_CardProvide, nCard, nStr]);
+    nSQL := 'Update %s Set H_Card=''%s'' Where H_ID=%s';
+    nSQL := Format(nSQL, [sTable_BillHaulBack, nCard, nStr]);
     FDM.ExecuteSQL(nSQL);
     //正在使用的采购业务卡
 
@@ -282,9 +275,8 @@ begin
     if Fields[0].AsInteger < 1 then
     begin
       nSQL := MakeSQLByStr([SF('C_Card', nCard),
-              SF('C_Group', nCardKeep),
               SF('C_Status', sFlag_CardUsed),
-              SF('C_Used', sFlag_ShipPro),
+              SF('C_Used', sFlag_Haulback),
               SF('C_Freeze', sFlag_No),
               SF('C_TruckNo', nTruck),
               SF('C_Man', gSysParam.FUserID),
@@ -295,9 +287,8 @@ begin
     begin
       nSQL := Format('C_Card=''%s''', [nCard]);
       nSQL := MakeSQLByStr([
-              SF('C_Group', nCardKeep),
               SF('C_Status', sFlag_CardUsed),
-              SF('C_Used', sFlag_ShipPro),
+              SF('C_Used', sFlag_Haulback),
               SF('C_Freeze', sFlag_No),
               SF('C_TruckNo', nTruck),
               SF('C_Man', gSysParam.FUserID),
@@ -316,64 +307,6 @@ begin
   end;
 end;
 
-procedure TfFrameCardProvide.N4Click(Sender: TObject);
-var nP: TFormCommandParam;
-    nOrder: TOrderItemInfo;
-    nSQL, nStr, nCard, nPoundID, nID: string;
-begin
-  inherited;
-  if cxView1.DataController.GetSelectedCount > 0 then
-  begin
-    nCard := SQLQuery.FieldByName('P_Card').AsString;
-    nStr := Format('确定要对卡[ %s ]执行更换订单操作吗?', [nCard]);
-    if not QueryDlg(nStr, sAsk) then Exit;
-
-    nP.FParamA := SQLQuery.FieldByName('P_CusID').AsString;
-    nP.FParamB := '';
-    nP.FParamC := sFlag_Provide;
-    if SQLQuery.FieldByName('P_Origin').AsString<>'' then
-      nP.FParamD:=SQLQuery.FieldByName('P_Origin').AsString;
-
-    nID := SQLQuery.FieldByName('R_ID').AsString;
-    nPoundID := SQLQuery.FieldByName('P_Pound').AsString;
-
-    CreateBaseFormItem(cFI_FormGetOrder, '', @nP);
-    if (nP.FCommand <> cCmd_ModalResult) or (nP.FParamA <> mrOK) then Exit;
-    nStr := nP.FParamB;
-
-    if nStr = '' then Exit;
-    AnalyzeOrderInfo(nStr, nOrder);
-
-    FDM.ADOConn.BeginTrans;
-    try
-      nSQL := 'Update %s Set P_Order=''%s'' Where R_ID=%s';
-      nSQL := Format(nSQL, [sTable_CardProvide, Trim(nOrder.FOrders), nID]);
-      FDM.ExecuteSQL(nSQL);
-
-      nSQL := 'Update %s Set P_Order=''%s'' Where P_ID=''%s''';
-      nSQL := Format(nSQL, [sTable_PoundLog, Trim(nOrder.FOrders), nPoundID]);
-      FDM.ExecuteSQL(nSQL);
-
-      FDM.ADOConn.CommitTrans;
-      ShowMsg('更新订单完毕', sHint);
-      InitFormData(FWhere);
-    except
-      FDM.ADOConn.RollbackTrans;
-      raise;
-    end;
-  end;
-end;
-
-procedure TfFrameCardProvide.N6Click(Sender: TObject);
-var nP: TFormCommandParam;
-    nRID: string;
-begin
-  inherited;
-  nRID := SQLQuery.FieldByName('R_ID').AsString;
-
-  CreateBaseFormItem(cFI_FormSelPoundSta, '', @nP);
-end;
-
 initialization
-  gControlManager.RegCtrl(TfFrameCardProvide, TfFrameCardProvide.FrameID);
+  gControlManager.RegCtrl(TfFrameBillHaulBack, TfFrameBillHaulBack.FrameID);
 end.

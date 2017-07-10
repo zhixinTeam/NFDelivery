@@ -10,7 +10,8 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, ZnMD5, ULibFun, UFormCtrl, USysLoger,
-  USysDB, UMITConst, UWorkerBusinessCommand{$IFDEF HardMon},UMgrHardHelper{$ENDIF};
+  USysDB, UMITConst, UWorkerBusinessCommand
+  {$IFDEF HardMon}, UMgrHardHelper, UWorkerHardware{$ENDIF};
 
 type
   TWorkerBusinessShipPro = class(TMITDBWorker)
@@ -155,6 +156,10 @@ begin
             SF('P_MuiltiPound', FListA.Values['Muilti']),
             SF('P_OneDoor', FListA.Values['TruckBack']),
             SF('P_UsePre', FListA.Values['TruckPre']),
+            {$IFDEF FORCEPSTATION}
+            SF('P_PoundStation', FListA.Values['PoundStation']),
+            SF('P_PoundName', FListA.Values['PoundName']),
+            {$ENDIF}
 
             SF('P_Truck', nTruck),
             SF('P_Status', sFlag_TruckNone),
@@ -201,6 +206,17 @@ begin
     FDBConn.FConn.RollbackTrans;
     raise;
   end;
+
+  {$IFDEF HardMon}
+  if Length(FListA.Values['PoundStation']) > 0 then
+  begin
+    FListC.Clear;
+    FListC.Values['Card'] := 'dt';
+    FListC.Values['Text'] := #9 + FListA.Values['Truck'] + #9;
+    FListC.Values['Content'] := FListA.Values['PoundStation'];
+    THardwareCommander.CallMe(cBC_PlayVoice, PackerEncodeStr(FListC.Text), '', @nOut);
+  end;
+  {$ENDIF}
 end;
 
 //Date: 2015/9/19
@@ -378,6 +394,12 @@ begin
       FPoundID    := FieldByName('P_Pound').AsString;
       FExtID_2    := FieldByName('P_Order').AsString;
       FMemo       := FieldByName('P_Memo').AsString;
+
+      if Assigned(FindField('P_PoundStation')) then
+      begin
+        FPoundStation := FieldByName('P_PoundStation').AsString;
+        FPoundSName   := FieldByName('P_PoundName').AsString;
+      end;
 
       FPreTruckP := FieldByName('P_UsePre').AsString = sFlag_Yes;
       if FPreTruckP then
@@ -714,6 +736,70 @@ begin
       nSQL := MakeSQLByStr([
               SF('T_LastTime',sField_SQLServer_Now, sfVal)
               ], sTable_Truck, SF('T_Truck', FTruck), False);
+      FListA.Add(nSQL);
+    end;
+  end else
+
+  //----------------------------------------------------------------------------
+  if FIn.FExtParam = sFlag_TruckXH then //验收现场
+  begin
+    with nPound[0] do
+    begin
+      FStatus := sFlag_TruckXH;
+      FNextStatus := sFlag_TruckBFM;
+
+      nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_ForceAddWater, FStockNo]);
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+      if RecordCount > 0 then
+           nYS := Fields[0].AsString
+      else nYS := sFlag_No;
+
+      if nYS = sFlag_Yes then
+        FNextStatus := sFlag_TruckWT;
+      //强制加水业务  
+
+      nStr := SF('P_ID', FPoundID);
+      //where
+      nSQL := MakeSQLByStr([
+              SF('P_YTime', sField_SQLServer_Now, sfVal),
+              SF('P_YMan', FIn.FBase.FFrom.FUser),
+              SF('P_YSResult', FYSValid),
+              SF('P_YLineName', FSeal),    //保存批次号
+              SF('P_KZComment', FKZComment), //扣杂原因
+              SF('P_KZValue', FKZValue, sfVal)
+              ], sTable_PoundLog, nStr, False);
+      //验收扣杂
+      FListA.Add(nSQL);
+
+      nSQL := MakeSQLByStr([
+              SF('P_Status', FStatus),
+              SF('P_NextStatus', FNextStatus)
+              ], sTable_CardProvide,  SF('P_Card', FCard), False);
+      FListA.Add(nSQL);
+    end;
+  end else
+
+  if FIn.FExtParam = sFlag_TruckWT then //验收现场
+  begin
+    with nPound[0] do
+    begin
+      FStatus := sFlag_TruckWT;
+      FNextStatus := sFlag_TruckBFM;
+
+      nStr := SF('P_ID', FPoundID);
+      //where
+      nSQL := MakeSQLByStr([
+              SF('P_WTTime', sField_SQLServer_Now, sfVal),
+              SF('P_WTMan', FIn.FBase.FFrom.FUser),
+              SF('P_WTLine', FMemo)
+              ], sTable_PoundLog, nStr, False);
+      FListA.Add(nSQL);
+
+      nSQL := MakeSQLByStr([
+              SF('P_Status', FStatus),
+              SF('P_NextStatus', FNextStatus)
+              ], sTable_CardProvide,  SF('P_Card', FCard), False);
       FListA.Add(nSQL);
     end;
   end else

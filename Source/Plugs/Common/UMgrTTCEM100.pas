@@ -265,8 +265,11 @@ end;
 
 procedure TM100ReaderManager.CloseReader(const nReader: PM100ReaderItem);
 begin
+  if not FEnable then Exit;
+
   if Assigned(nReader) and Assigned(nReader.FClient) then
   begin
+    if not  nReader.FEnable then Exit;
     ReaderCancel(nReader.FClient);
     //È¡Ïû¶Á¿¨Æ÷²Ù×÷
     

@@ -172,7 +172,7 @@ begin
       //xxxxx
 
       if GetFixedServiceURL = '' then
-           FHttp.TargetURL := gChannelChoolser.ActiveURL
+           Exit
       else FHttp.TargetURL := GetFixedServiceURL;
 
       Result := ISrvWebChat(FChannel).Action(GetFlagStr(cWorker_GetMITName),

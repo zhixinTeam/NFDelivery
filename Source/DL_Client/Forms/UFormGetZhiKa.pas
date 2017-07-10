@@ -24,6 +24,7 @@ type
     FTruck: string;         //车牌号码
     FBatchCode: string;     //批次号
     FAreaName: string;      //到货地点
+    FAreaTo: string;        //区域流向
     FValue: Double;         //订单可用
     FPlanNum: Double;       //计划量
   end;
@@ -188,6 +189,7 @@ function TfFormGetZhiKa.LoadCustomerInfo(const nID: string): Boolean;
 var nStr: string;
     nIdx: Integer;
     nDS: TDataSet;
+    nUseAreaTo: Boolean;
 begin
   ClearCustomerInfo;
   nDS := USysBusiness.LoadCustomerInfo(nID, ListInfo, nStr);
@@ -242,6 +244,11 @@ begin
     FListA.Clear;
     First;
 
+    if Assigned(FindField('docname')) then
+         nUseAreaTo := True
+    else nUseAreaTo := False;
+    //判断是否存在区域流向
+
     while not Eof do
     begin
       nStr := FieldByName('invcode').AsString;
@@ -257,6 +264,10 @@ begin
 
           FTruck := FieldByName('cvehicle').AsString;
           FBatchCode := FieldByName('vbatchcode').AsString;
+
+          if nUseAreaTo then
+               FAreaTo := FieldByName('docname').AsString
+          else FAreaTo := '';
 
           if FOrderType = sFlag_Provide then
           begin
@@ -361,6 +372,8 @@ begin
       SubItems.Add(FStockName);
       SubItems.Add(Format('%.2f', [FValue]));
       SubItems.Add(FAreaName);
+      SubItems.Add(FStockBrand);
+      SubItems.Add(FAreaTo);
 
       Data := Pointer(nIdx);
     end;

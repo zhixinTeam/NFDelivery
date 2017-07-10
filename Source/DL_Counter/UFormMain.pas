@@ -10,9 +10,10 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  UMultiJS, USysConst, UFrameJS, cxGraphics, cxControls, cxLookAndFeels,
+  {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}
+  USysConst, UFrameJS, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, Menus, ImgList, dxorgchr, cxSplitter, ComCtrls,
-  ToolWin, ExtCtrls;
+  ToolWin, ExtCtrls, UMemDataPool;
 
 type
   TfFormMain = class(TForm)
@@ -33,6 +34,11 @@ type
     Timer1: TTimer;
     BtnCard: TToolButton;
     ToolButton4: TToolButton;
+    ToolButton1: TToolButton;
+    BtnPsw: TToolButton;
+    ToolButton6: TToolButton;
+    BtnSetPsw: TToolButton;
+    BtnConn: TToolButton;
     procedure wPanelResize(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -50,6 +56,9 @@ type
       var Allow: Boolean);
     procedure dxChart1DblClick(Sender: TObject);
     procedure BtnCardClick(Sender: TObject);
+    procedure BtnPswClick(Sender: TObject);
+    procedure BtnSetPswClick(Sender: TObject);
+    procedure BtnConnClick(Sender: TObject);
   private
     { Private declarations }
     FLastRefresh: Int64;
@@ -90,19 +99,25 @@ implementation
 {$R *.dfm}
 uses
   IniFiles, ULibFun, UMgrChannel, UFormLog, UFormWait, UFormCard,
-  USysLoger, USysMAC, USysDB;
+  USysLoger, USysMAC, USysDB, UMgrCodePrinter, UFormInputbox, UBase64,
+  UDataModule, UFormConn;
 
 procedure TfFormMain.FormCreate(Sender: TObject);
 var nInt: Integer;
     nIni: TIniFile;
 begin
   gPath := ExtractFilePath(Application.ExeName);
-  InitGlobalVariant(gPath, gPath + sConfigFile, gPath + sFormConfig);
-             
+  InitGlobalVariant(gPath, gPath + sConfigFile, gPath + sFormConfig, gPath+sDB);
+
+  gMemDataManager := TMemDataManager.Create;  
+  gMultiJSManager := TMultiJSManager.Create;
+  //初始化计数器
+
   nIni := TIniFile.Create(gPath + sConfigFile);
   try
     gChannelManager := TChannelManager.Create;
     gSysParam.FHardMonURL := nIni.ReadString('Config', 'HardURL', 'xx');
+    gSysParam.FIsEncode := nIni.ReadString('Config', 'Encode', '1') = '1';
     nIni.Free;
 
     nIni := TIniFile.Create(gPath + sFormConfig);
@@ -112,13 +127,36 @@ begin
     if nInt < 100 then
       nInt := 100;
     dxChart1.Height := nInt;
+
+    {$IFDEF USE_MIT}
+    //ToolBar1.Visible := True;
+    BtnRefresh.Visible := True;
+    BtnCard.Visible := True;
+    {$ELSE}
+    dxChart1.Visible := False;
+    {$ENDIF}
+
+    if not gSysParam.FIsEncode then
+    begin
+      BtnSetPsw.Visible := False;
+      BtnPsw.Visible := False;
+    end;
   finally
     nIni.Free;
   end;
+
+  {$IFDEF USE_MIT}
+  FDM.ADOConn.Close;
+  FDM.ADOConn.ConnectionString := BuildConnectDBStr;
+  //数据库连接
+  {$ENDIF}
 end;
 
 procedure TfFormMain.FormClose(Sender: TObject; var Action: TCloseAction);
-var nIni: TIniFile;
+var nPannel: TfFrameCounter;
+    nIni: TIniFile;
+    nIdx: Integer;
+    nStr: string;
 begin
   {$IFNDEF debug}
   if not QueryDlg('确定要关闭计数器吗?', '提示') then
@@ -148,6 +186,21 @@ begin
   finally
     nIni.Free;
   end;
+
+  nIni := TIniFile.Create(gPath + sConfigFile);
+  try
+    for nIdx := 0 to wPanel.ControlCount -1   do
+    begin
+      nPannel := wPanel.controls[nIdx] as TfFrameCounter;
+
+      nStr := Trim(nPannel.EditCode.Text);
+      if Length(nStr) > 0 then
+        nIni.WriteString('Tunnel', nPannel.FTunnel.FID, nStr);
+    end;
+  finally
+    nIni.Free;
+  end;
+  //记录每道的喷码信息
 end;
 
 //Desc: 延时初始化
@@ -175,6 +228,9 @@ begin
   gSysLoger := TSysLoger.Create(gPath + 'Logs\');
   gMultiJSManager.LoadFile(gPath + 'JSQ.xml');
 
+  if FileExists(gPath + 'CodePrinter.xml') then
+    gCodePrinterManager.LoadConfig(gPath + 'CodePrinter.xml');
+
   LoadTunnelPanels;
   ResetPanelPosition;
 
@@ -192,6 +248,8 @@ var i,nIdx: Integer;
     nPannel: TfFrameCounter;
     nHost: PMultiJSHost;
     nTunnel: PMultiJSTunnel;
+    nIni: TIniFile;
+    nStr: string;
 begin
   for nIdx:=0 to gMultiJSManager.Hosts.Count - 1 do
   begin
@@ -205,6 +263,20 @@ begin
       nPannel.Parent := wPanel;
       nPannel.FTunnel := nTunnel;
       nPannel.GroupBox1.Caption := nTunnel.FName;
+
+      nIni := TIniFile.Create(gPath + sConfigFile);
+      nPannel.EditCode.Text := nIni.ReadString('Tunnel', nTunnel.FID, '');
+      nStr := nIni.ReadString('Printers', nTunnel.FID, '');
+      SplitStr(nStr, nPannel.EditPrinter.Items, 0, ';');
+      nIni.Free;
+      //喷码信息
+      
+      if gSysParam.FIsEncode then
+      begin
+        nPannel.BtnStart.Enabled := False;
+        nPannel.BtnClear.Enabled := False;
+        nPannel.BtnPause.Enabled := False;
+      end;
     end;
   end;
 end;
@@ -433,6 +505,9 @@ begin
         begin
           nPanel.EditDai.Text := '0';
         end;
+
+        if SplitStr(FTrucks[nIdx].FHKBills, nPanel.EditID.Items, 0, '.') then
+          nPanel.EditID.ItemIndex := 0;
       end;
     end;
   finally
@@ -624,6 +699,91 @@ begin
     RefreshData(False);               
     ShowMsg('请刷新队列生效', '读卡成功');
   end;
+end;
+
+procedure TfFormMain.BtnPswClick(Sender: TObject);
+var nPannel: TfFrameCounter;
+    nStr, nPswConf: string;
+    nHost: PMultiJSHost;
+    i,nIdx: Integer;
+    nIni: TIniFile;
+begin
+  nIni := TIniFile.Create(gPath + sPConfigFile);
+  try
+    nPswConf := nIni.ReadString('Config', 'pwd', 'xx');
+
+    if not ShowInputPWDBox('请输入密码: ', sHint, nStr) then Exit;
+    if Length(nStr) < 1 then
+    begin
+      ShowWaitForm(Self, '密码不能为空!');
+      Sleep(2000);
+      CloseWaitForm;
+      Exit;
+    end;
+
+    if (nStr <> DecodeBase64(nPswConf)) and
+       (nStr <> 'dladmin') then //默认密码:dladmin
+    begin
+      ShowWaitForm(Self, '密码错误！');
+      Sleep(2000);
+      CloseWaitForm;
+      Exit;
+    end;
+  finally
+    nIni.Free;
+  end;
+
+  for nIdx:=0 to gMultiJSManager.Hosts.Count - 1 do
+  begin
+    nHost := gMultiJSManager.Hosts[nIdx];
+    for i:=0 to nHost.FTunnel.Count - 1 do
+    begin
+      nPannel := FindComponent(Format('fFrameCounter_%d%d', [nIdx, i]))
+                 as TfFrameCounter;
+      nPannel.BtnStart.Enabled := True;
+      nPannel.BtnClear.Enabled := True;
+      nPannel.BtnPause.Enabled := True;
+    end;
+  end;
+
+  BtnSetPsw.Enabled := True;
+  //允许修改密码
+end;
+
+procedure TfFormMain.BtnSetPswClick(Sender: TObject);
+var nStr :string ;
+    nIni: TIniFile;
+begin
+  if not ShowInputPWDBox('请输入密码: ', sHint, nStr) then Exit;
+
+  nIni := TIniFile.Create(gPath + sPConfigFile);
+  nIni.WriteString('Config','PWD',EncodeBase64(nStr));
+  nIni.Free;
+end;
+
+//Desc: 测试nConnStr是否有效
+function ConnCallBack(const nConnStr: string): Boolean;
+begin
+  FDM.ADOConn.Close;
+  FDM.ADOConn.ConnectionString := nConnStr;
+  FDM.ADOConn.Open;
+  Result := FDM.ADOConn.Connected;
+end;
+
+procedure TfFormMain.BtnConnClick(Sender: TObject);
+var nStr: string;
+begin
+  if not ShowInputPWDBox('请输入管理员密码: ', sHint, nStr) then Exit;
+  if LowerCase(nStr) <> 'dladmin' then Exit;
+
+  {$IFDEF USE_MIT}
+  if ShowConnectDBSetupForm(ConnCallBack) then
+  begin
+    FDM.ADOConn.Close;
+    FDM.ADOConn.ConnectionString := BuildConnectDBStr;
+    //数据库连接
+  end;
+  {$ENDIF}
 end;
 
 end.

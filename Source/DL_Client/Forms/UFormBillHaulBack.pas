@@ -1,8 +1,8 @@
 {*******************************************************************************
   作者: fendou116688@163.com 2017/6/2
-  描述: 临时业务办卡(复磅模式)
+  描述: 回空业务办卡
 *******************************************************************************}
-unit UFormCardTemp;
+unit UFormBillHaulBack;
 
 interface
 
@@ -11,10 +11,10 @@ uses
   CPort, CPortTypes, UFormNormal, UFormBase, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, cxLabel, cxTextEdit,
   dxLayoutControl, StdCtrls, cxGraphics, cxMaskEdit, cxDropDownEdit,
-  cxCheckBox;
+  cxCheckBox, cxButtonEdit;
 
 type
-  TfFormCardTemp = class(TfFormNormal)
+  TfFormBillHaulBack = class(TfFormNormal)
     EditTruck: TcxTextEdit;
     dxLayout1Item4: TdxLayoutItem;
     cxLabel1: TcxLabel;
@@ -22,48 +22,36 @@ type
     EditCard: TcxTextEdit;
     dxLayout1Item6: TdxLayoutItem;
     ComPort1: TComPort;
-    EditCusID: TcxComboBox;
+    EditMemo: TcxTextEdit;
+    dxLayout1Item11: TdxLayoutItem;
+    EditSrcID: TcxButtonEdit;
     dxLayout1Item3: TdxLayoutItem;
     EditCusName: TcxTextEdit;
     dxLayout1Item7: TdxLayoutItem;
-    EditOrgin: TcxTextEdit;
+    EditStockName: TcxTextEdit;
     dxLayout1Item8: TdxLayoutItem;
-    EditMID: TcxComboBox;
+    EditValue: TcxTextEdit;
     dxLayout1Item9: TdxLayoutItem;
-    EditMName: TcxTextEdit;
-    dxLayout1Item10: TdxLayoutItem;
-    EditMemo: TcxTextEdit;
-    dxLayout1Item11: TdxLayoutItem;
-    EditMuilti: TcxCheckBox;
-    dxLayout1Item13: TdxLayoutItem;
-    dxLayout1Group3: TdxLayoutGroup;
-    EditCardType: TcxCheckBox;
-    dxLayout1Item12: TdxLayoutItem;
-    EditBack: TcxCheckBox;
-    dxLayout1Item14: TdxLayoutItem;
-    EditPre: TcxCheckBox;
-    dxLayout1Item15: TdxLayoutItem;
-    EditPoundStation: TcxComboBox;
-    dxLayout1Item16: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
     procedure ComPort1RxChar(Sender: TObject; Count: Integer);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditCardKeyPress(Sender: TObject; var Key: Char);
     procedure EditTruckKeyPress(Sender: TObject; var Key: Char);
-    procedure EditMIDPropertiesChange(Sender: TObject);
-    procedure EditCusIDPropertiesChange(Sender: TObject);
+    procedure EditSrcIDPropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
   private
     { Private declarations }
     FBuffer: string;
     //接收缓冲
-    FListA: TStrings;
+    FListA, FListB: TStrings;
     //数据传输
     FParam: PFormCommandParam;
-    procedure InitFormData;
+
+    procedure InitFormData(const nOrderInfo: string='');
     procedure ActionComPort(const nStop: Boolean);
 
-    procedure LoadStockItems;
-    procedure LoadCustomerItems;
+    procedure GetPoundHistory(const nSrc: string; const nQueryType: Integer=0);
+    //获取历史磅单
   public
     { Public declarations }
     class function CreateForm(const nPopedom: string = '';
@@ -77,7 +65,7 @@ implementation
 {$R *.dfm}
 uses
   IniFiles, ULibFun, UMgrControl, USysBusiness, USmallFunc, USysConst,
-  USysDB, UBusinessPacker, UDataModule, UAdjustForm;
+  USysDB, UBusinessPacker, UDataModule;
 
 type
   TReaderType = (ptT800, pt8142);
@@ -100,21 +88,22 @@ type
 var
   gReaderItem: TReaderItem;
   //读卡器配置
-  gStockItems: array of TSelectItem;
-  //品种列表
-  gCustomerItems: array of TSelectItem;
-  //供应商列表
 
-class function TfFormCardTemp.FormID: integer;
+class function TfFormBillHaulBack.FormID: integer;
 begin
-  Result := cFI_FormCardTemp;
+  Result := cFI_FormBillHaulback;
 end;
 
-class function TfFormCardTemp.CreateForm(const nPopedom: string;
+class function TfFormBillHaulBack.CreateForm(const nPopedom: string;
   const nParam: Pointer): TWinControl;
 var nP: PFormCommandParam;
+    nListIn: TStrings;
+    nStr, nMemo, nTmp: string;
 begin
   Result := nil;
+  nStr := '';
+  nMemo:= '';
+
   if not Assigned(nParam) then
   begin
     New(nP);
@@ -122,15 +111,41 @@ begin
   end else
   begin
     nP := nParam;
+    nStr := nP.FParamA; //需要作废的单号
+    nMemo:= nP.FParamB; //过磅错误信息
+    //回空数据
   end;
 
-  with TfFormCardTemp.Create(Application) do
+  nListIn := TStringList.Create;
+  try
+    if nMemo <> '' then
+    try
+      SplitStr(nMemo, nListIn, 0, ';');
+
+      nP.FCommand  := 0;            //车牌号查询
+      nP.FParamA   := nListIn.Values['Truck'];
+
+      CreateBaseFormItem(cFI_FormGetPoundHis, nPopedom, nP);
+      if (nP.FCommand <> cCmd_ModalResult) or (nP.FParamA <> mrOK) then Exit;
+      nTmp := nP.FParamB;
+    finally
+      if not Assigned(nParam) then Dispose(nP);
+    end;
+  finally
+    nListIn.Free;
+  end;
+
+  with TfFormBillHaulBack.Create(Application) do
   try
     FListA := TStringList.Create;
+    FListB := TStringList.Create;
     //init
-    
+
+    SplitStr(nMemo, FListB, 0, ';');
+    FListB.Values['DelID'] := nStr;
+
     FParam := nP;
-    InitFormData;
+    InitFormData(nTmp);
     ActionComPort(False);
 
     FParam.FCommand := cCmd_ModalResult;
@@ -141,23 +156,34 @@ begin
   end;
 end;
 
-procedure TfFormCardTemp.FormClose(Sender: TObject; var Action: TCloseAction);
+procedure TfFormBillHaulBack.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
   ActionComPort(True);
   FListA.Free;
+  FListB.Free;
 end;
 
-procedure TfFormCardTemp.InitFormData;
+procedure TfFormBillHaulBack.InitFormData(const nOrderInfo: string);
 begin
-  LoadStockItems;
-  LoadCustomerItems;
-  LoadPoundStation(EditPoundStation.Properties.Items);
-
   ActiveControl := EditTruck;
+
+  if nOrderInfo = '' then Exit;
+
+  FListA.Text := nOrderInfo;
+  with FListA do
+  begin
+    EditSrcID.Text := Values['BillNO'];
+    EditCusName.Text := Values['CusName'];
+    EditStockName.Text := Values['Stock'];
+
+    EditTruck.Text := Values['Truck'];
+    EditValue.Text := Values['Value'];
+    EditCard.Text  := FListB.Values['Pound_Card'];
+  end;
 end;
 
 //Desc: 串口操作
-procedure TfFormCardTemp.ActionComPort(const nStop: Boolean);
+procedure TfFormBillHaulBack.ActionComPort(const nStop: Boolean);
 var nInt: Integer;
     nIni: TIniFile;
 begin
@@ -211,7 +237,7 @@ begin
   end;
 end;
 
-procedure TfFormCardTemp.ComPort1RxChar(Sender: TObject; Count: Integer);
+procedure TfFormBillHaulBack.ComPort1RxChar(Sender: TObject; Count: Integer);
 var nStr: string;
     nIdx,nLen: Integer;
 begin
@@ -234,7 +260,7 @@ begin
   end;
 end;
 
-procedure TfFormCardTemp.EditCardKeyPress(Sender: TObject; var Key: Char);
+procedure TfFormBillHaulBack.EditCardKeyPress(Sender: TObject; var Key: Char);
 begin
   if Key = #13 then
   begin
@@ -243,7 +269,7 @@ begin
   end else OnCtrlKeyPress(Sender, Key);
 end;
 
-function TfFormCardTemp.OnVerifyCtrl(Sender: TObject; var nHint: string): Boolean;
+function TfFormBillHaulBack.OnVerifyCtrl(Sender: TObject; var nHint: string): Boolean;
 begin
   Result := True;
 
@@ -261,64 +287,28 @@ begin
 end;
 
 //Desc: 保存磁卡
-procedure TfFormCardTemp.BtnOKClick(Sender: TObject);
-var nID, nMID, nCusID: string;
+procedure TfFormBillHaulBack.BtnOKClick(Sender: TObject);
+var nID: string;
 begin
   if not IsDataValid then Exit;
 
-  if EditMID.ItemIndex < 0 then
-       nMID := Trim(EditMID.Text)
-  else nMID := gStockItems[Integer(EditMID.Properties.Items.Objects[EditMID.ItemIndex])].FID;
-
-  if EditCusID.ItemIndex < 0 then
-       nCusID := Trim(EditCusID.Text)
-  else nCusID := gCustomerItems[Integer(EditCusID.Properties.Items.Objects[EditCusID.ItemIndex])].FID;
-
   with FListA do
   begin
-    Clear;
-
-    Values['Origin']    := Trim(EditOrgin.Text);
-    Values['Truck']     := Trim(EditTruck.Text);
-
-    Values['ProID']     := nCusID;
-    Values['ProName']   := Trim(EditCusName.Text);
-
-    Values['StockNO']   := nMID;
-    Values['StockName'] := Trim(EditMName.Text);
-
-    Values['Card']      := Trim(EditCard.Text);
-    Values['Memo']      := Trim(EditMemo.Text);
-
-    if EditCardType.Checked then
-         Values['CardType']:= sFlag_ProvCardG
-    else Values['CardType']:= sFlag_ProvCardL;
-
-    if EditMuilti.Checked then
-         Values['Muilti']:= sFlag_Yes
-    else Values['Muilti']:= sFlag_No;
-
-    if EditBack.Checked then
-         Values['TruckBack']:= sFlag_Yes
-    else Values['TruckBack']:= sFlag_No;
-
-    if EditPre.Checked then
-         Values['TruckPre']:= sFlag_Yes
-    else Values['TruckPre']:= sFlag_No;
-
-    Values['PoundStation'] := GetCtrlData(EditPoundStation);
-    Values['PoundName']    := EditPoundStation.Text;
+    Values['DelBill']  := FListB.Values['DelID'];
+    Values['PStation'] := FListB.Values['PStation'];
+    Values['PValue']   := FListB.Values['Pound_PValue'];
+    Values['Card'] := Trim(EditCard.Text);
   end;
 
-  nID := SaveCardOther(PackerEncodeStr(FListA.Text));
+  nID := SaveBillHaulBack(PackerEncodeStr(FListA.Text));
   if nID = '' then Exit;
 
   ModalResult := mrOk;
-  ShowMsg('临时业务办卡成功', sHint);
+  ShowMsg('回空业务办理完毕', sHint);
 end;
 
-procedure TfFormCardTemp.EditTruckKeyPress(Sender: TObject; var Key: Char);
-var nP: TFormCommandParam;  
+procedure TfFormBillHaulBack.EditTruckKeyPress(Sender: TObject; var Key: Char);
+var nP: TFormCommandParam;
 begin
   inherited;
   if (Sender = EditTruck) and (Key = Char(VK_SPACE)) then
@@ -330,93 +320,35 @@ begin
 
     EditTruck.Text := nP.FParamB;
     EditTruck.SelectAll;
-  end;
-end;
+  end else
 
-procedure TfFormCardTemp.LoadStockItems;
-var nStr: string;
-    nIdx: Integer;
-begin
-  nStr := 'Select M_ID,M_Name From ' + sTable_Materails;
-
-  EditMID.Properties.Items.Clear;
-  SetLength(gStockItems, 0);
-
-  with FDM.QueryTemp(nStr) do
+  if (Sender = EditSrcID) and (Key = Char(VK_RETURN)) then
   begin
-    if RecordCount < 1 then Exit;
-    SetLength(gStockItems, RecordCount);
-
-    nIdx := 0;
-    First;
-
-    while not Eof do
-    begin
-      with gStockItems[nIdx] do
-      begin
-        FID := Fields[0].AsString;
-        FName := Fields[1].AsString;
-        EditMID.Properties.Items.AddObject(FID + '.' + FName, Pointer(nIdx));
-      end;
-
-      Inc(nIdx);
-      Next;
-    end;
-  end;
+    Key := #0;
+    GetPoundHistory(EditSrcID.Text, 1);
+  end;  
 end;
 
-procedure TfFormCardTemp.LoadCustomerItems;
-var nStr: string;
-    nIdx: Integer;
+procedure TfFormBillHaulBack.EditSrcIDPropertiesButtonClick(
+  Sender: TObject; AButtonIndex: Integer);
 begin
-  nStr := 'Select P_ID,P_Name From ' + sTable_Provider;
-
-  EditCusID.Properties.Items.Clear;
-  SetLength(gCustomerItems, 0);
-
-  with FDM.QueryTemp(nStr) do
-  begin
-    if RecordCount < 1 then Exit;
-    SetLength(gCustomerItems, RecordCount);
-
-    nIdx := 0;
-    First;
-
-    while not Eof do
-    begin
-      with gCustomerItems[nIdx] do
-      begin
-        FID := Fields[0].AsString;
-        FName := Fields[1].AsString;
-        EditCusID.Properties.Items.AddObject(FID + '.' + FName, Pointer(nIdx));
-      end;
-
-      Inc(nIdx);
-      Next;
-    end;
-  end;
-end;  
-
-procedure TfFormCardTemp.EditMIDPropertiesChange(Sender: TObject);
-var nIdx: Integer;
-begin
-  if (not EditMID.Focused) or (EditMID.ItemIndex < 0) then Exit;
-  nIdx := Integer(EditMID.Properties.Items.Objects[EditMID.ItemIndex]);
-
-  if nIdx < 0 then Exit;
-  EditMName.Text := gStockItems[nIdx].FName;
+  inherited;
+  GetPoundHistory(EditSrcID.Text, 1);
 end;
 
-procedure TfFormCardTemp.EditCusIDPropertiesChange(Sender: TObject);
-var nIdx: Integer;
+procedure TfFormBillHaulBack.GetPoundHistory(const nSrc: string;
+  const nQueryType: Integer=0);
+var nP: TFormCommandParam;
 begin
-  if (not EditCusID.Focused) or (EditCusID.ItemIndex < 0) then Exit;
-  nIdx := Integer(EditCusID.Properties.Items.Objects[EditCusID.ItemIndex]);
+  nP.FCommand := nQueryType;
+  nP.FParamA  := nSrc;
 
-  if nIdx < 0 then Exit;
-  EditCusName.Text := gCustomerItems[nIdx].FName;
-end;
+  CreateBaseFormItem(cFI_FormGetPoundHis, '', @nP);
+  if (nP.FCommand <> cCmd_ModalResult) or (nP.FParamA <> mrOK) then Exit;
+
+  InitFormData(nP.FParamB);
+end;    
 
 initialization
-  gControlManager.RegCtrl(TfFormCardTemp, TfFormCardTemp.FormID);
+  gControlManager.RegCtrl(TfFormBillHaulBack, TfFormBillHaulBack.FormID);
 end.

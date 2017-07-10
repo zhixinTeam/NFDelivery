@@ -11,7 +11,7 @@ uses
   CPort, CPortTypes, UFormNormal, UFormBase, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, cxLabel, cxTextEdit,
   dxLayoutControl, StdCtrls, cxGraphics, cxCheckBox, cxMaskEdit,
-  cxButtonEdit, USysBusiness;
+  cxButtonEdit, USysBusiness, cxDropDownEdit;
 
 type
   TfFormCardProvide = class(TfFormNormal)
@@ -45,6 +45,8 @@ type
     dxLayout1Item15: TdxLayoutItem;
     EditPre: TcxCheckBox;
     dxLayout1Item16: TdxLayoutItem;
+    EditPoundStation: TcxComboBox;
+    dxLayout1Item17: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
     procedure ComPort1RxChar(Sender: TObject; Count: Integer);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -72,7 +74,8 @@ implementation
 
 {$R *.dfm}
 uses
-  IniFiles, ULibFun, UMgrControl, USmallFunc, USysConst, USysDB, UBusinessPacker;
+  IniFiles, ULibFun, UMgrControl, USmallFunc, USysConst, USysDB,
+  UBusinessPacker, UAdjustForm;
 
 type
   TReaderType = (ptT800, pt8142);
@@ -165,10 +168,8 @@ procedure TfFormCardProvide.InitFormData;
 begin
   if nOrderData = '' then Exit;
   //无订单数据
-  
-  ActiveControl := EditTruck;
-  AnalyzeOrderInfo(nOrderData, FOrderItem);
 
+  AnalyzeOrderInfo(nOrderData, FOrderItem);
   with FOrderItem do
   begin
     EditPName.Text := FCusName;
@@ -178,6 +179,9 @@ begin
     EditOrder.Text := FOrders;
     EditOValue.Text:= FloatToStr(FValue);
   end;
+
+  LoadPoundStation(EditPoundStation.Properties.Items);
+  ActiveControl := EditTruck;
 end;
 
 //Desc: 串口操作
@@ -342,12 +346,16 @@ begin
     if EditPre.Checked then
          Values['TruckPre']:= sFlag_Yes
     else Values['TruckPre']:= sFlag_No;
+    
+    Values['PoundStation'] := GetCtrlData(EditPoundStation);
+    Values['PoundName']    := EditPoundStation.Text;
   end;
 
   nID := SaveCardProvie(PackerEncodeStr(FListA.Text));
   if nID = '' then Exit;
 
   ModalResult := mrOk;
+  ShowMsg('采购业务办卡成功', sHint);
   //done
 end;
 

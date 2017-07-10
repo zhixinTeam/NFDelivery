@@ -10,7 +10,7 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, ZnMD5, ULibFun, UFormCtrl, USysLoger,
-  USysDB, UMITConst, UMgrRFID102;
+  USysDB, UMITConst, UMgrRFID102, UMgrRemoteVoice, UMgrVoiceNet;
 
 type
   THardwareDBWorker = class(TBusinessWorkerBase)
@@ -73,6 +73,8 @@ type
     //车辆检测控制器业务
     function OpenDoorByReader(var nData: string): Boolean;
     //通过读卡器打开道闸
+    function PlayNetVoice(var nData: string): Boolean;
+    //网络语音播放
   public
     constructor Create; override;
     destructor destroy; override;
@@ -80,6 +82,9 @@ type
     function GetFlagStr(const nFlag: Integer): string; override;
     class function FunctionName: string; override;
     //base function
+    class function CallMe(const nCmd: Integer; const nData,nExt: string;
+      const nOut: PWorkerBusinessCommand): Boolean;
+    //local call
   end;
 
 implementation
@@ -249,6 +254,7 @@ begin
    cBC_IsTunnelOK           : Result := TruckProbe_IsTunnelOK(nData);
    cBC_TunnelOC             : Result := TruckProbe_TunnelOC(nData);
    cBC_OpenDoorByReader     : Result := OpenDoorByReader(nData);
+   cBC_PlayVoice            : Result := PlayNetVoice(nData);
    else
     begin
       Result := False;
@@ -394,6 +400,7 @@ begin
         FListB.Values['Truck'] := nTruck.FTruck;
         FListB.Values['Line'] := nLine.FLineID;
         FListB.Values['Bill'] := nTruck.FBill;
+        FListB.Values['HKBills'] := nTruck.FHKBills;
         FListB.Values['Value'] := FloatToStr(nTruck.FValue);
 
         if nLine.FPeerWeight > 0 then
@@ -452,7 +459,6 @@ end;
 function THardwareCommander.PrintCode(var nData: string): Boolean;
 var nStr,nBill,nCode,nArea,nCusCode,nSeal: string;
     nPrefixLen, nIDLen: Integer;
-    nUseDate: Boolean;
 begin
   Result := True;
   if not gCodePrinterManager.EnablePrinter then Exit;
@@ -460,17 +466,6 @@ begin
   nStr := '向通道[ %s ]发送交货单[ %s ]防违流码.';
   nStr := Format(nStr, [FIn.FExtParam, FIn.FData]);
   WriteLog(nStr);
-
-  nStr := 'Select D_Value from %s Where D_Name=''%s'' and ' +
-          'D_Memo=''%s''';
-  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam,
-                        sFlag_BatchAuto]);
-  //xxxxx
-
-  nUseDate := False;
-  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
-   if RecordCount>0 then nUseDate := Fields[0].AsString = sFlag_Yes;
-  //xxxxx
 
   nStr := 'Select B_Prefix,B_IDLen From %s ' +
           'Where B_Group=''%s'' And B_Object=''%s''';
@@ -516,40 +511,38 @@ begin
       nCusCode  := FieldByName('L_CusCode').AsString;
       //xxxxx
 
-      {$IFNDEF USEAUTOBAT}
+      {$IFDEF PrintChinese}
+      //protocol: 汉字喷码+客户代码(区域码) + 交货单号(末3位) + 批次号;
+      if (nArea <> '') and
+        gCodePrinterManager.IsPrinterChinaEnable(FIn.FExtParam) then
+      begin
+        nStr := 'Select B_PrintCode From %s Where B_Source=''%s'' and ' +
+                'B_Valid=''%s''';
+        nStr := Format(nStr, [sTable_ChineseBase, nArea, sFlag_Yes]);
+        //xxxxx
+
+        with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+        if RecordCount>0 then
+        begin
+          nCode := nCode + '@6' + Fields[0].AsString + '@7' +
+                   Copy(nBill, nPrefixLen + 1, nIDLen - nPrefixLen) +
+                   '@2    '; //换行
+          //如果有汉字,则换行处理
+        end;
+      end;
+
+      if nCode = '' then
+        nCode := Copy(nBill, nPrefixLen + 1, nIDLen - nPrefixLen);
+      //如果为空,则喷流水号  
+
+      nCode := nCode + FillString(nCusCode, 2, ' ');
+      nCode := nCode + FillString(nSeal, 6, '0');
+      {$ELSE}
       //protocol: yymmdd(开单时间) + 批次号 + 客户代码(区域码) + 交货单号(末3位);
       nCode := nCode + Copy(nBill, nPrefixLen + 1, 6);
       nCode := nCode + FillString(nSeal, 6, '0');
       nCode := nCode + FillString(nCusCode, 2, ' ');
       nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6);
-      {$ELSE}
-      if nUseDate then
-      begin
-        //protocol: 汉字喷码+客户代码(区域码) + 交货单号(末3位) + 批次号;
-
-        if (nArea <> '') and
-          gCodePrinterManager.IsPrinterChinaEnable(FIn.FExtParam) then
-        begin
-          nStr := 'Select B_PrintCode From %s Where B_Source=''%s'' and ' +
-                  'B_Valid=''%s''';
-          nStr := Format(nStr, [sTable_ChineseBase, nArea, sFlag_Yes]);
-          //xxxxx
-
-          with gDBConnManager.WorkerQuery(FDBConn, nStr) do
-          if RecordCount>0 then  nCode := nCode + Fields[0].AsString;
-        end;
-
-        nCode := nCode + FillString(nCusCode, 2, ' ');
-        nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6)+ '  ';
-        nCode := nCode + FillString(nSeal, 6, '0');
-      end else
-      begin
-        //protocol: yymmdd(开单时间) + 批次号 + 客户代码(区域码) + 交货单号(末3位);
-        nCode := nCode + Copy(nBill, nPrefixLen + 1, 6);
-        nCode := nCode + FillString(nSeal, 6, '0');
-        nCode := nCode + FillString(nCusCode, 2, ' ');
-        nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6);
-      end;
       {$ENDIF}
     end;
   end;
@@ -803,6 +796,53 @@ begin
   if Trim(nReader) <> '' then
     gHYReaderManager.OpenDoor(Trim(nReader));
 end;
+
+function THardwareCommander.PlayNetVoice(var nData: string): Boolean;
+begin
+  Result := True;
+  FListA.Text := PackerDecodeStr(FIn.FData);
+  if gTruckQueueManager.IsNetPlayVoice and Assigned(gNetVoiceHelper) then
+       gNetVoiceHelper.PlayVoice(FListA.Values['Text'], FListA.Values['Card'], FListA.Values['Content'])
+  else gVoiceHelper.PlayVoice(FListA.Values['Text']);
+
+  WriteLog('PlayNetVoice:::' + FListA.Text);
+end;
+
+//Date: 2017/7/5
+//Parm: 命令;数据;参数;输出
+//Desc: 本地调用业务对象
+class function THardwareCommander.CallMe(const nCmd: Integer;
+  const nData, nExt: string; const nOut: PWorkerBusinessCommand): Boolean;
+var nStr: string;
+    nIn: TWorkerBusinessCommand;
+    nPacker: TBusinessPackerBase;
+    nWorker: TBusinessWorkerBase;
+begin
+  nPacker := nil;
+  nWorker := nil;
+  try
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nExt;
+
+    nPacker := gBusinessPackerManager.LockPacker(sBus_BusinessCommand);
+    nPacker.InitData(@nIn, True, False);
+    //init
+
+    nStr := nPacker.PackIn(@nIn);
+    nWorker := gBusinessWorkerManager.LockWorker(FunctionName);
+    //get worker
+
+    Result := nWorker.WorkActive(nStr);
+    if Result then
+         nPacker.UnPackOut(nStr, nOut)
+    else nOut.FData := nStr;
+  finally
+    gBusinessPackerManager.RelasePacker(nPacker);
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
 
 initialization
   gBusinessWorkerManager.RegisteWorker(THardwareCommander, sPlug_ModuleHD);

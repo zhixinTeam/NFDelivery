@@ -1,7 +1,7 @@
 inherited fFormGetZhiKa: TfFormGetZhiKa
-  Left = 409
-  Top = 266
-  Width = 508
+  Left = 398
+  Top = 141
+  Width = 634
   Height = 545
   BorderStyle = bsSizeable
   Position = poDesktopCenter
@@ -10,16 +10,16 @@ inherited fFormGetZhiKa: TfFormGetZhiKa
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 492
+    Width = 618
     Height = 507
     inherited BtnOK: TButton
-      Left = 346
+      Left = 472
       Top = 474
       Caption = #30830#23450
       TabOrder = 5
     end
     inherited BtnExit: TButton
-      Left = 416
+      Left = 542
       Top = 474
       TabOrder = 6
     end
@@ -78,6 +78,14 @@ inherited fFormGetZhiKa: TfFormGetZhiKa
         end
         item
           Caption = #21040#36135#22320#28857
+        end
+        item
+          Caption = #21697#29260
+          Width = 60
+        end
+        item
+          Caption = #21306#22495#27969#21521
+          Width = 120
         end>
       HideSelection = False
       ParentFont = False

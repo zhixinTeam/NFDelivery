@@ -118,6 +118,7 @@ type
     function SavePoundSale: Boolean;
     function SavePoundProvide: Boolean;
     function SavePoundDuanDao: Boolean;
+    function SavePoundHaulBack: Boolean;
     //保存称重
     procedure WriteLog(nEvent: string);
     //记录日志
@@ -412,6 +413,17 @@ begin
     Exit;
   end;
 
+  if (nBills[0].FPoundStation <> '') and
+     (nBills[0].FPoundStation <> FPoundTunnel.FID) then
+  begin
+    nVoice := '%s请到%s过磅';
+    nVoice := Format(nVoice, [nBills[0].FTruck, nBills[0].FPoundSName]);
+    PlayVoice(nVoice);
+    WriteLog(nVoice);
+    SetUIData(True);
+    Exit;
+  end;  
+
   nLast := -1;
   if GetTruckLastTime(nBills[0].FTruck, nLast) and (nLast > 0) and 
      (nLast < FPoundTunnel.FCardInterval) then
@@ -644,7 +656,9 @@ begin
 
   if nStr = '' then
   begin
-    PlayVoice('获取订单信息失败,请联系管理员');
+    nStr := '获取订单信息失败,请联系管理员';
+    WriteSysLog(nStr);
+    PlayVoice(nStr);
     Exit;
   end;
 
@@ -680,7 +694,9 @@ begin
 
   if not GetOrderFHValue(FListA) then
   begin
-    PlayVoice('获取订单剩余量失败,请联系管理员');
+    nStr := '获取订单剩余量失败,请联系管理员';
+    WriteSysLog(nStr);
+    PlayVoice(nStr);
     Exit;
   end;  
   //获取已发货量
@@ -846,7 +862,7 @@ end;
 //Desc: 保存销售
 function TfFrameAutoPoundItem.SavePoundSale: Boolean;
 var nVal,nNet: Double;
-    nStr, nHint: string;
+    nStr, nHint, nMemo: string;
 begin
   Result := False;
   //init
@@ -866,7 +882,7 @@ begin
   if (FType = sFlag_San) and (FNextStatus = sFlag_TruckBFP) then
   begin
     nNet := GetTruckEmptyValue(FTruck);
-    nVal := nNet * 1000 - FPData.FValue * 1000;
+    nVal := FPData.FValue * 1000 - nNet * 1000;
 
     if (nNet > 0) and
        (((nVal > 0) and (FPoundPZ > 0) and (nVal > FPoundPZ)) or
@@ -881,8 +897,11 @@ begin
 
       if not VerifyManualEventRecord(FID + sFlag_ManualB, nHint) then
       begin
+        nMemo := 'Truck=%s;PStation=%s;Pound_PValue=%.2f;Pound_Card=%s';
+        nMemo := Format(nMemo, [FTruck, FPoundTunnel.FID, FPData.FValue, FCard]);
+        
         AddManualEventRecord(FID + sFlag_ManualB, FTruck, nHint,
-            sFlag_DepBangFang, sFlag_Solution_YNP, sFlag_DepDaTing);
+            sFlag_DepBangFang, sFlag_Solution_YNP, sFlag_DepDaTing, True, nMemo);
         WriteSysLog(nHint);
 
         nHint := '[n1]%s皮重超出预警,请下磅联系开票员处理后再次过磅';
@@ -899,7 +918,10 @@ begin
   begin
     if FUIData.FPData.FValue > FUIData.FMData.FValue then
     begin
-      PlayVoice('皮重应小于毛重,请联系管理员处理');
+      nStr := '皮重%.2f吨应小于毛重%.2f吨,请联系管理员处理';
+      nStr := Format(nStr, [FUIData.FPData.FValue, FUIData.FMData.FValue]);
+      WriteSysLog(nStr);
+      PlayVoice(nStr);
       Exit;
     end;
 
@@ -953,7 +975,7 @@ begin
 
         WriteSysLog(nStr);
         Exit;
-      end;  
+      end;
 
       if (FType = sFlag_San) And (FCardUse = sFlag_Sale) then
       begin
@@ -1102,6 +1124,54 @@ begin
   //保存称重
 end;
 
+//Desc: 回空业务
+function TfFrameAutoPoundItem.SavePoundHaulBack: Boolean;
+var nNextStatus, nHint: string;
+    nNet, nVal: Double;
+begin
+  Result := False;
+  //init
+
+  with FUIData, gSysParam do
+  if (FPData.FValue > 0) and (FMData.FValue > 0) then
+  begin
+    nNet := GetTruckEmptyValue(FTruck);
+    nVal := FPData.FValue * 1000 - nNet * 1000;
+
+    if (nNet > 0) and
+       (((nVal > 0) and (FPoundPZ > 0) and (nVal > FPoundPZ)) or
+        ((nVal < 0) and (FPoundPF > 0) and (-nVal > FPoundPF))) then
+    begin
+      nHint := '[n1]%s皮重超出预警%.2f公斤,请下磅卸货后再次过磅';
+      nHint := Format(nHint, [FTruck, nVal]);
+      WriteSysLog(nHint);
+      PlayVoice(nHint);
+      Exit;
+      //判断皮重是否超差
+    end;
+  end;
+
+  nNextStatus := FBillItems[0].FNextStatus;
+  //保存读卡时下一状态
+
+  SetLength(FBillItems, 1);
+  FBillItems[0] := FUIData;
+  //复制用户界面数据
+
+  with FBillItems[0] do
+  begin
+    FFactory := gSysParam.FFactNum;
+    //xxxxx
+    
+    if FNextStatus = sFlag_TruckBFP then
+         FPData.FStation := FPoundTunnel.FID
+    else FMData.FStation := FPoundTunnel.FID;
+  end;
+
+  Result := SaveLadingBills(nNextStatus, FBillItems, FPoundTunnel);
+  //保存称重
+end;
+
 
 //Desc: 读取表头数据
 procedure TfFrameAutoPoundItem.OnPoundDataEvent(const nValue: Double);
@@ -1232,6 +1302,7 @@ begin
   if FUIData.FCardUse = sFlag_Sale then      nRet := SavePoundSale
   else if FUIData.FCardUse = sFlag_SaleNew then nRet := SavePoundSale
   else if FUIData.FCardUse = sFlag_DuanDao then nRet := SavePoundDuanDao
+  else if FUIData.FCardUse = sFlag_Haulback then nRet:= SavePoundHaulBack
   else if FUIData.FCardUse = sFlag_Provide then nRet := SavePoundProvide
   else if FUIData.FCardUse = sFlag_ShipPro then nRet := SavePoundProvide
   else if FUIData.FCardUse = sFlag_ShipTmp then nRet := SavePoundProvide

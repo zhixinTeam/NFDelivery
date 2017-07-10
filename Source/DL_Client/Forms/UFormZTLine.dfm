@@ -2,23 +2,23 @@ inherited fFormZTLine: TfFormZTLine
   Left = 536
   Top = 401
   Caption = #35013#36710#32447#37197#32622
-  ClientHeight = 247
+  ClientHeight = 248
   ClientWidth = 550
   Position = poMainFormCenter
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
     Width = 550
-    Height = 247
+    Height = 248
     inherited BtnOK: TButton
       Left = 404
-      Top = 214
-      TabOrder = 11
+      Top = 215
+      TabOrder = 13
     end
     inherited BtnExit: TButton
       Left = 474
-      Top = 214
-      TabOrder = 12
+      Top = 215
+      TabOrder = 14
     end
     object EditName: TcxTextEdit [2]
       Left = 354
@@ -40,24 +40,24 @@ inherited fFormZTLine: TfFormZTLine
     end
     object EditMax: TcxTextEdit [4]
       Left = 81
-      Top = 111
+      Top = 136
       Hint = 'T.Z_QueueMax'
       HelpType = htKeyword
       HelpKeyword = 'I'
       ParentFont = False
-      TabOrder = 6
+      TabOrder = 8
       Text = '3'
       Width = 210
     end
     object CheckValid: TcxCheckBox [5]
       Left = 11
-      Top = 214
+      Top = 215
       Hint = 'T.Z_Valid'
       Caption = #36890#36947#26377#25928
       ParentFont = False
       Style.BorderColor = clWindowFrame
       Style.BorderStyle = ebsSingle
-      TabOrder = 10
+      TabOrder = 12
       Transparent = True
       Width = 80
     end
@@ -71,25 +71,25 @@ inherited fFormZTLine: TfFormZTLine
     end
     object cxLabel2: TcxLabel [7]
       Left = 296
-      Top = 111
+      Top = 136
       Caption = #27880': '#35813#21442#25968#29992#20110#25511#21046#27599#38431#26368#22810#26377#22810#23569#36710#36742'.'
       ParentFont = False
       Transparent = True
     end
     object EditPeer: TcxTextEdit [8]
       Left = 81
-      Top = 136
+      Top = 161
       Hint = 'T.Z_PeerWeight'
       HelpType = htKeyword
       HelpKeyword = 'I'
       ParentFont = False
-      TabOrder = 8
+      TabOrder = 10
       Text = '50'
       Width = 210
     end
     object cxLabel4: TcxLabel [9]
       Left = 296
-      Top = 136
+      Top = 161
       Caption = #27880': '#35813#21442#25968#29992#20110#35013#36710#35745#25968#26102#35745#31639#34955#25968'.'
       ParentFont = False
       Transparent = True
@@ -125,6 +125,21 @@ inherited fFormZTLine: TfFormZTLine
       Left = 296
       Top = 86
       Caption = #27880': '#35813#21442#25968#24433#21709#36827#38431#21015#30340#21457#36135#21333#31867#22411'.'
+      ParentFont = False
+      Transparent = True
+    end
+    object EditLineGroup: TcxComboBox [13]
+      Left = 81
+      Top = 111
+      Hint = 'T.Z_Group'
+      ParentFont = False
+      TabOrder = 5
+      Width = 121
+    end
+    object cxLabel1: TcxLabel [14]
+      Left = 296
+      Top = 107
+      Caption = #27880': '#35813#21442#25968#24433#21709#36827#38431#21015#30340#21457#36135#21333#20998#32452
       ParentFont = False
       Transparent = True
     end
@@ -176,16 +191,37 @@ inherited fFormZTLine: TfFormZTLine
             Hidden = True
             LayoutDirection = ldHorizontal
             ShowBorder = False
-            object dxLayout1Item3: TdxLayoutItem
-              Caption = #26632#21488#31867#22411':'
-              Control = EditType
-              ControlOptions.ShowBorder = False
-            end
-            object dxLayout1Item22: TdxLayoutItem
-              AutoAligns = [aaVertical]
+            object dxLayout1Group6: TdxLayoutGroup
               ShowCaption = False
-              Control = cxLabel5
-              ControlOptions.ShowBorder = False
+              Hidden = True
+              ShowBorder = False
+              object dxLayout1Item3: TdxLayoutItem
+                Caption = #26632#21488#31867#22411':'
+                Control = EditType
+                ControlOptions.ShowBorder = False
+              end
+              object dxLayout1Item6: TdxLayoutItem
+                Caption = #26632#21488#20998#32452':'
+                Control = EditLineGroup
+                ControlOptions.ShowBorder = False
+              end
+            end
+            object dxLayout1Group7: TdxLayoutGroup
+              ShowCaption = False
+              Hidden = True
+              ShowBorder = False
+              object dxLayout1Item22: TdxLayoutItem
+                AutoAligns = [aaVertical]
+                ShowCaption = False
+                Control = cxLabel5
+                ControlOptions.ShowBorder = False
+              end
+              object dxLayout1Item9: TdxLayoutItem
+                Caption = 'cxLabel1'
+                ShowCaption = False
+                Control = cxLabel1
+                ControlOptions.ShowBorder = False
+              end
             end
           end
           object dxLayout1Group12: TdxLayoutGroup

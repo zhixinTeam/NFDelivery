@@ -1,6 +1,6 @@
 object fFormMain: TfFormMain
-  Left = 322
-  Top = 96
+  Left = 307
+  Top = 179
   Width = 581
   Height = 449
   Caption = #35745#25968#22120
@@ -19,8 +19,8 @@ object fFormMain: TfFormMain
   object wPanel: TScrollBox
     Left = 0
     Top = 37
-    Width = 573
-    Height = 178
+    Width = 565
+    Height = 167
     HorzScrollBar.Smooth = True
     HorzScrollBar.Tracking = True
     VertScrollBar.Smooth = True
@@ -31,15 +31,15 @@ object fFormMain: TfFormMain
   end
   object SBar: TStatusBar
     Left = 0
-    Top = 403
-    Width = 573
+    Top = 392
+    Width = 565
     Height = 19
     Panels = <>
   end
   object ToolBar1: TToolBar
     Left = 0
     Top = 0
-    Width = 573
+    Width = 565
     Height = 37
     AutoSize = True
     ButtonHeight = 35
@@ -54,6 +54,7 @@ object fFormMain: TfFormMain
       Top = 0
       Caption = ' '#27979#35797#26381#21153' '
       ImageIndex = 0
+      Visible = False
     end
     object BtnLog: TToolButton
       Left = 67
@@ -75,6 +76,7 @@ object fFormMain: TfFormMain
       Top = 0
       Caption = #21047#26032#38431#21015
       ImageIndex = 1
+      Visible = False
       OnClick = BtnRefreshClick
     end
     object ToolButton4: TToolButton
@@ -90,13 +92,52 @@ object fFormMain: TfFormMain
       Top = 0
       Caption = #21047#21345#35013#36710
       ImageIndex = 12
+      Visible = False
       OnClick = BtnCardClick
+    end
+    object ToolButton1: TToolButton
+      Left = 288
+      Top = 0
+      Width = 8
+      Caption = 'ToolButton1'
+      ImageIndex = 13
+      Style = tbsSeparator
+    end
+    object BtnPsw: TToolButton
+      Left = 296
+      Top = 0
+      Caption = #36755#20837#23494#30721
+      ImageIndex = 0
+      OnClick = BtnPswClick
+    end
+    object ToolButton6: TToolButton
+      Left = 363
+      Top = 0
+      Width = 8
+      Caption = 'ToolButton6'
+      ImageIndex = 14
+      Style = tbsSeparator
+    end
+    object BtnSetPsw: TToolButton
+      Left = 371
+      Top = 0
+      Caption = #35774#32622#23494#30721
+      Enabled = False
+      ImageIndex = 11
+      OnClick = BtnSetPswClick
+    end
+    object BtnConn: TToolButton
+      Left = 438
+      Top = 0
+      Caption = #36830#25509#25968#25454#24211
+      ImageIndex = 12
+      OnClick = BtnConnClick
     end
   end
   object cxSplitter1: TcxSplitter
     Left = 0
-    Top = 215
-    Width = 573
+    Top = 204
+    Width = 565
     Height = 8
     HotZoneClassName = 'TcxXPTaskBarStyle'
     AlignSplitter = salBottom
@@ -104,8 +145,8 @@ object fFormMain: TfFormMain
   end
   object dxChart1: TdxOrgChart
     Left = 0
-    Top = 223
-    Width = 573
+    Top = 212
+    Width = 565
     Height = 180
     DefaultNodeWidth = 60
     DefaultNodeHeight = 32
@@ -682,7 +723,7 @@ object fFormMain: TfFormMain
   end
   object Timer1: TTimer
     OnTimer = Timer1Timer
-    Left = 6
+    Left = 8
     Top = 74
   end
 end

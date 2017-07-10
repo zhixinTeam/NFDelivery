@@ -8,6 +8,6 @@
     <Transaction>2015/09/10 16:22:09.000.402,D:\Delphi XE Android\PNFCReadCard\Unit1.fmx=D:\Delphi XE Android\PNFCReadCard\Form\UShowOrderInfo.fmx</Transaction>
     <Transaction>2015/09/11 09:15:20.000.895,D:\Delphi XE Android\PNFCReadCard\Unit1.fmx=D:\Delphi XE Android\PNFCReadCard\Form\ULogin.fmx</Transaction>
   </Transactions>
-	<MobileDevice>32abdc54-Android</MobileDevice>
+	<MobileDevice>239528d1-Android</MobileDevice>
 	<BT_BuildType>Debug</BT_BuildType>
 </BorlandProject>

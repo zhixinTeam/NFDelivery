@@ -72,8 +72,7 @@ type
     //保存车辆到Truck表
     function Login(var nData: string):Boolean;
     function LogOut(var nData: string): Boolean;
-    //登录注销，用于移动终端
-
+    //登录注销，用于移动终端 
     function GetStockBatcode(var nData: string): Boolean;
     //批次编号管理
 
@@ -102,6 +101,8 @@ type
     //发货单到榜单
     function SyncNC_ME03(var nData: string): Boolean;
     //供应订单到榜单
+    function SyncNC_HaulBack(var nData: string): Boolean;
+    //回空业务到磅单
     function GetPoundBaseValue(var nData: string): Boolean;
     function IsDeDuctValid:Boolean;
     //使用暗扣规则
@@ -371,6 +372,7 @@ begin
    cBC_GetSQLQueryCustomer : Result := GetSQLQueryCustomer(nData);
    cBC_SyncME25            : Result := SyncNC_ME25(nData);
    cBC_SyncME03            : Result := SyncNC_ME03(nData);
+   cBC_SyncHaulBack        : Result := SyncNC_HaulBack(nData);
 
    cBC_GetOrderFHValue     : Result := GetOrderFHValue(nData);
    cBC_GetOrderGYValue     : Result := GetOrderGYValue(nData);
@@ -909,9 +911,10 @@ begin
               FieldByName('D_Rund').AsFloat - FieldByName('D_Init').AsFloat -
               StrToFloat(FListA.Values['Value']);
 
-      if FloatRelation(nVal, 0, rtGreater) then Continue;
+      if FloatRelation(nVal, 0, rtLE) then Continue;
       //超发
 
+      nSelect   := sFlag_Yes;
       nBatchNew := FieldByName('D_ID').AsString;
       Break;
     finally
@@ -921,15 +924,15 @@ begin
     if nSelect <> sFlag_Yes then
     begin
       nData := '满足条件的物料[ %s.%s ]批次不存在.';
-      nData := Format(nData, [FIn.FData, FListA.Values['D_Brand']]);
+      nData := Format(nData, [FIn.FData, FListA.Values['Brand']]);
       Exit;
     end;
 
     if nVal <= FieldByName('D_Warn').AsFloat then //超发提醒
     begin
       nStr := '物料[ %s.%s ]即将更换批次号,请通知化验室准备取样.';
-      nStr := Format(nStr, [FieldByName('B_Stock').AsString,
-                            FieldByName('B_Name').AsString]);
+      nStr := Format(nStr, [FIn.FData,
+                            FListA.Values['Brand']]);
       //xxxxx
 
       nStr := 'Update %s Set D_Valid=''%s'' Where D_ID=''%s''';
@@ -1023,7 +1026,8 @@ begin
   FOut.FData := 'select ' +
      'pk_meambill_b as pk_meambill,VBILLCODE,VBILLTYPE,COPERATOR,user_name,' +  //订单表头
      'TMAKETIME,NPLANNUM,cvehicle,vbatchcode,unitname,areaclname,t1.vdef10,' +  //订单表体(t1.vdef10:矿点)
-     't1.vdef2,t1.vdef5,t1.pk_cumandoc,custcode,cmnecode,custname,t_cd.def30,'+ //客商信息(t1.vdef5:品牌;t1.vdef2:区域流向)
+     't1.vdef5,t1.pk_cumandoc,custcode,cmnecode,custname,t_cd.def30,'+          //客商信息(t1.vdef5:品牌)
+     't1.vdef2,t_def.docname,' +                                                //客商2(t1.vdef2:区域流向PK;docname:区域流向名)
      'invcode,invname,invtype ' +                                               //物料
      'from meam_bill t1 ' +
      '  left join sm_user t_su on t_su.cuserid=t1.coperator ' +
@@ -1033,6 +1037,7 @@ begin
      '  left join Bd_invbasdoc t_ib on t_ib.pk_invbasdoc=t2.PK_INVBASDOC' +
      '  left join bd_corp t_cp on t_cp.pk_corp=t1.pk_corp' +
      '  left join bd_areacl t_al on t_al.pk_areacl=t1.vdef1' +
+     '  left join bd_defdoc t_def on t_def.pk_defdoc=t1.vdef2' +
      ' Where ';
   //xxxxx
 
@@ -2183,7 +2188,7 @@ begin
       if FIn.FExtParam <> '' then
         FZhiKa := FIn.FExtParam;
       //xxxxx
-      
+
       with FPData do
       begin
         FValue    := FieldByName('P_PValue').AsFloat;
@@ -2198,7 +2203,14 @@ begin
         FOperator := FieldByName('P_MMan').AsString;
       end;
 
-      FValue := Float2Float(FMData.FValue - FPData.FValue, cPrecision, False);
+      FKZValue := FieldByName('P_KZValue').AsFloat;
+
+      if Assigned(FindField('P_PDValue')) then
+           FPDValue := FieldByName('P_PDValue').AsFloat
+      else FPDValue := 0;
+
+      FValue := Float2Float(FMData.FValue - FPData.FValue - FKZValue,
+                cPrecision, False);
       //供应量
     end;
   end;
@@ -2233,6 +2245,8 @@ begin
               SF('bpushbillstatus', 'N'),
               SF('bsame_ew', 'N'),
 
+              SF('nabatenum', nBills[nIdx].FKZValue, sfVal),
+              SF('nclientabatenum', nBills[nIdx].FPDValue, sfVal),
               SF('breturn', FieldByName('breplenishflag').AsString),
               SF('cmainunit', FieldByName('cmainunit').AsString),
               SF('coperatorid', FieldByName('coperator').AsString),
@@ -2345,6 +2359,184 @@ begin
           gDBConnManager.WorkerExec(nWorker, FListA[nIdx]);
         //xxxxx
 
+        nWorker.FConn.CommitTrans;
+        Result := True;
+      except
+        on E:Exception do
+        begin
+          nWorker.FConn.RollbackTrans;
+          nData := '同步NC计量榜单错误,描述: ' + E.Message;
+          Exit;
+        end;
+      end;
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+end;
+
+//Date: 2017/6/25
+//Parm: 回空单据号
+//Desc: 同步回空单过磅数据到NC计量榜单表中
+function TWorkerBusinessCommander.SyncNC_HaulBack(var nData: string): Boolean;
+var nSQL, nStr: string;
+    nIdx: Integer;
+    nNet, nRetnet: Double;
+    nDS: TDataSet;
+    nWorker: PDBWorker;
+    nBills: TLadingBillItems;
+begin
+  Result := False;
+
+  nSQL := 'Select P_ID, H_ID, H_LPID, H_PValue, H_PDate, H_MValue, H_MDate ' +
+          'From $BillHaul ' +
+          '  Left Join $PLOG On P_Bill=H_ID ' +
+          'Where H_ID=''$ID''';
+  nSQL := MacroValue(nSQL, [MI('$BillHaul', sTable_BillHaulBack),
+          MI('$PLOG', sTable_PoundLog), MI('$ID', FIn.FData)]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nData := '回空单[ %s ]信息已丢失.';
+      nData := Format(nData, [FIn.FData]);
+      Exit;
+    end;
+
+    SetLength(nBills, RecordCount);
+    nIdx := 0;
+
+    FListA.Clear;
+    First;
+
+    while not Eof do
+    begin
+      with nBills[nIdx] do
+      begin
+        FID         := FieldByName('H_ID').AsString;
+        FPoundID    := FieldByName('P_ID').AsString;                  //回空磅单
+        if FPoundID = '' then
+          FPoundID  := FID;
+
+        with FPData do
+        begin
+          FValue    := FieldByName('H_PValue').AsFloat;
+          FDate     := FieldByName('H_PDate').AsDateTime;
+        end;
+
+        with FMData do
+        begin
+          FValue    := FieldByName('H_MValue').AsFloat;
+          FDate     := FieldByName('H_MDate').AsDateTime;
+        end;
+
+        FMuiltiPound := FieldByName('H_LPID').AsString;
+        //原始磅单号
+      end;
+
+      Inc(nIdx);
+      Next;
+    end;
+  end;
+
+  //----------------------------------------------------------------------------
+  nSQL := 'select p1.*,p2.* from meam_poundbill p1 ' +
+          '  left join meam_poundbill_b p2 on p2.PK_poundBILL=p1.PK_poundBILL ' +
+          'where vbillcode = ''%s''';
+  nSQL := Format(nSQL, [nBills[0].FMuiltiPound]);
+
+  nWorker := nil;
+  try
+    nDS := gDBConnManager.SQLQuery(nSQL, nWorker, sFlag_DB_NC);
+    with nDS do
+    begin
+      if RecordCount < 1 then
+      begin
+        nData := '原始磅单[ %s ]信息已丢失.';
+        nData := Format(nData, [nBills[0].FMuiltiPound]);
+        Exit;
+      end;
+
+      FListA.Clear;
+      //init sql list
+
+      for nIdx:=Low(nBills) to High(nBills) do
+      begin
+        First;
+        //init cursor
+
+        while not Eof do
+        begin
+          nStr := FieldByName('vbillcode').AsString;
+          if nStr = nBills[nIdx].FMuiltiPound then Break;
+          Next;
+        end;
+
+        if Eof then Continue;
+        //磅单丢失则不予处理
+
+        nNet := FieldByName('nnet').AsFloat;
+        nRetnet := FieldByName('ngross').AsFloat - nBills[nIdx].FMData.FValue;
+        nRetnet := Float2Float(nRetnet, cPrecision, False);
+
+        nSQL := MakeSQLByStr([
+                SF('dbizdate', Date2Str(nBills[nIdx].FMData.FDate)),            //回空日期
+                SF('dreturntaretime', DateTime2Str(nBills[nIdx].FMData.FDate)), //回空时间
+                SF('nreturntare', nBills[nIdx].FMData.FValue, sfVal),
+                SF('nreturnnet', nRetnet, sfVal)
+                ], 'meam_poundbill', SF('vbillcode', nBills[nIdx].FPoundID), False);
+        FListA.Add(nSQL);
+        //更新回空信息
+
+        nSQL := MakeSQLByStr([SF('cassunit', FieldByName('cassunit').AsString),
+                SF('dbizdate', Date2Str(nBills[nIdx].FMData.FDate)),
+                SF('dr', 0, sfVal),
+                SF('nassrate', FieldByName('nassrate').AsString, sfVal),
+                SF('nconfirmnum', FieldByName('nconfirmnum').AsString, sfVal),
+                SF('ndelivplannum', FieldByName('ndelivplannum').AsString, sfVal),
+                SF('nexecnum', FieldByName('nexecnum').AsFloat, sfVal),
+                SF('nnet', Float2Float(nRetnet - nNet, cPrecision, False), sfVal),
+                SF('nplannum', FieldByName('nplannum').AsFloat, sfVal),
+                SF('pk_corp', FieldByName('pk_corp').AsString),
+
+                SF('pk_poundbill', nBills[nIdx].FMuiltiPound),
+                SF('pk_poundbill_b', nBills[nIdx].FPoundID + '_2'),
+                SF('pk_sourcebill', FieldByName('pk_sourcebill').AsString),
+                SF('pk_sourcebill_b', FieldByName('pk_sourcebill_b').AsString),
+                SF('ts', DateTime2Str(nBills[nIdx].FMData.FDate)),
+                SF('vbatchcode', FieldByName('vbatchcode').AsString),
+                MakeField(nDS, 'vdef1', 1),
+                MakeField(nDS, 'vdef10', 1),
+                MakeField(nDS, 'vdef11', 1),
+                MakeField(nDS, 'vdef12', 1),
+                MakeField(nDS, 'vdef13', 1),
+                MakeField(nDS, 'vdef14', 1),
+                MakeField(nDS, 'vdef15', 1),
+                MakeField(nDS, 'vdef16', 1),
+                MakeField(nDS, 'vdef17', 1),
+                MakeField(nDS, 'vdef18', 1),
+                MakeField(nDS, 'vdef19', 1),
+                MakeField(nDS, 'vdef2', 1),
+                MakeField(nDS, 'vdef20', 1),
+                MakeField(nDS, 'vdef3', 1),
+                MakeField(nDS, 'vdef4', 1),
+                MakeField(nDS, 'vdef5', 1),
+                MakeField(nDS, 'vdef6', 1),
+                MakeField(nDS, 'vdef7', 1),
+                MakeField(nDS, 'vdef8', 1),
+                MakeField(nDS, 'vdef9', 1),
+                SF('vsourcebillcode', FieldByName('vsourcebillcode').AsString)
+                ], 'meam_poundbill_b', '', True);
+        FListA.Add(nSQL);
+      end;
+
+      nWorker.FConn.BeginTrans;
+      try
+        for nIdx:=0 to FListA.Count - 1 do
+          gDBConnManager.WorkerExec(nWorker, FListA[nIdx]);
+        //xxxxx
+        
         nWorker.FConn.CommitTrans;
         Result := True;
       except
@@ -3246,6 +3438,8 @@ begin
               FListB.Values['CusID'] := FieldByName('custcode').AsString;
               FListB.Values['CusName'] := FieldByName('custname').AsString;
               FListB.Values['SendArea']:= FieldByName('areaclname').AsString;
+              FListB.Values['Brand'] := FieldByName('vdef5').AsString;
+              FListB.Values['StockArea'] := FieldByName('areaclname').AsString;
             end;
 
             FListA[nIdx] := PackerEncodeStr(FListB.Text);

@@ -74,6 +74,12 @@ type
     class function FunctionName: string; override;
   end;
 
+  TClientBusinessHaulBack = class(TClient2MITWorker)
+  public
+    function GetFlagStr(const nFlag: Integer): string; override;
+    class function FunctionName: string; override;
+  end;
+
   TClientBusinessHardware = class(TClient2MITWorker)
   public
     function GetFlagStr(const nFlag: Integer): string; override;
@@ -373,6 +379,22 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+class function TClientBusinessHaulBack.FunctionName: string;
+begin
+  Result := sCLI_BusinessHaulback;
+end;
+
+function TClientBusinessHaulBack.GetFlagStr(const nFlag: Integer): string;
+begin
+  Result := inherited GetFlagStr(nFlag);
+
+  case nFlag of
+   cWorker_GetPackerName : Result := sBus_BusinessCommand;
+   cWorker_GetMITName    : Result := sBus_BusinessHaulBack;
+  end;
+end;
+
+//------------------------------------------------------------------------------
 class function TClientBusinessHardware.FunctionName: string;
 begin
   Result := sCLI_HardwareCommand;
@@ -401,5 +423,6 @@ initialization
   gBusinessWorkerManager.RegisteWorker(TClientBusinessDuanDao);
   gBusinessWorkerManager.RegisteWorker(TClientBusinessShipPro);
   gBusinessWorkerManager.RegisteWorker(TClientBusinessShipTmp);
+  gBusinessWorkerManager.RegisteWorker(TClientBusinessHaulBack);
   gBusinessWorkerManager.RegisteWorker(TClientBusinessHardware);
 end.

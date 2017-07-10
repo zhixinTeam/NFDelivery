@@ -53,31 +53,37 @@ inherited fFormChineseBase: TfFormChineseBase
       Transparent = True
       Width = 121
     end
-    object EditName: TcxTextEdit [6]
-      Left = 81
-      Top = 36
-      ParentFont = False
-      TabOrder = 0
-      Width = 121
-    end
-    object EditMemo: TcxTextEdit [7]
+    object EditMemo: TcxTextEdit [6]
       Left = 81
       Top = 170
       ParentFont = False
       TabOrder = 4
       Width = 121
     end
+    object EditName: TcxButtonEdit [7]
+      Left = 81
+      Top = 36
+      Properties.Buttons = <
+        item
+          Default = True
+          Kind = bkEllipsis
+        end>
+      Properties.OnButtonClick = EditNamePropertiesButtonClick
+      TabOrder = 0
+      OnKeyPress = EditNameKeyPress
+      Width = 121
+    end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup
         object dxLayout1Item6: TdxLayoutItem
-          Caption = #21161' '#35760' '#30721':'
+          Caption = #21306#22495#27969#21521':'
           Control = EditName
           ControlOptions.ShowBorder = False
         end
         object dxLayout1Item9: TdxLayoutItem
           AutoAligns = [aaVertical]
           AlignHorz = ahClient
-          Caption = #21943#30721#26469#28304':'
+          Caption = #21306#22495#20195#30721':'
           Control = EditSource
           ControlOptions.ShowBorder = False
         end

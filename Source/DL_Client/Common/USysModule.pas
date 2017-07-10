@@ -36,10 +36,13 @@ uses
 
   UFrameCardProvide, UFormCardProvide, UFrameCardProPQuery,
   UFrameCardTemp, UFormCardTemp, UFrameCardTmpPQuery,
-  UFormReadCard
+  UFormReadCard,
   //ÂëÍ·ÒµÎñ
+
+  UFrameBillHaulBack, UFormBillHaulBack, UFormGetPoundHis
   {$IFDEF PrintChinese},
-  UFrameChineseBase, UFormChineseBase, UFrameChineseDict ,UFormChineseDict
+  UFrameChineseBase, UFormChineseBase, UFrameChineseDict ,UFormChineseDict,
+  UFormGetAreaTo
   {$ENDIF};
 
 procedure InitSystemObject;

@@ -39,6 +39,8 @@ type
     N1: TMenuItem;
     N2: TMenuItem;
     N3: TMenuItem;
+    EditPoundD: TcxButtonEdit;
+    dxLayout1Item9: TdxLayoutItem;
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
@@ -46,11 +48,14 @@ type
     procedure mniN1Click(Sender: TObject);
     procedure N2Click(Sender: TObject);
     procedure N3Click(Sender: TObject);
+    procedure cxButtonEdit1PropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
   private
     { Private declarations }
   protected
     FStart,FEnd: TDate;
     FTimeS,FTimeE: TDate;
+    FPoundS, FPoundE: TDate;
     //时间区间
     FJBWhere: string;
     //交班条件 
@@ -82,6 +87,9 @@ begin
   FTimeS := Str2DateTime(Date2Str(Now) + ' 00:00:00');
   FTimeE := Str2DateTime(Date2Str(Now+1) + ' 00:00:00');
 
+  FPoundS := Date;
+  FPoundE := Date;
+
   FJBWhere := '';
   InitDateRange(Name, FStart, FEnd);
 end;
@@ -95,6 +103,7 @@ end;
 function TfFrameSaleDetailQuery.InitFormDataSQL(const nWhere: string): string;
 begin
   EditDate.Text := Format('%s 至 %s', [Date2Str(FStart), Date2Str(FEnd)]);
+  EditPoundD.Text := Format('%s 至 %s', [Date2Str(FPoundS), Date2Str(FPoundE)]);
   Result := 'Select * From $Bill b Left Join $PoundLog p on b.L_ID=p.P_Bill ';
 
   if FJBWhere = '' then
@@ -201,6 +210,20 @@ begin
   try
     FJBWhere := '(L_LadeTime>=''%s'' and L_LadeTime <''%s'' And L_OutFact Is Not Null)';
     FJBWhere := Format(FJBWhere, [DateTime2Str(FTimeS), DateTime2Str(FTimeE)]);
+    InitFormData('');
+  finally
+    FJBWhere := '';
+  end;
+end;
+
+procedure TfFrameSaleDetailQuery.cxButtonEdit1PropertiesButtonClick(
+  Sender: TObject; AButtonIndex: Integer);
+begin
+  inherited;
+  if ShowDateFilterForm(FPoundS, FPoundE) then
+  try
+    FJBWhere := '(L_MDate>=''%s'' and L_MDate <''%s'')';
+    FJBWhere := Format(FJBWhere, [DateTime2Str(FPoundS), DateTime2Str(FPoundE + 1)]);
     InitFormData('');
   finally
     FJBWhere := '';

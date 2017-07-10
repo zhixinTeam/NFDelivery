@@ -181,6 +181,10 @@ procedure PrinterEnable(const nTunnel: string; const nEnable: Boolean);
 //启停喷码机
 function ChangeDispatchMode(const nMode: Byte): Boolean;
 //切换调度模式
+function LoadZTLineGroup(const nList: TStrings; const nWhere: string = ''): Boolean;
+//栈台分组
+function LoadPoundStation(const nList: TStrings; const nWhere: string = ''): Boolean;
+//指定磅站
 
 function PrintBillReport(nBill: string; const nAsk: Boolean): Boolean;
 //打印提货单
@@ -239,6 +243,11 @@ function SaveCardOther(const nCardData: string): string;
 function DeleteCardOther(const nID: string): Boolean;
 //删除临时卡
 
+function SaveBillHaulBack(const nCardData: string): string;
+//Desc: 保存回空业务单据信息
+function DeleteBillHaulBack(const nID: string): Boolean;
+//删除回空业务单据
+
 function WebChatGetCustomerInfo: string;
 //获取网上商城客户信息
 function WebChatEditShopCustom(const nData: string; nSale: string = 'Y'): Boolean;
@@ -252,9 +261,14 @@ function AddManualEventRecord(nEID, nKey, nEvent:string;
 function VerifyManualEventRecord(const nEID: string; var nHint: string;
     const nWant: string = 'Y'): Boolean;
 //检查事件是否通过处理
+function DealManualEvent(const nEID, nResult: string; nMemo: string=''): Boolean;
+//处理待处理事项
+
 
 function GetTruckEmptyValue(nTruck: string): Double;
 //车辆有效皮重
+function GetStockTruckSort(nID: string=''): string;
+//车辆排队序列
 
 implementation
 
@@ -539,6 +553,40 @@ begin
     //自动称重时不提示
 
     nWorker := gBusinessWorkerManager.LockWorker(sCLI_BusinessShipTmp);
+    //get worker
+    Result := nWorker.WorkActive(@nIn, nOut);
+
+    if not Result then
+      WriteLog(nOut.FBase.FErrDesc);
+    //xxxxx
+  finally
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
+//Date: 2017/6/2
+//Parm: 命令;数据;参数;输出
+//Desc: 回空业务
+function CallBusinessHaulBackItems(const nCmd: Integer; const nData,nExt: string;
+  const nOut: PWorkerBusinessCommand; const nWarn: Boolean = True): Boolean;
+var nIn: TWorkerBusinessCommand;
+    nWorker: TBusinessWorkerBase;
+begin
+  nWorker := nil;
+  try
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nExt;
+
+    if nWarn then
+         nIn.FBase.FParam := ''
+    else nIn.FBase.FParam := sParam_NoHintOnError;
+
+    if gSysParam.FAutoPound and (not gSysParam.FIsManual) then
+      nIn.FBase.FParam := sParam_NoHintOnError;
+    //自动称重时不提示
+
+    nWorker := gBusinessWorkerManager.LockWorker(sCLI_BusinessHaulback);
     //get worker
     Result := nWorker.WorkActive(@nIn, nOut);
 
@@ -1311,6 +1359,11 @@ begin
   if nStr = sFlag_ShipTmp then
   begin
     Result := CallBusinessShipTmpItems(cBC_GetPostBills, nCard, nPost, @nOut);
+  end else
+
+  if nStr = sFlag_HaulBack then
+  begin
+    Result := CallBusinessHaulBackItems(cBC_GetPostBills, nCard, nPost, @nOut);
   end;
 
   if Result then
@@ -1368,6 +1421,13 @@ begin
   begin
     nStr := CombineBillItmes(nData);
     Result := CallBusinessShipTmpItems(cBC_SavePostBills, nStr, nPost, @nOut);
+	  if (not Result) or (nOut.FData = '') then Exit;
+  end else
+
+  if nStr = sFlag_HaulBack then
+  begin
+    nStr := CombineBillItmes(nData);
+    Result := CallBusinessHaulBackItems(cBC_SavePostBills, nStr, nPost, @nOut);
 	  if (not Result) or (nOut.FData = '') then Exit;
   end;
 
@@ -1529,7 +1589,7 @@ end;
 
 //Desc: 打印提货单
 function PrintBillReport(nBill: string; const nAsk: Boolean): Boolean;
-var nStr: string;
+var nStr, nSort: string;
     nParam: TReportParamItem;
 begin
   Result := False;
@@ -1539,6 +1599,9 @@ begin
     nStr := '是否要打印提货单?';
     if not QueryDlg(nStr, sAsk) then Exit;
   end;
+
+  nSort := GetStockTruckSort(nBill);
+  //获取车辆排队顺序
 
   nBill := AdjustListStrFormat(nBill, '''', True, ',', False);
   //添加引号
@@ -1567,6 +1630,10 @@ begin
 
   nParam.FName := 'Company';
   nParam.FValue := gSysParam.FHintText;
+  FDR.AddParamItem(nParam);
+
+  nParam.FName := 'TruckSort';
+  nParam.FValue := nSort;
   FDR.AddParamItem(nParam);
 
   FDR.Dataset1.DataSet := FDM.SqlTemp;
@@ -2063,6 +2130,26 @@ begin
   Result := CallBusinessShipTmpItems(cBC_DeleteBill, nID, '', @nOut);
 end;
 
+//Date: 2017/6/20
+//Parm: 无
+//Desc: 保存回空业务单据信息
+function SaveBillHaulBack(const nCardData: string): string;
+var nOut: TWorkerBusinessCommand;
+begin
+  if CallBusinessHaulBackItems(cBC_SaveBills, nCardData, '', @nOut) then
+       Result := nOut.FData
+  else Result := '';
+end;
+
+//Date: 2017/6/20
+//Parm: 无
+//Desc: 删除回空业务单据信息
+function DeleteBillHaulBack(const nID: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessHaulBackItems(cBC_DeleteBill, nID, '', @nOut);
+end;
+
 //获取客户注册信息
 function WebChatGetCustomerInfo: string;
 var nOut: TWorkerBusinessCommand;
@@ -2115,7 +2202,7 @@ begin
   nSQL := MakeSQLByStr([
           SF('E_ID', nEID),
           SF('E_Key', nKey),
-          SF('E_Result', ''),
+          SF('E_Result', 'NULL', sfVal),
           SF('E_From', nFrom),
           SF('E_Memo', nMemo),
           
@@ -2161,6 +2248,26 @@ begin
   end;
 end;
 
+//------------------------------------------------------------------------------
+//Date: 2017/4/1
+//Parm: 待处理事件ID;处理结果
+//Desc: 处理待处理时间信息
+function DealManualEvent(const nEID, nResult: string; nMemo: string): Boolean;
+var nP: TFormCommandParam;
+begin
+  Result := True;
+
+  if (Copy(nEID, Length(nEID), 1) = sFlag_ManualB) and (nResult = sFlag_SHaulback) then
+  begin //皮重预警,回空业务处理
+    nP.FCommand := cCmd_AddData;
+    nP.FParamA  := Copy(nEID, 1, Length(nEID)-1);
+    nP.FParamB  := nMemo;
+
+    CreateBaseFormItem(cFI_FormBillHaulback, '', @nP);
+    Result := nP.FCommand = cCmd_ModalResult; 
+  end;
+end;
+
 //Desc: 车辆有效皮重
 function GetTruckEmptyValue(nTruck: string): Double;
 var nStr: string;
@@ -2172,6 +2279,123 @@ begin
   if RecordCount > 0 then
        Result := Fields[0].AsFloat
   else Result := 0;
+end;
+
+//Desc: 读取栈台分组列表到nList中,包含附加数据
+function LoadZTLineGroup(const nList: TStrings; const nWhere: string = ''): Boolean;
+var nStr,nW: string;
+begin
+  if nWhere = '' then
+       nW := ''
+  else nW := Format(' And (%s)', [nWhere]);
+
+  nStr := 'D_Value=Select D_Value,D_Memo,D_ParamB From %s ' +
+          'Where D_Name=''%s'' %s Order By D_ID';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_ZTLineGroup, nW]);
+
+  AdjustStringsItem(nList, True);
+  FDM.FillStringsData(nList, nStr, -1, '.', DSA(['D_Value']));
+
+  AdjustStringsItem(nList, False);
+  Result := nList.Count > 0;
+end;
+
+//Desc: 读取可用地磅列表到nList中,包含附加数据
+function LoadPoundStation(const nList: TStrings; const nWhere: string = ''): Boolean;
+var nStr,nW: string;
+begin
+  if nWhere = '' then
+       nW := ''
+  else nW := Format(' And (%s)', [nWhere]);
+
+  nStr := 'D_Value=Select D_Value,D_Memo From %s ' +
+          'Where D_Name=''%s'' %s Order By D_ID';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_PoundStation, nW]);
+
+  AdjustStringsItem(nList, True);
+  FDM.FillStringsData(nList, nStr, -1, '.', DSA(['D_Value']));
+
+  AdjustStringsItem(nList, False);
+  Result := nList.Count > 0;
+end;
+
+//Date: 2017/7/10
+//Parm: 销售提货单号
+//Desc: 获取销售提货单号的排队顺序
+function GetStockTruckSort(nID: string=''): string;
+var nStr, nVip, nStock, nPoundQueue: string;
+    nDate: TDateTime;
+begin
+  Result := '';
+  if nID = '' then Exit;
+
+  nStr := 'Select * From %s Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, nID]);
+  with FDM.QuerySQL(nStr) do
+  begin
+    if RecordCount < 1 then Exit;
+    //交货单已无效
+
+    if FieldByName('L_OutFact').AsString <> '' then Exit;
+    //交货单已完成
+
+    nStock := FieldByName('L_StockNO').AsString;
+    nDate  := FieldByName('L_Date').AsDateTime;
+    nVip   := FieldByName('L_IsVip').AsString;
+  end;
+
+  nStr := 'Select D_Value From $DT Where D_Memo = ''$PQ''';
+  nStr := MacroValue(nStr, [MI('$DT', sTable_SysDict),
+          MI('$PQ', sFlag_PoundQueue)]);
+
+  with FDM.QuerySQL(nStr) do
+  begin
+    if FieldByName('D_Value').AsString = 'Y' then
+    nPoundQueue := 'Y';
+  end;
+
+  nStr := 'Select D_Value From $DT Where D_Memo = ''$DQ''';
+  nStr := MacroValue(nStr, [MI('$DT', sTable_SysDict),
+          MI('$DQ', sFlag_DelayQueue)]);
+
+  with FDM.QuerySQL(nStr) do
+  begin
+  if  FieldByName('D_Value').AsString = 'Y' then
+    begin
+      if nPoundQueue <> 'Y' then
+      begin
+        nStr := 'Select Count(*) From $TB Where T_InQueue Is Null And ' +
+                'T_Valid=''$Yes'' And T_StockNo=''$SN'' And T_InFact<''$IT'' And T_Vip=''$VIP''';
+      end else
+      begin
+        nStr := ' Select Count(*) From $TB left join S_PoundLog on S_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
+                ' Where T_InQueue Is Null And ' +
+                ' T_Valid=''$Yes'' And T_StockNo=''$SN'' And P_PDate<''$IT'' And T_Vip=''$VIP''';
+      end;
+    end else
+    begin
+      nStr := 'Select Count(*) From $TB Where T_InQueue Is Null And ' +
+              'T_Valid=''$Yes'' And T_StockNo=''$SN'' And T_InTime<''$IT'' And T_Vip=''$VIP''';
+    end;
+
+    nStr := MacroValue(nStr, [MI('$TB', sTable_ZTTrucks),
+          MI('$Yes', sFlag_Yes), MI('$SN', nStock),
+          MI('$IT', DateTime2Str(nDate)),MI('$VIP', nVip)]);
+  end;
+  //xxxxx
+
+  with FDM.QuerySQL(nStr) do
+  begin
+    if Fields[0].AsInteger < 1 then
+    begin
+      nStr := '当前还有【 0 】辆车排队,请关注大屏.';
+      Result := nStr;
+    end else
+    begin
+      nStr := '当前还有【 %d 】辆车等待进厂';
+      Result := Format(nStr, [Fields[0].AsInteger]);
+    end;
+  end;
 end;
 
 end.

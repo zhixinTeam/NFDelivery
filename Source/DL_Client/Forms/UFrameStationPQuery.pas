@@ -102,8 +102,8 @@ function TfFrameStationPQuery.InitFormDataSQL(const nWhere: string): string;
 begin
   EditDate.Text := Format('%s жа %s', [Date2Str(FStart), Date2Str(FEnd)]);
 
-  Result := 'Select pl.*,(P_MValue-P_PValue) As P_NetWeight,' +
-            'ABS((P_MValue-P_PValue) * 100 / P_LimValue) As P_Zhuangzailv ' +
+  Result := 'Select pl.*,(P_MValue-P_PValue-P_KZValue) As P_NetWeight,' +
+            'ABS((P_MValue-P_PValue-P_KZValue) * 100 / P_LimValue) As P_Zhuangzailv ' +
             'From $PL pl';
   //xxxxx
 

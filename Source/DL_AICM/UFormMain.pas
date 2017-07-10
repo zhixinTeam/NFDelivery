@@ -200,7 +200,7 @@ begin
     CreateBaseFrame(cFI_FrameQueryCard, PanelWork);
     BroadcastFrameCommand(nil, cCmd_QueryCard, @nParam);
 
-    gTimeCounter := 10;
+    gTimeCounter := 20;
     TimerDec.Enabled := True;
     Exit;
   end;

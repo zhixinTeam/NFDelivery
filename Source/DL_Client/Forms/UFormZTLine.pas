@@ -42,6 +42,12 @@ type
     cxLabel5: TcxLabel;
     dxLayout1Group10: TdxLayoutGroup;
     dxLayout1Group12: TdxLayoutGroup;
+    EditLineGroup: TcxComboBox;
+    dxLayout1Item6: TdxLayoutItem;
+    cxLabel1: TcxLabel;
+    dxLayout1Item9: TdxLayoutItem;
+    dxLayout1Group6: TdxLayoutGroup;
+    dxLayout1Group7: TdxLayoutGroup;
     procedure BtnOKClick(Sender: TObject);
     procedure EditStockIDPropertiesChange(Sender: TObject);
   protected
@@ -71,7 +77,7 @@ implementation
 {$R *.dfm}
 uses
   IniFiles, ULibFun, UMgrControl, UDataModule, UFormInputbox, USysGrid,
-  UFormCtrl, USysDB, USysConst ,USysLoger;
+  UFormCtrl, USysDB, USysConst ,USysLoger, USysBusiness, UAdjustForm;
 
 type
   TLineStockItem = record
@@ -82,6 +88,7 @@ type
   TFormInfoItem = record
     FID       : string;
     FName     : string;
+    FGroup    : string;
     FStockID  : string;
     FStockName: string;
 
@@ -144,6 +151,11 @@ begin
   ResetHintAllForm(Self, 'T', sTable_ZTLines);
   //重置表名称
 
+  LoadZTLineGroup(EditLineGroup.Properties.Items);
+  //载入栈台分组列表
+  if EditLineGroup.Properties.Items.Count > 0 then
+    EditLineGroup.ItemIndex := 0;
+
   if nID <> '' then
   begin
     EditID.Properties.ReadOnly := True;
@@ -159,6 +171,7 @@ begin
       begin
         FID     := EditID.Text;
         FName   := EditName.Text;
+        FGroup  := GetCtrlData(EditLineGroup);
 
         FStockID:= EditStockID.Text;
         FStockName:=EditStockName.Text;
@@ -228,6 +241,12 @@ begin
   begin
     Result := True;
     CheckValid.Checked := nData <> sFlag_No;
+  end else
+
+  if Sender = EditLineGroup then
+  begin
+    Result := True;
+    SetCtrlData(EditLineGroup, Trim(nData));
   end;
 end;
 
@@ -346,6 +365,13 @@ begin
     begin
       nEvent := '通道 [ %s ] 信息由  [ %s ] 变为 [ %s ] ';
       nEvent := Format(nEvent, [EditID.Text, FMax, EditMax.Text]);
+      FDM.WriteSysLog(sFlag_TruckQueue, 'UFromZTline',nEvent);
+    end;
+
+    if FGroup<>GetCtrlData(EditLineGroup) then
+    begin
+      nEvent := '通道 [ %s ] 信息由  [ %s ] 变为 [ %s ] ';
+      nEvent := Format(nEvent, [EditID.Text, FGroup, GetCtrlData(EditLineGroup)]);
       FDM.WriteSysLog(sFlag_TruckQueue, 'UFromZTline',nEvent);
     end;
   end;  

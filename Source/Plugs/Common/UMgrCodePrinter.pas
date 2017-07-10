@@ -494,7 +494,7 @@ begin
     Exit;
   end;
 
-  if FTunnelCode.Values[nTunnel] = nCode then
+  if Length(nCode) < 1 then
   begin
     Result := True;
     Exit;

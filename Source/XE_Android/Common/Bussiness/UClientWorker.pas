@@ -62,6 +62,13 @@ type
     function GetFixedServiceURL: string; override;
   end;
 
+  TClientBusinessShipPro = class(TClient2MITWorker)
+  public
+    function GetFlagStr(const nFlag: Integer): string; override;
+    class function FunctionName: string; override;
+    function GetFixedServiceURL: string; override;
+  end;
+
   TClientBusinessHardware = class(TClient2MITWorker)
   public
     function GetFlagStr(const nFlag: Integer): string; override;
@@ -140,10 +147,10 @@ begin
     begin
       ShowMessage(nStr);
     end else PBWDataBase(nOut)^.FErrDesc := nStr;
-    
+
     Exit;
   end;
-  
+
   FPacker.UnPackOut(nStr, nOut);
   with PBWDataBase(nOut)^ do
   begin
@@ -316,6 +323,29 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+class function TClientBusinessShipPro.FunctionName: string;
+begin
+  Result := sCLI_BusinessShipPro;
+end;
+
+function TClientBusinessShipPro.GetFlagStr(const nFlag: Integer): string;
+begin
+  Result := inherited GetFlagStr(nFlag);
+
+  case nFlag of
+   cWorker_GetPackerName : Result := sBus_BusinessCommand;
+   cWorker_GetMITName    : Result := sBus_BusinessShipPro;
+  end;
+end;
+
+function TClientBusinessShipPro.GetFixedServiceURL: string;
+var nStrURL: string;
+begin
+  nStrURL := 'http://%s:%d/Soap?service=SrvBusiness';
+  Result  := Format(nStrURL, [gSysParam.FServIP, gSysParam.FServPort]);
+end;
+
+//------------------------------------------------------------------------------
 class function TClientBusinessHardware.FunctionName: string;
 begin
   Result := sCLI_HardwareCommand;
@@ -341,5 +371,6 @@ initialization
   gBusinessWorkerManager.RegisteWorker(TClientBusinessCommand);
   gBusinessWorkerManager.RegisteWorker(TClientBusinessSaleBill);
   gBusinessWorkerManager.RegisteWorker(TClientBusinessHardware);
+  gBusinessWorkerManager.RegisteWorker(TClientBusinessShipPro);
   gBusinessWorkerManager.RegisteWorker(TClientBusinessPurchaseOrder);
 end.

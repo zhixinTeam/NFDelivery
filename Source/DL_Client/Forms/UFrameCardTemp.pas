@@ -277,7 +277,7 @@ begin
       nSQL := MakeSQLByStr([SF('C_Card', nCard),
               SF('C_Group', nCardKeep),
               SF('C_Status', sFlag_CardUsed),
-              SF('C_Used', sFlag_ShipPro),
+              SF('C_Used', sFlag_ShipTmp),
               SF('C_Freeze', sFlag_No),
               SF('C_TruckNo', nTruck),
               SF('C_Man', gSysParam.FUserID),
@@ -290,7 +290,7 @@ begin
       nSQL := MakeSQLByStr([
               SF('C_Group', nCardKeep),
               SF('C_Status', sFlag_CardUsed),
-              SF('C_Used', sFlag_ShipPro),
+              SF('C_Used', sFlag_ShipTmp),
               SF('C_Freeze', sFlag_No),
               SF('C_TruckNo', nTruck),
               SF('C_Man', gSysParam.FUserID),

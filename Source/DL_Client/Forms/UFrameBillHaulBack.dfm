@@ -1,4 +1,4 @@
-inherited fFrameCardProvide: TfFrameCardProvide
+inherited fFrameBillHaulBack: TfFrameBillHaulBack
   Width = 1065
   Height = 513
   inherited ToolBar1: TToolBar
@@ -42,7 +42,7 @@ inherited fFrameCardProvide: TfFrameCardProvide
     object cxTextEdit1: TcxTextEdit [1]
       Left = 81
       Top = 94
-      Hint = 'T.R_ID'
+      Hint = 'T.H_ID'
       ParentFont = False
       TabOrder = 4
       Width = 115
@@ -50,7 +50,7 @@ inherited fFrameCardProvide: TfFrameCardProvide
     object cxTextEdit4: TcxTextEdit [2]
       Left = 259
       Top = 94
-      Hint = 'T.P_Truck'
+      Hint = 'T.H_Truck'
       ParentFont = False
       TabOrder = 5
       Width = 115
@@ -71,7 +71,7 @@ inherited fFrameCardProvide: TfFrameCardProvide
     object Edit1: TcxTextEdit [4]
       Left = 621
       Top = 94
-      Hint = 'T.P_MName'
+      Hint = 'T.H_MName'
       ParentFont = False
       TabOrder = 7
       Width = 176
@@ -103,7 +103,7 @@ inherited fFrameCardProvide: TfFrameCardProvide
     object cxTextEdit2: TcxTextEdit [7]
       Left = 437
       Top = 94
-      Hint = 'T.P_CusName'
+      Hint = 'T.H_CusName'
       ParentFont = False
       TabOrder = 6
       Width = 121
@@ -162,7 +162,7 @@ inherited fFrameCardProvide: TfFrameCardProvide
   inherited TitlePanel1: TZnBitmapPanel
     Width = 1065
     inherited TitleBar: TcxLabel
-      Caption = #20379#24212#21150#21345#35760#24405#26597#35810
+      Caption = #22238#31354#21150#21345#35760#24405#26597#35810
       Style.IsFontAssigned = True
       Width = 1065
       AnchorX = 533
@@ -188,22 +188,6 @@ inherited fFrameCardProvide: TfFrameCardProvide
     object N1: TMenuItem
       Caption = #27880#38144'IC'#30913#21345
       OnClick = N1Click
-    end
-    object N3: TMenuItem
-      Caption = '-'
-      Enabled = False
-    end
-    object N4: TMenuItem
-      Caption = #26356#25442'NC'#35746#21333
-      OnClick = N4Click
-    end
-    object N5: TMenuItem
-      Caption = '-'
-      Enabled = False
-    end
-    object N6: TMenuItem
-      Caption = #25351#23450#22320#30917
-      OnClick = N6Click
     end
   end
 end

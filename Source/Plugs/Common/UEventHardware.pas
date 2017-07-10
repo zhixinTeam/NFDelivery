@@ -36,7 +36,7 @@ uses
   SysUtils, USysLoger, UHardBusiness, UMgrTruckProbe, UMgrParam, UMITConst,
   UMgrQueue, UMgrLEDCard, UMgrHardHelper, UMgrRemotePrint, U02NReader,
   UMgrERelay,   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}
-  UMgrRemoteVoice, UMgrCodePrinter, UMgrLEDDisp, UMgrTTCEM100,
+  UMgrRemoteVoice, UMgrVoiceNet, UMgrCodePrinter, UMgrLEDDisp, UMgrTTCEM100,
   UMgrRFID102{$IFDEF HKVDVR}, UMgrCamera{$ENDIF};
 
 class function THardwareWorker.ModuleInfo: TPlugModuleInfo;
@@ -117,6 +117,13 @@ begin
     begin
       gProberManager := TProberManager.Create;
       gProberManager.LoadConfig(nCfg + 'TruckProber.xml');
+    end;
+
+    nStr := '网络语音服务';
+    if FileExists(nCfg + 'NetVoice.xml') then
+    begin
+      gNetVoiceHelper := TNetVoiceManager.Create;
+      gNetVoiceHelper.LoadConfig(nCfg + 'NetVoice.xml');
     end;
   except
     on E:Exception do
@@ -210,6 +217,12 @@ begin
     gM100ReaderManager.StartReader;
   end;
   //三合一读卡器
+
+  if Assigned(gNetVoiceHelper) then
+  begin
+    gNetVoiceHelper.StartVoice;
+  end;
+  //启动语音
 end;
 
 procedure THardwareWorker.AfterStopServer;
@@ -264,6 +277,12 @@ begin
     gM100ReaderManager.OnCardProc := nil;
   end;
   //三合一读卡器
+
+  if Assigned(gNetVoiceHelper) then
+  begin
+    gNetVoiceHelper.StopVoice;
+  end;
+  //启动语音
 end;
 
 end.

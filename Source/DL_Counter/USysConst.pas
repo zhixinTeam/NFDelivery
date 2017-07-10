@@ -4,11 +4,13 @@
 *******************************************************************************}
 unit USysConst;
 
+{$I Link.Inc}
 interface
 
 uses
   Windows, Classes, SysUtils, UBusinessPacker, UBusinessWorker, UBusinessConst,
-  UClientWorker, UMITPacker, UWaitItem, ULibFun, UMultiJS, USysDB, USysLoger;
+  {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}
+  UClientWorker, UMITPacker, UWaitItem, ULibFun, USysDB, USysLoger;
 
 type
   TSysParam = record
@@ -23,6 +25,8 @@ type
     FLocalMAC   : string;                            //本机MAC
     FLocalName  : string;                            //本机名称
     FHardMonURL : string;                            //硬件守护
+
+    FIsEncode   : Boolean;                           //是否需要密码启动
   end;
   //系统参数
 
@@ -44,7 +48,8 @@ type
     FDai      : Integer;     //袋数
     FTotal    : Integer;     //总数
     FInFact   : Boolean;     //是否进厂
-    FIsRun    : Boolean;     //是否运行    
+    FIsRun    : Boolean;     //是否运行
+    FHKBills  : string;      //合卡列表
   end;
 
   TZTLineItems = array of TZTLineItem;
@@ -103,6 +108,8 @@ resourceString
   sConfigSec          = 'Config';                    //主配置小节
   sVerifyCode         = ';Verify:';                  //校验码标记
   sFormConfig         = 'FormInfo.ini';              //窗体配置
+  sPConfigFile        = 'PConfig.Ini';               //面板加载控制
+  sDB                 = 'DBConn.Ini';
 
   sInvalidConfig      = '配置文件无效或已经损坏';    //配置文件无效
   sCloseQuery         = '确定要退出程序吗?';         //主窗口退出
@@ -241,6 +248,7 @@ begin
       FTruck    := Values['Truck'];
       FLine     := Values['Line'];
       FBill     := Values['Bill'];
+      FHKBills  := Values['HKBills'];
 
       if IsNumber(Values['Value'], True) then
            FValue := StrToFloat(Values['Value'])
@@ -389,8 +397,7 @@ end;
 //Parm: 通道号;交货单;提示
 //Desc: 向nTunnel的喷码机发送打印nBill请求
 function PrintBillCode(const nTunnel,nBill: string; var nHint: string): Boolean;
-var nList: TStrings;
-    nIn: TWorkerBusinessCommand;
+var nIn: TWorkerBusinessCommand;
     nOut: TWorkerBusinessCommand;
     nWorker: TBusinessWorkerBase;
 begin

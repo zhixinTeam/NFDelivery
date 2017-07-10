@@ -145,6 +145,8 @@ begin
     FTruck:= FieldByName('cvehicle').AsString;
     FBatchCode:= FieldByName('vbatchcode').AsString;
     FValue:= FieldByName('NPLANNUM').AsFloat;
+    FStockArea := FieldByName('areaclname').AsString;
+    FStockBrand:= FieldByName('vdef5').AsString;
 
     FListA.Text := nOrder.FOrders;
     if not GetOrderFHValue(FListA) then

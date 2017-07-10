@@ -1,9 +1,9 @@
-{*******************************************************************************
-  ×÷Õß: dmzn@163.com 2012-02-03
-  ÃèÊö: ÒµÎñ³£Á¿¶¨Òå
+ï»¿{*******************************************************************************
+  ä½œè€…: dmzn@163.com 2012-02-03
+  æè¿°: ä¸šåŠ¡å¸¸é‡å®šä¹‰
 
-  ±¸×¢:
-  *.ËùÓĞIn/OutÊı¾İ,×îºÃ´øÓĞTBWDataBase»ùÊı¾İ,ÇÒÎ»ÓÚµÚÒ»¸öÔªËØ.
+  å¤‡æ³¨:
+  *.æ‰€æœ‰In/Outæ•°æ®,æœ€å¥½å¸¦æœ‰TBWDataBaseåŸºæ•°æ®,ä¸”ä½äºç¬¬ä¸€ä¸ªå…ƒç´ .
 *******************************************************************************}
 unit UBusinessConst;
 
@@ -24,59 +24,60 @@ const
   cQF_Bill                    = $0001;
 
   {*business command*}
-  cBC_GetSerialNO             = $0001;   //»ñÈ¡´®ĞĞ±àºÅ
-  cBC_ServerNow               = $0002;   //·şÎñÆ÷µ±Ç°Ê±¼ä
-  cBC_IsSystemExpired         = $0003;   //ÏµÍ³ÊÇ·ñÒÑ¹ıÆÚ
-  cBC_GetCardUsed             = $0004;   //»ñÈ¡¿¨Æ¬ÀàĞÍ
-  cBC_UserLogin               = $0005;   //ÓÃ»§µÇÂ¼
-  cBC_UserLogOut              = $0006;   //ÓÃ»§×¢Ïú
+  cBC_GetSerialNO             = $0001;   //è·å–ä¸²è¡Œç¼–å·
+  cBC_ServerNow               = $0002;   //æœåŠ¡å™¨å½“å‰æ—¶é—´
+  cBC_IsSystemExpired         = $0003;   //ç³»ç»Ÿæ˜¯å¦å·²è¿‡æœŸ
 
-  cBC_GetCustomerMoney        = $0010;   //»ñÈ¡¿Í»§¿ÉÓÃ½ğ
-  cBC_GetZhiKaMoney           = $0011;   //»ñÈ¡Ö½¿¨¿ÉÓÃ½ğ
-  cBC_CustomerHasMoney        = $0012;   //¿Í»§ÊÇ·ñÓĞÓà¶î
+  cBC_UserLogin               = $0005;   //ç”¨æˆ·ç™»å½•
+  cBC_UserLogOut              = $0006;   //ç”¨æˆ·æ³¨é”€
+  cBC_GetCardUsed             = $0007;   //è·å–å¡ç‰‡ç±»å‹
 
-  cBC_SaveTruckInfo           = $0013;   //±£´æ³µÁ¾ĞÅÏ¢
-  cBC_GetTruckPoundData       = $0015;   //»ñÈ¡³µÁ¾³ÆÖØÊı¾İ
-  cBC_SaveTruckPoundData      = $0016;   //±£´æ³µÁ¾³ÆÖØÊı¾İ
+  cBC_GetCustomerMoney        = $0010;   //è·å–å®¢æˆ·å¯ç”¨é‡‘
+  cBC_GetZhiKaMoney           = $0011;   //è·å–çº¸å¡å¯ç”¨é‡‘
+  cBC_CustomerHasMoney        = $0012;   //å®¢æˆ·æ˜¯å¦æœ‰ä½™é¢
 
-  cBC_SaveBills               = $0020;   //±£´æ½»»õµ¥ÁĞ±í
-  cBC_DeleteBill              = $0021;   //É¾³ı½»»õµ¥
-  cBC_ModifyBillTruck         = $0022;   //ĞŞ¸Ä³µÅÆºÅ
-  cBC_SaleAdjust              = $0023;   //ÏúÊÛµ÷²¦
-  cBC_SaveBillCard            = $0024;   //°ó¶¨½»»õµ¥´Å¿¨
-  cBC_LogoffCard              = $0025;   //×¢Ïú´Å¿¨
+  cBC_SaveTruckInfo           = $0013;   //ä¿å­˜è½¦è¾†ä¿¡æ¯
+  cBC_GetTruckPoundData       = $0015;   //è·å–è½¦è¾†ç§°é‡æ•°æ®
+  cBC_SaveTruckPoundData      = $0016;   //ä¿å­˜è½¦è¾†ç§°é‡æ•°æ®
+
+  cBC_SaveBills               = $0020;   //ä¿å­˜äº¤è´§å•åˆ—è¡¨
+  cBC_DeleteBill              = $0021;   //åˆ é™¤äº¤è´§å•
+  cBC_ModifyBillTruck         = $0022;   //ä¿®æ”¹è½¦ç‰Œå·
+  cBC_SaleAdjust              = $0023;   //é”€å”®è°ƒæ‹¨
+  cBC_SaveBillCard            = $0024;   //ç»‘å®šäº¤è´§å•ç£å¡
+  cBC_LogoffCard              = $0025;   //æ³¨é”€ç£å¡
 
   cBC_SaveOrder               = $0040;
   cBC_DeleteOrder             = $0041;
   cBC_SaveOrderCard           = $0042;
   cBC_LogOffOrderCard         = $0043;
-  cBC_GetPostOrders           = $0044;   //»ñÈ¡¸ÚÎ»²É¹ºµ¥
-  cBC_SavePostOrders          = $0045;   //±£´æ¸ÚÎ»²É¹ºµ¥
+  cBC_GetPostOrders           = $0044;   //è·å–å²—ä½é‡‡è´­å•
+  cBC_SavePostOrders          = $0045;   //ä¿å­˜å²—ä½é‡‡è´­å•
 
-  cBC_GetPostBills            = $0030;   //»ñÈ¡¸ÚÎ»½»»õµ¥
-  cBC_SavePostBills           = $0031;   //±£´æ¸ÚÎ»½»»õµ¥
+  cBC_GetPostBills            = $0030;   //è·å–å²—ä½äº¤è´§å•
+  cBC_SavePostBills           = $0031;   //ä¿å­˜å²—ä½äº¤è´§å•
 
-  cBC_ChangeDispatchMode      = $0053;   //ÇĞ»»µ÷¶ÈÄ£Ê½
-  cBC_GetPoundCard            = $0054;   //»ñÈ¡°õÕ¾¿¨ºÅ
-  cBC_GetQueueData            = $0055;   //»ñÈ¡¶ÓÁĞÊı¾İ
+  cBC_ChangeDispatchMode      = $0053;   //åˆ‡æ¢è°ƒåº¦æ¨¡å¼
+  cBC_GetPoundCard            = $0054;   //è·å–ç£…ç«™å¡å·
+  cBC_GetQueueData            = $0055;   //è·å–é˜Ÿåˆ—æ•°æ®
   cBC_PrintCode               = $0056;
-  cBC_PrintFixCode            = $0057;   //ÅçÂë
-  cBC_PrinterEnable           = $0058;   //ÅçÂë»úÆôÍ£
+  cBC_PrintFixCode            = $0057;   //å–·ç 
+  cBC_PrinterEnable           = $0058;   //å–·ç æœºå¯åœ
 
   cBC_JSStart                 = $0060;
   cBC_JSStop                  = $0061;
   cBC_JSPause                 = $0062;
   cBC_JSGetStatus             = $0063;
-  cBC_SaveCountData           = $0064;   //±£´æ¼ÆÊı½á¹û
+  cBC_SaveCountData           = $0064;   //ä¿å­˜è®¡æ•°ç»“æœ
   cBC_RemoteExecSQL           = $0065;
 
   cBC_IsTunnelOK              = $0075;
   cBC_TunnelOC                = $0076;
 
-  cBC_SyncCustomer            = $0080;   //Ô¶³ÌÍ¬²½¿Í»§
-  cBC_SyncSaleMan             = $0081;   //Ô¶³ÌÍ¬²½ÒµÎñÔ±
-  cBC_SyncStockBill           = $0082;   //Í¬²½µ¥¾İµ½Ô¶³Ì
-  cBC_CheckStockValid         = $0083;   //ÑéÖ¤ÊÇ·ñÔÊĞí·¢»õ
+  cBC_SyncCustomer            = $0080;   //è¿œç¨‹åŒæ­¥å®¢æˆ·
+  cBC_SyncSaleMan             = $0081;   //è¿œç¨‹åŒæ­¥ä¸šåŠ¡å‘˜
+  cBC_SyncStockBill           = $0082;   //åŒæ­¥å•æ®åˆ°è¿œç¨‹
+  cBC_CheckStockValid         = $0083;   //éªŒè¯æ˜¯å¦å…è®¸å‘è´§
 
 type
   PSystemParam = ^TSystemParam;
@@ -100,104 +101,108 @@ type
   PWorkerQueryFieldData = ^TWorkerQueryFieldData;
   TWorkerQueryFieldData = record
     FBase     : TBWDataBase;
-    FType     : Integer;           //ÀàĞÍ
-    FData     : string;            //Êı¾İ
+    FType     : Integer;           //ç±»å‹
+    FData     : string;            //æ•°æ®
   end;
 
   PWorkerBusinessCommand = ^TWorkerBusinessCommand;
   TWorkerBusinessCommand = record
     FBase     : TBWDataBase;
-    FCommand  : Integer;           //ÃüÁî
-    FData     : string;            //Êı¾İ
-    FExtParam : string;            //²ÎÊı
+    FCommand  : Integer;           //å‘½ä»¤
+    FData     : string;            //æ•°æ®
+    FExtParam : string;            //å‚æ•°
   end;
 
   TPoundStationData = record
-    FStation  : string;            //°õÕ¾±êÊ¶
-    FValue    : Double;           //Æ¤ÖØ
-    FDate     : TDateTime;        //³ÆÖØÈÕÆÚ
-    FOperator : string;           //²Ù×÷Ô±
+    FStation  : string;            //ç£…ç«™æ ‡è¯†
+    FValue    : Double;           //çš®é‡
+    FDate     : TDateTime;        //ç§°é‡æ—¥æœŸ
+    FOperator : string;           //æ“ä½œå‘˜
   end;
 
   PLadingBillItem = ^TLadingBillItem;
   TLadingBillItem = record
-    FID         : string;          //½»»õµ¥ºÅ
-    FZhiKa      : string;          //Ö½¿¨±àºÅ
-    FCusID      : string;          //¿Í»§±àºÅ
-    FCusName    : string;          //¿Í»§Ãû³Æ
-    FTruck      : string;          //³µÅÆºÅÂë
+    FID         : string;          //äº¤è´§å•å·
+    FZhiKa      : string;          //çº¸å¡ç¼–å·
+    FCusID      : string;          //å®¢æˆ·ç¼–å·
+    FCusName    : string;          //å®¢æˆ·åç§°
+    FTruck      : string;          //è½¦ç‰Œå·ç 
 
-    FType       : string;          //Æ·ÖÖÀàĞÍ
-    FStockNo    : string;          //Æ·ÖÖ±àºÅ
-    FStockName  : string;          //Æ·ÖÖÃû³Æ
-    FValue      : Double;          //Ìá»õÁ¿
-    FPrice      : Double;          //Ìá»õµ¥¼Û
+    FType       : string;          //å“ç§ç±»å‹
+    FStockNo    : string;          //å“ç§ç¼–å·
+    FStockName  : string;          //å“ç§åç§°
+    FValue      : Double;          //æè´§é‡
+    FPrice      : Double;          //æè´§å•ä»·
 
-    FCard       : string;          //´Å¿¨ºÅ
-    FIsVIP      : string;          //Í¨µÀÀàĞÍ
-    FStatus     : string;          //µ±Ç°×´Ì¬
-    FNextStatus : string;          //ÏÂÒ»×´Ì¬
+    FCard       : string;          //ç£å¡å·
+    FIsVIP      : string;          //é€šé“ç±»å‹
+    FStatus     : string;          //å½“å‰çŠ¶æ€
+    FNextStatus : string;          //ä¸‹ä¸€çŠ¶æ€
 
-    FPData      : TPoundStationData; //³ÆÆ¤
-    FMData      : TPoundStationData; //³ÆÃ«
-    FFactory    : string;          //¹¤³§±àºÅ
-    FPModel     : string;          //³ÆÖØÄ£Ê½
-    FPType      : string;          //ÒµÎñÀàĞÍ
-    FPoundID    : string;          //³ÆÖØ¼ÇÂ¼
-    FSelected   : Boolean;         //Ñ¡ÖĞ×´Ì¬
+    FPData      : TPoundStationData; //ç§°çš®
+    FMData      : TPoundStationData; //ç§°æ¯›
+    FFactory    : string;          //å·¥å‚ç¼–å·
+    FPModel     : string;          //ç§°é‡æ¨¡å¼
+    FPType      : string;          //ä¸šåŠ¡ç±»å‹
+    FPoundID    : string;          //ç§°é‡è®°å½•
+    FSelected   : Boolean;         //é€‰ä¸­çŠ¶æ€
 
-    FKZValue    : Double;          //¹©Ó¦¿Û³ı
-    FMemo       : string;          //¶¯×÷±¸×¢
+    FKZValue    : Double;          //ä¾›åº”æ‰£é™¤
+    FMemo       : string;          //åŠ¨ä½œå¤‡æ³¨
+    FSeal       : string;          //éªŒæ”¶ç‚¹
+    FCardType   : string;          //å¡ç‰‡ç±»å‹
   end;
 
   TLadingBillItems = array of TLadingBillItem;
-  //½»»õµ¥ÁĞ±í
+  //äº¤è´§å•åˆ—è¡¨
 
 procedure AnalyseBillItems(const nData: string; var nItems: TLadingBillItems);
-//½âÎöÓÉÒµÎñ¶ÔÏó·µ»ØµÄ½»»õµ¥Êı¾İ
+//è§£æç”±ä¸šåŠ¡å¯¹è±¡è¿”å›çš„äº¤è´§å•æ•°æ®
 function CombineBillItmes(const nItems: TLadingBillItems): string;
-//ºÏ²¢½»»õµ¥Êı¾İÎªÒµÎñ¶ÔÏóÄÜ´¦ÀíµÄ×Ö·û´®
+//åˆå¹¶äº¤è´§å•æ•°æ®ä¸ºä¸šåŠ¡å¯¹è±¡èƒ½å¤„ç†çš„å­—ç¬¦ä¸²
 procedure LoadParamFromIni;
 procedure SaveParamToIni;
 
 resourcestring
   {*PBWDataBase.FParam*}
-  sParam_NoHintOnError        = 'NHE';                  //²»ÌáÊ¾´íÎó
+  sParam_NoHintOnError        = 'NHE';                  //ä¸æç¤ºé”™è¯¯
 
   {*plug module id*}
   sPlug_ModuleBus             = '{DF261765-48DC-411D-B6F2-0B37B14E014E}';
-                                                        //ÒµÎñÄ£¿é
+                                                        //ä¸šåŠ¡æ¨¡å—
   sPlug_ModuleHD              = '{B584DCD6-40E5-413C-B9F3-6DD75AEF1C62}';
-                                                        //Ó²¼şÊØ»¤
+                                                        //ç¡¬ä»¶å®ˆæŠ¤
                                                                                                    
   {*common function*}  
-  sSys_BasePacker             = 'Sys_BasePacker';       //»ù±¾·â°üÆ÷
+  sSys_BasePacker             = 'Sys_BasePacker';       //åŸºæœ¬å°åŒ…å™¨
 
   {*business mit function name*}
-  sBus_ServiceStatus          = 'Bus_ServiceStatus';    //·şÎñ×´Ì¬
-  sBus_GetQueryField          = 'Bus_GetQueryField';    //²éÑ¯µÄ×Ö¶Î
+  sBus_ServiceStatus          = 'Bus_ServiceStatus';    //æœåŠ¡çŠ¶æ€
+  sBus_GetQueryField          = 'Bus_GetQueryField';    //æŸ¥è¯¢çš„å­—æ®µ
 
-  sBus_BusinessSaleBill       = 'Bus_BusinessSaleBill'; //½»»õµ¥Ïà¹Ø
-  sBus_BusinessCommand        = 'Bus_BusinessCommand';  //ÒµÎñÖ¸Áî
-  sBus_HardwareCommand        = 'Bus_HardwareCommand';  //Ó²¼şÖ¸Áî
-  sBus_BusinessPurchaseOrder  = 'Bus_BusinessProvide'; //²É¹ºµ¥Ïà¹Ø
+  sBus_BusinessSaleBill       = 'Bus_BusinessSaleBill'; //äº¤è´§å•ç›¸å…³
+  sBus_BusinessCommand        = 'Bus_BusinessCommand';  //ä¸šåŠ¡æŒ‡ä»¤
+  sBus_HardwareCommand        = 'Bus_HardwareCommand';  //ç¡¬ä»¶æŒ‡ä»¤
+  sBus_BusinessPurchaseOrder  = 'Bus_BusinessProvide'; //é‡‡è´­å•ç›¸å…³
+  sBus_BusinessShipPro        = 'Bus_BusinessShipPro';  //
 
   {*client function name*}
-  sCLI_ServiceStatus          = 'CLI_ServiceStatus';    //·şÎñ×´Ì¬
-  sCLI_GetQueryField          = 'CLI_GetQueryField';    //²éÑ¯µÄ×Ö¶Î
+  sCLI_ServiceStatus          = 'CLI_ServiceStatus';    //æœåŠ¡çŠ¶æ€
+  sCLI_GetQueryField          = 'CLI_GetQueryField';    //æŸ¥è¯¢çš„å­—æ®µ
 
-  sCLI_BusinessSaleBill       = 'CLI_BusinessSaleBill'; //½»»õµ¥ÒµÎñ
-  sCLI_BusinessCommand        = 'CLI_BusinessCommand';  //ÒµÎñÖ¸Áî
-  sCLI_HardwareCommand        = 'CLI_HardwareCommand';  //Ó²¼şÖ¸Áî
-  sCLI_BusinessPurchaseOrder  = 'CLI_BusinessProvide'; //²É¹ºµ¥Ïà¹Ø
+  sCLI_BusinessSaleBill       = 'CLI_BusinessSaleBill'; //äº¤è´§å•ä¸šåŠ¡
+  sCLI_BusinessCommand        = 'CLI_BusinessCommand';  //ä¸šåŠ¡æŒ‡ä»¤
+  sCLI_HardwareCommand        = 'CLI_HardwareCommand';  //ç¡¬ä»¶æŒ‡ä»¤
+  sCLI_BusinessPurchaseOrder  = 'CLI_BusinessProvide'; //é‡‡è´­å•ç›¸å…³
+  sCLI_BusinessShipPro        = 'CLI_BusinessShipPro';  //
 
 var gSysParam: TSystemParam;
 
 implementation
 
 //Date: 2014-09-17
-//Parm: ½»»õµ¥Êı¾İ;½âÎö½á¹û
-//Desc: ½âÎönDataÎª½á¹¹»¯ÁĞ±íÊı¾İ
+//Parm: äº¤è´§å•æ•°æ®;è§£æç»“æœ
+//Desc: è§£ænDataä¸ºç»“æ„åŒ–åˆ—è¡¨æ•°æ®
 procedure AnalyseBillItems(const nData: string; var nItems: TLadingBillItems);
 var nStr: string;
     nIdx,nInt: Integer;
@@ -279,6 +284,7 @@ begin
         else FKZValue := 0;
 
         FMemo := Values['Memo'];
+        FSeal := Values['Seal'];
       end;
 
       Inc(nInt);
@@ -290,8 +296,8 @@ begin
 end;
 
 //Date: 2014-09-18
-//Parm: ½»»õµ¥ÁĞ±í
-//Desc: ½«nItemsºÏ²¢ÎªÒµÎñ¶ÔÏóÄÜ´¦ÀíµÄ
+//Parm: äº¤è´§å•åˆ—è¡¨
+//Desc: å°†nItemsåˆå¹¶ä¸ºä¸šåŠ¡å¯¹è±¡èƒ½å¤„ç†çš„
 function CombineBillItmes(const nItems: TLadingBillItems): string;
 var nIdx: Integer;
     nListA,nListB: TStrings;
@@ -355,6 +361,7 @@ begin
 
         Values['KZValue']    := FloatToStr(FKZValue);
         Values['Memo']       := FMemo;
+        Values['Seal']       := FSeal;
       end;
 
       nListA.Add(PackerEncodeStr(nListB.Text));

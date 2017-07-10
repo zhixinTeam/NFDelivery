@@ -10,8 +10,8 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, UWorkerBusinessCommand, ZnMD5, ULibFun,
-  UFormCtrl, USysLoger, USysDB, {$IFDEF HardMon}UMgrHardHelper, {$ENDIF}
-  UMITConst, UBase64;
+  UFormCtrl, USysLoger, USysDB, UMITConst, UBase64
+  {$IFDEF HardMon}, UMgrHardHelper, UWorkerHardware{$ENDIF};
 
 type
   TStockInfoItem = record
@@ -67,6 +67,8 @@ type
     //io
     FSanMultiBill: Boolean;
     //散装多单
+    FDefaultBrand: string;
+    //默认品牌
     FStockInfo: array of TStockInfoItem;
     //品种信息
     FStockItems: array of TStockMatchItem;
@@ -86,6 +88,7 @@ type
     function GetStockGroup(const nStock: string): string;
     function GetMatchRecord(const nStock: string): string;
     //物料分组
+    function DefaultBrand: string;                                              //默认品牌
     function GetInBillInterval: Integer;
     function AllowedSanMultiBill: Boolean;
     function VerifyBeforSave(var nData: string): Boolean;
@@ -261,6 +264,23 @@ begin
   end;
 end;
 
+//Date: 2017/6/21
+//Parm: 无
+//Desc: 获取默认的品牌名称
+function TWorkerBusinessBills.DefaultBrand: string;
+var nStr: string;
+begin
+  Result := '';
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_DefaultBrand]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    Result := Fields[0].AsString;
+  end;
+end;
+
 //Date: 2015-01-09
 //Desc: 车辆进厂后在指定时间内必须开单,过期无效
 function TWorkerBusinessBills.GetInBillInterval: Integer;
@@ -429,6 +449,9 @@ begin
 
   FSanMultiBill := AllowedSanMultiBill;
   //散装允许开多单
+
+  FDefaultBrand := DefaultBrand;
+  //选择批次号时默认品牌
   
   nStr := 'Select M_ID,M_Group From %s Where M_Status=''%s'' ';
   nStr := Format(nStr, [sTable_StockMatch, sFlag_Yes]);
@@ -465,7 +488,7 @@ begin
 
     while not Eof do
     begin
-      if (FieldByName('T_Type').AsString = sFlag_San) and (not FSanMultiBill) then
+      if (FieldByName('T_Type').AsString = sFlag_San) and (not FSanMultiBill) then        //允许,但是只能是过皮重后
       begin
         nStr := '车辆[ %s ]在未完成[ %s ]交货单之前禁止开单.';
         nData := Format(nStr, [nTruck, FieldByName('T_Bill').AsString]);
@@ -652,7 +675,7 @@ end;
 //Date: 2014-09-15
 //Desc: 保存交货单
 function TWorkerBusinessBills.SaveBills(var nData: string): Boolean;
-var nStr,nSQL,nBill: string;
+var nStr,nSQL,nBill,nBrand: string;
     nIdx,nInt: Integer;
     nOut: TWorkerBusinessCommand;
 begin
@@ -665,24 +688,38 @@ begin
     FOut.FData := '';
     //bill list
 
+    nBrand := FDefaultBrand;
+    if FListA.Values['Brand'] <> '' then
+      nBrand := FListA.Values['Brand'];
+    //客户端指定品牌时,选择品牌  
+
     for nIdx:=Low(FOrderItems) to High(FOrderItems) do
     begin
       if FOrderItems[nIdx].FKDValue <= 0 then Continue;
       //无开单量
 
-      if FListA.Values['Pack'] = '' then
-        FListA.Values['Pack'] := FOrderItems[nIdx].FPackStyle;
-      //包装类型  
+      FListA.Values['Pack'] := FOrderItems[nIdx].FPackStyle;
+      //包装类型
 
       FListC.Clear;
-      FListC.Values['Brand'] := FListA.Values['Brand'];
+      FListC.Values['Brand'] := nBrand;
       FListC.Values['Value'] := FloatToStr(FOrderItems[nIdx].FKDValue);
 
       if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
           FOrderItems[nIdx].FStockID, PackerEncodeStr(FListC.Text), @nOut) then
       raise Exception.Create(nOut.FData);
-      FListA.Values['Seal'] := nOut.FData;
-      //获取新的批次
+      
+      if nOut.FData <> '' then
+      begin
+        FListA.Values['Seal'] := nOut.FData;
+        //获取新的批次
+
+        if PBWDataBase(@nOut).FErrCode = sFlag_ForceHint then
+        begin
+          FOut.FBase.FErrCode := sFlag_ForceHint;
+          FOut.FBase.FErrDesc := PBWDataBase(@nOut).FErrDesc;
+        end;
+      end;
 
       FListC.Clear;
       FListC.Values['Group'] :=sFlag_BusGroup;
@@ -706,6 +743,8 @@ begin
               SF('L_SaleID', FOrderItems[nIdx].FSaleID),
               SF('L_SaleMan', FOrderItems[nIdx].FSaleName),
               SF('L_Area', FOrderItems[nIdx].FAreaTo),
+              SF('L_StockArea', FListA.Values['StockArea']),
+              SF('L_StockBrand', FListA.Values['Brand']),
               {$IFDEF LineGroup}
               SF('L_LineGroup', FListA.Values['LineGroup']),
               {$ENDIF}
@@ -722,6 +761,12 @@ begin
               SF('L_Lading', FListA.Values['Lading']),
               SF('L_IsVIP', FListA.Values['IsVIP']),
               SF('L_Seal', FListA.Values['Seal']),
+              SF('L_Memo', FListA.Values['Memo']),
+              {$IFDEF FORCEPSTATION}
+              SF('L_PoundStation', FListA.Values['PoundStation']),
+              SF('L_PoundName', FListA.Values['PoundName']),
+              {$ENDIF}
+
               SF('L_Man', FIn.FBase.FFrom.FUser),
               SF('L_Date', sField_SQLServer_Now, sfVal)
               ], sTable_Bill, '', True);
@@ -740,7 +785,7 @@ begin
                 SF('L_PValue', nStr, sfVal),
                 SF('L_PDate', sField_SQLServer_Now, sfVal),
                 SF('L_PMan', FIn.FBase.FFrom.FUser),
-                SF('L_LadeTime', sField_SQLServer_Now, sfVal), 
+                SF('L_LadeTime', sField_SQLServer_Now, sfVal),
                 SF('L_LadeMan', FIn.FBase.FFrom.FUser),
                 SF('L_Card', FListA.Values['Card'])
                 ], sTable_Bill, SF('L_ID', nOut.FData), False);
@@ -902,7 +947,7 @@ begin
     if Copy(FOut.FData, nIdx, 1) = ',' then
       System.Delete(FOut.FData, nIdx, 1);
     //xxxxx
-    
+
     FDBConn.FConn.CommitTrans;
     Result := True;
   except
@@ -918,7 +963,18 @@ begin
   else FListC.Values['BillType'] := IntToStr(cMsg_WebChat_BillNew);
   TWorkerBusinessCommander.CallMe(cBC_WebChat_DLSaveShopInfo,
    PackerEncodeStr(FListC.Text), '', @nOut);
-  //保存同步信息 
+  //保存同步信息
+
+  {$IFDEF HardMon}
+  if Length(FListA.Values['PoundStation']) > 0 then
+  begin
+    FListC.Clear;
+    FListC.Values['Card'] := 'dt';
+    FListC.Values['Text'] := #9 + FListA.Values['Truck'] + #9;
+    FListC.Values['Content'] := FListA.Values['PoundStation'];
+    THardwareCommander.CallMe(cBC_PlayVoice, PackerEncodeStr(FListC.Text), '', @nOut);
+  end;
+  {$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
@@ -1428,13 +1484,7 @@ begin
     end;
   end;
 
-  nStr := 'Select L_ID,L_ZhiKa,L_CusID,L_CusName,L_Type,L_StockNo,' +
-          'L_StockName,L_Truck,L_Value,L_Price,L_Status,' +
-          'L_NextStatus,L_Card,L_IsVIP,L_PValue,L_MValue,' +
-          {$IFDEF LineGroup}
-          'L_LineGroup,'     +
-          {$ENDIF}
-          'L_Seal,L_Memo From $Bill b ';
+  nStr := 'Select * From $Bill b ';
   //xxxxx
 
   if nIsBill then
@@ -1492,9 +1542,14 @@ begin
         FNextStatus := sFlag_TruckNone;
       end;
 
-      {$IFDEF LineGroup}
-      FLineGroup    := FieldByName('L_LineGroup').AsString;
-      {$ENDIF}
+      if Assigned(FindField('L_LineGroup')) then
+        FLineGroup    := FieldByName('L_LineGroup').AsString;
+
+      if Assigned(FindField('L_PoundStation')) then
+      begin
+        FPoundStation := FieldByName('L_PoundStation').AsString;
+        FPoundSName   := FieldByName('L_PoundName').AsString;
+      end;
 
       FPData.FValue := FieldByName('L_PValue').AsFloat;
       FMData.FValue := FieldByName('L_MValue').AsFloat;
@@ -1706,6 +1761,12 @@ begin
               ], sTable_Truck, SF('T_Truck', FTruck), False);
       FListA.Add(nSQL);
       //更新车辆活动时间
+
+      nSQL := Format('T_HKBills Like ''%%%s%%''', [FID]);
+      nSQL := MakeSQLByStr([SF('T_PDate', sField_SQLServer_Now,sfVal)],
+              sTable_ZTTrucks, nSQL, False);
+      FListA.Add(nSQL);
+      //更新队列中的过皮时间        
     end;
   end else
 
@@ -1750,8 +1811,22 @@ begin
     for nIdx:=Low(nBills) to High(nBills) do
     with nBills[nIdx] do
     begin
-      nSQL := MakeSQLByStr([SF('L_Status', sFlag_TruckFH),
-              SF('L_NextStatus', sFlag_TruckBFM),
+      FStatus := sFlag_TruckFH;
+      FNextStatus := sFlag_TruckBFM;
+
+      nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_ForceAddWater, FStockNo]);
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+      if RecordCount > 0 then
+           nTmp := Fields[0].AsString
+      else nTmp := sFlag_No;
+
+      if nTmp = sFlag_Yes then
+        FNextStatus := sFlag_TruckWT;
+      //强制加水
+
+      nSQL := MakeSQLByStr([SF('L_Status', FStatus),
+              SF('L_NextStatus', FNextStatus),
               {$IFDEF LineGroup}
               SF('L_LineGroup', FLineGroup),
               {$ENDIF}
@@ -1764,6 +1839,21 @@ begin
       nSQL := Format(nSQL, [sTable_ZTTrucks, sField_SQLServer_Now, FID]);
       FListA.Add(nSQL);
       //更新队列车辆提货状态
+    end;
+  end else
+
+  if FIn.FExtParam = sFlag_TruckWT then //验收现场
+  begin
+    for nIdx:=Low(nBills) to High(nBills) do
+    with nBills[nIdx] do
+    begin
+      nSQL := MakeSQLByStr([SF('L_Status', sFlag_TruckWT),
+              SF('L_NextStatus', sFlag_TruckBFM),
+              SF('L_WTTime', sField_SQLServer_Now, sfVal),
+              SF('L_WTMan', FIn.FBase.FFrom.FUser),
+              SF('L_WTLine', FMemo)
+              ], sTable_Bill, SF('L_ID', FID), False);
+      FListA.Add(nSQL);
     end;
   end else
 
@@ -1798,17 +1888,6 @@ begin
 
     if nBills[nInt].FType = sFlag_San then
     begin
-      for nIdx:=Low(nBills) to High(nBills) do
-      with nBills[nIdx] do
-      begin
-        if not FNCChanged then Continue;
-
-        nSQL := 'Update %s Set B_Freeze=B_Freeze-%.2f Where B_ID=''%s''';
-        nSQL := Format(nSQL, [sTable_Order, FChangeValue, FZhiKa]);
-        FListA.Add(nSQL);
-      end;
-      //NC可用量减少
-
       nNet := nMVal - nBills[nInt].FPData.FValue;
 
       nVal := 0;

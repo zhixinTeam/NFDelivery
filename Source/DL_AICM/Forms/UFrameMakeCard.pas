@@ -118,7 +118,7 @@ begin
     LabelMemo.Caption  := '±¸×¢ÐÅÏ¢:' + Values['SendArea'];
   end;
 
-  gTimeCounter := 15;
+  gTimeCounter := 30;
 end;
 
 procedure TfFrameMakeCard.BtnOKClick(Sender: TObject);
@@ -170,6 +170,8 @@ begin
       Values['BuDan'] := sFlag_No;
       Values['CusID'] := FListA.Values['CusID'];
       Values['CusName'] := FListA.Values['CusName'];
+      Values['Brand'] := FListA.Values['Brand'];
+      Values['StockArea'] := FListA.Values['StockArea'];
     end;
 
     nStr := SaveBill(EncodeBase64(FListB.Text));
@@ -251,6 +253,8 @@ begin
     WriteLog(nMsg);
     ShowMsg(nMsg,sWarn);
   end;
+
+  gTimeCounter := 0;
 end;
 
 initialization

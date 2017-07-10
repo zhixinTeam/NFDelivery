@@ -2,7 +2,7 @@ inherited fFormCardProvide: TfFormCardProvide
   Left = 203
   Top = 158
   Caption = #20379#24212#30913#21345
-  ClientHeight = 463
+  ClientHeight = 487
   ClientWidth = 398
   Position = poMainFormCenter
   OnClose = FormClose
@@ -10,17 +10,17 @@ inherited fFormCardProvide: TfFormCardProvide
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
     Width = 398
-    Height = 463
+    Height = 487
     inherited BtnOK: TButton
       Left = 252
-      Top = 430
+      Top = 454
       Caption = #30830#23450
-      TabOrder = 14
+      TabOrder = 15
     end
     inherited BtnExit: TButton
       Left = 322
-      Top = 430
-      TabOrder = 15
+      Top = 454
+      TabOrder = 16
     end
     object EditTruck: TcxTextEdit [2]
       Left = 81
@@ -57,28 +57,28 @@ inherited fFormCardProvide: TfFormCardProvide
     end
     object EditCardType: TcxCheckBox [5]
       Left = 23
-      Top = 319
+      Top = 343
       Caption = #38271#26399#21345
       ParentFont = False
-      TabOrder = 10
+      TabOrder = 11
       Transparent = True
       Width = 121
     end
     object EditBack: TcxCheckBox [6]
       Left = 23
-      Top = 397
+      Top = 421
       Caption = #20498#36710#19979#30917
       ParentFont = False
-      TabOrder = 13
+      TabOrder = 14
       Transparent = True
       Width = 121
     end
     object EditMuilti: TcxCheckBox [7]
       Left = 23
-      Top = 345
+      Top = 369
       Caption = #31995#32479#22797#30917
       ParentFont = False
-      TabOrder = 11
+      TabOrder = 12
       Transparent = True
       Width = 121
     end
@@ -126,9 +126,9 @@ inherited fFormCardProvide: TfFormCardProvide
     end
     object EditMemo: TcxTextEdit [13]
       Left = 81
-      Top = 261
+      Top = 286
       ParentFont = False
-      TabOrder = 9
+      TabOrder = 10
       Width = 121
     end
     object EditArea: TcxTextEdit [14]
@@ -140,11 +140,17 @@ inherited fFormCardProvide: TfFormCardProvide
     end
     object EditPre: TcxCheckBox [15]
       Left = 23
-      Top = 371
+      Top = 395
       Caption = #39044#32622#30382#37325
       ParentFont = False
-      TabOrder = 12
+      TabOrder = 13
       Transparent = True
+      Width = 121
+    end
+    object EditPoundStation: TcxComboBox [16]
+      Left = 81
+      Top = 261
+      TabOrder = 9
       Width = 121
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
@@ -194,6 +200,11 @@ inherited fFormCardProvide: TfFormCardProvide
         object dxLayout1Item6: TdxLayoutItem
           Caption = #30913#21345#32534#21495':'
           Control = EditCard
+          ControlOptions.ShowBorder = False
+        end
+        object dxLayout1Item17: TdxLayoutItem
+          Caption = #25351#23450#22320#30917':'
+          Control = EditPoundStation
           ControlOptions.ShowBorder = False
         end
         object dxLayout1Item14: TdxLayoutItem

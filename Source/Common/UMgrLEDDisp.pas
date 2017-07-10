@@ -21,13 +21,15 @@ type
     FID: string;
     FName: string;
     FType: string;
+    FTunnel: string;                        //通道编号
 
     FHost: string;
     FPort: Integer;
-    FAddr: Integer;
-    FLastUpdate: Int64;
-    FKeepTime: Int64;
-    FKeepShow: Boolean;
+    FAddr: Integer;                         //屏号
+    FLastUpdate: Int64;                     //最后活动
+    FKeepTime: Int64;                       //非持续显示时，保持时间
+    FKeepShow: Boolean;                     //持续显示
+    FClient: TIdTCPClient;                  //数据链路
   end;
 
   PDispContent = ^TDispContent;
@@ -44,8 +46,6 @@ type
     //拥有者
     FBuffer: TList;
     //显示内容
-    FClient: TIdTCPClient;
-    //数据链路
     FWaiter: TWaitObject;
     //等待对象
   protected
@@ -79,6 +79,7 @@ type
     //同步锁
   protected
     procedure ClearBuffer(const nList: TList; const nFree: Boolean = False);
+    procedure ClearCards;
     //清理资源
   public
     constructor Create;
@@ -89,7 +90,7 @@ type
     procedure StartDisplay;
     procedure StopDisplay;
     //启停显示
-    procedure Display(const nID,nText: string);
+    procedure Display(const nTunnel,nText: string);
     //显示内容
   end;
 
@@ -116,6 +117,7 @@ destructor TDisplayManager.Destroy;
 begin
   StopDisplay;
   ClearBuffer(FBuffData, True);
+  ClearCards;
 
   FSyncLock.Free;
   inherited;
@@ -133,6 +135,18 @@ begin
   if nFree then
     nList.Free;
   //xxxxx
+end;
+
+procedure TDisplayManager.ClearCards;
+var nIdx: Integer;
+begin
+  for nIdx := High(FCards) downto Low(FCards) do
+  with FCards[nIdx] do
+  begin
+    FClient.Disconnect;
+    FClient.Free;
+    FClient := nil;
+  end;
 end;
 
 procedure TDisplayManager.StartDisplay;
@@ -155,20 +169,35 @@ end;
 //Date: 2013-07-20
 //Parm: 标识;内容
 //Desc: 在nID屏上显示nText
-procedure TDisplayManager.Display(const nID,nText: string);
+procedure TDisplayManager.Display(const nTunnel,nText: string);
 var nItem: PDispContent;
+    nIdx, nInt: Integer;
 begin
   if not Assigned(FControler) then Exit;
   //no controler
 
+  if nTunnel = '' then Exit;
+  //未指定屏号
+
   FSyncLock.Enter;
   try
-    New(nItem);
-    FBuffData.Add(nItem);
+    nInt := 0;
+    for nIdx := Low(FCards) to High(FCards) do
+    begin
+      if (CompareText(FCards[nIdx].FID, nTunnel) = 0) or            //ID相同
+         (CompareText(FCards[nIdx].FTunnel, nTunnel) = 0) then      //Tunnel相同
+      begin
+        New(nItem);
+        FBuffData.Add(nItem);
 
-    nItem.FID := nID;
-    nItem.FText := nText;
-    FControler.WakupMe;
+        nItem.FID := FCards[nIdx].FID;
+        nItem.FText := nText;
+
+        Inc(nInt);
+      end;
+    end;
+
+    if nInt > 0 then FControler.WakupMe;
   finally
     FSyncLock.Leave;
   end;
@@ -220,6 +249,18 @@ begin
              FKeepTime := cDisp_KeepLong
         else FKeepTime := nTmp.ValueAsInt64Def(cDisp_KeepLong);
 
+        nTmp := FindNode('tunnel');
+        if Assigned(nTmp) then
+          FTunnel := nTmp.ValueAsString;
+
+        if not Assigned(FClient) then
+          FClient := TIdTCPClient.Create;
+
+        FClient.Host := FHost;
+        FClient.Port := FPort;
+        FClient.ReadTimeout := 5 * 1000;
+        FClient.ConnectTimeout := 5 * 1000;
+
         FLastUpdate := 0;
         Inc(nInt);
       end;
@@ -239,17 +280,10 @@ begin
   FBuffer := TList.Create;
   FWaiter := TWaitObject.Create;
   FWaiter.Interval := 2000;
-
-  FClient := TIdTCPClient.Create;
-  FClient.ReadTimeout := 5 * 1000;
-  FClient.ConnectTimeout := 5 * 1000;
 end;
 
 destructor TDisplayControler.Destroy;
 begin
-  FClient.Disconnect;
-  FClient.Free;
-
   FOwner.ClearBuffer(FBuffer, True);
   FWaiter.Free;
   inherited;
@@ -408,27 +442,10 @@ var nIdx: Integer;
 begin
   if not Terminated then
   try
-    if FClient.Connected and ((FClient.Host <> nCard.FHost) or (
-       FClient.Port <> nCard.FPort)) then
-    begin
-      FClient.Disconnect;
-      if Assigned(FClient.IOHandler) then
-        FClient.IOHandler.InputBuffer.Clear;
-      //try to swtich connection
-    end;
-
-    if not FClient.Connected then
-    begin
-      FClient.Host := nCard.FHost;
-      FClient.Port := nCard.FPort;
-      FClient.Connect;
-    end;
-
     for nIdx:=FBuffer.Count - 1 downto 0 do
     begin
       nContent := FBuffer[nIdx];
       if CompareText(nContent.FID, nCard.FID) <> 0 then Continue;
-
       if CompareText(nCard.FType, cDisp_CtrlCardType) = 0 then
       begin
         nStrSend := GetBXShowInfoAtTime(nContent.FText, nCard.FAddr);
@@ -437,17 +454,25 @@ begin
       else
         ConvertStr(Char($40) + Char(nCard.FAddr) + nContent.FText + #13, nBuf);
 
-      FClient.Socket.Write(nBuf);
+      if not nCard.FClient.Connected then
+        nCard.FClient.Connect;
+      //xxxxxx
+
+      nCard.FClient.Socket.Write(nBuf);
       nCard.FLastUpdate := GetTickCount;
     end;
   except
-    WriteLog(Format('向小屏[ %s ]发送显示内容失败.', [nCard.FName]));
-    //loged
+    on E: Exception do
+    begin
+      WriteLog(Format('屏幕[ %s.%s ]异常:[ %s ].', [nCard.FID,
+        nCard.FName, E.Message]));
+      //loged
 
-    FClient.Disconnect;
-    if Assigned(FClient.IOHandler) then
-      FClient.IOHandler.InputBuffer.Clear;
-    //close connection
+      nCard.FClient.Disconnect;
+      if Assigned(nCard.FClient.IOHandler) then
+        nCard.FClient.IOHandler.InputBuffer.Clear;
+      //close connection
+    end;
   end;
 end;
 

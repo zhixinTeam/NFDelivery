@@ -221,7 +221,7 @@ var nIdx: Integer;
     nOut: TWorkerBusinessCommand;
 begin
   nSQL := 'Select ws.R_ID, ws.S_Status, ws.S_Value, wi.W_WebID,wi.W_DLID ' +
-          'From %s ws Inner Join %s wi on W_DLID=S_ID ' +
+          'From %s ws Left Join %s wi on W_DLID=S_ID ' +
           'Where S_Upload <> ''%s'' And S_UpCount < 5 Order By ws.R_ID ';
   nSQL := Format(nSQL, [sTable_WebSyncStatus, sTable_WebOrderInfo, sFlag_Yes]);
   with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
@@ -230,6 +230,7 @@ begin
 
     First;
     FListA.Clear;
+    FListC.Clear;
 
     while not Eof do
     try
@@ -265,9 +266,9 @@ begin
   end;
   //删除非商城订单记录
 
+  FListC.Clear;
   if FListA.Count > 0 then
   begin
-    FListC.Clear;
     for nIdx := 0 to FListA.Count - 1 do
     begin
       FListB.Text := PackerDecodeStr(FListA[nIdx]);
@@ -324,6 +325,7 @@ begin
 
     First;
     FListA.Clear;
+    FListC.Clear;
 
     while not Eof do
     try
@@ -349,9 +351,9 @@ begin
     end;
   end;
 
+  FListC.Clear;
   if FListA.Count > 0 then
   begin
-    FListC.Clear;
     for nIdx := 0 to FListA.Count - 1 do
     begin
       FListB.Text := PackerDecodeStr(FListA[nIdx]);

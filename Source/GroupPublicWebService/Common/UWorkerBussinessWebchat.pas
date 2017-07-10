@@ -282,7 +282,7 @@ begin
   try
     WriteLog('TBusWorkerBusinessWebchat.Send_Event_Msg request:'+#13+nXmlStr);
     nResponse := nService.mainfuncs('send_event_msg',nXmlStr);
-    nResponse := UTF8Decode(nResponse);
+    //nResponse := UTF8Decode(nResponse);
     WriteLog('TBusWorkerBusinessWebchat.Send_Event_Msg response:'+#13+nResponse);
     FPacker.XMLBuilder.Clear;
     FPacker.XMLBuilder.ReadFromString(nResponse);
@@ -712,7 +712,7 @@ begin
   try
     WriteLog('TBusWorkerBusinessWebchat.GetShopOrderByNO request:'+#13+nXmlStr);
     nResponse := nService.mainfuncs('get_shoporderByNO',nXmlStr);
-    nResponse := UTF8Decode(nResponse);
+    //nResponse := UTF8Decode(nResponse);
     WriteLog('TBusWorkerBusinessWebchat.GetShopOrderByNO response:'+#13+nResponse);
 
     nObj.FPacker := FPacker;
@@ -767,7 +767,7 @@ begin
   try
     WriteLog('TBusWorkerBusinessWebchat.complete_shoporders request'+#13+nXmlStr);
     nResponse := nService.mainfuncs('complete_shoporders',nXmlStr);
-    nResponse := UTF8Decode(nResponse);
+    //nResponse := UTF8Decode(nResponse);
     WriteLog('TBusWorkerBusinessWebchat.complete_shoporders response'+#13+nResponse);
 
     nObj.FPacker := FPacker;
@@ -912,11 +912,11 @@ begin
       //物料编号
 
       nTmp := nNodeTmp.FindNode('goodsname');
-      items[nIdx].FGoodsname := nTmp.ValueAsString;
+      items[nIdx].FGoodsname := UTF8Decode(nTmp.ValueAsString);
       //物料名称
 
       nTmp := nNodeTmp.FindNode('tracknumber');
-      items[nIdx].Ftracknumber := nTmp.ValueAsString;
+      items[nIdx].Ftracknumber := UTF8Decode(nTmp.ValueAsString);
       //车牌号
 
       nTmp := nNodeTmp.FindNode('data');

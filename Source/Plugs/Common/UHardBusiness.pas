@@ -34,6 +34,11 @@ function PrepareShowInfo(const nCard: string; nTunnel: string=''):string;
 function GetCardUsed(const nCard: string; var nCardType: string): Boolean;
 //获取卡号类型
 
+procedure MakeTruckShowPreInfo(const nCard: string; nTunnel: string='');
+//显示预刷卡信息
+procedure MakeTruckAddWater(const nCard: string; nTunnel: string='');
+//散装车加水
+
 procedure HardOpenDoor(const nReader: String);
 //打开道闸
 {$IFDEF HKVDVR}
@@ -198,6 +203,38 @@ begin
     nPacker := gBusinessPackerManager.LockPacker(sBus_BusinessCommand);
     nStr := nPacker.PackIn(@nIn);
     nWorker := gBusinessWorkerManager.LockWorker(sBus_BusinessShipTmp);
+    //get worker
+
+    Result := nWorker.WorkActive(nStr);
+    if Result then
+         nPacker.UnPackOut(nStr, nOut)
+    else nOut.FData := nStr;
+  finally
+    gBusinessPackerManager.RelasePacker(nPacker);
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
+//Date: 2017-06-04
+//Parm: 命令;数据;参数;输出
+//Desc: 调用中间件上的回空单据对象
+function CallBusinessHaulBack(const nCmd: Integer;
+  const nData, nExt: string; const nOut: PWorkerBusinessCommand): Boolean;
+var nStr: string;
+    nIn: TWorkerBusinessCommand;
+    nPacker: TBusinessPackerBase;
+    nWorker: TBusinessWorkerBase;
+begin
+  nPacker := nil;
+  nWorker := nil;
+  try
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nExt;
+
+    nPacker := gBusinessPackerManager.LockPacker(sBus_BusinessCommand);
+    nStr := nPacker.PackIn(@nIn);
+    nWorker := gBusinessWorkerManager.LockWorker(sBus_BusinessHaulback);
     //get worker
 
     Result := nWorker.WorkActive(nStr);
@@ -393,7 +430,35 @@ begin
     gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
   //xxxxx
 end;
-                                                             
+
+//Date: 2017-06-04
+//Parm: 岗位;回空业务单据列表
+//Desc: 保存nPost岗位上的回空单数据
+function GetHaulBackItems(const nCard,nPost: string;
+ var nData: TLadingBillItems): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessHaulBack(cBC_GetPostBills, nCard, nPost, @nOut);
+  if Result then
+       AnalyseBillItems(nOut.FData, nData)
+  else gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
+end;
+
+//Date: 2017-06-04
+//Parm: 岗位;码头采购单列表
+//Desc: 保存nPost岗位上的采购入厂单数据
+function SaveHaulBackItems(const nPost: string; nData: TLadingBillItems): Boolean;
+var nStr: string;
+    nOut: TWorkerBusinessCommand;
+begin
+  nStr := CombineBillItmes(nData);
+  Result := CallBusinessHaulBack(cBC_SavePostBills, nStr, nPost, @nOut);
+
+  if not Result then
+    gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
+  //xxxxx
+end;
+
 //------------------------------------------------------------------------------
 //Date: 2013-07-21
 //Parm: 事件描述;岗位标识
@@ -439,7 +504,9 @@ begin
   if nCardType = sFlag_ShipPro then
     nRet := GetShipProItems(nCard, sFlag_TruckIn, nTrucks) else
   if nCardType = sFlag_ShipTmp then
-    nRet := GetShipTmpItems(nCard, sFlag_TruckIn, nTrucks);
+    nRet := GetShipTmpItems(nCard, sFlag_TruckIn, nTrucks) else
+  if nCardType = sFlag_HaulBack then
+    nRet := GetHaulBackItems(nCard, sFlag_TruckIn, nTrucks);
 
   if not nRet then
   begin
@@ -514,7 +581,9 @@ begin
     if nCardType = sFlag_ShipPro then
       nRet := SaveShipProItems(sFlag_TruckIn, nTrucks)  else
     if nCardType = sFlag_ShipTmp then
-      nRet := SaveShipTmpItems(sFlag_TruckIn, nTrucks);
+      nRet := SaveShipTmpItems(sFlag_TruckIn, nTrucks) else
+  if nCardType = sFlag_HaulBack then
+    nRet := SaveHaulBackItems(sFlag_TruckIn, nTrucks);
 
     if not nRet then
     begin
@@ -649,7 +718,9 @@ begin
   if nCardType = sFlag_ShipPro then
     nRet := GetShipProItems(nCard, sFlag_TruckOut, nTrucks)  else
   if nCardType = sFlag_ShipTmp then
-    nRet := GetShipTmpItems(nCard, sFlag_TruckOut, nTrucks);
+    nRet := GetShipTmpItems(nCard, sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_HaulBack then
+    nRet := GetHaulBackItems(nCard, sFlag_TruckOut, nTrucks);
   //xxxxx
 
   if not nRet then
@@ -690,7 +761,9 @@ begin
   if nCardType = sFlag_ShipPro then
     nRet := SaveShipProItems(sFlag_TruckOut, nTrucks) else
   if nCardType = sFlag_ShipTmp then
-    nRet := SaveShipTmpItems(sFlag_TruckOut, nTrucks);
+    nRet := SaveShipTmpItems(sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_HaulBack then
+    nRet := SaveHaulBackItems(sFlag_TruckOut, nTrucks);
   //xxxxx
 
   if not nRet then
@@ -736,7 +809,9 @@ begin
       nPrint := nReaderItem.FPrinter;
     end else nPrint := nPrinter;
 
-    if (nCardType = sFlag_ShipPro) or (nCardType = sFlag_ShipTmp) then
+    if (nCardType = sFlag_ShipPro) or (nCardType = sFlag_ShipTmp) or
+       (nCardType = sFlag_HaulBack)
+    then
          nID := nTrucks[nIdx].FPoundID
     else nID := nTrucks[nIdx].FID;
 
@@ -771,7 +846,9 @@ begin
   if nCardType = sFlag_ShipPro then
     nRet := GetShipProItems(nCard, sFlag_TruckOut, nTrucks)  else
   if nCardType = sFlag_ShipTmp then
-    nRet := GetShipTmpItems(nCard, sFlag_TruckOut, nTrucks);
+    nRet := GetShipTmpItems(nCard, sFlag_TruckOut, nTrucks)  else
+  if nCardType = sFlag_HaulBack then
+    nRet := GetHaulBackItems(nCard, sFlag_TruckOut, nTrucks);
   //xxxxx
 
   if not nRet then
@@ -815,8 +892,9 @@ begin
   if nCardType = sFlag_ShipPro then
     nRet := SaveShipProItems(sFlag_TruckOut, nTrucks) else
   if nCardType = sFlag_ShipTmp then
-    nRet := SaveShipTmpItems(sFlag_TruckOut, nTrucks);
-  //xxxxx
+    nRet := SaveShipTmpItems(sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_HaulBack then
+    nRet := SaveHaulBackItems(sFlag_TruckOut, nTrucks);
 
   if not nRet then
   begin
@@ -853,7 +931,8 @@ begin
     nStr := nStr + #7 + nCardType;
     //磁卡类型
 
-    if (nCardType = sFlag_ShipPro) or (nCardType = sFlag_ShipTmp) then
+    if (nCardType = sFlag_ShipPro) or (nCardType = sFlag_ShipTmp) or
+       (nCardType = sFlag_HaulBack) then
          nID := nTrucks[nIdx].FPoundID
     else nID := nTrucks[nIdx].FID;
 
@@ -863,6 +942,9 @@ begin
 
     gRemotePrinter.PrintBill(nStr);
   end; //打印报表
+
+  if nTrucks[0].FCardKeep = sFlag_Yes then Exit;
+  //长期卡,不吞卡
 
   Result := True;
 end;
@@ -1088,7 +1170,7 @@ var nStr: string;
     nOut: TWorkerBusinessCommand;
 begin
   Result := True;
-  if not gMultiJSManager.CountEnable then Exit;
+  if not (gMultiJSManager.CountEnable and gMultiJSManager.ChainEnable) then Exit;
 
   nTask := gTaskMonitor.AddTask('UHardBusiness.PrintBillCode', cTaskTimeoutLong);
   //to mon
@@ -1450,17 +1532,37 @@ end;
 //Parm: 主机;卡号
 //Desc: 对nHost.nCard新到卡号作出动作
 procedure WhenReaderCardIn(const nCard: string; const nHost: PReaderHost);
-var nTxt: string;
+var nReader: string;
 begin
   if nHost.FType = rtOnce then
   begin
+    {$IFDEF ForceReader}
+    nReader := nHost.FID;
+    {$ELSE}
+    nReader := '';
+    {$ENDIF}
     if nHost.FFun = rfOut then
-         MakeTruckOut(nCard, nHost.FID, nHost.FPrinter)
+         MakeTruckOut(nCard, nReader, nHost.FPrinter)
     else MakeTruckLadingDai(nCard, nHost.FTunnel);
   end else
 
   if nHost.FType = rtKeep then
   begin
+    if Assigned(nHost.FOptions) then
+    begin
+      if nHost.FOptions.Values['DaiShowPre'] = sFlag_Yes then
+      begin
+        MakeTruckShowPreInfo(nCard, nHost.FTunnel);
+        Exit;
+      end else
+
+      if nHost.FOptions.Values['SanWater'] = sFlag_Yes then
+      begin
+        MakeTruckAddWater(nCard, nHost.FTunnel);
+        Exit;
+      end;   
+    end;
+
     MakeTruckLadingSan(nCard, nHost.FTunnel);
   end;
 end;
@@ -1473,6 +1575,21 @@ begin
   {$IFDEF DEBUG}
   WriteHardHelperLog('WhenReaderCardOut退出.');
   {$ENDIF}
+
+  if Assigned(nHost.FOptions) then
+  begin
+    if nHost.FOptions.Values['DaiShowPre'] = sFlag_Yes then
+    begin
+      gDisplayManager.Display(nHost.FTunnel, nHost.FLEDText);
+      Exit;
+    end else
+
+    if nHost.FOptions.Values['SanWater'] = sFlag_Yes then
+    begin
+      gDisplayManager.Display(nHost.FTunnel, nHost.FLEDText);
+      Exit;
+    end;   
+  end;
 
   if nHost.FETimeOut then
   begin
@@ -1591,36 +1708,55 @@ begin
   //auto out
 end;
 
+function GetStockType(nBill: string):string;
+var nStr, nStockMap: string;
+    nWorker: PDBWorker;
+begin
+  Result := 'C';
+  nStr := 'Select L_PackStyle, L_StockBrand, L_StockNO From %s ' +
+          'Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, nBill]);
+
+  nWorker := nil;
+  try
+    with gDBConnManager.SQLQuery(nStr, nWorker) do
+    if RecordCount > 0 then
+    begin
+      Result := UpperCase(GetPinYinOfStr(Fields[0].AsString + Fields[1].AsString));
+      nStockMap := Fields[2].AsString + Fields[0].AsString + Fields[1].AsString;
+
+      nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_StockBrandShow, nStockMap]);
+      with gDBConnManager.WorkerQuery(nWorker, nStr) do
+      if RecordCount > 0 then
+      begin
+        Result := Fields[0].AsString;
+      end;
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+
+  Result := Copy(Result, 1, 4);
+end;
+
 //Date: 2015-01-14
 //Parm: 车牌号;交货单
 //Desc: 格式化nBill交货单需要显示的车牌号
 function GetJSTruck(const nTruck,nBill: string): string;
 var nStr: string;
     nLen: Integer;
-    nWorker: PDBWorker;
 begin
   Result := nTruck;
   if nBill = '' then Exit;
 
   {$IFDEF JSTruck}
-  nWorker := nil;
-  try
-    nStr := 'Select L_PackStyle From %s Where L_ID=''%s''';
-    nStr := Format(nStr, [sTable_Bill, nBill]);
+  nStr := GetStockType(nBill);
+  if nStr = '' then Exit;
 
-    with gDBConnManager.SQLQuery(nStr, nWorker) do
-    if RecordCount > 0 then
-    begin
-      nStr := Trim(Fields[0].AsString);
-      if (nStr = '') or (nStr = 'C') then Exit;
-      //普通模式,车牌全显
-
-      nLen := cMultiJS_Truck - 2;
-      Result := nStr + '-' + Copy(nTruck, Length(nTruck) - nLen + 1, nLen);
-    end;
-  finally
-    gDBConnManager.ReleaseConnection(nWorker);
-  end;   
+  nLen := cMultiJS_Truck - 2;
+  Result := Copy(nStr, 1, 2) +    //取前两位
+            Copy(nTruck, Length(nTruck) - nLen + 1, nLen);
   {$ENDIF}
 end;
 
@@ -1653,28 +1789,6 @@ begin
   end;
 end;
 
-function GetStockType(nBill: string):string;
-var nStr: string;
-    nWorker: PDBWorker;
-begin
-  Result := '普通';
-  nStr := 'Select L_PackStyle From %s Where L_ID=''%s''';
-  nStr := Format(nStr, [sTable_Bill, nBill]);
-
-  nWorker := nil;
-  try
-    with gDBConnManager.SQLQuery(nStr, nWorker) do
-    if RecordCount > 0 then
-    begin
-      nStr := Trim(Fields[0].AsString);
-      if nStr = 'Z' then Result := '纸袋';
-      if nStr = 'R' then Result := '早强';
-    end;
-  finally
-    gDBConnManager.ReleaseConnection(nWorker);
-  end;
-end;
-
 function PrepareShowInfo(const nCard:string; nTunnel: string=''):string;
 var nStr: string;
     nDai: Double;
@@ -1687,8 +1801,9 @@ begin
   begin
     Result := '读取磁卡[ %s ]交货单信息失败.';
     Result := Format(Result, [nCard]);
-
     WriteNearReaderLog(Result);
+
+    Result := '磁卡无效1.';
     Exit;
   end;
 
@@ -1698,6 +1813,7 @@ begin
     Result := Format(Result, [nCard]);
 
     WriteNearReaderLog(Result);
+    Result := '磁卡无效2.';
     Exit;
   end;
 
@@ -1708,19 +1824,34 @@ begin
   end;
 
   nInt := 0;
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+     if not IsTruckInQueue(FTruck, nTunnel, False, nStr,
+         nPTruck, nPLine, sFlag_Dai) then
+     begin
+        WriteNearReaderLog(nStr);
+        Continue;
+     end; //检查通道
+
+     Inc(nInt);
+  end;
+
+  if nInt < 1 then
+  begin
+    nIdx := Length(nTrucks[0].FTruck);
+    nStr := nTrucks[0].FTruck + StringOfChar(' ',12 - nIdx) + '请换库装车';
+    Result := nStr;
+    Exit;
+  end;
+  //通道错误
+
   Result := '';
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
-     if not IsTruckInQueue(FTruck, nTunnel, False, Result,
-         nPTruck, nPLine, sFlag_Dai) then
-     begin
-        WriteNearReaderLog(Result);
-        Continue;
-     end; //检查通道
-
-     if ((FStatus = sFlag_TruckZT) or
-      (FNextStatus= sFlag_TruckZT)) then
+     nStr := '';
+     if FNextStatus= sFlag_TruckZT then
      begin
         nDai := Int(FValue * 1000) / nPLine.FPeerWeight;
 
@@ -1729,12 +1860,100 @@ begin
 
         nStr := FormatFloat('00000' , nDai);
         Result := Result + StringOfChar('0' , 5 - Length(nStr)) + nStr;
-
-        Inc(nInt);
-     end;
+     end else
+     begin
+        Result := Format('下一状态 %s', [TruckStatusToStr(FNextStatus)]);
+     end;  
   end;
 
-  if nInt<1 then Result := '车辆不在队列中';
+  WriteNearReaderLog('PrepareShowInfo: [' + Result + ']');
+end;
+
+//Date: 2017/6/21
+//Parm: 磁卡号;通道编号
+//Desc: 显示预刷卡车辆信息
+procedure MakeTruckShowPreInfo(const nCard: string; nTunnel: string='');
+var nMsgStr: string;
+begin
+  nMsgStr := PrepareShowInfo(nCard, nTunnel);
+  gDisplayManager.Display(nTunnel, nMsgStr);
+end;
+
+//Date: 2017/6/21
+//Parm: 磁卡号;通道编号
+//Desc: 散装车辆加水
+procedure MakeTruckAddWater(const nCard: string; nTunnel: string='');
+var nTrucks: TLadingBillItems;
+    nCardType, nStr: string;
+    nRet: Boolean;
+    nIdx: Integer;
+begin
+  if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
+
+  nRet := False;
+  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
+    nRet := GetLadingBills(nCard, sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_Provide then
+    nRet := GetProvideItems(nCard, sFlag_TruckOut, nTrucks) else
+  if nCardType = sFlag_ShipPro then
+    nRet := GetShipProItems(nCard, sFlag_TruckOut, nTrucks)  else
+  if nCardType = sFlag_ShipTmp then
+    nRet := GetShipTmpItems(nCard, sFlag_TruckOut, nTrucks);
+  //xxxxx
+
+  if not nRet then
+  begin
+    nStr := '读取磁卡[ %s ]交货单信息失败.';
+    nStr := Format(nStr, [nCard]);
+
+    WriteHardHelperLog(nStr, sPost_Out);
+    Exit;
+  end;
+
+  if Length(nTrucks) < 1 then
+  begin
+    nStr := '磁卡[ %s ]没有需要加水车辆.';
+    nStr := Format(nStr, [nCard]);
+
+    WriteHardHelperLog(nStr, sPost_Out);
+    Exit;
+  end;
+
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    FCardUse := nCardType;
+    if (FNextStatus = sFlag_TruckWT) or (FStatus = sFlag_TruckWT) then Continue;
+    nStr := '车辆[ %s ]下一状态为:[ %s ],无法加水.';
+    nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
+
+    WriteHardHelperLog(nStr, sPost_Out);
+    Exit;
+  end;
+
+  nRet := False;
+  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
+    nRet := SaveLadingBills(sFlag_TruckWT, nTrucks) else
+  if nCardType = sFlag_Provide then
+    nRet := SaveProvideItems(sFlag_TruckWT, nTrucks) else
+  if nCardType = sFlag_ShipPro then
+    nRet := SaveShipProItems(sFlag_TruckWT, nTrucks) else
+  if nCardType = sFlag_ShipTmp then
+    nRet := SaveShipTmpItems(sFlag_TruckWT, nTrucks);
+  //xxxxx
+
+  if not nRet then
+  begin
+    nStr := '车辆[ %s ]加水放行失败.';
+    nStr := Format(nStr, [nTrucks[0].FTruck]);
+
+    WriteHardHelperLog(nStr, sPost_Out);
+    Exit;
+  end;
+
+  nStr := nTrucks[0].FTruck + '请加水';
+  WriteNearReaderLog(nStr);
+  gDisplayManager.Display(nTunnel, nStr);
 end;
 
 procedure HardOpenDoor(const nReader: String);

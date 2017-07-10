@@ -40,6 +40,8 @@ type
     procedure cxRadio1PropertiesEditValueChanged(Sender: TObject);
   private
     { Private declarations }
+    FIsBusy: Boolean;
+    //正在处理事件
     function LoadEventFromDB: Boolean;
     procedure LoadEventToUI;
     function GetSolution(const nData: string; nUIIndex: Integer = -1): string;
@@ -59,7 +61,7 @@ implementation
 
 uses
   IniFiles, ULibFun, UMgrControl, UFormBase, UFormCtrl, USysDB, USysConst,
-  USysGrid, UMgrSndPlay;
+  USysGrid, UMgrSndPlay, USysBusiness;
 
 const
   cRefreshInterval = 10; //刷新间隔
@@ -69,7 +71,10 @@ type
   TEventItem = record
     FEnable: Boolean;
     FRecord: string;
+
+    FEID: string;
     FFrom: string;
+    FMemo: string;
     FEvent: string;
     FSolution: string;
     FDate: TDateTime;
@@ -121,6 +126,9 @@ begin
   finally
     nIni.Free;
   end;
+
+  FIsBusy := False;
+  //初始化空闲
 end;
 
 procedure TfFormTodo.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -212,7 +220,10 @@ begin
 
           nItem.FEnable := True;
           nItem.FRecord := nStr;
+
+          nItem.FEID  := FieldByName('E_ID').AsString;
           nItem.FFrom := FieldByName('E_From').AsString;
+          nItem.FMemo := FieldByName('E_Memo').AsString;
           nItem.FEvent := FieldByName('E_Event').AsString;
           nItem.FSolution := FieldByName('E_Solution').AsString;
           nItem.FDate := FieldByName('E_Date').AsDateTime;
@@ -342,6 +353,9 @@ begin
       Exit;
     end;
 
+    if FIsBusy then Exit;
+    //正在处理事件时,不显示
+
     if Visible and Active then
          nBool := False
     else nBool := True;
@@ -373,6 +387,15 @@ begin
             '※.结果: ' + nStr + #13#10#13#10 +
             '确认处理结果请点击"是"按钮.';
     if not QueryDlg(nStr, sAsk, Handle) then Exit;
+
+    FIsBusy := True;
+    try
+      Visible := False;
+      if not DealManualEvent(nItem.FEID,
+         GetSolution(nItem.FSolution, cxRadio1.ItemIndex), nItem.FMemo) then Exit;
+    finally
+      FIsBusy := False;
+    end;
 
     nStr := GetSolution(nItem.FSolution, cxRadio1.ItemIndex);
     nStr := MakeSQLByStr([SF('E_Result', nStr),

@@ -53,7 +53,7 @@ inherited FrmShowOrderInfo: TFrmShowOrderInfo
         TabOrder = 9
         TextSettings.Font.Size = 16.000000000000000000
         Position.X = 112.000000000000000000
-        Position.Y = 296.000000000000000000
+        Position.Y = 344.000000000000000000
         Size.Width = 209.000000000000000000
         Size.Height = 24.000000000000000000
         Size.PlatformDefault = False
@@ -63,7 +63,7 @@ inherited FrmShowOrderInfo: TFrmShowOrderInfo
       object Label10: TLabel
         StyledSettings = [Family, Style, FontColor]
         Position.X = 8.000000000000000000
-        Position.Y = 296.000000000000000000
+        Position.Y = 344.000000000000000000
         Size.Width = 105.000000000000000000
         Size.Height = 23.000000000000000000
         Size.PlatformDefault = False
@@ -173,6 +173,35 @@ inherited FrmShowOrderInfo: TFrmShowOrderInfo
         Size.PlatformDefault = False
         TextSettings.Font.Size = 16.000000000000000000
         Text = #27611#37325'('#21544'):'
+      end
+      object Label3: TLabel
+        StyledSettings = [Family, FontColor]
+        Position.X = 8.000000000000000000
+        Position.Y = 288.000000000000000000
+        Size.Width = 82.000000000000000000
+        Size.Height = 31.000000000000000000
+        Size.PlatformDefault = False
+        TextSettings.Font.Size = 16.000000000000000000
+        TextSettings.Font.Style = [fsBold]
+        Text = #21368#36135#22320#28857':'
+      end
+      object EditArea: TComboBox
+        Items.Strings = (
+          '1'#21495#39564#25910#28857
+          '2'#21495#39564#25910#28857
+          '3'#21495#39564#25910#28857
+          '4'#21495#39564#25910#28857
+          '5'#21495#39564#25910#28857
+          '6'#21495#39564#25910#28857
+          '7'#21495#39564#25910#28857
+          '8'#21495#39564#25910#28857
+          '9'#21495#39564#25910#28857)
+        Position.X = 112.000000000000000000
+        Position.Y = 288.000000000000000000
+        Size.Width = 209.000000000000000000
+        Size.Height = 30.000000000000000000
+        Size.PlatformDefault = False
+        TabOrder = 11
       end
     end
   end

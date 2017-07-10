@@ -81,6 +81,7 @@ ResourceString
   sFlag_Unknow        = 'U';                         //未知 
   sFlag_Enabled       = 'Y';                         //启用
   sFlag_Disabled      = 'N';                         //禁用
+  sFlag_SHaulback     = 'P';                         //回空
 
   sFlag_Integer       = 'I';                         //整数
   sFlag_Decimal       = 'D';                         //小数
@@ -100,6 +101,7 @@ ResourceString
 
   sFlag_ShipPro       = 'A';                         //复磅采购
   sFlag_ShipTmp       = 'B';                         //复磅临时
+  sFlag_Haulback      = 'C';                         //回空磅单
 
   sFlag_TiHuo         = 'T';                         //自提
   sFlag_SongH         = 'S';                         //送货
@@ -138,6 +140,7 @@ ResourceString
   sFlag_TruckFH       = 'F';                         //放灰车辆
   sFlag_TruckZT       = 'Z';                         //栈台车辆
   sFlag_TruckXH       = 'X';                         //验收车辆
+  sFlag_TruckWT       = 'W';                         //加水车辆                           
 
   sFlag_PoundBZ       = 'B';                         //标准
   sFlag_PoundPZ       = 'Z';                         //皮重
@@ -160,8 +163,6 @@ ResourceString
   sFlag_ManualA       = 'A';                         //皮重预警(错误事件类型)
   sFlag_ManualB       = 'B';                         //皮重超出范围
   sFlag_ManualC       = 'C';                         //净重超出误差范围
-  sFlag_ManualD       = 'D';                         //散装超出大票量
-  sFlag_ManualE       = 'E';                         //批次号获取失败
 
   sFlag_SysParam      = 'SysParam';                  //系统参数
   sFlag_EnableBakdb   = 'Uses_BackDB';               //备用库
@@ -172,6 +173,7 @@ ResourceString
   sFlag_ViaBillCard   = 'ViaBillCard';               //直接制卡
   sFlag_DispatchPound = 'PoundDispatch';             //磅站调度
   sFlag_PSanWuChaStop = 'PoundSanWuChaStop';         //超出误差停止业务
+  sFlag_ForceAddWater = 'ForceAddWater';             //强制加水品种
   
   sFlag_PoundIfDai    = 'PoundIFDai';                //袋装是否过磅
   sFlag_PoundWuCha    = 'PoundWuCha';                //过磅误差分组
@@ -196,6 +198,8 @@ ResourceString
   sFlag_DuctTimeItem  = 'DuctTimeItem';              //暗扣时间段项
   sFlag_TiHuoTypeItem = 'TiHuoTypeItem';             //提货类型
   sFlag_ZTLineGroup   = 'ZTLineGroup';               //栈台分组
+  sFlag_StockBrandShow= 'StockBrandShow';            //预刷卡品种显示
+  sFlag_PoundStation  = 'PoundStation';              //地磅可用磅站,用于指定过磅
 
   sFlag_InWHouse      = 'Warehouse';                 //库存可发(收)货订单
   sFlag_InWHID        = 'WarehouseID';               //仓库可发(收)货订单
@@ -225,6 +229,9 @@ ResourceString
   sFlag_BatchBrand    = 'Batch_Brand';               //批次区分品牌
   sFlag_BatchValid    = 'Batch_Valid';               //启用批次管理
   sFlag_PoundBaseValue= 'PoundBaseValue';            //磅房跳动基数
+  sFlag_OutOfHaulBack = 'OutOfHaulBack';             //退货(回空)时限
+  sFlag_DefaultBrand  = 'DefaultBrand';              //默认品牌
+  sFlag_NetPlayVoice  = 'NetPlayVoice';              //使用网络语音卡
 
   sFlag_BusGroup      = 'BusFunction';               //业务编码组
   sFlag_BillNo        = 'Bus_Bill';                  //交货单号
@@ -238,7 +245,7 @@ ResourceString
   sFlag_Transfer      = 'Bus_Transfer';              //短倒单号
   sFlag_BillNewNO     = 'Bus_BillNew';
   sFlag_PStationNo    = 'Bus_PStation';              //火车衡称重记录
-  sFlag_CardProvide   = 'Bus_CardProvide';           //
+  sFlag_BillHaulBack  = 'Bus_BillHaulBack';          //回空单号
   
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
@@ -265,6 +272,8 @@ ResourceString
   sTable_StockMatch   = 'S_StockMatch';              //品种映射
   sTable_BillNew      = 'S_BillNew';                 //交货单基础表
   sTable_BillNewBak   = 'S_BillNewBak';              //已删除表
+  sTable_BillHaulBack = 'S_BillHaulBack';            //回空业务表
+  sTable_BillHaulBak  = 'S_BillHaulBak';            //回空业务表
 
   sTable_Mine         = 'S_Mine';                    //矿点表
   sTable_Truck        = 'S_Truck';                   //车辆表
@@ -317,8 +326,8 @@ const
   sFlag_Solution_YNP  = 'Y=通过;P=回空;N=禁止';
 
   {*新建表*}
-  sSQL_NewSysDict = 'Create Table $Table(D_ID $Inc, D_Name varChar(15),' +
-       'D_Desc varChar(30), D_Value varChar(50), D_Memo varChar(20),' +
+  sSQL_NewSysDict = 'Create Table $Table(D_ID $Inc, D_Name varChar(32),' +
+       'D_Desc varChar(64), D_Value varChar(50), D_Memo varChar(128),' +
        'D_ParamA $Float, D_ParamB varChar(50), D_ParamC VarChar(50),' +
        'D_Index Integer Default 0)';
   {-----------------------------------------------------------------------------
@@ -430,7 +439,8 @@ const
   sSQL_NewManualEvent = 'Create Table $Table(R_ID $Inc, E_ID varChar(32),' +
        'E_From varChar(32), E_Key varChar(32), E_Event varChar(200), ' +
        'E_Solution varChar(100), E_Result varChar(12),E_Departmen varChar(32),' +
-       'E_Date DateTime, E_ManDeal varChar(32), E_DateDeal DateTime)';
+       'E_Date DateTime, E_ManDeal varChar(32), E_DateDeal DateTime, ' +
+       'E_ParamA Integer, E_ParamB varChar(128), E_Memo varChar(512))';
   {-----------------------------------------------------------------------------
    人工干预事件: ManualEvent
    *.R_ID: 编号
@@ -443,6 +453,9 @@ const
    *.E_Departmen: 处理部门
    *.E_Date: 发生时间
    *.E_ManDeal,E_DateDeal: 处理人
+   *.E_ParamA: 附加参数, 整型
+   *.E_ParamB: 附加参数, 字符串
+   *.E_Memo: 备注信息
   -----------------------------------------------------------------------------}
 
   sSQL_NewCustomer = 'Create Table $Table(R_ID $Inc, C_ID varChar(15), ' +
@@ -473,7 +486,7 @@ const
   -----------------------------------------------------------------------------}
 
   sSQL_NewStockMatch = 'Create Table $Table(R_ID $Inc, M_Group varChar(8),' +
-       'M_ID varChar(20), M_Name varChar(80), M_Status Char(1))';
+       'M_ID varChar(20), M_Name varChar(80), M_Status Char(1), M_LineNo varChar(20))';
   {-----------------------------------------------------------------------------
    相似品种映射: StockMatch
    *.R_ID: 记录编号
@@ -532,6 +545,7 @@ const
        'L_CusPY varChar(80), L_CusCode varChar(15),' +
        'L_SaleID varChar(20), L_SaleMan varChar(32),' +
        'L_Type Char(1), L_StockNo varChar(20), L_StockName varChar(80),' +
+       'L_StockArea varChar(120), L_StockBrand varChar(120),' +
        'L_Value $Float, L_Price $Float, L_PackStyle Char(1),' +
        'L_Truck varChar(15), L_Status Char(1), L_NextStatus Char(1),' +
        'L_InTime DateTime, L_InMan varChar(32),' +
@@ -539,8 +553,10 @@ const
        'L_MValue $Float, L_MDate DateTime, L_MMan varChar(32),' +
        'L_LadeTime DateTime, L_LadeMan varChar(32), ' +
        'L_LadeLine varChar(15), L_LineName varChar(32), L_LineGroup varChar(15),' +
+       'L_WTMan varChar(32), L_WTTime DateTime, L_WTLine varChar(50),' +
        'L_DaiTotal Integer , L_DaiNormal Integer, L_DaiBuCha Integer,' +
-       'L_OutFact DateTime, L_OutMan varChar(32),' +
+       'L_OutFact DateTime, L_OutMan varChar(32), ' +
+       'L_PoundStation varChar(32), L_PoundName varChar(32), ' +
        'L_Lading Char(1), L_IsVIP varChar(1), L_Seal varChar(100),' +
        'L_HYDan varChar(15), L_Man varChar(32), L_Date DateTime,' +
        'L_DelMan varChar(32), L_DelDate DateTime, L_Memo VarChar(500))';
@@ -568,7 +584,11 @@ const
    *.L_LadeTime,L_LadeMan: 发货时间,发货人
    *.L_LadeLine,L_LineName, L_LineGroup: 发货通道
    *.L_DaiTotal,L_DaiNormal,L_DaiBuCha:总装,正常,补差
+   *.L_WTMan:加水人
+   *.L_WTTime:加水时间
+   *.L_WTLine:加水点
    *.L_OutFact,L_OutMan: 出厂放行
+   *.L_PoundStation, L_PoundName：指定磅站和地磅名
    *.L_Lading: 提货方式(自提,送货)
    *.L_IsVIP:VIP单
    *.L_Seal: 封签号
@@ -578,6 +598,55 @@ const
    *.L_DelMan: 交货单删除人员
    *.L_DelDate: 交货单删除时间
    *.L_Memo: 动作备注
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewBillHaulback = 'Create Table $Table(R_ID $Inc, H_ID varChar(20),' +
+       'H_Card varChar(20),H_LID varChar(20),H_LPID varChar(20),H_LOutFact DateTime,' +
+       'H_CusID varChar(15),H_CusName varChar(80),H_CusPY varChar(80),' +
+       'H_SaleID varChar(15),H_SaleMan varChar(32),' +
+       'H_ZKType Char(1),H_ZhiKa varChar(20),H_CusType Char(1),' +
+       'H_Type Char(1),H_StockNo varChar(20),H_StockName varChar(80),' +
+       'H_LimValue $Float,H_Value $Float,H_Price $Float,' +
+       'H_Truck varChar(15),H_Status Char(1),H_NextStatus Char(1),' +
+       'H_InTime DateTime,H_InMan varChar(32),' +
+       'H_PValue $Float,H_PDate DateTime,H_PMan varChar(32),' +
+       'H_MValue $Float,H_MDate DateTime,H_MMan varChar(32),' +
+       'H_LadeTime DateTime,H_LadeMan varChar(32), ' +
+       'H_LadeLine varChar(15),H_LineName varChar(32),' +
+       'H_OutFact DateTime,H_OutMan varChar(32),' +
+       'H_PoundStation varChar(32), H_PoundName varChar(32), ' +
+       'H_Man varChar(32),H_Date DateTime,' +
+       'H_DelMan varChar(32),H_DelDate DateTime)';
+  {-----------------------------------------------------------------------------
+   退货单(回空)表: NewBillHaulback
+   *.R_ID: 编号
+   *.H_ID: 退货单号
+   *.H_Card: 磁卡号
+   *.H_LID: 退货单对应提货单号
+   *.H_LPID: 退货单对应的原始磅单
+   *.H_LOutFact: 提货出厂时间
+   *.H_CusID,H_CusName,H_CusPY,H_CusType:客户
+   *.H_SaleID,H_SaleMan:业务员
+   *.H_ZhiKa: 订单编号
+   *.H_ZKType: 订单类型
+   *.H_Type: 类型(袋,散)
+   *.H_StockNo: 物料编号
+   *.H_StockName: 物料描述
+   *.H_LimValue: 提货单原始提货量
+   *.H_Value: 退货量
+   *.H_Price: 退货单价
+   *.H_Truck: 车船号
+   *.H_Status,H_NextStatus:状态控制
+   *.H_InTime,H_InMan: 进厂放行
+   *.H_PValue,H_PDate,H_PMan: 称皮重
+   *.H_MValue,H_MDate,H_MMan: 称毛重
+   *.H_LadeTime,H_LadeMan: 卸货时间,卸货人
+   *.H_LadeLine,H_LineName: 卸货通道
+   *.H_OutFact,H_OutMan: 出厂放行
+   *.H_Man:操作人
+   *.H_Date:创建时间
+   *.H_DelMan: 退货单删除人员
+   *.H_DelDate: 退货单删除时间
   -----------------------------------------------------------------------------}
 
   sSQL_NewCard = 'Create Table $Table(R_ID $Inc, C_Card varChar(16),' +
@@ -677,6 +746,9 @@ const
        'P_FactID varChar(32), P_Origin varChar(80),' +
        'P_PStation varChar(10), P_MStation varChar(10),' +
        'P_PStation2 varChar(10), P_MStation2 varChar(10),' +
+       'P_YMan varChar(32), P_YTime DateTime, ' +
+       'P_YSResult Char(1), P_YLineName varChar(50), P_KZComment varChar(128),' +
+       'P_WTMan varChar(32), P_WTTime DateTime, P_WTLine varChar(50),' +
        'P_Direction varChar(10), P_PModel varChar(10), P_Status Char(1),' +
        'P_Valid Char(1), P_PrintNum Integer Default 1, P_Memo varChar(128),' +
        'P_DelMan varChar(32), P_DelDate DateTime)';
@@ -700,6 +772,14 @@ const
    *.P_PStation,P_MStation: 称重磅站
    *.P_Direction: 物料流向(进,出)
    *.P_PModel: 过磅模式(标准,配对等)
+   *.P_YMan:验收人
+   *.P_YTime:验收时间
+   *.P_YSResult: 验收结果
+   *.P_YLineName: 验收点
+   *.P_KZComment: 验收备注
+   *.P_WTMan:加水人
+   *.P_WTTime:加水时间
+   *.P_WTLine:加水点
    *.P_Status: 记录状态
    *.P_Valid: 是否有效
    *.P_PrintNum: 打印次数
@@ -719,7 +799,7 @@ const
 
   sSQL_NewZTLines = 'Create Table $Table(R_ID $Inc, Z_ID varChar(15),' +
        'Z_Name varChar(32), Z_StockNo varChar(20), Z_Stock varChar(80),' +
-       'Z_StockType Char(1), Z_PeerWeight Integer, Z_Group Char(15),' +
+       'Z_StockType Char(1), Z_PeerWeight Integer, Z_Group varChar(15),' +
        'Z_QueueMax Integer, Z_VIPLine Char(1), Z_Valid Char(1), Z_Index Integer)';
   {-----------------------------------------------------------------------------
    装车线配置: ZTLines
@@ -927,6 +1007,7 @@ const
        'P_BFPTime2 DateTime, P_BFPMan2 varChar(32), P_BFPValue2 $Float Default 0,' +
        'P_BFMTime2 DateTime, P_BFMMan2 varChar(32), P_BFMValue2 $Float Default 0,' +
        'P_KeepCard varChar(1), P_OneDoor Char(1), P_MuiltiPound Char(1), ' +
+       'P_PoundStation varChar(32), P_PoundName varChar(32), ' +
        'P_Man varChar(32), P_Date DateTime, P_UsePre Char(1),' +
        'P_DelMan varChar(32), P_DelDate DateTime, P_Memo varChar(128))';
   {-----------------------------------------------------------------------------
@@ -967,6 +1048,7 @@ const
        'O_BFMTime2 DateTime, O_BFMMan2 varChar(32), O_BFMValue2 $Float Default 0,' +
        'O_KeepCard varChar(1), O_MuiltiPound Char(1), O_Man varChar(32), O_Date DateTime,' +
        'O_UsePValue Char(1) Default ''N'', O_OneDoor Char(1) Default ''N'', ' +
+       'O_PoundStation varChar(32), O_PoundName varChar(32), ' +
        'O_UsePre Char(1), ' +
        'O_DelMan varChar(32), O_DelDate DateTime, O_Memo varChar(128))';
   {-----------------------------------------------------------------------------
@@ -1022,7 +1104,7 @@ const
   
   sSQL_NewBatcodeDoc = 'Create Table $Table(R_ID $Inc, D_ID varChar(32),' +
        'D_Stock varChar(32),D_Name varChar(80), D_Brand varChar(32), ' +
-       'D_Plan $Float, D_Sent $Float, D_Rund $Float, D_Init $Float, D_Warn $Float, ' +
+       'D_Plan $Float, D_Sent $Float Default 0, D_Rund $Float, D_Init $Float, D_Warn $Float, ' +
        'D_Man varChar(32), D_Date DateTime, D_DelMan varChar(32), D_DelDate DateTime, ' +
        'D_UseDate DateTime, D_LastDate DateTime, D_Valid char(1))';
   {-----------------------------------------------------------------------------
@@ -1213,6 +1295,7 @@ begin
   if nStatus = sFlag_TruckSH then Result := '送货中' else
   if nStatus = sFlag_TruckXH then Result := '验收处' else
   if nStatus = sFlag_TruckFH then Result := '放灰处' else
+  if nStatus = sFlag_TruckWT then Result := '加水' else
   if nStatus = sFlag_TruckZT then Result := '栈台' else Result := '未进厂';
 end;
 
@@ -1244,6 +1327,7 @@ begin
   if nBus = sFlag_Returns    then Result := '退货' else
   if nBus = sFlag_ShipPro    then Result := '供应' else
   if nBus = sFlag_ShipTmp    then Result := '转运' else
+  if nBus = sFlag_HaulBack   then Result := '回空' else
   if nBus = sFlag_Other      then Result := '其它';
 end;
 
@@ -1283,6 +1367,8 @@ begin
   AddSysTableItem(sTable_BillBak, sSQL_NewBill);
   AddSysTableItem(sTable_BillNew, sSQB_NewBillNew);
   AddSysTableItem(sTable_BillNewBak, sSQB_NewBillNew);
+  AddSysTableItem(sTable_BillHaulBak, sSQL_NewBillHaulback);
+  AddSysTableItem(sTable_BillHaulBack, sSQL_NewBillHaulback);
 
   AddSysTableItem(sTable_Truck, sSQL_NewTruck);
   AddSysTableItem(sTable_ZTLines, sSQL_NewZTLines);

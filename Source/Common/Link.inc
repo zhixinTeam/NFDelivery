@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE SYNF}
+{$DEFINE GXNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -80,6 +80,8 @@
   //强制抬杆
   {$DEFINE HKVDVR}
   //服务器抓拍
+  {$DEFINE FORCEREADER}
+  //出厂读卡器
 {$ENDIF}
 //富阳南方
 
@@ -180,7 +182,75 @@
   //批次控制发货量
   {$DEFINE MITTruckProber}
   //中间件控制车检
+  {$DEFINE MultiReplay}
+  //计数器应答模式
   {$DEFINE CardProvide}
   //采用复磅模式
+  {$DEFINE LineGroup}
+  //通道进行分组
+  {$DEFINE PrintChinese}
+  //汉字喷码支持
+  {$DEFINE JSTruck}
+  //格式化计数器车牌
 {$ENDIF}
 //山亚南方
+
+{$IFDEF ZGNF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+  {$DEFINE MITTruckProber}
+  //中间件控制车检
+  {$DEFINE MultiReplay}
+  //计数器应答模式
+  {$DEFINE CardProvide}
+  //采用复磅模式
+  {$DEFINE LineGroup}
+  //通道进行分组
+  {$DEFINE PrintChinese}
+  //汉字喷码支持
+  {$DEFINE JSTruck}
+  //格式化计数器车牌
+  {$DEFINE ORDERVALUE}
+  //显示订单量
+  {$DEFINE GROUPBYBRAND}
+  //根据品牌分组
+{$ENDIF}
+//诸葛南方
+
+{$IFDEF GXNF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+  {$DEFINE MITTruckProber}
+  //中间件控制车检
+  {$DEFINE MultiReplay}
+  //计数器应答模式
+  {$DEFINE CardProvide}
+  //采用复磅模式
+  {$DEFINE LineGroup}
+  //通道进行分组
+  {$DEFINE PrintChinese}
+  //汉字喷码支持
+  {$DEFINE JSTruck}
+  //格式化计数器车牌
+  {$DEFINE ORDERVALUE}
+  //显示订单量
+  {$DEFINE FORCEPSTATION}
+  //强制地磅磅站
+{$ENDIF}
+//广西南方

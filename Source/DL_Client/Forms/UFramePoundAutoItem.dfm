@@ -496,7 +496,7 @@ inherited fFrameAutoPoundItem: TfFrameAutoPoundItem
   object cxLabel5: TcxLabel
     Left = 385
     Top = 171
-    Caption = #29289#26009#21517#31216':'
+    Caption = #23458#25143#21517#31216':'
     ParentFont = False
     Style.Font.Charset = GB2312_CHARSET
     Style.Font.Color = clBlack

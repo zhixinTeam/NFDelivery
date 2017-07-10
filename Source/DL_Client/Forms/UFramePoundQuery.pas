@@ -44,6 +44,7 @@ type
     dxLayout1Item9: TdxLayoutItem;
     N6: TMenuItem;
     N7: TMenuItem;
+    N8: TMenuItem;
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
@@ -56,6 +57,7 @@ type
     procedure N4Click(Sender: TObject);
     procedure N6Click(Sender: TObject);
     procedure N7Click(Sender: TObject);
+    procedure N8Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -106,8 +108,8 @@ function TfFramePoundQuery.InitFormDataSQL(const nWhere: string): string;
 begin
   EditDate.Text := Format('%s жа %s', [Date2Str(FStart), Date2Str(FEnd)]);
 
-  Result := 'Select pl.*,(P_MValue-P_PValue) As P_NetWeight,' +
-            'ABS((P_MValue-P_PValue)-P_LimValue) As P_Wucha From $PL pl';
+  Result := 'Select pl.*,(P_MValue-P_PValue-P_KZValue) As P_NetWeight,' +
+            'ABS((P_MValue-P_PValue-P_KZValue)-P_LimValue) As P_Wucha From $PL pl';
   //xxxxx
 
   if FJBWhere = '' then
@@ -255,7 +257,7 @@ begin
     FJBWhere := '(P_PDate>=''%s'' And P_PDate<''%s'' And P_Type=''%s'' And ' +
                 'P_MDate Is Not Null)';
     FJBWhere := Format(FJBWhere, [DateTime2Str(FTimeS), DateTime2Str(FTimeE),
-                sFlag_Provide]);
+                sFlag_ShipPro]);
     InitFormData('');
   finally
     FJBWhere := '';
@@ -369,6 +371,21 @@ begin
     nPic.Free;
     CloseWaitForm;
     FDM.SqlTemp.Close;
+  end;
+end;
+
+procedure TfFramePoundQuery.N8Click(Sender: TObject);
+begin
+  inherited;
+  if ShowDateFilterForm(FTimeS, FTimeE, True) then
+  try
+    FJBWhere := '(P_PDate>=''%s'' And P_PDate<''%s'' And P_Type=''%s'' And ' +
+                'P_MDate Is Not Null)';
+    FJBWhere := Format(FJBWhere, [DateTime2Str(FTimeS), DateTime2Str(FTimeE),
+                sFlag_ShipTmp]);
+    InitFormData('');
+  finally
+    FJBWhere := '';
   end;
 end;
 

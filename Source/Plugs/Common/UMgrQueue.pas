@@ -9,7 +9,7 @@ interface
 
 uses
   Windows, Classes, DB, SysUtils, SyncObjs, UMgrDBConn, UWaitItem, ULibFun,
-  USysLoger, USysDB, UMgrRemoteVoice;
+  USysLoger, USysDB, UMgrRemoteVoice, UMgrVoiceNet;
 
 type
   PLineItem = ^TLineItem;
@@ -69,12 +69,14 @@ type
     FNoSanQueue : Boolean;     //散装禁用队列
     FDelayQueue : Boolean;     //延时排队(厂内)
     FPoundQueue : Boolean;     //延时排队(厂内依据过皮时间)
+    FNetVoice   : Boolean;     //网络播放语音
   end;
 
   TStockMatchItem = record
     FGroup      : string;      //分组名称
     FMate       : string;      //物料号
     FName       : string;      //物料名
+    FLineNo     : string;      //通道专用分组
   end;
 
   TTruckQueueManager = class;
@@ -99,7 +101,8 @@ type
     procedure ExecuteSQL(const nList: TStrings);
     //执行SQL语句
     procedure LoadStockMatck;
-    function GetStockMatchGroup(const nStockNo: string): string;
+    function GetStockMatchGroup(const nStockNo: string;
+      const nLineNo: string = ''; const nStockInLine: Boolean = True): string;
     function IsStockMatch(const nStockA, nStockB: string): Boolean; overload;
     function IsStockMatch(nTruck: PTruckItem; nLine: PLineItem): Boolean; overload;
     function IsStockMatch(const nStock: string; nLine: PLineItem): Boolean; overload;
@@ -170,6 +173,7 @@ type
     function IsDaiQueueClosed: Boolean;
     function IsSanQueueClosed: Boolean;
     function IsDelayQueue: Boolean;
+    function IsNetPlayVoice: Boolean;
     //队列参数
     procedure RefreshParam;
     procedure RefreshTrucks(const nLoadLine: Boolean);
@@ -363,6 +367,19 @@ begin
   end;
 end;
 
+function TTruckQueueManager.IsNetPlayVoice: Boolean;
+begin
+  Result := False;
+
+  if Assigned(FDBReader) then
+  try
+    FSyncLock.Enter;
+    Result := FDBReader.FParam.FNetVoice;
+  finally
+    FSyncLock.Leave;
+  end;
+end;
+
 //Desc: 添加nSQL语句
 procedure TTruckQueueManager.AddExecuteSQL(const nSQL: string);
 begin
@@ -468,12 +485,17 @@ var nStr: string;
 begin
   if nLocked then SyncLock.Enter;
   try
-    nStr := #9 + GetVoiceTruck(#9, False) + #9;
+    nStr := GetVoiceTruck(#9, False);
+    if nStr = '' then Exit;
+    
+    nStr := #9 + nStr + #9;
     //truck flag
 
     if nStr <> FLastQueueVoice then
     begin
-      gVoiceHelper.PlayVoice(nStr);
+      if IsNetPlayVoice and Assigned(gNetVoiceHelper) then
+           gNetVoiceHelper.PlayVoice(nStr)
+      else gVoiceHelper.PlayVoice(nStr);
       FLastQueueVoice := nStr;
     end;
   finally
@@ -641,6 +663,8 @@ begin
     FNoDaiQueue := False;
     FNoSanQueue := False;
     FDelayQueue := False;
+
+    FNetVoice   := False;
   end;
 
   FWaiter := TWaitObject.Create;
@@ -732,6 +756,7 @@ end;
 procedure TTruckQueueDBReader.LoadStockMatck;
 var nStr: string;
     nIdx: Integer;
+    nUseLine: Boolean;
 begin
   if FOwner.FLineLoaded then Exit;
   {$IFDEF DEBUG}
@@ -745,6 +770,9 @@ begin
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
   if RecordCount > 0 then
   begin
+    nUseLine := Assigned(FindField('M_LineNo'));
+    //是否使用通道分组
+
     SetLength(FMatchItems, RecordCount);
     nIdx := 0;
     First;
@@ -756,6 +784,10 @@ begin
         FGroup := FieldByName('M_Group').AsString;
         FMate  := FieldByName('M_ID').AsString;
         FName  := FieldByName('M_Name').AsString;
+
+        if nUseLine then
+             FLineNo := FieldByName('M_LineNo').AsString
+        else FLineNo := '';
       end;
 
       Inc(nIdx);
@@ -765,19 +797,46 @@ begin
 end;
 
 //Date: 2012-10-21
-//Parm: 品种编号
+//Parm: 品种编号;装车线;装车线包含该物料
 //Desc: 获取nStockNo在品种映射关系中所在的分组
-function TTruckQueueDBReader.GetStockMatchGroup(const nStockNo: string): string;
+function TTruckQueueDBReader.GetStockMatchGroup(const nStockNo: string;
+  const nLineNo: string; const nStockInLine: Boolean): string;
 var nIdx: Integer;
 begin
   Result := '';
+  if nLineNo <> '' then
+  begin
+    if nStockInLine then
+    begin
+      for nIdx:=Low(FMatchItems) to High(FMatchItems) do
+       with FMatchItems[nIdx] do
+        if (FLineNo = nLineNo) and (FMate = nStockNo) then
+        begin
+          Result := FGroup;
+          Exit;
+        end;
+      //装车线支持该品种
+    end else
+    begin 
+      for nIdx:=Low(FMatchItems) to High(FMatchItems) do
+       with FMatchItems[nIdx] do
+        if FLineNo = nLineNo then
+        begin
+          Result := FGroup;
+          Exit;
+        end;
+      //装车线专用分组
+    end;
+  end;
 
   for nIdx:=Low(FMatchItems) to High(FMatchItems) do
-  if FMatchItems[nIdx].FMate = nStockNo then
-  begin
-    Result := FMatchItems[nIdx].FGroup;
-    Break;
-  end;
+   with FMatchItems[nIdx] do
+    if (FLineNo = '') and (FMate = nStockNo) then
+    begin
+      Result := FGroup;
+      Exit;
+    end;
+  //普通物料分组
 end;
 
 //Date: 2012-10-21
@@ -805,6 +864,14 @@ begin
   begin
     Result := (nTruck.FStockGroup <> '') and
               (nTruck.FStockGroup = nLine.FStockGroup);
+    //xxxxx
+
+    if not Result then
+    begin
+      Result := (nLine.FStockGroup <> '') and
+        (nLine.FStockGroup = GetStockMatchGroup(nTruck.FStockNo, nLine.FLineID));
+      //xxxxx
+    end;
   end;
 end;
 
@@ -818,7 +885,8 @@ begin
   if not Result then
   begin
     Result := (nLine.FStockGroup <> '') and
-              (nLine.FStockGroup = GetStockMatchGroup(nStock));
+              (nLine.FStockGroup = GetStockMatchGroup(nStock, nLine.FLineID));
+    //xxxxx
   end;
 end;
 
@@ -871,6 +939,10 @@ begin
 
       if CompareText(Fields[1].AsString, sFlag_PoundQueue) = 0 then
         FParam.FPoundQueue := Fields[0].AsString = sFlag_Yes;
+
+      if CompareText(Fields[1].AsString, sFlag_NetPlayVoice) = 0 then
+        FParam.FNetVoice := Fields[0].AsString = sFlag_Yes;
+      //NetVoice
       Next;
     end;
   end;
@@ -926,7 +998,7 @@ begin
         FStockNo    := FieldByName('Z_StockNo').AsString;
         FStockName  := FieldByName('Z_Stock').AsString;
         FStockType  := FieldByName('Z_StockType').AsString;
-        FStockGroup := GetStockMatchGroup(FStockNo);
+        FStockGroup := GetStockMatchGroup(FStockNo, FLineID, False);
         FPeerWeight := FieldByName('Z_PeerWeight').AsInteger;
 
         FQueueMax   := FieldByName('Z_QueueMax').AsInteger;
@@ -1180,7 +1252,7 @@ begin
       if FTruckPool[i].FIsVIP <> sFlag_TypeShip then Continue;
       //1.交货单与通道类型不匹配
 
-      if not IsStockMatch(FTruckPool[i].FStockNo, FStockNo) then Continue;
+      if not IsStockMatch(FTruckPool[i].FStockNo, FOwner.Lines[nIdx]) then Continue;
       //2.交货单与通道品种不匹配
 
       if BillInLine(FTruckPool[i].FBill, FTrucks, True) >= 0 then Continue;
@@ -1217,7 +1289,7 @@ begin
       if FTruckPool[i].FIsReal and (FRealCount >= FQueueMax) then Continue;
       //2.实位车辆,队列已满
 
-      if not IsStockMatch(FTruckPool[i].FStockNo, FStockNo) then Continue;
+      if not IsStockMatch(FTruckPool[i].FStockNo, FOwner.Lines[nIdx]) then Continue;
       //3.交货单与通道品种不匹配
 
       if not IsLineTruckLeast(FOwner.Lines[nIdx], FTruckPool[i].FIsReal) then
@@ -1392,7 +1464,10 @@ begin
 
           nTruck.FIsVIP := FIsVIP;
           nTruck.FIndex := FIndex;
+
           nTruck.FValue := FValue;
+          if nLine.FPeerWeight>0 then
+            nTruck.FDai := Trunc(FValue * 1000 / nLine.FPeerWeight);
 
           nTruck.FBill  := FBill;
           nTruck.FHKBills := FHKBills;

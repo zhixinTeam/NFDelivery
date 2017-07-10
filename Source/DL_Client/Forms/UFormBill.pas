@@ -29,14 +29,20 @@ type
     dxLayout1Group3: TdxLayoutGroup;
     EditValue: TcxTextEdit;
     dxLayout1Item4: TdxLayoutItem;
-    dxLayout1Group4: TdxLayoutGroup;
     dxLayout1Item7: TdxLayoutItem;
     EditPack: TcxComboBox;
     dxLayout1Group2: TdxLayoutGroup;
     dxLayout1Group5: TdxLayoutGroup;
     EditBrand: TcxTextEdit;
     dxLayout1Item8: TdxLayoutItem;
+    EditLineGroup: TcxComboBox;
+    dxLayout1Item10: TdxLayoutItem;
+    EditMemo: TcxTextEdit;
+    dxLayout1Item11: TdxLayoutItem;
+    dxLayout1Group6: TdxLayoutGroup;
     dxLayout1Group7: TdxLayoutGroup;
+    EditPoundStation: TcxComboBox;
+    dxLayout1Item13: TdxLayoutItem;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure BtnOKClick(Sender: TObject);
@@ -56,8 +62,11 @@ type
     function SetVipTruck(nTruck: String): Boolean;
     //VIP车道设置
     function GetStockPackStyle(const nStockID: string): string;
+    //获取包装袋类型
     function VerifyTruckGPS(const nTruck: String=''): Boolean;
     //车辆是否安装GPS
+    function GetGroupByBrand(const nBrand: string): string;
+    //获取品牌分组
   public
     { Public declarations }
     class function CreateForm(const nPopedom: string = '';
@@ -185,6 +194,8 @@ begin
 
     if Sender = EditLading then
       ActiveControl := EditTruck else
+    if Sender = EditTruck then
+      ActiveControl := EditValue else
     if Sender = EditValue then
          ActiveControl := BtnOK
     else Perform(WM_NEXTDLGCTL, 0, 0);
@@ -212,7 +223,6 @@ procedure TfFormBill.LoadFormData(const nOrders: string);
 begin
   AnalyzeOrderInfo(nOrders, FOrder);
   LoadOrderInfo(FOrder, ListInfo);
-  ActiveControl := EditTruck;
 
   EditBrand.Text:=FOrder.FStockBrand;
   EditBrand.Properties.ReadOnly := EditBrand.Text<>'';
@@ -220,17 +230,7 @@ begin
   {$IFDEF ORDERVALUE}
   EditValue.Text := Format('%.2f', [FOrder.FValue]);
   {$ENDIF}
-  {EditFQ.Text := FOrder.FBatchCode;
-  if EditFQ.Text = '' then
-  with FListA do
-  begin
-    Clear;
-    Values['Brand'] := FOrder.FStockBrand;
-    Values['Value'] := '0.00';
-    //暂时不定
-
-    EditFQ.Text := GetStockBatcode(FOrder.FStockID, PackerEncodeStr(Text));
-  end;}
+  EditFQ.Text := FOrder.FBatchCode;
   //xxxxx
 
   EditTruck.Text := FOrder.FTruck;
@@ -239,6 +239,15 @@ begin
   //包装类型
 
   SetVipTruck(FOrder.FTruck);
+  if LoadZTLineGroup(EditLineGroup.Properties.Items) then
+    EditLineGroup.ItemIndex := 0;
+
+  {$IFDEF GROUPBYBRAND}
+  SetCtrlData(EditLineGroup, GetGroupByBrand(FOrder.FStockBrand));
+  {$ENDIF}
+
+  LoadPoundStation(EditPoundStation.Properties.Items);
+  ActiveControl := EditTruck;
 end;
 
 function TfFormBill.OnVerifyCtrl(Sender: TObject; var nHint: string): Boolean;
@@ -306,9 +315,15 @@ begin
     Values['BuDan'] := FBuDanFlag;
     Values['Seal'] := EditFQ.Text;
     Values['Brand'] := EditBrand.Text;
-      
+    Values['StockArea'] := FOrder.FStockArea;
+
     Values['CusID'] := FOrder.FCusID;
     Values['CusName'] := FOrder.FCusName;
+    Values['LineGroup'] := GetCtrlData(EditLineGroup);
+    Values['Memo']     := Trim(EditMemo.Text);
+
+    Values['PoundStation'] := GetCtrlData(EditPoundStation);
+    Values['PoundName']    := EditPoundStation.Text;
   end;
 
   FBills := SaveBill(PackerEncodeStr(FListA.Text));
@@ -383,7 +398,7 @@ begin
   begin
     Result := True;
     Exit;
-  end;   
+  end;
 
   if nTruck <> '' then
        nTmp := Trim(nTruck)
@@ -407,7 +422,20 @@ begin
     //xxxxx
 
     Result := QueryDlg(nStr, sWarn);
-  end;  
+  end;
+end;
+
+function TfFormBill.GetGroupByBrand(const nBrand: string): string;
+var nStr: string;
+begin
+  nStr := 'Select D_Value From %s Where (D_Name=''ZTLineGroup''' +
+          ' and D_Memo=''%s'')';
+  nStr := Format(nStr, [sTable_SysDict, Trim(nBrand)]);
+
+  Result := '';
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+     Result := Fields[0].AsString;
 end;
 
 initialization

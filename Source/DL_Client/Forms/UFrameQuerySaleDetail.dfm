@@ -59,11 +59,11 @@ inherited fFrameSaleDetailQuery: TfFrameSaleDetailQuery
       Top = 93
       Hint = 'T.L_CusName'
       ParentFont = False
-      TabOrder = 7
+      TabOrder = 8
       Width = 105
     end
     object EditDate: TcxButtonEdit [1]
-      Left = 615
+      Left = 840
       Top = 36
       ParentFont = False
       Properties.Buttons = <
@@ -73,7 +73,7 @@ inherited fFrameSaleDetailQuery: TfFrameSaleDetailQuery
         end>
       Properties.ReadOnly = True
       Properties.OnButtonClick = EditDatePropertiesButtonClick
-      TabOrder = 3
+      TabOrder = 4
       Width = 185
     end
     object EditCustomer: TcxButtonEdit [2]
@@ -95,7 +95,7 @@ inherited fFrameSaleDetailQuery: TfFrameSaleDetailQuery
       Top = 93
       Hint = 'T.L_Value'
       ParentFont = False
-      TabOrder = 6
+      TabOrder = 7
       Width = 115
     end
     object cxtxtdt3: TcxTextEdit [4]
@@ -103,7 +103,7 @@ inherited fFrameSaleDetailQuery: TfFrameSaleDetailQuery
       Top = 93
       Hint = 'T.L_ID'
       ParentFont = False
-      TabOrder = 4
+      TabOrder = 5
       Width = 115
     end
     object cxtxtdt4: TcxTextEdit [5]
@@ -111,7 +111,7 @@ inherited fFrameSaleDetailQuery: TfFrameSaleDetailQuery
       Top = 93
       Hint = 'T.L_StockName'
       ParentFont = False
-      TabOrder = 5
+      TabOrder = 6
       Width = 115
     end
     object EditTruck: TcxButtonEdit [6]
@@ -142,6 +142,18 @@ inherited fFrameSaleDetailQuery: TfFrameSaleDetailQuery
       OnKeyPress = OnCtrlKeyPress
       Width = 115
     end
+    object EditPoundD: TcxButtonEdit [8]
+      Left = 615
+      Top = 36
+      Properties.Buttons = <
+        item
+          Default = True
+          Kind = bkEllipsis
+        end>
+      Properties.OnButtonClick = cxButtonEdit1PropertiesButtonClick
+      TabOrder = 3
+      Width = 162
+    end
     inherited dxGroup1: TdxLayoutGroup
       inherited GroupSearch1: TdxLayoutGroup
         object dxLayout1Item7: TdxLayoutItem
@@ -159,8 +171,13 @@ inherited fFrameSaleDetailQuery: TfFrameSaleDetailQuery
           Control = EditCustomer
           ControlOptions.ShowBorder = False
         end
+        object dxLayout1Item9: TdxLayoutItem
+          Caption = #36807#30917#26085#26399':'
+          Control = EditPoundD
+          ControlOptions.ShowBorder = False
+        end
         object dxLayout1Item6: TdxLayoutItem
-          Caption = #26085#26399#31579#36873':'
+          Caption = #20986#21378#26085#26399':'
           Control = EditDate
           ControlOptions.ShowBorder = False
         end

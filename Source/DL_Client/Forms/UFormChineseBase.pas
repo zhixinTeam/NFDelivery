@@ -11,7 +11,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   UFormBase, UFormNormal, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, cxMaskEdit, cxDropDownEdit,
-  cxTextEdit, dxLayoutControl, StdCtrls, cxCheckBox;
+  cxTextEdit, dxLayoutControl, StdCtrls, cxCheckBox, cxButtonEdit;
 
 type
   TfFormChineseBase = class(TfFormNormal)
@@ -24,14 +24,18 @@ type
     dxGroup2: TdxLayoutGroup;
     cxCheckValid: TcxCheckBox;
     dxLayout1Item4: TdxLayoutItem;
-    EditName: TcxTextEdit;
-    dxLayout1Item6: TdxLayoutItem;
     EditMemo: TcxTextEdit;
     dxLayout1Item11: TdxLayoutItem;
+    EditName: TcxButtonEdit;
+    dxLayout1Item6: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
+    procedure EditNamePropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
+    procedure EditNameKeyPress(Sender: TObject; var Key: Char);
   protected
     { Protected declarations }
     FChineseID: string;
+    procedure GetAreaTo(nName: string='');
     procedure LoadFormData(const nID: string);
     function HaveSaved(nStr: string): Boolean;
     function GetPrintCodeOfStr(nStr: string): string;
@@ -200,6 +204,35 @@ begin
 
   ModalResult := mrOk;
   ShowMsg('∫∫◊÷≈Á¬Î”≥…‰±£¥Ê≥…π¶', sHint);
+end;
+
+procedure TfFormChineseBase.GetAreaTo(nName: string);
+var nP: TFormCommandParam;
+begin
+  nP.FParamA := nName;
+  CreateBaseFormItem(cFI_FormGetAreaTo, '', @nP);
+  if (nP.FCommand <> cCmd_ModalResult) or (nP.FParamA <> mrOK) then Exit;
+
+  EditName.Text := nP.FParamC;
+  EditSource.Text := nP.FParamB;
+end;
+
+procedure TfFormChineseBase.EditNamePropertiesButtonClick(Sender: TObject;
+  AButtonIndex: Integer);
+begin
+  inherited;
+  GetAreaTo(EditName.Text);
+end;
+
+procedure TfFormChineseBase.EditNameKeyPress(Sender: TObject;
+  var Key: Char);
+begin
+  inherited;
+  if Key = Char(VK_RETURN) then
+  begin
+    Key := #0;
+    GetAreaTo(EditName.Text);
+  end;  
 end;
 
 initialization

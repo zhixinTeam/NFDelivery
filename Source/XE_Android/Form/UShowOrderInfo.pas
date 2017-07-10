@@ -6,7 +6,7 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants, 
   FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls,
   UAndroidFormBase, FMX.Edit, FMX.Controls.Presentation, FMX.Layouts,
-  UMITPacker,UClientWorker,UBusinessConst,USysBusiness,UMainFrom;
+  UMITPacker,UClientWorker,UBusinessConst,USysBusiness,UMainFrom, FMX.ListBox;
 
 type
   TFrmShowOrderInfo = class(TfrmFormBase)
@@ -27,6 +27,8 @@ type
     LabelNext: TLabel;
     LabelMValue: TLabel;
     Label7: TLabel;
+    Label3: TLabel;
+    EditArea: TComboBox;
     procedure tmrGetOrderTimer(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char;
@@ -63,6 +65,8 @@ begin
   if Length(gOrders)>0 then
   with gOrders[0] do
   begin
+    if EditArea.ItemIndex >=0  then
+      FSeal  := EditArea.Items[EditArea.ItemIndex];
     FKZValue := StrToFloatDef(EditKZValue.Text, 0);
 
     if SavePurchaseOrders('X', gOrders) then

@@ -51,7 +51,6 @@ type
     procedure Check1Click(Sender: TObject);
     procedure BtnDelClick(Sender: TObject);
     procedure N4Click(Sender: TObject);
-    procedure N6Click(Sender: TObject);
     procedure N7Click(Sender: TObject);
   private
     { Private declarations }
@@ -103,15 +102,15 @@ function TfFrameCardProPQuery.InitFormDataSQL(const nWhere: string): string;
 begin
   EditDate.Text := Format('%s 至 %s', [Date2Str(FStart), Date2Str(FEnd)]);
 
-  Result := 'Select pl.*,(P_MValue-P_PValue) As P_NetWeight,' +
+  Result := 'Select pl.*,(P_MValue-P_PValue-P_KZValue) As P_NetWeight,' +
             '(P_MValue2-P_PValue2) As P_NetWeight2, ' +
-            'ABS((P_MValue-P_PValue)-P_LimValue) As P_Wucha From $PL pl';
+            'ABS((P_MValue-P_PValue-P_KZValue)-P_LimValue) As P_Wucha From $PL pl';
   //xxxxx
 
   if FJBWhere = '' then
   begin
-    Result := Result + ' Where P_Type = ''$TYPE'' and ((P_PDate >=''$S'' and P_PDate<''$E'') or ' +
-              '(P_MDate >=''$S'' and P_MDate<''$E'')) ';
+    Result := Result + ' Where P_Type = ''$TYPE'' and ((P_PDate >=''$S'' and P_PDate<''$E'') and ' +
+              '(P_MDate Is Not NULL)) ';
   end else
   begin
     Result := Result + ' Where P_Type = ''$TYPE'' and (' + FJBWhere + ')';
@@ -206,7 +205,7 @@ var nStr: string;
 begin
   if cxView1.DataController.GetSelectedCount > 0 then
   begin
-    if SQLQuery.FieldByName('P_PValue').AsFloat = 0 then
+    if SQLQuery.FieldByName('P_MValue').AsFloat = 0 then
     begin
       ShowMsg('请先称量皮重', sHint); Exit;
     end;
@@ -229,20 +228,6 @@ begin
   end;
 end;
 
-//Desc: 销售完成统计
-procedure TfFrameCardProPQuery.N6Click(Sender: TObject);
-begin
-  if ShowDateFilterForm(FTimeS, FTimeE, True) then
-  try
-    FJBWhere := '(P_MDate>=''%s'' And P_MDate<''%s'' And P_Type=''%s'')';
-    FJBWhere := Format(FJBWhere, [DateTime2Str(FTimeS), DateTime2Str(FTimeE),
-                sFlag_Sale]);
-    InitFormData('');
-  finally
-    FJBWhere := '';
-  end;
-end;
-
 //Desc: 采购完成统计
 procedure TfFrameCardProPQuery.N7Click(Sender: TObject);
 begin
@@ -251,7 +236,7 @@ begin
     FJBWhere := '(P_PDate>=''%s'' And P_PDate<''%s'' And P_Type=''%s'' And ' +
                 'P_MDate Is Not Null)';
     FJBWhere := Format(FJBWhere, [DateTime2Str(FTimeS), DateTime2Str(FTimeE),
-                sFlag_Provide]);
+                sFlag_ShipPro]);
     InitFormData('');
   finally
     FJBWhere := '';

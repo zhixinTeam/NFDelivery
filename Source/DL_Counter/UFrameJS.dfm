@@ -1,8 +1,8 @@
 object fFrameCounter: TfFrameCounter
   Left = 0
   Top = 0
-  Width = 284
-  Height = 287
+  Width = 537
+  Height = 414
   Font.Charset = GB2312_CHARSET
   Font.Color = clWindowText
   Font.Height = -24
@@ -14,10 +14,24 @@ object fFrameCounter: TfFrameCounter
     Tag = 1
     Left = 10
     Top = 10
-    Width = 265
-    Height = 265
+    Width = 519
+    Height = 399
     Caption = #35013#36710'1'#36947
     TabOrder = 0
+    object Label1: TLabel
+      Left = 10
+      Top = 204
+      Width = 84
+      Height = 24
+      Caption = #21333#25454#21495':'
+    end
+    object Label2: TLabel
+      Left = 266
+      Top = 204
+      Width = 84
+      Height = 24
+      Caption = #21943#30721#26426':'
+    end
     object LabelHint: TcxLabel
       Left = 2
       Top = 26
@@ -35,14 +49,14 @@ object fFrameCounter: TfFrameCounter
       Properties.Alignment.Vert = taVCenter
       Properties.LabelStyle = cxlsRaised
       Height = 50
-      Width = 261
-      AnchorX = 133
+      Width = 515
+      AnchorX = 260
       AnchorY = 51
     end
     object EditTruck: TLabeledEdit
       Left = 10
       Top = 100
-      Width = 245
+      Width = 495
       Height = 37
       EditLabel.Width = 84
       EditLabel.Height = 24
@@ -60,7 +74,7 @@ object fFrameCounter: TfFrameCounter
     object EditDai: TLabeledEdit
       Left = 10
       Top = 165
-      Width = 120
+      Width = 245
       Height = 37
       EditLabel.Width = 60
       EditLabel.Height = 24
@@ -75,8 +89,8 @@ object fFrameCounter: TfFrameCounter
     end
     object BtnStart: TButton
       Left = 10
-      Top = 212
-      Width = 85
+      Top = 340
+      Width = 120
       Height = 42
       Caption = #21551#21160
       Font.Charset = DEFAULT_CHARSET
@@ -89,9 +103,9 @@ object fFrameCounter: TfFrameCounter
       OnClick = BtnStartClick
     end
     object BtnClear: TButton
-      Left = 170
-      Top = 212
-      Width = 85
+      Left = 389
+      Top = 340
+      Width = 120
       Height = 42
       Caption = #28165#38646
       Font.Charset = DEFAULT_CHARSET
@@ -104,9 +118,9 @@ object fFrameCounter: TfFrameCounter
       OnClick = BtnClearClick
     end
     object EditTon: TLabeledEdit
-      Left = 135
+      Left = 263
       Top = 165
-      Width = 120
+      Width = 245
       Height = 37
       EditLabel.Width = 60
       EditLabel.Height = 24
@@ -123,9 +137,9 @@ object fFrameCounter: TfFrameCounter
       OnDblClick = EditTonDblClick
     end
     object BtnPause: TButton
-      Left = 102
-      Top = 212
-      Width = 60
+      Left = 199
+      Top = 340
+      Width = 120
       Height = 42
       Caption = #26242#20572
       Font.Charset = DEFAULT_CHARSET
@@ -136,6 +150,58 @@ object fFrameCounter: TfFrameCounter
       ParentFont = False
       TabOrder = 6
       OnClick = BtnPauseClick
+    end
+    object EditCode: TLabeledEdit
+      Left = 266
+      Top = 292
+      Width = 245
+      Height = 37
+      EditLabel.Width = 60
+      EditLabel.Height = 24
+      EditLabel.Caption = #21943#30721':'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -29
+      Font.Name = #23435#20307
+      Font.Style = []
+      MaxLength = 200
+      ParentFont = False
+      TabOrder = 7
+    end
+    object EditID: TComboBox
+      Left = 10
+      Top = 232
+      Width = 245
+      Height = 32
+      ItemHeight = 24
+      TabOrder = 8
+      OnSelect = EditIDSelect
+    end
+    object EditPrinter: TComboBox
+      Left = 266
+      Top = 232
+      Width = 245
+      Height = 32
+      ItemHeight = 24
+      TabOrder = 9
+    end
+    object EditStock: TLabeledEdit
+      Left = 10
+      Top = 292
+      Width = 245
+      Height = 37
+      AutoSize = False
+      EditLabel.Width = 108
+      EditLabel.Height = 24
+      EditLabel.Caption = #29289#26009#21517#31216':'
+      Font.Charset = DEFAULT_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -21
+      Font.Name = #23435#20307
+      Font.Style = []
+      MaxLength = 200
+      ParentFont = False
+      TabOrder = 10
     end
   end
   object Timer1: TTimer

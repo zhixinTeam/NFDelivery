@@ -10,7 +10,8 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, ZnMD5, ULibFun, UFormCtrl, USysLoger,
-  USysDB, UMITConst, UWorkerBusinessCommand{$IFDEF HardMon},UMgrHardHelper{$ENDIF};
+  USysDB, UMITConst, UWorkerBusinessCommand
+  {$IFDEF HardMon}, UMgrHardHelper, UWorkerHardware{$ENDIF};
 
 type
   TWorkerBusinessShipTmp = class(TMITDBWorker)
@@ -159,6 +160,10 @@ begin
             SF('O_MuiltiPound', FListA.Values['Muilti']),
             SF('O_OneDoor', FListA.Values['TruckBack']),
             SF('O_UsePre', FListA.Values['TruckPre']),
+            {$IFDEF FORCEPSTATION}
+            SF('O_PoundStation', FListA.Values['PoundStation']),
+            SF('O_PoundName', FListA.Values['PoundName']),
+            {$ENDIF}
 
             SF('O_Truck', nTruck),
             SF('O_Status', sFlag_TruckNone),
@@ -205,6 +210,17 @@ begin
     FDBConn.FConn.RollbackTrans;
     raise;
   end;
+
+  {$IFDEF HardMon}
+  if Length(FListA.Values['PoundStation']) > 0 then
+  begin
+    FListC.Clear;
+    FListC.Values['Card'] := 'dt';
+    FListC.Values['Text'] := #9 + FListA.Values['Truck'] + #9;
+    FListC.Values['Content'] := FListA.Values['PoundStation'];
+    THardwareCommander.CallMe(cBC_PlayVoice, PackerEncodeStr(FListC.Text), '', @nOut);
+  end;
+  {$ENDIF}
 end;
 
 //Date: 2015/9/19
@@ -380,6 +396,12 @@ begin
 
       FPoundID    := FieldByName('O_Pound').AsString;
       FMemo       := FieldByName('O_Memo').AsString;
+
+      if Assigned(FindField('O_PoundStation')) then
+      begin
+        FPoundStation := FieldByName('O_PoundStation').AsString;
+        FPoundSName   := FieldByName('O_PoundName').AsString;
+      end;  
 
       FPreTruckP := FieldByName('O_UsePre').AsString = sFlag_Yes;
       if FPreTruckP then
