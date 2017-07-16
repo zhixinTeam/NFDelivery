@@ -68,6 +68,7 @@ ResourceString
   sPopedom_Print      = 'F';                         //打印
   sPopedom_Export     = 'G';                         //导出
   sPopedom_ViewPrice  = 'H';                         //查看单价
+  sPopedom_FullReport = 'I';                         //原始报表
   sPopedom_ViewDai    = 'J';                         //查看袋装
 
   {*数据库标识*}
@@ -174,6 +175,7 @@ ResourceString
   sFlag_DispatchPound = 'PoundDispatch';             //磅站调度
   sFlag_PSanWuChaStop = 'PoundSanWuChaStop';         //超出误差停止业务
   sFlag_ForceAddWater = 'ForceAddWater';             //强制加水品种
+  sFlag_ShadowWeight  = 'ShadowWeight';              //影子重量
   
   sFlag_PoundIfDai    = 'PoundIFDai';                //袋装是否过磅
   sFlag_PoundWuCha    = 'PoundWuCha';                //过磅误差分组

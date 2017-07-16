@@ -58,7 +58,9 @@ type
     FPoundS, FPoundE: TDate;
     //时间区间
     FJBWhere: string;
-    //交班条件 
+    //交班条件
+    FShadowWeight: Double;
+    //影子重量 
     procedure OnCreateFrame; override;
     procedure OnDestroyFrame; override;
     function FilterColumnField: string; override;
@@ -73,8 +75,8 @@ implementation
 
 {$R *.dfm}
 uses
-  IniFiles, ULibFun, UMgrControl, UFormDateFilter, USysPopedom, USysBusiness,
-  UBusinessConst, USysConst, USysDB;
+  IniFiles, ULibFun, UMgrControl, UDataModule, UFormDateFilter, USysPopedom,
+  USysBusiness, UBusinessConst, USysConst, USysDB;
 
 class function TfFrameSaleDetailQuery.FrameID: integer;
 begin
@@ -91,6 +93,7 @@ begin
   FPoundE := Date;
 
   FJBWhere := '';
+  FShadowWeight := -1;
   InitDateRange(Name, FStart, FEnd);
 end;
 
@@ -101,6 +104,7 @@ begin
 end;
 
 function TfFrameSaleDetailQuery.InitFormDataSQL(const nWhere: string): string;
+var nStr: string;
 begin
   EditDate.Text := Format('%s 至 %s', [Date2Str(FStart), Date2Str(FEnd)]);
   EditPoundD.Text := Format('%s 至 %s', [Date2Str(FPoundS), Date2Str(FPoundE)]);
@@ -125,6 +129,28 @@ begin
             MI('$PoundLog', sTable_PoundLog),
             MI('$S', Date2Str(FStart)), MI('$End', Date2Str(FEnd + 1))]);
   //xxxxx
+
+  if not gPopedomManager.HasPopedom(PopedomItem, sPopedom_FullReport) then
+  begin
+    if FShadowWeight < 0 then
+    begin
+      FShadowWeight := 0;
+      nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_ShadowWeight]);
+
+      with FDM.QueryTemp(nStr) do
+      if RecordCount > 0 then
+      begin
+        FShadowWeight := Fields[0].AsFloat;
+      end;
+    end;
+
+    if FShadowWeight > 0 then
+    begin
+      nStr := ' And L_Value<%f';
+      Result := Result +  Format(nStr, [FShadowWeight]);
+    end;
+  end;
 end;
 
 //Desc: 过滤字段

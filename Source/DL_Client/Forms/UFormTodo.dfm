@@ -1,8 +1,8 @@
 inherited fFormTodo: TfFormTodo
   Left = 530
   Top = 295
-  Width = 448
-  Height = 514
+  Width = 453
+  Height = 517
   BorderStyle = bsSizeable
   Position = poDefault
   OnClose = FormClose
@@ -10,17 +10,17 @@ inherited fFormTodo: TfFormTodo
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 432
-    Height = 476
+    Width = 445
+    Height = 490
     inherited BtnOK: TButton
-      Left = 286
-      Top = 443
+      Left = 299
+      Top = 457
       Caption = #30830#23450
       TabOrder = 6
     end
     inherited BtnExit: TButton
-      Left = 356
-      Top = 443
+      Left = 369
+      Top = 457
       Caption = #20851#38381
       TabOrder = 7
     end
@@ -59,7 +59,7 @@ inherited fFormTodo: TfFormTodo
     end
     object EditDate: TcxTextEdit [4]
       Left = 57
-      Top = 256
+      Top = 225
       ParentFont = False
       Properties.ReadOnly = True
       TabOrder = 2
@@ -67,7 +67,7 @@ inherited fFormTodo: TfFormTodo
     end
     object EditFrom: TcxTextEdit [5]
       Left = 57
-      Top = 281
+      Top = 250
       ParentFont = False
       Properties.ReadOnly = True
       TabOrder = 3
@@ -75,18 +75,18 @@ inherited fFormTodo: TfFormTodo
     end
     object EditEvent: TcxMemo [6]
       Left = 57
-      Top = 306
+      Top = 275
       ParentFont = False
       Properties.ReadOnly = True
       Properties.ScrollBars = ssVertical
       Style.Edges = []
       TabOrder = 4
-      Height = 50
-      Width = 360
+      Height = 100
+      Width = 365
     end
     object cxRadio1: TcxRadioGroup [7]
       Left = 23
-      Top = 361
+      Top = 380
       Caption = #22788#29702#26041#26696':'
       ParentFont = False
       Properties.Items = <>
@@ -94,8 +94,8 @@ inherited fFormTodo: TfFormTodo
       Style.Edges = [bLeft, bTop, bRight, bBottom]
       TabOrder = 5
       Transparent = True
-      Height = 70
-      Width = 394
+      Height = 65
+      Width = 399
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup

@@ -287,7 +287,8 @@ end;
 
 procedure TfFormTodo.ListTodoSelectItem(Sender: TObject; Item: TListItem;
   Selected: Boolean);
-var nItem: PEventItem;
+var nStr: string;
+    nItem: PEventItem;
 begin
   cxRadio1.Enabled := Selected;
   if Selected and Assigned(Item) then
@@ -295,8 +296,15 @@ begin
     nItem := Item.Data;
     EditDate.Text := DateTime2Str(nItem.FDate);
     EditFrom.Text := nItem.FFrom;
-    EditEvent.Text := nItem.FEvent;
 
+    while True do
+    begin
+      nStr := StringReplace(nItem.FEvent, #13#10#13#10, #13#10, [rfReplaceAll]);
+      if nItem.FEvent = nStr then Break;
+      nItem.FEvent := nStr;
+    end;
+
+    EditEvent.Text := nItem.FEvent;
     GetSolution(nItem.FSolution);
   end;
 end;

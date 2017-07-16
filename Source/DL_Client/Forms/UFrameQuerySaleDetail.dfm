@@ -145,6 +145,7 @@ inherited fFrameSaleDetailQuery: TfFrameSaleDetailQuery
     object EditPoundD: TcxButtonEdit [8]
       Left = 615
       Top = 36
+      ParentFont = False
       Properties.Buttons = <
         item
           Default = True
