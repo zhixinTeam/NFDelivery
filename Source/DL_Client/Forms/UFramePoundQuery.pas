@@ -66,6 +66,8 @@ type
     //时间区间
     FJBWhere: string;
     //交班查询
+    FShadowWeight: Double;
+    //影子重量
     procedure OnCreateFrame; override;
     procedure OnDestroyFrame; override;
     procedure AfterInitFormData; override;
@@ -95,6 +97,7 @@ begin
   FTimeE := Str2DateTime(Date2Str(Now+1) + ' 00:00:00');
 
   FJBWhere := '';
+  FShadowWeight := -1;
   InitDateRange(Name, FStart, FEnd);
 end;
 
@@ -105,6 +108,7 @@ begin
 end;
 
 function TfFramePoundQuery.InitFormDataSQL(const nWhere: string): string;
+var nStr: string;
 begin
   EditDate.Text := Format('%s 至 %s', [Date2Str(FStart), Date2Str(FEnd)]);
 
@@ -135,6 +139,28 @@ begin
   if nWhere <> '' then
     Result := Result + ' And (' + nWhere + ')';
   //xxxxx
+
+  if not gPopedomManager.HasPopedom(PopedomItem, sPopedom_FullReport) then
+  begin
+    if FShadowWeight < 0 then
+    begin
+      FShadowWeight := 0;
+      nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_ShadowWeight]);
+
+      with FDM.QueryTemp(nStr) do
+      if RecordCount > 0 then
+      begin
+        FShadowWeight := Fields[0].AsFloat;
+      end;
+    end;
+
+    if FShadowWeight > 0 then
+    begin
+      nStr := ' And (P_MValue-P_PValue-P_KZValue)<%f';
+      Result := Result +  Format(nStr, [FShadowWeight]);
+    end;
+  end;
 end;
 
 procedure TfFramePoundQuery.AfterInitFormData;

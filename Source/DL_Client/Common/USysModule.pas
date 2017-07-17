@@ -72,7 +72,8 @@ begin
   gChannelChoolser.AutoUpdateLocal := False;
   //channel
 
-  gDisplayManager.LoadConfig(gPath + cDisp_Config);
+  if FileExists(gPath + cDisp_Config) then
+    gDisplayManager.LoadConfig(gPath + cDisp_Config);
   //LED DisPlay
 end;
 
