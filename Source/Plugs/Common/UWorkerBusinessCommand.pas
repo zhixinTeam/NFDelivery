@@ -425,9 +425,11 @@ end;
 //Desc: 按规则生成序列编号
 function TWorkerBusinessCommander.GetSerailID(var nData: string): Boolean;
 var nInt: Integer;
+    nIsTrans: Boolean;
     nStr,nP,nB: string;
 begin
-  FDBConn.FConn.BeginTrans;
+  nIsTrans := FDBConn.FConn.InTransaction;
+  if not nIsTrans then FDBConn.FConn.BeginTrans;
   try
     Result := False;
     FListA.Text := FIn.FData;
@@ -452,7 +454,8 @@ begin
         nData := '没有[ %s.%s ]的编码配置.';
         nData := Format(nData, [FListA.Values['Group'], FListA.Values['Object']]);
 
-        FDBConn.FConn.RollbackTrans;
+        if not nIsTrans then
+          FDBConn.FConn.RollbackTrans;
         Exit;
       end;
 
@@ -491,10 +494,12 @@ begin
       end;
     end;
 
-    FDBConn.FConn.CommitTrans;
+    if not nIsTrans then
+      FDBConn.FConn.CommitTrans;
     Result := True;
   except
-    FDBConn.FConn.RollbackTrans;
+    if not nIsTrans then
+      FDBConn.FConn.RollbackTrans;
     raise;
   end;
 end;
@@ -934,13 +939,12 @@ begin
       nStr := Format(nStr, [FIn.FData,
                             FListA.Values['Brand']]);
       //xxxxx
+      FOut.FBase.FErrCode := sFlag_ForceHint;
+      FOut.FBase.FErrDesc := nStr;
 
       nStr := 'Update %s Set D_Valid=''%s'' Where D_ID=''%s''';
       nStr := Format(nStr, [sTable_BatcodeDoc, sFlag_BatchOutUse, nBatchNew]);
       gDBConnManager.WorkerExec(FDBConn, nStr);
-
-      FOut.FBase.FErrCode := sFlag_ForceHint;
-      FOut.FBase.FErrDesc := nStr;
     end;
 
     nStr := 'Update %s Set D_LastDate=null Where D_Valid=''%s'' ' +
@@ -1984,6 +1988,9 @@ begin
 
       for nIdx:=Low(nBills) to High(nBills) do
       begin
+        if FloatRelation(nBills[nIdx].FValue, 0, rtLE) then Continue;
+        //发货量为0,不回传磅单
+
         First;
         //init cursor
 

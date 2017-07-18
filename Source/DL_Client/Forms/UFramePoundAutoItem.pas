@@ -1318,6 +1318,14 @@ begin
 
   if FBarrierGate then
   begin
+    {$IFDEF ERROPENONEDOOR}
+    if not nRet then
+    begin
+      OpenDoorByReader(FLastReader, sFlag_Yes);
+      Exit;
+    end;
+    {$ENDIF}
+
     if FUIData.FOneDoor = sFlag_Yes then
          OpenDoorByReader(FLastReader, sFlag_Yes)
     else OpenDoorByReader(FLastReader, sFlag_No);

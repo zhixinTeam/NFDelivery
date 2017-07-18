@@ -252,6 +252,8 @@
   //显示订单量
   {$DEFINE FORCEPSTATION}
   //强制地磅磅站
+  {$DEFINE ERROPENONEDOOR}
+  //过磅失败倒车下磅
 {$ENDIF}
 //广西南方
 

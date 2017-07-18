@@ -59,6 +59,7 @@ type
 
     FStockBrand: string;  //物料品牌
     FStockArea : string;  //产地，矿点
+    FAreaTo    : string;
 
     FTruck: string;       //车牌号
     FBatchCode: string;   //批次号
@@ -929,8 +930,10 @@ begin
 
       Values['StockID']   := FStockID;
       Values['StockName'] := FStockName;
-      Values['StockArea'] := FStockArea;
       Values['StockBrand']:= FStockBrand;
+
+      Values['StockArea'] := FStockArea;
+      Values['AreaTo']    := FAreaTo;
 
       Values['Truck']     := FTruck;
       Values['BatchCode'] := FBatchCode;
@@ -964,8 +967,10 @@ begin
 
       FStockID := Values['StockID'];
       FStockName := Values['StockName'];
-      FStockArea := Values['StockArea'];
       FStockBrand:= Values['StockBrand'];
+
+      FStockArea := Values['StockArea'];
+      FAreaTo    := Values['AreaTo'];
 
       FTruck := Values['Truck'];
       FBatchCode := Values['BatchCode'];

@@ -437,6 +437,33 @@ begin
       Exit;
     end;
 
+    if nStr <> '' then
+    begin
+      if nOrder.FStockID <> FItems[nInt].FStockID then
+      begin
+        ShowMsg('禁止不同品种合单', sHint);
+        Exit;
+      end;
+
+      if nOrder.FStockBrand <> FItems[nInt].FStockBrand then
+      begin
+        ShowMsg('禁止不同品牌合单', sHint);
+        Exit;
+      end;
+
+      if nOrder.FStockArea <> FItems[nInt].FAreaName then
+      begin
+        ShowMsg('禁止不同到货地点合单', sHint);
+        Exit;
+      end;
+
+      if nOrder.FAreaTo <> FItems[nInt].FAreaTo then
+      begin
+        ShowMsg('禁止不同区域流向合单', sHint);
+        Exit;
+      end;
+    end;
+
     if nStr = '' then //第一个选择项
     begin
       with nOrder do
@@ -446,8 +473,9 @@ begin
 
         FStockID := FItems[nInt].FStockID;
         FStockName := FItems[nInt].FStockName;
-        FStockArea := FItems[nInt].FAreaName;
         FStockBrand:= FItems[nInt].FStockBrand;
+        FStockArea := FItems[nInt].FAreaName;
+        FAreaTo    := FItems[nInt].FAreaTo;
 
         FSaleMan := FItems[nInt].FSaleMan;
         FValue := FItems[nInt].FValue;

@@ -6,7 +6,8 @@ uses
   System.SysUtils, System.Types, System.UITypes, System.Classes, System.Variants, 
   FMX.Types, FMX.Graphics, FMX.Controls, FMX.Forms, FMX.Dialogs, FMX.StdCtrls,
   UAndroidFormBase, FMX.Edit, FMX.Controls.Presentation, FMX.Layouts,
-  UMITPacker,UClientWorker,UBusinessConst,USysBusiness,UMainFrom, FMX.ListBox;
+  UMITPacker,UClientWorker,UBusinessConst,USysBusiness,UMainFrom, FMX.ListBox,
+  FMX.ComboEdit;
 
 type
   TFrmShowOrderInfo = class(TfrmFormBase)
@@ -28,7 +29,9 @@ type
     LabelMValue: TLabel;
     Label7: TLabel;
     Label3: TLabel;
-    EditArea: TComboBox;
+    EditKZComment: TComboEdit;
+    Label5: TLabel;
+    EditArea: TComboEdit;
     procedure tmrGetOrderTimer(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char;
@@ -65,8 +68,8 @@ begin
   if Length(gOrders)>0 then
   with gOrders[0] do
   begin
-    if EditArea.ItemIndex >=0  then
-      FSeal  := EditArea.Items[EditArea.ItemIndex];
+    FSeal := EditArea.Text;
+    FKZComment := EditKZComment.Text;
     FKZValue := StrToFloatDef(EditKZValue.Text, 0);
 
     if SavePurchaseOrders('X', gOrders) then
@@ -120,6 +123,9 @@ begin
   lblTruck.Text    := '';
   EditKZValue.Text := '0.00';
 
+  EditArea.ItemIndex := 0;
+  EditKZComment.ItemIndex := 0;
+
   BtnOK.Enabled := False;
   tmrGetOrder.Enabled := True;
   SetLength(gOrders, 0);
@@ -162,6 +168,8 @@ begin
     lblTruck.Text    := FTruck;
     LabelNext.Text   := TruckStatusToStr(FNextStatus);
     LabelMValue.Text := FloatToStr(FPData.FValue);
+    EditKZComment.Text := FKZComment;
+    EditArea.Text      := FSeal;
 
     EditKZValue.Text := FloatToStr(FKZValue);
   end;

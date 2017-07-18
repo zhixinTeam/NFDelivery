@@ -148,6 +148,7 @@ type
     FSelected   : Boolean;         //选中状态
 
     FKZValue    : Double;          //供应扣除
+    FKZComment  : string;          //扣杂原因
     FMemo       : string;          //动作备注
     FSeal       : string;          //验收点
     FCardType   : string;          //卡片类型
@@ -282,6 +283,7 @@ begin
         if (nStr <> '') then
              FKZValue := StrToFloatDef(nStr, 0)
         else FKZValue := 0;
+        FKZComment := Values['KZComment'];
 
         FMemo := Values['Memo'];
         FSeal := Values['Seal'];
@@ -360,6 +362,7 @@ begin
         else Values['Selected'] := 'N';
 
         Values['KZValue']    := FloatToStr(FKZValue);
+        Values['KZComment']  := FKZComment;
         Values['Memo']       := FMemo;
         Values['Seal']       := FSeal;
       end;

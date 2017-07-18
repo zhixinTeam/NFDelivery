@@ -395,9 +395,10 @@ end;
 function TWorkerBusinessBills.VerifyBeforSave(var nData: string): Boolean;
 var nIdx,nInt: Integer;
     nVal,nDec: Double;
-    nStr,nTruck: string;
     nWorker: PDBWorker;
+    nQItem: TLadingBillItem;
     nOut: TWorkerBusinessCommand;
+    nStr,nTruck, nType, nQBill: string;
 begin
   Result := False;
   nTruck := FListA.Values['Truck'];
@@ -474,6 +475,10 @@ begin
     end;
   end;
 
+  nType := '';
+  nQBill:= '';
+  //车辆在队列中的信息
+
   nStr := 'Select R_ID,T_Bill,T_StockNo,T_Type,T_InFact,T_Valid From %s ' +
           'Where T_Truck=''%s'' ';
   nStr := Format(nStr, [sTable_ZTTrucks, nTruck]);
@@ -488,20 +493,29 @@ begin
 
     while not Eof do
     begin
-      if (FieldByName('T_Type').AsString = sFlag_San) and (not FSanMultiBill) then        //允许,但是只能是过皮重后
+      if nType = '' then
+        nType := FieldByName('T_Type').AsString;
+      //获取车辆在队列中的类型
+
+      if nType = sFlag_San then
       begin
-        nStr := '车辆[ %s ]在未完成[ %s ]交货单之前禁止开单.';
-        nData := Format(nStr, [nTruck, FieldByName('T_Bill').AsString]);
-        Exit;
+        if not FSanMultiBill then
+        begin
+          nStr := '车辆[ %s ]在未完成[ %s ]交货单之前禁止开单.';
+          nData := Format(nStr, [nTruck, FieldByName('T_Bill').AsString]);
+          Exit;
+        end;
+
+        nQBill := FieldByName('T_Bill').AsString;
       end else
 
-      if (FieldByName('T_Type').AsString = sFlag_Dai) and
+      if (nType = sFlag_Dai) and
          (FieldByName('T_InFact').AsString <> '') then
       begin
         nStr := '车辆[ %s ]在未完成[ %s ]交货单之前禁止开单.';
         nData := Format(nStr, [nTruck, FieldByName('T_Bill').AsString]);
         Exit;
-      end else
+      end;
 
       if FieldByName('T_Valid').AsString = sFlag_No then
       begin
@@ -521,6 +535,35 @@ begin
       Next;
     end;
   end;
+
+  if (nType = sFlag_San) and (nQBill <> '') and FSanMultiBill then
+  begin
+    nStr := 'Select * From %s Where L_ID=''%s''';
+    nStr := Format(nStr, [sTable_Bill, nQBill]);
+
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nData := Format('提货单[ %s ]信息已丢失.', [nQBill]);
+        Exit;
+      end;
+
+      with nQItem do
+      begin
+        FID := FieldByName('L_ID').AsString;
+        FStockNo := FieldByName('L_StockNO').AsString;
+        FStockName := FieldByName('L_StockName').AsString;
+
+        FCusID := FieldByName('L_CusID').AsString;
+        FCusName := FieldByName('L_CusName').AsString;
+
+        FOrigin := FieldByName('L_Area').AsString;      //区域流向
+        FExtID_1:= FieldByName('L_StockArea').AsString; //到货地点
+      end;  
+    end;  
+  end;
+  //获取队列中的散装车辆提货单信息
 
   TWorkerBusinessCommander.CallMe(cBC_SaveTruckInfo, nTruck, '', @nOut);
   //保存车牌号
@@ -551,6 +594,46 @@ begin
         nStr := StringReplace(FListB.Text, #13#10, ',', [rfReplaceAll]);
         nData := Format('订单[ %s ]信息已丢失.', [nStr]);
         Exit;
+      end;
+
+      if (nType = sFlag_San)  and (nQBill <> '') and FSanMultiBill then
+      with nQItem do
+      begin
+        if FieldByName('invcode').AsString <> FStockNo then
+        begin
+          nStr := '车辆[ %s ]已有交货单[ %s ]品种[ %s ]与 新增交货单品种[ %s ]'+
+                  '不同,禁止合单.';
+          nData := Format(nStr, [nTruck, nQBill, FStockName,
+                   FieldByName('invname').AsString]);
+          Exit;
+        end;
+
+        if FieldByName('custcode').AsString <> FCusID then
+        begin
+          nStr := '车辆[ %s ]已有交货单[ %s ]客户[ %s ]与 新增交货单客户[ %s ]'+
+                  '不同,禁止合单.';
+          nData := Format(nStr, [nTruck, nQBill, FCusName,
+                   FieldByName('custname').AsString]);
+          Exit;
+        end;
+
+        if FieldByName('vdef2').AsString <> FOrigin then
+        begin
+          nStr := '车辆[ %s ]已有交货单[ %s ]区域流向[ %s ]与 新增交货单区域流向[ %s ]'+
+                  '不同,禁止合单.';
+          nData := Format(nStr, [nTruck, nQBill, FOrigin,
+                   FieldByName('vdef2').AsString]);
+          Exit;
+        end;
+
+        if FieldByName('areaclname').AsString <> FExtID_1 then
+        begin
+          nStr := '车辆[ %s ]已有交货单[ %s ]到货地点[ %s ]与 新增交货单到货地点[ %s ]'+
+                  '不同,禁止合单.';
+          nData := Format(nStr, [nTruck, nQBill, FExtID_1,
+                   FieldByName('areaclname').AsString]);
+          Exit;
+        end;
       end;
 
       if not LoadStockInfo(nData) then Exit;
@@ -676,15 +759,36 @@ end;
 //Desc: 保存交货单
 function TWorkerBusinessBills.SaveBills(var nData: string): Boolean;
 var nStr,nSQL,nBill,nBrand: string;
-    nIdx,nInt: Integer;
+    nIdx,nInt,nErrCode: Integer;
+    nDBWorker: PDBWorker;
     nOut: TWorkerBusinessCommand;
 begin
   Result := False;
   FListA.Text := PackerDecodeStr(FIn.FData);
   if not VerifyBeforSave(nData) then Exit;
 
-  FDBConn.FConn.BeginTrans;
-  try       
+  nDBWorker := FDBConn;
+  FDBConn := nil;
+  //备份旧链路
+
+  try
+    with gParamManager.ActiveParam^ do
+    begin
+      FDBConn := gDBConnManager.GetConnection(FDB.FID, nErrCode, True);
+
+      if not Assigned(FDBConn) then
+      begin
+        nData := Format('连接[ %s ]数据库失败(ErrCode: %d).', [FDB.FID, nErrCode]);
+        Exit;
+      end;
+
+      if not FDBConn.FConn.Connected then
+        FDBConn.FConn.Connected := True;
+      //conn db
+    end;
+
+    FDBConn.FConn.BeginTrans;
+    //开启事务
     FOut.FData := '';
     //bill list
 
@@ -950,8 +1054,15 @@ begin
 
     FDBConn.FConn.CommitTrans;
     Result := True;
+
+    gDBConnManager.ReleaseConnection(FDBConn);
+    FDBConn := nDBWorker;
+    //还原链路
   except
     FDBConn.FConn.RollbackTrans;
+    gDBConnManager.ReleaseConnection(FDBConn);
+    FDBConn := nDBWorker;
+    //还原链路
     raise;
   end;
 
@@ -1566,12 +1677,33 @@ begin
   Result := True;
 end;
 
+//Date: 2017/7/15
+//Parm: 排队顺序
+//Desc: 从小到大排序
+procedure SortBillItemsByValue(var nItems: TLadingBillItems);
+var i,j,nInt: Integer;
+    nItem: TLadingBillItem;
+begin
+  nInt := High(nItems);
+  //xxxxx
+
+  for i:=Low(nItems) to nInt do
+   for j:=i+1 to nInt do
+    if nItems[j].FValue < nItems[i].FValue then
+    begin
+      nItem := nItems[i];
+      nItems[i] := nItems[j];
+      nItems[j] := nItem;
+    end;
+  //冒泡排序
+end;
+
 //Date: 2014-09-18
 //Parm: 交货单[FIn.FData];岗位[FIn.FExtParam]
 //Desc: 保存指定岗位提交的交货单列表
 function TWorkerBusinessBills.SavePostBillItems(var nData: string): Boolean;
 var nStr,nSQL,nTmp: string;
-    f,m,nVal,nMVal,nTotal,nDec,nNet: Double;
+    nVal,nMVal,nTotal,nDec,nNet: Double;
     i,nIdx,nInt: Integer;
     {$IFDEF HardMon}
     nReader: THHReaderItem;
@@ -1860,9 +1992,11 @@ begin
   //----------------------------------------------------------------------------
   if FIn.FExtParam = sFlag_TruckBFM then //称量毛重
   begin
+    SortBillItemsByValue(nBills);
+    //从小到大排序
+
     nInt := -1;
     nMVal := 0;
-    
     for nIdx:=Low(nBills) to High(nBills) do
     if nBills[nIdx].FPoundID = sFlag_Yes then
     begin
@@ -1878,7 +2012,10 @@ begin
       Exit;
     end;
 
-    //销售规定卡，在二次过磅时，自动选择可用订单
+    nNet := nMVal - nBills[nInt].FPData.FValue;
+    //车辆净重
+
+    //销售固定卡，在二次过磅时，自动选择可用订单
     if nBills[nInt].FCardUse = sFlag_SaleNew then
     begin
       for nIdx:=Low(nBills) to High(nBills) do
@@ -1888,8 +2025,6 @@ begin
 
     if nBills[nInt].FType = sFlag_San then
     begin
-      nNet := nMVal - nBills[nInt].FPData.FValue;
-
       nVal := 0;
       for nIdx:=Low(nBills) to High(nBills) do
         nVal := nBills[nIdx].FValue + nVal;
@@ -1899,7 +2034,7 @@ begin
       //调整量
 
       if nVal>0 then
-      for nIdx:=Low(nBills) to High(nBills) do
+      for nIdx:=High(nBills) downto Low(nBills) do
       with nBills[nIdx] do
       begin
         if FValue > nVal then
@@ -1933,8 +2068,13 @@ begin
     begin
       if nIdx < High(nBills) then
       begin
-        FMData.FValue := FPData.FValue + FValue;
-        nVal := nVal + FValue;
+         if nNet < FValue then
+              nDec := nNet
+         else nDec := FValue;
+
+        FMData.FValue := FPData.FValue + nDec;
+        nVal := nVal + nDec;
+        nNet := nNet - nDec;
         //累计净重
 
         nSQL := MakeSQLByStr([
