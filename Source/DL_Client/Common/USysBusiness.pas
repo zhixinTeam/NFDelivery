@@ -169,6 +169,10 @@ function ReadPoundCard(var nReader: string;
 procedure CapturePicture(const nTunnel: PPTTunnelItem; const nList: TStrings);
 //抓拍指定通道
 
+procedure GetPoundAutoWuCha(var nWCValZ,nWCValF: Double; const nVal: Double;
+ const nStation: string = '');
+//获取误差范围
+
 function GetStationPoundItem(const nTruck: string;
  var nPoundData: TLadingBillItems): Boolean;
 function SaveStationPoundItem(const nTunnel: PPTTunnelItem;
@@ -856,6 +860,42 @@ begin
     if nLogin > -1 then
       NET_DVR_Logout(nLogin);
     NET_DVR_Cleanup();
+  end;
+end;
+
+//------------------------------------------------------------------------------
+//Date: 2017-07-09
+//Parm: 包装正负误差;票重;磅站号
+//Desc: 计算nVal的误差范围
+procedure GetPoundAutoWuCha(var nWCValZ,nWCValF: Double; const nVal: Double;
+ const nStation: string);
+var nStr: string;
+begin
+  nWCValZ := 0;
+  nWCValF := 0;
+  if nVal <= 0 then Exit;
+
+  nStr := 'Select * From %s Where P_Start<=%.2f and P_End>%.2f';
+  nStr := Format(nStr, [sTable_PoundDaiWC, nVal, nVal]);
+
+  if Length(nStation) > 0 then
+    nStr := nStr + ' And P_Station=''' + nStation + '''';
+  //xxxxx
+
+  with FDM.QuerySQL(nStr) do
+  if RecordCount > 0 then
+  begin
+    if FieldByName('P_Percent').AsString = sFlag_Yes then 
+    begin
+      nWCValZ := nVal * 1000 * FieldByName('P_DaiWuChaZ').AsFloat;
+      nWCValF := nVal * 1000 * FieldByName('P_DaiWuChaF').AsFloat;
+      //按比例计算误差
+    end else
+    begin     
+      nWCValZ := FieldByName('P_DaiWuChaZ').AsFloat;
+      nWCValF := FieldByName('P_DaiWuChaF').AsFloat;
+      //按固定值计算误差
+    end;
   end;
 end;
 

@@ -932,6 +932,13 @@ begin
 
     with gSysParam,FBillItems[0] do
     begin
+      {$IFDEF DaiStepWuCha}
+      if FType = sFlag_Dai then
+      begin
+        GetPoundAutoWuCha(FPoundDaiZ, FPoundDaiF, FInnerData.FValue);
+        //¼ÆËãÎó²î
+      end;
+      {$ELSE}
       if FDaiPercent and (FType = sFlag_Dai) then
       begin
         if nVal > 0 then
@@ -940,6 +947,7 @@ begin
         else FPoundDaiF := Float2Float(FInnerData.FValue * FPoundDaiF_1 * 1000,
                                        cPrecision, False);
       end;
+      {$ENDIF}
 
       if ((FType = sFlag_Dai) and (
           ((nVal > 0) and (FPoundDaiZ > 0) and (nVal > FPoundDaiZ)) or

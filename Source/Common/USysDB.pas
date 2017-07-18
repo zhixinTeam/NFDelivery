@@ -290,6 +290,8 @@ ResourceString
   sTable_PoundLog     = 'Sys_PoundLog';              //过磅数据
   sTable_PoundBak     = 'Sys_PoundBak';              //过磅作废
   sTable_Picture      = 'Sys_Picture';               //存放图片
+  sTable_PoundDaiWC   = 'Sys_PoundDaiWuCha';         //包装误差
+  
   sTable_PoundStation = 'Sys_PoundStation';          //火车衡过磅数据
   sTable_PoundStatBak = 'Sys_PoundStatBak';          //火车衡作废数据
   sTable_PoundStatIMP = 'Sys_PoundStatIMP';          //火车衡过磅数据
@@ -797,6 +799,19 @@ const
    *.P_Mate: 物料
    *.P_Date: 时间
    *.P_Picture: 图片
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewPoundDaiWC = 'Create Table $Table(R_ID $Inc,' +
+       'P_DaiWuChaZ $Float, P_DaiWuChaF $Float, P_Start $Float, P_End $Float,' +
+       'P_Percent Char(1), P_Station varChar(32))';
+  {-----------------------------------------------------------------------------
+   袋装误差范围: PoundDaiWuCha
+   *.P_DaiWuChaZ: 正误差
+   *.P_DaiWuChaF: 负误差
+   *.P_Start: 起始范围
+   *.P_End: 结束范围
+   *.P_Percent: 按比例计算误差(Y、是;其它、否)
+   *.P_Station: 磅站编号
   -----------------------------------------------------------------------------}
 
   sSQL_NewZTLines = 'Create Table $Table(R_ID $Inc, Z_ID varChar(15),' +
@@ -1384,6 +1399,8 @@ begin
   AddSysTableItem(sTable_PoundLog, sSQL_NewPoundLog);
   AddSysTableItem(sTable_PoundBak, sSQL_NewPoundLog);
   AddSysTableItem(sTable_Picture, sSQL_NewPicture);
+  AddSysTableItem(sTable_PoundDaiWC, sSQL_NewPoundDaiWC);
+  
   AddSysTableItem(sTable_PoundStation, sSQL_NewPoundLog);
   AddSysTableItem(sTable_PoundStatBak, sSQL_NewPoundLog);
   AddSysTableItem(sTable_PoundStatIMP, sSQL_NewPoundLog);
