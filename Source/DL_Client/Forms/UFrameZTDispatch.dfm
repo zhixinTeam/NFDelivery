@@ -156,5 +156,14 @@ inherited fFrameZTDispatch: TfFrameZTDispatch
       RadioItem = True
       OnClick = N5Click
     end
+    object N7: TMenuItem
+      Caption = '-'
+      GroupIndex = 12
+    end
+    object N8: TMenuItem
+      Caption = #33337#36816#31163#23736
+      GroupIndex = 12
+      OnClick = N8Click
+    end
   end
 end

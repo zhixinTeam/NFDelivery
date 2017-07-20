@@ -134,6 +134,7 @@ inherited fFormBill: TfFormBill
     object EditPoundStation: TcxComboBox [12]
       Left = 81
       Top = 331
+      ParentFont = False
       TabOrder = 9
       Width = 121
     end

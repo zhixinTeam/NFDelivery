@@ -299,9 +299,17 @@ begin
   end;
   //Query Truck GPS
 
-  LoadSysDictItem(sFlag_PrintBill, FListB);
-  //需打印品种
-  nPrint := FListB.IndexOf(FOrder.FStockID) >= 0;
+  nPrint := False;
+  {$IFDEF PrintShipReport}
+  nPrint := GetCtrlData(EditType) = sFlag_TypeShip;
+  {$ENDIF}
+
+  if not nPrint then
+  begin
+    LoadSysDictItem(sFlag_PrintBill, FListB);
+    //需打印品种
+    nPrint := FListB.IndexOf(FOrder.FStockID) >= 0;
+  end;
 
   with FListA do
   begin

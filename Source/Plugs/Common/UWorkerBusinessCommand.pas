@@ -563,12 +563,13 @@ begin
   //init
 
   nIdx := Length(nTruck);
-  if (nIdx < 3) or (nIdx > 10) then
+  if (nIdx < 3) or (nIdx > 20) then
   begin
-    nData := '有效的车牌号长度为3-10.';
+    nData := '有效的车牌号长度为3-20.';
     Exit;
   end;
 
+  {$IFNDEF NoVerifyTruckNo}
   nWStr := LowerCase(nTruck);
   //lower
 
@@ -586,6 +587,7 @@ begin
       Exit;
     end;
   end;
+  {$ENDIF}
 
   nStr := 'Select T_Valid From %s Where T_Truck=''%s''';
   nStr := Format(nStr, [sTable_Truck, nTruck]);

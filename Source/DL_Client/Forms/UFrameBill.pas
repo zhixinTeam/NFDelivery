@@ -51,6 +51,9 @@ type
     N10: TMenuItem;
     CheckDelButton: TcxCheckBox;
     dxLayout1Item10: TdxLayoutItem;
+    N11: TMenuItem;
+    N12: TMenuItem;
+    N13: TMenuItem;
     procedure EditIDPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnDelClick(Sender: TObject);
@@ -64,6 +67,8 @@ type
     procedure PMenu1Popup(Sender: TObject);
     procedure VIP1Click(Sender: TObject);
     procedure CheckDelButtonClick(Sender: TObject);
+    procedure N12Click(Sender: TObject);
+    procedure N13Click(Sender: TObject);
   protected
     FStart,FEnd: TDate;
     //时间区间
@@ -85,7 +90,7 @@ implementation
 {$R *.dfm}
 uses
   ULibFun, UMgrControl, UDataModule, UFormBase, UFormInputbox, USysPopedom,
-  USysConst, USysDB, USysBusiness, UFormDateFilter;
+  USysConst, USysDB, USysBusiness, UFormDateFilter, UMgrRemotePrint;
 
 //------------------------------------------------------------------------------
 class function TfFrameBill.FrameID: integer;
@@ -207,7 +212,7 @@ var nP: TFormCommandParam;
 begin
   nP.FParamA := '';
   CreateBaseFormItem(cFI_FormMakeBill, PopedomItem, @nP);
-  
+
   if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
   begin
     InitFormData('');
@@ -250,6 +255,7 @@ begin
   N3.Enabled := BtnEdit.Enabled;
   N5.Enabled := BtnEdit.Enabled;
   N7.Enabled := BtnEdit.Enabled;
+  N12.Enabled := BtnEdit.Enabled;
 end;
 
 //Desc: 修改未进厂车牌号
@@ -337,6 +343,45 @@ procedure TfFrameBill.CheckDelButtonClick(Sender: TObject);
 begin
   inherited;
   BtnRefresh.Click;
+end;
+
+procedure TfFrameBill.N12Click(Sender: TObject);
+var nP: TFormCommandParam;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    if SQLQuery.FieldByName('L_IsVIP').AsString <> sFlag_TypeShip then
+    begin
+      ShowMsg('请选择船运单据', sHint);
+      Exit;
+    end;
+
+    nP.FCommand := cCmd_AddData;
+    nP.FParamA := SQLQuery.FieldByName('L_ID').AsString;
+    CreateBaseFormItem(cFI_FormShipPound, PopedomItem, @nP);
+  end;
+end;
+
+procedure TfFrameBill.N13Click(Sender: TObject);
+var nStr,nP: string;
+begin
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('请选择要打印的记录', sHint);
+    Exit;
+  end;
+
+  nStr := '是否在远程打印[ %s.%s ]单据?';
+  nStr := Format(nStr, [SQLQuery.FieldByName('L_ID').AsString,
+                        SQLQuery.FieldByName('L_Truck').AsString]);
+  if not QueryDlg(nStr, sAsk) then Exit;
+
+  if gRemotePrinter.RemoteHost.FPrinter = '' then
+       nP := ''
+  else nP := #9 + gRemotePrinter.RemoteHost.FPrinter;
+
+  nStr := SQLQuery.FieldByName('L_ID').AsString + nP + #7 + sFlag_Sale;
+  gRemotePrinter.PrintBill(nStr);
 end;
 
 initialization

@@ -209,6 +209,10 @@ inherited fFramePoundQuery: TfFramePoundQuery
       Caption = #25171#21360#36807#30917#21333
       OnClick = N3Click
     end
+    object N9: TMenuItem
+      Caption = #36828#31243#25171#30917#21333
+      OnClick = N9Click
+    end
     object N2: TMenuItem
       Caption = #26102#38388#27573#26597#35810
       OnClick = N2Click

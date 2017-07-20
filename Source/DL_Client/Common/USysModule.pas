@@ -38,6 +38,8 @@ uses
   UFrameCardTemp, UFormCardTemp, UFrameCardTmpPQuery,
   UFormReadCard,
   //码头业务
+  UFormShipPound,
+  //船运离岸单
 
   UFrameBillHaulBack, UFormBillHaulBack, UFormGetPoundHis
   {$IFDEF PrintChinese},
@@ -53,7 +55,7 @@ implementation
 
 uses
   UMgrChannel, UChannelChooser, UDataModule, USysDB, USysMAC, SysUtils,
-  USysLoger, USysConst, UMemDataPool, UMgrLEDDisp, UFormBase;
+  USysLoger, USysConst, UMemDataPool, UMgrLEDDisp, UFormBase, UMgrRemotePrint;
 
 //Desc: 初始化系统对象
 procedure InitSystemObject;
@@ -222,6 +224,12 @@ begin
 
   CreateBaseFormItem(cFI_FormTodo);
   //待处理事项
+
+  if FileExists(gPath + 'Printer.xml') then
+  begin
+    gRemotePrinter.LoadConfig(gPath + 'Printer.xml');
+    gRemotePrinter.StartPrinter;
+  end;
 end;
 
 //Desc: 释放系统对象

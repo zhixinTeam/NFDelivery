@@ -1481,6 +1481,8 @@ begin
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
+    if FIsVIP = sFlag_TypeShip then Continue;
+    //船运不检查
     if (FStatus = sFlag_TruckFH) or (FNextStatus = sFlag_TruckFH) then Continue;
     //未装或已装
 
@@ -1503,6 +1505,16 @@ begin
     gERelayManager.ShowTxt(nTunnel, nStr);
     Exit;
   end; //检查通道
+
+  if nTrucks[0].FIsVIP = sFlag_TypeShip then
+  begin
+    nStr := '货船[ %s ]在码头刷卡装船.';
+    nStr := Format(nStr, [nTrucks[0].FTruck]);
+    WriteNearReaderLog(nStr);
+
+    TruckStartFH(nPTruck, nTunnel);
+    Exit;
+  end;
 
   if nTrucks[0].FStatus = sFlag_TruckFH then
   begin
@@ -1746,9 +1758,37 @@ end;
 function GetJSTruck(const nTruck,nBill: string): string;
 var nStr: string;
     nLen: Integer;
+    nWorker: PDBWorker;
 begin
   Result := nTruck;
   if nBill = '' then Exit;
+
+  {$IFDEF JSTruckSimple}
+  nWorker := nil;
+  try
+    nStr := 'Select D_ParamC From %s b' +
+            ' Left Join %s d On d.D_Name=''%s'' and d.D_ParamB=b.L_StockNo ' +
+            'Where b.L_ID=''%s''';
+    nStr := Format(nStr, [sTable_Bill, sTable_SysDict, sFlag_StockItem, nBill]);
+
+    with gDBConnManager.SQLQuery(nStr, nWorker) do
+    if RecordCount > 0 then
+    begin
+      nStr := Trim(Fields[0].AsString);
+      if (nStr = '') or (nStr = 'C') then Exit;
+      //common,普通袋不予格式化
+
+      Result := Copy(Fields[0].AsString + '-', 1, 2) +
+                Copy(Result, 3, cMultiJS_Truck - 2);
+      //format
+      nStr := Result;
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+
+  Exit;
+  {$ENDIF}
 
   {$IFDEF JSTruck}
   nStr := GetStockType(nBill);

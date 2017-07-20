@@ -283,6 +283,7 @@ ResourceString
   sTable_ZTLines      = 'S_ZTLines';                 //装车道
   sTable_ZTTrucks     = 'S_ZTTrucks';                //车辆队列
   sTable_Deduct       = 'S_PoundDeduct';             //过磅暗扣
+  sTable_PoundShip    = 'S_PoundShip';               //船运离岸单
   sTable_BatcodeDoc   = 'S_BatcodeDoc';              //批次号
   sTable_StationTruck = 'S_StationTruck';            //火车厢
   sTable_Customer     = 'S_Customer';                //客户信息
@@ -1160,6 +1161,28 @@ const
    *.D_Valid: 是否有效(Y/N)
   -----------------------------------------------------------------------------}
 
+  sSQL_NewPoundShip = 'Create Table $Table(R_ID $Inc, S_Bill varChar(20),' +
+       'S_YunShu varChar(100), S_Value $Float, S_PiCi varChar(80),' +
+       'S_FengQian varChar(100),S_Memo varChar(500),' +
+       'S_KW varChar(15), S_KZ varChar(15),S_KT varChar(15),' +
+       'S_ZLW varChar(15), S_ZLZ varChar(15), S_ZLT varChar(15),' +
+       'S_ZRW varChar(15), S_ZRZ varChar(15), S_ZRT varChar(15),' +
+       'S_Man varChar(32), S_Date DateTime)';
+  {-----------------------------------------------------------------------------
+   船运发货单: PoundShip
+   *.R_ID: 编号
+   *.S_Bill: 提货单
+   *.S_YunShu: 运输单位
+   *.S_Value: 净重
+   *.S_PiCi: 批次号
+   *.S_FengQian: 封签号
+   *.S_Memo: 备注
+   *.S_KW,S_KZ,S_KT: 空船尾,中,头
+   *.S_ZLW,S_ZLZ,S_ZLT: 重船左(Left)尾,中,头
+   *.S_ZRW,S_ZRZ,S_ZRT: 重船右(Right)尾,中,头
+   *.S_Man,S_Date: 开单人 
+  -----------------------------------------------------------------------------}
+
   sSQL_NewMine = 'Create Table $Table(R_ID $Inc, M_Mine varChar(30), ' +
        'M_PY varChar(15), M_Owner varChar(32), M_Phone varChar(15), ' +
        'M_Stock varChar(32), M_StockName varChar(80), ' +
@@ -1393,6 +1416,7 @@ begin
   AddSysTableItem(sTable_Batcode, sSQL_NewBatcode);
   AddSysTableItem(sTable_BatcodeDoc, sSQL_NewBatcodeDoc);
   AddSysTableItem(sTable_Deduct, sSQL_NewDeduct);
+  AddSysTableItem(sTable_PoundShip, sSQL_NewPoundShip);
   AddSysTableItem(sTable_Mine, sSQL_NewMine);
   AddSysTableItem(sTable_StationTruck, sSQL_NewStationTruck);
 

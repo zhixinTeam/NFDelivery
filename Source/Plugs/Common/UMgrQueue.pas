@@ -1076,15 +1076,17 @@ var nStr: string;
 begin
   if (FParam.FPoundQueue) and (FParam.FDelayQueue) then
   begin                                      //增加厂内依据过皮时间排队 20131114
-    nStr := ' Select * From %s  ' +
-            ' Where IsNull(T_Valid,''%s'')<>''%s'' And IsNull(T_PDate,'''')<>'''' ' +
-            ' Order By T_Index ASC,T_PDate ASC,T_InTime ASC';
-    nStr := Format(nStr, [sTable_ZTTrucks, sFlag_Yes, sFlag_No]);
+    nStr := 'Select * From %s  ' +
+            'Where (IsNull(T_Valid,''%s'')<>''%s'' And ' +
+            ' IsNull(T_PDate,'''')<>'''') Or (T_VIP=''%s'') ' +
+            'Order By T_Index ASC,T_PDate ASC,T_InTime ASC';
+    nStr := Format(nStr, [sTable_ZTTrucks, sFlag_Yes, sFlag_No, sFlag_TypeShip]);
   end else
   begin
-    nStr := 'Select * From %s Where IsNull(T_Valid,''%s'')<>''%s'' $Ext ' +
+    nStr := 'Select * From %s Where (IsNull(T_Valid,''%s'')<>''%s'' $Ext) Or ' +
+            ' (T_VIP=''%s'')  ' +
             'Order By T_Index ASC,T_InFact ASC,T_InTime ASC';
-    nStr := Format(nStr, [sTable_ZTTrucks, sFlag_Yes, sFlag_No]);
+    nStr := Format(nStr, [sTable_ZTTrucks, sFlag_Yes, sFlag_No, sFlag_TypeShip]);
 
     {++++++++++++++++++++++++++++++ 注意 +++++++++++++++++++++++++
      1.厂外模式时,进厂时间(T_InFact)为空,车辆以开单时间(T_InTime)为准.

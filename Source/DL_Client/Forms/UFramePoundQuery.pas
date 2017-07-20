@@ -45,6 +45,7 @@ type
     N6: TMenuItem;
     N7: TMenuItem;
     N8: TMenuItem;
+    N9: TMenuItem;
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
@@ -58,6 +59,7 @@ type
     procedure N6Click(Sender: TObject);
     procedure N7Click(Sender: TObject);
     procedure N8Click(Sender: TObject);
+    procedure N9Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -83,7 +85,7 @@ implementation
 {$R *.dfm}
 uses
   ShellAPI, ULibFun, UMgrControl, UDataModule, USysBusiness, UFormDateFilter,
-  UFormWait, USysConst, USysDB, USysPopedom;
+  UFormWait, USysConst, USysDB, USysPopedom, UMgrRemotePrint;
 
 class function TfFramePoundQuery.FrameID: integer;
 begin
@@ -413,6 +415,35 @@ begin
   finally
     FJBWhere := '';
   end;
+end;
+
+procedure TfFramePoundQuery.N9Click(Sender: TObject);
+var nStr,nP: string;
+begin
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('请选择要打印的记录', sHint);
+    Exit;
+  end;
+
+  nStr := SQLQuery.FieldByName('P_Type').AsString;
+  if nStr = sFlag_Sale then
+  begin
+    ShowMsg('销售单据请在"开单查询"打印', sHint);
+    Exit;
+  end;
+
+  nStr := '是否在远程打印[ %s.%s ]单据?';
+  nStr := Format(nStr, [SQLQuery.FieldByName('P_ID').AsString,
+                        SQLQuery.FieldByName('P_Truck').AsString]);
+  if not QueryDlg(nStr, sAsk) then Exit;
+
+  if gRemotePrinter.RemoteHost.FPrinter = '' then
+       nP := ''
+  else nP := #9 + gRemotePrinter.RemoteHost.FPrinter;
+
+  nStr := SQLQuery.FieldByName('P_ID').AsString + nP + #7 + sFlag_Other;
+  gRemotePrinter.PrintBill(nStr);
 end;
 
 initialization

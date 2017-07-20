@@ -159,6 +159,8 @@ const
   cFI_FormGetPoundHis   = $1161;                     //获取历史已完成磅单
   cFI_FormSelPoundSta   = $1162;                     //选择指定地磅编号
 
+  cFI_FormShipPound     = $1170;                     //船运离岸单
+
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据
   cCmd_ViewSysLog       = $0003;                     //系统日志

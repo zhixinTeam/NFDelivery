@@ -273,14 +273,16 @@
   //中间件控制车检
   {$DEFINE MultiReplay}
   //计数器应答模式
-  {$DEFINE CardProvide}
-  //采用复磅模式
   {$DEFINE LineGroup}
   //通道进行分组
-  {$DEFINE JSTruck}
+  {$DEFINE JSTruckSimple}
   //格式化计数器车牌
   {$DEFINE ORDERVALUE}
   //显示订单量
-  {$DEFINE FORCEPSTATION}
-  //强制地磅磅站
+  {$DEFINE DaiStepWuCha}
+  //包装阶梯误差
+  {$DEFINE PrintShipReport}
+  //船运开单时强制打单
+  {$DEFINE NoVerifyTruckNo}
+  //不校验车牌号(船号不符合规则)
 {$ENDIF}

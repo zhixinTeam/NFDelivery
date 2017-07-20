@@ -38,7 +38,7 @@ type
     FName      : string;
     FHost      : string;
     FPort      : Integer;
-    FEnable    : Boolean;
+    FPrinter   : string;
   end;
 
   TPrinterHelper = class;
@@ -89,6 +89,8 @@ type
     //启停读取
     procedure PrintBill(const nBill: string);
     //打印单
+    property RemoteHost: TPrinterItem read FHost;
+    //属性相关
   end;
 
 var
@@ -154,6 +156,9 @@ var nIdx: Integer;
     nPtr: PRPPrintBill;
     nBase: PRPDataBase;
 begin
+  if not Assigned(FPrinter) then Exit;
+  //xxxxxx
+
   FSyncLock.Enter;
   try
     for nIdx:=FBuffData.Count - 1 downto 0 do
@@ -182,7 +187,7 @@ end;
 //Desc: 载入nFile配置文件
 procedure TPrinterHelper.LoadConfig(const nFile: string);
 var nXML: TNativeXml;
-    nNode, nTmp: TXmlNode;
+    nNode,nTmp: TXmlNode;
 begin
   nXML := TNativeXml.Create;
   try
@@ -196,10 +201,10 @@ begin
       FHost  := nNode.NodeByName('ip').ValueAsString;
       FPort  := nNode.NodeByName('port').ValueAsInteger;
 
-      nTmp := nNode.FindNode('enable');
+      nTmp := nNode.FindNode('printer');
       if Assigned(nTmp) then
-           FEnable := nTmp.ValueAsString <> '0'
-      else FEnable := True;
+           FPrinter := nTmp.ValueAsString
+      else FPrinter := '';
     end;
   finally
     nXML.Free;
@@ -255,8 +260,6 @@ begin
   try
     FWaiter.EnterWait;
     if Terminated then Exit;
-
-    if not FOwner.FHost.FEnable then Exit;
 
     try
       if not FClient.Connected then

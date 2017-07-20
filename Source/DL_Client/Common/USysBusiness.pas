@@ -1651,9 +1651,18 @@ begin
   nBill := AdjustListStrFormat(nBill, '''', True, ',', False);
   //添加引号
 
-  nStr := 'Select * From %s b Left Join %s p on b.L_ID=p.P_Bill Where L_ID In(%s)';
+  {$IFDEF PrintShipReport}
+  nStr := 'Select * From %s b ' +
+          '  Left Join %s p on b.L_ID=p.P_Bill ' +
+          '  Left Join %s s on s.S_Bill=b.L_ID ' +
+          'Where L_ID In(%s)';
+  nStr := Format(nStr, [sTable_Bill, sTable_PoundLog, sTable_PoundShip, nBill]);
+  {$ELSE}
+  nStr := 'Select * From %s b ' +
+          '  Left Join %s p on b.L_ID=p.P_Bill ' +
+          'Where L_ID In(%s)';
   nStr := Format(nStr, [sTable_Bill, sTable_PoundLog, nBill]);
-  //xxxxx
+  {$ENDIF}
 
   if FDM.QueryTemp(nStr).RecordCount < 1 then
   begin
@@ -1662,7 +1671,22 @@ begin
     ShowMsg(nStr, sHint); Exit;
   end;
 
-  nStr := gPath + sReportDir + 'LadingBill.fr3';
+  nStr := '';
+  {$IFDEF PrintShipReport}
+  with FDM.SqlTemp do
+  if FieldByName('L_IsVIP').AsString = sFlag_TypeShip then
+  begin
+    if FieldByName('L_OutFact').AsString = '' then
+         nStr := gPath + sReportDir + 'ShipReqBill.fr3'
+    else nStr := gPath + sReportDir + 'ShipBill.fr3';
+    //船运未出厂时打印装船计划单,出厂时打印船运交互单
+  end;
+  {$ENDIF}
+
+  if nStr = '' then
+    nStr := gPath + sReportDir + 'LadingBill.fr3';
+  //default
+  
   if not FDR.LoadReportFile(nStr) then
   begin
     nStr := '无法正确加载报表文件';

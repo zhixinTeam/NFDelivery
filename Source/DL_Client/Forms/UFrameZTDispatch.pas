@@ -32,6 +32,8 @@ type
     N4: TMenuItem;
     N5: TMenuItem;
     N6: TMenuItem;
+    N7: TMenuItem;
+    N8: TMenuItem;
     procedure ToolBar1AdvancedCustomDraw(Sender: TToolBar;
       const ARect: TRect; Stage: TCustomDrawStage;
       var DefaultDraw: Boolean);
@@ -45,6 +47,7 @@ type
     procedure BtnAddClick(Sender: TObject);
     procedure N3Click(Sender: TObject);
     procedure N5Click(Sender: TObject);
+    procedure N8Click(Sender: TObject);
   private
     { Private declarations }
     FLastRefresh: Int64;
@@ -74,7 +77,7 @@ implementation
 
 {$R *.dfm}
 uses
-  IniFiles, ULibFun, UMgrControl, UFormWait, UFormZTLine,
+  IniFiles, ULibFun, UMgrControl, UFormWait, UFormZTLine, UFormBase,
   USysDB, USysConst, USysFun, USysPopedom, UDataModule, USysLoger;
 
 class function TfFrameZTDispatch.FrameID: integer;
@@ -197,6 +200,10 @@ begin
                 Assigned(dxChart1.Selected) and (dxChart1.Selected.Level = 0);
   N6.Enabled := N5.Enabled;
   //≈Á¬Îª˙∆ÙÕ£
+
+  N8.Enabled := gPopedomManager.HasPopedom(PopedomItem, sPopedom_Edit) and
+                Assigned(dxChart1.Selected) and (dxChart1.Selected.Level > 0);
+  //¥¨‘À¿Î∞∂
 
   nInt := Integer(dxChart1.Selected.Data);
   N5.Checked := FLines[nInt].FPrinterOK;
@@ -377,6 +384,26 @@ begin
       FLines[nInt].FPrinterOK := nMenu.Tag = 10;
       PrinterEnable(FLines[nInt].FID,FLines[nInt].FPrinterOK);
     end;
+  end;
+end;
+
+//Desc: ¥¨‘À¿Î∞∂
+procedure TfFrameZTDispatch.N8Click(Sender: TObject);
+var nP: TdxOcNode;
+    nParm: TFormCommandParam;
+begin
+  with FTrucks[Integer(dxChart1.Selected.Data)] do
+  begin
+    nP := FindNode(FLine);
+    if FLines[Integer(nP.Data)].FIsVip <> sFlag_TypeShip then
+    begin
+      ShowMsg('«Î—°‘Ò¥¨‘ÀΩ⁄µ„', sHint);
+      Exit;
+    end;
+
+    nParm.FCommand := cCmd_AddData;
+    nParm.FParamA := FBill;
+    CreateBaseFormItem(cFI_FormShipPound, PopedomItem, @nParm);
   end;
 end;
 
