@@ -40,6 +40,8 @@ uses
   //码头业务
   UFormShipPound,
   //船运离岸单
+  UFormpoundAdjust,
+  //磅单勘误
 
   UFrameBillHaulBack, UFormBillHaulBack, UFormGetPoundHis
   {$IFDEF PrintChinese},

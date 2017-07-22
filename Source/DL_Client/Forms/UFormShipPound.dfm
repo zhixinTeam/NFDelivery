@@ -47,14 +47,17 @@ inherited fFormShipPound: TfFormShipPound
     object EditYuShu: TcxComboBox [5]
       Left = 81
       Top = 61
+      ParentFont = False
       Properties.DropDownRows = 20
       Properties.ItemHeight = 20
+      Properties.MaxLength = 100
       TabOrder = 2
       Width = 300
     end
     object EditFengQian: TcxTextEdit [6]
       Left = 81
       Top = 136
+      ParentFont = False
       Properties.MaxLength = 100
       TabOrder = 7
       Width = 121
@@ -62,6 +65,7 @@ inherited fFormShipPound: TfFormShipPound
     object EditMemo: TcxTextEdit [7]
       Left = 81
       Top = 335
+      ParentFont = False
       Properties.MaxLength = 500
       TabOrder = 20
       Width = 121
@@ -85,18 +89,24 @@ inherited fFormShipPound: TfFormShipPound
     object EditKW: TcxTextEdit [9]
       Left = 81
       Top = 194
+      ParentFont = False
+      Properties.MaxLength = 15
       TabOrder = 9
       Width = 121
     end
     object EditKZ: TcxTextEdit [10]
       Left = 253
       Top = 194
+      ParentFont = False
+      Properties.MaxLength = 15
       TabOrder = 10
       Width = 121
     end
     object EditKT: TcxTextEdit [11]
       Left = 425
       Top = 194
+      ParentFont = False
+      Properties.MaxLength = 15
       TabOrder = 11
       Width = 121
     end
@@ -120,6 +130,7 @@ inherited fFormShipPound: TfFormShipPound
       Left = 81
       Top = 252
       ParentFont = False
+      Properties.MaxLength = 15
       TabOrder = 13
       Width = 121
     end
@@ -127,6 +138,7 @@ inherited fFormShipPound: TfFormShipPound
       Left = 253
       Top = 252
       ParentFont = False
+      Properties.MaxLength = 15
       TabOrder = 14
       Width = 121
     end
@@ -134,6 +146,7 @@ inherited fFormShipPound: TfFormShipPound
       Left = 425
       Top = 252
       ParentFont = False
+      Properties.MaxLength = 15
       TabOrder = 15
       Width = 121
     end
@@ -141,6 +154,7 @@ inherited fFormShipPound: TfFormShipPound
       Left = 425
       Top = 277
       ParentFont = False
+      Properties.MaxLength = 15
       TabOrder = 18
       Width = 121
     end
@@ -148,6 +162,7 @@ inherited fFormShipPound: TfFormShipPound
       Left = 253
       Top = 277
       ParentFont = False
+      Properties.MaxLength = 15
       TabOrder = 17
       Width = 121
     end
@@ -155,6 +170,7 @@ inherited fFormShipPound: TfFormShipPound
       Left = 81
       Top = 277
       ParentFont = False
+      Properties.MaxLength = 15
       TabOrder = 16
       Width = 121
     end
@@ -177,6 +193,7 @@ inherited fFormShipPound: TfFormShipPound
     object EditBill: TcxTextEdit [20]
       Left = 444
       Top = 36
+      ParentFont = False
       Properties.ReadOnly = True
       TabOrder = 1
       Width = 121
@@ -184,12 +201,14 @@ inherited fFormShipPound: TfFormShipPound
     object EditShip: TcxTextEdit [21]
       Left = 444
       Top = 61
+      ParentFont = False
       TabOrder = 3
       Width = 121
     end
     object EditValue: TcxTextEdit [22]
       Left = 81
       Top = 111
+      ParentFont = False
       TabOrder = 5
       Width = 300
     end

@@ -158,6 +158,7 @@ const
   cFI_FormGetAreaTo     = $1159;                     //获取区域流向(NC)
   cFI_FormGetPoundHis   = $1161;                     //获取历史已完成磅单
   cFI_FormSelPoundSta   = $1162;                     //选择指定地磅编号
+  cFI_FormPoundAjdust   = $1163;                     //磅单勘误
 
   cFI_FormShipPound     = $1170;                     //船运离岸单
 

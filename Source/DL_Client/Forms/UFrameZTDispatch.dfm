@@ -161,7 +161,14 @@ inherited fFrameZTDispatch: TfFrameZTDispatch
       GroupIndex = 12
     end
     object N8: TMenuItem
-      Caption = #33337#36816#31163#23736
+      Tag = 10
+      Caption = #33337#36816#21457#36135#21333
+      GroupIndex = 12
+      OnClick = N8Click
+    end
+    object N9: TMenuItem
+      Tag = 20
+      Caption = #31163#28207#36890#30693#21333
       GroupIndex = 12
       OnClick = N8Click
     end

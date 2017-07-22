@@ -34,6 +34,7 @@ type
     N6: TMenuItem;
     N7: TMenuItem;
     N8: TMenuItem;
+    N9: TMenuItem;
     procedure ToolBar1AdvancedCustomDraw(Sender: TToolBar;
       const ARect: TRect; Stage: TCustomDrawStage;
       var DefaultDraw: Boolean);
@@ -203,6 +204,7 @@ begin
 
   N8.Enabled := gPopedomManager.HasPopedom(PopedomItem, sPopedom_Edit) and
                 Assigned(dxChart1.Selected) and (dxChart1.Selected.Level > 0);
+  N9.Enabled := N8.Enabled;
   //船运离岸
 
   nInt := Integer(dxChart1.Selected.Data);
@@ -401,9 +403,17 @@ begin
       Exit;
     end;
 
-    nParm.FCommand := cCmd_AddData;
-    nParm.FParamA := FBill;
-    CreateBaseFormItem(cFI_FormShipPound, PopedomItem, @nParm);
+    if TComponent(Sender).Tag = 10 then
+    begin
+      nParm.FCommand := cCmd_AddData;
+      nParm.FParamA := FBill;
+      CreateBaseFormItem(cFI_FormShipPound, PopedomItem, @nParm);
+    end; //发货单
+
+    if TComponent(Sender).Tag = 20 then
+    begin
+      PrintShipLeaveReport(FBill, False);
+    end; //离岸通知单
   end;
 end;
 

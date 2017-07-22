@@ -201,6 +201,8 @@ function PrintOrderReport(nOrder: string; const nAsk: Boolean): Boolean;
 //打印采购单
 function PrintDuanDaoReport(nID: string; const nAsk: Boolean): Boolean;
 //打印短倒单
+function PrintShipLeaveReport(nID: string; const nAsk: Boolean): Boolean;
+//船运离岗通知单
 
 //保存电子标签
 function SetTruckRFIDCard(nTruck: string; var nRFIDCard: string;
@@ -1676,7 +1678,7 @@ begin
   with FDM.SqlTemp do
   if FieldByName('L_IsVIP').AsString = sFlag_TypeShip then
   begin
-    if FieldByName('L_OutFact').AsString = '' then
+    if FieldByName('S_Bill').AsString = '' then
          nStr := gPath + sReportDir + 'ShipReqBill.fr3'
     else nStr := gPath + sReportDir + 'ShipBill.fr3';
     //船运未出厂时打印装船计划单,出厂时打印船运交互单
@@ -1703,6 +1705,52 @@ begin
 
   nParam.FName := 'TruckSort';
   nParam.FValue := nSort;
+  FDR.AddParamItem(nParam);
+
+  FDR.Dataset1.DataSet := FDM.SqlTemp;
+  FDR.ShowReport;
+  Result := FDR.PrintSuccess;
+end;
+
+//Date: 2017-07-20
+//Parm: 交货单号;询问
+//Desc: 打印船运离岸通知单
+function PrintShipLeaveReport(nID: string; const nAsk: Boolean): Boolean;
+var nStr: string; 
+    nParam: TReportParamItem;
+begin
+  Result := False;
+  nStr := 'Update %s Set S_LeaveMan=''%s'',S_LeaveDate=%s ' +
+          'Where S_Bill=''%s''';
+  nStr := Format(nStr, [sTable_PoundShip, gSysParam.FUserID,
+          sField_SQLServer_Now, nID]);
+  FDM.ExecuteSQL(nStr); 
+
+  nStr := 'Select * From %s b ' +
+          '  Left Join %s s on s.S_Bill=b.L_ID ' +
+          'Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, sTable_PoundShip, nID]);
+
+  if FDM.QueryTemp(nStr).RecordCount < 1 then
+  begin
+    nStr := '编号为[ %s ] 的提货记录已无效!!';
+    nStr := Format(nStr, [nID]);
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nStr := gPath + sReportDir + 'ShipLeave.fr3';
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nStr := '无法正确加载报表文件';
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nParam.FName := 'UserName';
+  nParam.FValue := gSysParam.FUserID;
+  FDR.AddParamItem(nParam);
+
+  nParam.FName := 'Company';
+  nParam.FValue := gSysParam.FHintText;
   FDR.AddParamItem(nParam);
 
   FDR.Dataset1.DataSet := FDM.SqlTemp;

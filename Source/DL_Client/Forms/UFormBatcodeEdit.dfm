@@ -149,7 +149,7 @@ inherited fFormBatcodeEdit: TfFormBatcodeEdit
             LayoutDirection = ldHorizontal
             ShowBorder = False
             object dxLayout1Item8: TdxLayoutItem
-              Caption = #39044' '#35686' '#37327':'
+              Caption = #39044#35686'('#20313'):'
               Control = EditWarn
               ControlOptions.ShowBorder = False
             end

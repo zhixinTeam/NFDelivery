@@ -22,8 +22,11 @@ type
     LabelTruck: TcxLabel;
     LabelDec: TcxLabel;
     LabelTon: TcxLabel;
-    LabelBill: TcxLabel;
+    LabelCustomer: TcxLabel;
     LabelOrder: TcxLabel;
+    LabelBill: TcxLabel;
+    cxLabel1: TcxLabel;
+    cxLabel2: TcxLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure ComPort1RxChar(Sender: TObject; Count: Integer);
@@ -177,11 +180,13 @@ begin
        15: StopBits := sbOne5StopBits
        else StopBits := sbOneStopBit;
       end;
+
+      if FPort <> '' then
+        ComPort1.Open;
+      //xxxxx
     finally
       nIni.Free;
-    end;
-
-    ComPort1.Open;
+    end; 
   end;
 end;
 
@@ -192,6 +197,7 @@ begin
     Timer1.Enabled := False;
     LabelDec.Caption := '';
 
+    LabelCustomer.Caption := '客户名称:';
     LabelBill.Caption := '交货单号:';
     LabelTruck.Caption := '车牌号码:';
     LabelOrder.Caption := '销售订单:';
@@ -288,6 +294,7 @@ begin
       nStock := FieldByName('L_StockNo').AsString;
       nVip := FieldByName('L_IsVip').AsString;
 
+      LabelCustomer.Caption := '客户名称: ' + FieldByName('L_CusName').AsString;
       LabelBill.Caption := '交货单号: ' + FieldByName('L_ID').AsString;
       LabelOrder.Caption := '销售订单: ' + FieldByName('L_ZhiKa').AsString;
       LabelTruck.Caption := '车牌号码: ' + FieldByName('L_Truck').AsString;
@@ -416,6 +423,5 @@ begin
 
   FDM.ADOConn.Connected := False;
 end;
-
 
 end.

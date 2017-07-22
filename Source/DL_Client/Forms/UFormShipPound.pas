@@ -74,6 +74,8 @@ type
     //提货单号
     FShip: string;
     //船运单记录
+    FPlanValue: Double;
+    //计划量
     procedure LoadFormData(const nID: string);
   public
     { Public declarations }
@@ -127,7 +129,7 @@ begin
     EditYuShu.Properties.Items.LoadFromFile(gPath + cYuShuFile);
   //xxxxx
 
-  nStr := 'Select L_ID,L_CusName,L_StockName,L_Truck,L_Seal,' +
+  nStr := 'Select L_ID,L_CusName,L_StockName,L_Truck,L_Value,L_Seal,' +
           'L_Memo,L_IsVIP,s.* From %s b ' +
           ' Left Join %s s on s.S_Bill=b.L_ID ' +
           'Where b.L_ID=''%s''';
@@ -163,6 +165,11 @@ begin
     EditMemo.Text := Trim(FieldByName('S_Memo').AsString);
     if EditMemo.Text = '' then
       EditMemo.Text := FieldByName('L_Memo').AsString;
+    //xxxxx
+
+    FPlanValue := FieldByName('S_Plan').AsFloat;
+    if FPlanValue < 0.01 then
+      FPlanValue := FieldByName('L_Value').AsFloat;
     //xxxxx
 
     EditKW.Text := FieldByName('S_KW').AsString;
@@ -201,6 +208,7 @@ begin
   nStr := MakeSQLByStr([SF('S_Bill', FBill),
           SF('S_YunShu', EditYuShu.Text),
           SF('S_Value', EditValue.Text, sfVal),
+          SF('S_Plan', FPlanValue, sfVal),
           SF('S_PiCi', EditPici.Text),
           SF('S_FengQian', EditFengQian.Text),
           SF('S_Memo', EditMemo.Text),
@@ -213,14 +221,16 @@ begin
           SF('S_ZLZ', EditZLZ.Text),
           SF('S_ZLT', EditZLT.Text),
           SF('S_ZRW', EditZRW.Text),
-          SF('S_ZRZ', EditZRW.Text),
-          SF('S_ZRT', EditZRW.Text),
+          SF('S_ZRZ', EditZRZ.Text),
+          SF('S_ZRT', EditZRT.Text),
 
           SF('S_Man', gSysParam.FUserID),
           SF('S_Date', sField_SQLServer_Now, sfVal)
           ], sTable_PoundShip, nStr, nStr = '');
-  //xxxxx
+  FDM.ExecuteSQL(nStr);
 
+  nStr := 'Update %s Set L_Value=%s Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, EditValue.Text, FBill]);
   FDM.ExecuteSQL(nStr);
 
   with EditYuShu.Properties do

@@ -3,8 +3,8 @@ object fFormMain: TfFormMain
   Top = 46
   BorderStyle = bsNone
   Caption = #29992#25143#33258#21161#26597#35810#31995#32479
-  ClientHeight = 659
-  ClientWidth = 931
+  ClientHeight = 792
+  ClientWidth = 1012
   Color = clBlack
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clRed
@@ -19,7 +19,7 @@ object fFormMain: TfFormMain
   TextHeight = 56
   object LabelStock: TcxLabel
     Left = 0
-    Top = 285
+    Top = 373
     Align = alTop
     AutoSize = False
     Caption = #21697#31181#21517#31216':'
@@ -35,12 +35,12 @@ object fFormMain: TfFormMain
     Properties.Alignment.Vert = taVCenter
     Transparent = True
     Height = 95
-    Width = 931
-    AnchorY = 333
+    Width = 1012
+    AnchorY = 421
   end
   object LabelNum: TcxLabel
     Left = 0
-    Top = 475
+    Top = 563
     Align = alTop
     AutoSize = False
     Caption = #24320#25918#36947#25968':'
@@ -54,14 +54,13 @@ object fFormMain: TfFormMain
     Properties.Alignment.Horz = taLeftJustify
     Properties.Alignment.Vert = taVCenter
     Transparent = True
-    Visible = False
     Height = 95
-    Width = 931
-    AnchorY = 523
+    Width = 1012
+    AnchorY = 611
   end
   object LabelHint: TcxLabel
     Left = 0
-    Top = 570
+    Top = 658
     Align = alClient
     Caption = #35831#24744#21047#21345
     ParentFont = False
@@ -75,14 +74,14 @@ object fFormMain: TfFormMain
     Properties.Alignment.Vert = taVCenter
     Properties.WordWrap = True
     Transparent = True
-    Width = 931
-    AnchorX = 466
-    AnchorY = 615
+    Width = 1012
+    AnchorX = 506
+    AnchorY = 725
   end
   object Panel1: TPanel
     Left = 0
     Top = 0
-    Width = 931
+    Width = 1012
     Height = 95
     Align = alTop
     BevelOuter = bvNone
@@ -105,11 +104,11 @@ object fFormMain: TfFormMain
       Properties.Alignment.Vert = taVCenter
       Transparent = True
       Height = 95
-      Width = 902
+      Width = 983
       AnchorY = 48
     end
     object LabelDec: TcxLabel
-      Left = 902
+      Left = 983
       Top = 0
       Align = alRight
       ParentFont = False
@@ -128,7 +127,7 @@ object fFormMain: TfFormMain
   end
   object LabelTon: TcxLabel
     Left = 0
-    Top = 380
+    Top = 468
     Align = alTop
     AutoSize = False
     Caption = #25552#36135#25968#37327':'
@@ -143,15 +142,14 @@ object fFormMain: TfFormMain
     Properties.Alignment.Vert = taVCenter
     Transparent = True
     Height = 95
-    Width = 931
-    AnchorY = 428
+    Width = 1012
+    AnchorY = 516
   end
-  object LabelBill: TcxLabel
+  object LabelCustomer: TcxLabel
     Left = 0
-    Top = 95
+    Top = 105
     Align = alTop
-    AutoSize = False
-    Caption = #20132#36135#21333#21495':'
+    Caption = #23458#25143#21517#31216':'
     ParentFont = False
     Style.Edges = [bLeft, bRight, bBottom]
     Style.Font.Charset = DEFAULT_CHARSET
@@ -161,14 +159,14 @@ object fFormMain: TfFormMain
     Style.Font.Style = [fsBold]
     Style.IsFontAssigned = True
     Properties.Alignment.Vert = taVCenter
+    Properties.WordWrap = True
     Transparent = True
-    Height = 95
-    Width = 931
-    AnchorY = 143
+    Width = 1012
+    AnchorY = 139
   end
   object LabelOrder: TcxLabel
     Left = 0
-    Top = 190
+    Top = 278
     Align = alTop
     AutoSize = False
     Caption = #38144#21806#35746#21333':'
@@ -183,8 +181,68 @@ object fFormMain: TfFormMain
     Properties.Alignment.Vert = taVCenter
     Transparent = True
     Height = 95
-    Width = 931
-    AnchorY = 238
+    Width = 1012
+    AnchorY = 326
+  end
+  object LabelBill: TcxLabel
+    Left = 0
+    Top = 183
+    Align = alTop
+    AutoSize = False
+    Caption = #20132#36135#21333#21495':'
+    ParentFont = False
+    Style.Edges = [bLeft, bRight, bBottom]
+    Style.Font.Charset = DEFAULT_CHARSET
+    Style.Font.Color = clWhite
+    Style.Font.Height = -64
+    Style.Font.Name = #23435#20307
+    Style.Font.Style = [fsBold]
+    Style.IsFontAssigned = True
+    Properties.Alignment.Vert = taVCenter
+    Transparent = True
+    Height = 95
+    Width = 1012
+    AnchorY = 231
+  end
+  object cxLabel1: TcxLabel
+    Left = 0
+    Top = 95
+    Align = alTop
+    AutoSize = False
+    ParentFont = False
+    Style.Edges = [bLeft, bRight, bBottom]
+    Style.Font.Charset = DEFAULT_CHARSET
+    Style.Font.Color = clWhite
+    Style.Font.Height = -64
+    Style.Font.Name = #23435#20307
+    Style.Font.Style = [fsBold]
+    Style.IsFontAssigned = True
+    Properties.Alignment.Vert = taVCenter
+    Properties.WordWrap = True
+    Transparent = True
+    Height = 10
+    Width = 1012
+    AnchorY = 100
+  end
+  object cxLabel2: TcxLabel
+    Left = 0
+    Top = 173
+    Align = alTop
+    AutoSize = False
+    ParentFont = False
+    Style.Edges = [bLeft, bRight, bBottom]
+    Style.Font.Charset = DEFAULT_CHARSET
+    Style.Font.Color = clWhite
+    Style.Font.Height = -64
+    Style.Font.Name = #23435#20307
+    Style.Font.Style = [fsBold]
+    Style.IsFontAssigned = True
+    Properties.Alignment.Vert = taVCenter
+    Properties.WordWrap = True
+    Transparent = True
+    Height = 10
+    Width = 1012
+    AnchorY = 178
   end
   object ComPort1: TComPort
     BaudRate = br9600

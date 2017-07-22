@@ -54,6 +54,7 @@ type
     N11: TMenuItem;
     N12: TMenuItem;
     N13: TMenuItem;
+    N14: TMenuItem;
     procedure EditIDPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnDelClick(Sender: TObject);
@@ -331,6 +332,11 @@ begin
           SQLQuery.FieldByName('R_ID').AsString]);
   FDM.ExecuteSQL(nStr);
 
+  nStr := 'Update %s Set T_VIP=''%s'' Where T_HKBills Like ''%%%s%%''';
+  nStr := Format(nStr, [sTable_ZTTrucks, nFlag,
+          SQLQuery.FieldByName('L_ID').AsString]);
+  FDM.ExecuteSQL(nStr);
+
   nStr := '交货单类型[ %s -> %s ].';
   nStr := Format(nStr, [SQLQuery.FieldByName('L_IsVIP').AsString, nFlag]);
   FDM.WriteSysLog(sFlag_BillItem, SQLQuery.FieldByName('L_ID').AsString, nStr);
@@ -356,9 +362,17 @@ begin
       Exit;
     end;
 
-    nP.FCommand := cCmd_AddData;
-    nP.FParamA := SQLQuery.FieldByName('L_ID').AsString;
-    CreateBaseFormItem(cFI_FormShipPound, PopedomItem, @nP);
+    if TComponent(Sender).Tag = 10 then
+    begin
+      nP.FCommand := cCmd_AddData;
+      nP.FParamA := SQLQuery.FieldByName('L_ID').AsString;
+      CreateBaseFormItem(cFI_FormShipPound, PopedomItem, @nP);
+    end; //发货单
+
+    if TComponent(Sender).Tag = 20 then
+    begin
+      PrintShipLeaveReport(SQLQuery.FieldByName('L_ID').AsString, False);
+    end; //离岸通知单
   end;
 end;
 

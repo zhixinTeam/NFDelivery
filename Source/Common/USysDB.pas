@@ -1162,25 +1162,28 @@ const
   -----------------------------------------------------------------------------}
 
   sSQL_NewPoundShip = 'Create Table $Table(R_ID $Inc, S_Bill varChar(20),' +
-       'S_YunShu varChar(100), S_Value $Float, S_PiCi varChar(80),' +
-       'S_FengQian varChar(100),S_Memo varChar(500),' +
+       'S_YunShu varChar(100), S_Value $Float, S_Plan $Float, ' +
+       'S_PiCi varChar(80), S_FengQian varChar(100),S_Memo varChar(500),' +
        'S_KW varChar(15), S_KZ varChar(15),S_KT varChar(15),' +
        'S_ZLW varChar(15), S_ZLZ varChar(15), S_ZLT varChar(15),' +
        'S_ZRW varChar(15), S_ZRZ varChar(15), S_ZRT varChar(15),' +
-       'S_Man varChar(32), S_Date DateTime)';
+       'S_Man varChar(32), S_Date DateTime,' +
+       'S_LeaveMan varChar(32), S_LeaveDate DateTime)';
   {-----------------------------------------------------------------------------
    船运发货单: PoundShip
    *.R_ID: 编号
    *.S_Bill: 提货单
    *.S_YunShu: 运输单位
    *.S_Value: 净重
+   *.S_Plan: 计划量
    *.S_PiCi: 批次号
    *.S_FengQian: 封签号
    *.S_Memo: 备注
    *.S_KW,S_KZ,S_KT: 空船尾,中,头
    *.S_ZLW,S_ZLZ,S_ZLT: 重船左(Left)尾,中,头
    *.S_ZRW,S_ZRZ,S_ZRT: 重船右(Right)尾,中,头
-   *.S_Man,S_Date: 开单人 
+   *.S_Man,S_Date: 开单人
+   *.S_LeaveMan,S_LeaveDate: 离港
   -----------------------------------------------------------------------------}
 
   sSQL_NewMine = 'Create Table $Table(R_ID $Inc, M_Mine varChar(30), ' +
