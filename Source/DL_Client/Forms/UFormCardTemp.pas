@@ -45,6 +45,9 @@ type
     dxLayout1Item15: TdxLayoutItem;
     EditPoundStation: TcxComboBox;
     dxLayout1Item16: TdxLayoutItem;
+    EditTruckOut: TcxCheckBox;
+    dxLayout1Item17: TdxLayoutItem;
+    dxLayout1Group2: TdxLayoutGroup;
     procedure BtnOKClick(Sender: TObject);
     procedure ComPort1RxChar(Sender: TObject; Count: Integer);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -305,6 +308,10 @@ begin
     if EditPre.Checked then
          Values['TruckPre']:= sFlag_Yes
     else Values['TruckPre']:= sFlag_No;
+
+    if EditTruckOut.Checked then
+         Values['TruckOut']:= sFlag_Yes
+    else Values['TruckOut']:= sFlag_No;
 
     Values['PoundStation'] := GetCtrlData(EditPoundStation);
     Values['PoundName']    := EditPoundStation.Text;

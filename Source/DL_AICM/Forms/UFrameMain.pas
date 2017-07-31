@@ -10,6 +10,7 @@ uses
 type
   TfFrameMain = class(TfFrameBase)
     ClientImage: TImage;
+    ShowWelcome: TStaticText;
   private
     { Private declarations }
   public
@@ -55,10 +56,23 @@ end;
 
 procedure TfFrameMain.OnShowFrame;
 var nStr: string;
+    nList: TStrings;
 begin
   nStr := gPath + 'Images\Background.jpg';
   if FileExists(nStr) then
     ClientImage.Picture.LoadFromFile(nStr);
+
+  nStr := gPath + 'Images\Welcome.txt';
+  if FileExists(nStr) then
+  begin
+    nList := TStringList.Create;
+    try
+      nList.LoadFromFile(nStr);
+      ShowWelcome.Caption := nList.Text;
+    finally
+      nList.Free;
+    end;
+  end;
 end;
 
 initialization

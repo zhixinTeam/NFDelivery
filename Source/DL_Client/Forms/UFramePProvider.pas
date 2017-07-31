@@ -95,12 +95,25 @@ end;
 //Desc: 删除
 procedure TfFrameProvider.BtnDelClick(Sender: TObject);
 var nStr: string;
+    nList: TStrings;
 begin
   if cxView1.DataController.GetSelectedCount > 0 then
   begin
     nStr := SQLQuery.FieldByName('P_Name').AsString;
     nStr := Format('确定要删除供应商[ %s ]吗?', [nStr]);
     if not QueryDlg(nStr, sAsk) then Exit;
+
+    nList := TStringList.Create;
+    //init
+
+    if SQLQuery.FieldByName('P_WeiXin').AsString <> '' then
+    try
+      nList.Values['Type']     := 'del';
+      nList.Values['WebProID'] := SQLQuery.FieldByName('P_WeiXin').AsString;
+      if not WebChatEditShopCustom(nList.Text, sFlag_No) then Exit;
+    finally
+      nList.Free;
+    end;
 
     nStr := 'Delete From %s Where R_ID=%s';
     nStr := Format(nStr, [sTable_Provider, SQLQuery.FieldByName('R_ID').AsString]);

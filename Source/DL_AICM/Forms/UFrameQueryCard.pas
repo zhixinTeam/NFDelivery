@@ -123,7 +123,7 @@ begin
       nStock := FieldByName('L_StockNo').AsString;
 
       LabelBill.Caption := '交货单号: ' + FieldByName('L_ID').AsString;
-      LabelOrder.Caption := '销售订单: ' + FieldByName('L_ZhiKa').AsString;
+      LabelOrder.Caption := '客户名称: ' + FieldByName('L_CusName').AsString;
       LabelTruck.Caption := '车牌号码: ' + FieldByName('L_Truck').AsString;
       LabelStock.Caption := '品种名称: ' + FieldByName('L_StockName').AsString;
       LabelTon.Caption := '提货数量: ' + FieldByName('L_Value').AsString + '吨';

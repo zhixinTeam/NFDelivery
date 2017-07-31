@@ -775,8 +775,7 @@ begin
     Exit;
   end;
 
-  if (nReader <> '') and
-     (not gTruckQueueManager.IsTruckAutoOut(nCardType = sFlag_Sale)) then
+  if nReader <> '' then
     HardOpenDoor(nReader);
   //Ì§¸Ë
 
@@ -2001,7 +2000,7 @@ var nIdx: Integer;
     nStr: string;
 begin
   for nIdx := 0 to 3 do
-  begin
+  try
     {$IFDEF RFIDOPENDOOR}
     nStr := StringReplace(nReader, 'V', 'H', [rfReplaceAll]);
     gHYReaderManager.OpenDoor(nStr);
@@ -2009,6 +2008,8 @@ begin
     nStr := StringReplace(nReader, 'V', '1', [rfReplaceAll]);
     gHardwareHelper.OpenDoor(nStr);
     {$ENDIF}
+  except
+    Continue;
   end;
 end;
 

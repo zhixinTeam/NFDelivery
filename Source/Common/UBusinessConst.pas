@@ -200,6 +200,7 @@ type
     FMuiltiPound: string;         //是否为复磅订单
     FMuiltiType : string;         //是否为复磅操作
     FOneDoor    : string;         //同一侧上下磅
+    FOutDoor    : string;         //是否出厂
 
     FLineGroup  : string;         //通道分组
     FPoundStation: string;        //磅站编号
@@ -336,6 +337,7 @@ begin
         FMuiltiPound:= Values['MuiltiPound'];
         FMuiltiType := Values['MuiltiType'];
         FOneDoor    := Values['OneDoor'];
+        FOutDoor    := Values['OutDoor'];
 
         FIsVIP      := Values['IsVIP'];
         FStatus     := Values['Status'];
@@ -455,6 +457,7 @@ begin
         Values['MuiltiPound']:= FMuiltiPound;
         Values['MuiltiType'] := FMuiltiType;
         Values['OneDoor']    := FOneDoor;
+        Values['OutDoor']    := FOutDoor;
 
         Values['IsVIP']      := FIsVIP;
         Values['Status']     := FStatus;

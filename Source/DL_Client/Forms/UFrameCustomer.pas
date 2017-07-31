@@ -130,6 +130,7 @@ end;
 //Desc: 删除
 procedure TfFrameCustomer.BtnDelClick(Sender: TObject);
 var nStr,nSQL: string;
+    nList: TStrings;
 begin
   if cxView1.DataController.GetSelectedCount < 1 then
   begin
@@ -138,6 +139,17 @@ begin
 
   nStr := SQLQuery.FieldByName('C_Name').AsString;
   if not QueryDlg('确定要删除名称为[ ' + nStr + ' ]的客户吗', sAsk) then Exit;
+
+  nList := TStringList.Create;
+  //init
+  if SQLQuery.FieldByName('C_WeiXin').AsString <> '' then
+  try
+    nList.Values['Type']     := 'del';
+    nList.Values['WebProID'] := SQLQuery.FieldByName('C_WeiXin').AsString;
+    if not WebChatEditShopCustom(nList.Text, sFlag_No) then Exit;
+  finally
+    nList.Free;
+  end;
 
   FDM.ADOConn.BeginTrans;
   try

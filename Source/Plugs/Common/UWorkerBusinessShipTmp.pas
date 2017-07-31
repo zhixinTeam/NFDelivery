@@ -159,6 +159,7 @@ begin
 
             SF('O_MuiltiPound', FListA.Values['Muilti']),
             SF('O_OneDoor', FListA.Values['TruckBack']),
+            SF('O_OutDoor', FListA.Values['TruckOut']),
             SF('O_UsePre', FListA.Values['TruckPre']),
             {$IFDEF FORCEPSTATION}
             SF('O_PoundStation', FListA.Values['PoundStation']),
@@ -348,6 +349,7 @@ begin
 
       FMuiltiPound:= FieldByName('O_MuiltiPound').AsString;
       FOneDoor    := FieldByName('O_OneDoor').AsString;
+      FOutDoor    := FieldByName('O_OutDoor').AsString;
       FMuiltiType := sFlag_No;
       //默认为首次过磅
 
@@ -710,6 +712,37 @@ begin
               SF('T_LastTime',sField_SQLServer_Now, sfVal)
               ], sTable_Truck, SF('T_Truck', FTruck), False);
       FListA.Add(nSQL);
+
+      if (FOutDoor = sFlag_No) and (FMuiltiPound <> sFlag_Yes) then
+      begin
+        if FCardKeep = sFlag_ProvCardG then
+        begin
+          nSQL := 'Update %s Set O_Pound=NULL,' +
+                  'O_BFPTime=NULL,O_BFPMan=NULL,O_BFPValue=0,' +
+                  'O_BFMTime=NULL,O_BFMMan=NULL,O_BFMValue=0,' +
+                  'O_BFPTime2=NULL,O_BFPMan2=NULL,O_BFPValue2=0,' +
+                  'O_BFMTime2=NULL,O_BFMMan2=NULL,O_BFMValue2=0,' +
+                  'O_Status=''%s'', O_NextStatus=''%s'' ' +
+                  'Where O_Card=''%s''';
+          nSQL := Format(nSQL, [sTable_CardOther, sFlag_TruckNone,
+                  sFlag_TruckNone, FCard]);
+          FListA.Add(nSQL);
+        end else
+
+        begin
+          nSQL := 'Update %s Set C_Status=''%s'', C_TruckNo=NULL Where C_Card=''%s''';
+          nSQL := Format(nSQL, [sTable_Card, sFlag_CardIdle, FCard]);
+          FListA.Add(nSQL);
+
+          nSQL := 'Update %s Set O_Pound=NULL, O_Card=NULL, ' +
+                  'O_Status=''%s'', O_NextStatus=NULL ' +
+                  'Where O_Card=''%s''';
+          nSQL := Format(nSQL, [sTable_CardOther, sFlag_TruckOut,
+                  FCard]);
+          FListA.Add(nSQL);
+        end;
+      end;
+      //非复磅业务的厂内临时过磅业务
     end;
   end else
 
@@ -770,18 +803,8 @@ begin
         end;
       end;
 
-      {$IFDEF AutoSaveTruckP}
-      nStr := MakeSQLByStr([SF('T_PrePValue', FPData.FValue, sfVal),
-              SF('T_PrePTime', sField_SQLServer_Now, sfVal),
-              SF('T_PrePMan', FIn.FBase.FFrom.FUser)],
-              sTable_Truck, SF('T_Truck', FTruck), False);
-      FListA.Add(nSQL);
-      //预置皮重
-      {$ENDIF}
-
        nStr := SF('P_ID', FPoundID);
-      //磅单编号
-
+      //磅单编号            
       if (FMuiltiPound = sFlag_Yes) and (FMuiltiType = sFlag_Yes) then
       begin //复磅业务的第二次过磅
         if FNextStatus = sFlag_TruckBFP then
@@ -893,6 +916,37 @@ begin
               ], sTable_Truck, SF('T_Truck', FTruck), False);
       FListA.Add(nSQL);
       //更新车辆活动时间
+
+      if (FOutDoor = sFlag_No) and (FMuiltiPound <> sFlag_Yes) then
+      begin
+        if FCardKeep = sFlag_ProvCardG then
+        begin
+          nSQL := 'Update %s Set O_Pound=NULL,' +
+                  'O_BFPTime=NULL,O_BFPMan=NULL,O_BFPValue=0,' +
+                  'O_BFMTime=NULL,O_BFMMan=NULL,O_BFMValue=0,' +
+                  'O_BFPTime2=NULL,O_BFPMan2=NULL,O_BFPValue2=0,' +
+                  'O_BFMTime2=NULL,O_BFMMan2=NULL,O_BFMValue2=0,' +
+                  'O_Status=''%s'', O_NextStatus=''%s'' ' +
+                  'Where O_Card=''%s''';
+          nSQL := Format(nSQL, [sTable_CardOther, sFlag_TruckNone,
+                  sFlag_TruckNone, FCard]);
+          FListA.Add(nSQL);
+        end else
+
+        begin
+          nSQL := 'Update %s Set C_Status=''%s'', C_TruckNo=NULL Where C_Card=''%s''';
+          nSQL := Format(nSQL, [sTable_Card, sFlag_CardIdle, FCard]);
+          FListA.Add(nSQL);
+
+          nSQL := 'Update %s Set O_Pound=NULL, O_Card=NULL, ' +
+                  'O_Status=''%s'', O_NextStatus=NULL ' +
+                  'Where O_Card=''%s''';
+          nSQL := Format(nSQL, [sTable_CardOther, sFlag_TruckOut,
+                  FCard]);
+          FListA.Add(nSQL);
+        end;
+      end;
+      //厂内临时过磅业务
     end;
   end else
 

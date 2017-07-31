@@ -1714,6 +1714,7 @@ begin
       LEDDisplay(nStr);
 
       if ((FUIData.FID='') and (FUIData.FPoundID <> '')) or
+         ((FUIData.FID <> '') and (FUIData.FID = FUIData.FZhiKa) and (FUIData.FPoundID <> '')) or
          RadioCC.Checked or FPreTruckPFlag then
         PrintPoundReport(nPoundID, True);
       //原料或出厂模式

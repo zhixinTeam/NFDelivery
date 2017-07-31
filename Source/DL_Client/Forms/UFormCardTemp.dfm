@@ -15,12 +15,12 @@ inherited fFormCardTemp: TfFormCardTemp
       Left = 264
       Top = 436
       Caption = #30830#23450
-      TabOrder = 14
+      TabOrder = 15
     end
     inherited BtnExit: TButton
       Left = 334
       Top = 436
-      TabOrder = 15
+      TabOrder = 16
     end
     object EditTruck: TcxTextEdit [2]
       Left = 81
@@ -124,7 +124,7 @@ inherited fFormCardTemp: TfFormCardTemp
       ParentFont = False
       TabOrder = 13
       Transparent = True
-      Width = 121
+      Width = 194
     end
     object EditPre: TcxCheckBox [14]
       Left = 23
@@ -138,7 +138,17 @@ inherited fFormCardTemp: TfFormCardTemp
     object EditPoundStation: TcxComboBox [15]
       Left = 81
       Top = 236
+      ParentFont = False
       TabOrder = 8
+      Width = 121
+    end
+    object EditTruckOut: TcxCheckBox [16]
+      Left = 222
+      Top = 403
+      Caption = #36710#36742#20986#21378
+      ParentFont = False
+      TabOrder = 14
+      Transparent = True
       Width = 121
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
@@ -215,11 +225,23 @@ inherited fFormCardTemp: TfFormCardTemp
           Control = EditPre
           ControlOptions.ShowBorder = False
         end
-        object dxLayout1Item14: TdxLayoutItem
-          Caption = 'cxCheckBox3'
+        object dxLayout1Group2: TdxLayoutGroup
           ShowCaption = False
-          Control = EditBack
-          ControlOptions.ShowBorder = False
+          Hidden = True
+          LayoutDirection = ldHorizontal
+          ShowBorder = False
+          object dxLayout1Item14: TdxLayoutItem
+            Caption = 'cxCheckBox3'
+            ShowCaption = False
+            Control = EditBack
+            ControlOptions.ShowBorder = False
+          end
+          object dxLayout1Item17: TdxLayoutItem
+            Caption = 'cxCheckBox1'
+            ShowCaption = False
+            Control = EditTruckOut
+            ControlOptions.ShowBorder = False
+          end
         end
       end
     end

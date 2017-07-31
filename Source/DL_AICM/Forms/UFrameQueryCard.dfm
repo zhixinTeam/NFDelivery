@@ -47,7 +47,7 @@ inherited fFrameQueryCard: TfFrameQueryCard
     Top = 200
     Align = alTop
     AutoSize = False
-    Caption = #38144#21806#35746#21333':'
+    Caption = #23458#25143#21517#31216':'
     ParentFont = False
     Style.Font.Charset = DEFAULT_CHARSET
     Style.Font.Color = clWhite

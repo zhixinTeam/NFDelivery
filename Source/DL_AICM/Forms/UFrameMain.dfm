@@ -29,4 +29,23 @@ inherited fFrameMain: TfFrameMain
       000000000000000000000000000000000000000000007FFFD9}
     Stretch = True
   end
+  object ShowWelcome: TStaticText
+    Left = 0
+    Top = 0
+    Width = 873
+    Height = 750
+    Align = alClient
+    BevelInner = bvNone
+    BevelOuter = bvNone
+    Caption = #26174#31034#22522#26412#20449#24687
+    Color = clBlack
+    Font.Charset = GB2312_CHARSET
+    Font.Color = clWhite
+    Font.Height = -64
+    Font.Name = #23435#20307
+    Font.Style = [fsBold]
+    ParentColor = False
+    ParentFont = False
+    TabOrder = 0
+  end
 end

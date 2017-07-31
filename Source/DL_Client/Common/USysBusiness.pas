@@ -1837,9 +1837,12 @@ begin
   FDR.AddParamItem(nParam);
 
   FDR.Dataset1.DataSet := FDM.SqlTemp;
+  {$IFDEF ShowReport}
   FDR.ShowReport;
   Result := FDR.PrintSuccess;
-  //Result := FDR.PrintReport;
+  {$ELSE}
+  Result := FDR.PrintReport;
+  {$ENDIF}
 
   if Result  then
   begin

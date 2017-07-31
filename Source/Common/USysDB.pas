@@ -1067,7 +1067,7 @@ const
        'O_KeepCard varChar(1), O_MuiltiPound Char(1), O_Man varChar(32), O_Date DateTime,' +
        'O_UsePValue Char(1) Default ''N'', O_OneDoor Char(1) Default ''N'', ' +
        'O_PoundStation varChar(32), O_PoundName varChar(32), ' +
-       'O_UsePre Char(1), ' +
+       'O_UsePre Char(1), O_OutDoor Char(1) Default ''Y'',' +
        'O_DelMan varChar(32), O_DelDate DateTime, O_Memo varChar(128))';
   {-----------------------------------------------------------------------------
    临时磁卡:CardOther
@@ -1088,6 +1088,7 @@ const
    *.O_Man,O_Date:制卡人
    *.O_UsePValue: 以空车为皮重
    *.O_OneDoor: 单向过磅
+   *.O_OutDoor: 出厂转运
    *.O_MuiltiPound: 系统复磅
    *.O_UsePre: 预置皮重
    *.O_DelMan,O_DelDate: 删除人
