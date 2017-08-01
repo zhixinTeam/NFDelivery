@@ -112,6 +112,8 @@
   //散装允许自动过磅
   {$DEFINE ORDERVALUE}
   //显示大票量发货量
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
 {$ENDIF}
 //永丰南方(永丰、安抚、上高)
 
@@ -254,6 +256,8 @@
   //强制地磅磅站
   {$DEFINE ERROPENONEDOOR}
   //过磅失败倒车下磅
+  {$DEFINE DaiStepWuCha}
+  //包装阶梯误差
 {$ENDIF}
 //广西南方
 
