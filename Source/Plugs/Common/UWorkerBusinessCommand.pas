@@ -720,6 +720,15 @@ var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType: string;
                 ], sTable_Batcode, nTmp, False);
       gDBConnManager.WorkerExec(FDBConn, nSQL);
     end;
+
+    //Desc: 封存记录
+    procedure OutuseCode(const nID: string);
+    begin
+      nStr := 'Update %s Set D_Valid=''%s'',D_LastDate=%s Where D_ID=''%s''';
+      nStr := Format(nStr, [sTable_BatcodeDoc, sFlag_BatchOutUse,
+              sField_SQLServer_Now, nID]);
+      gDBConnManager.WorkerExec(FDBConn, nStr);
+    end;
 begin
   Result := False;
 
@@ -909,17 +918,37 @@ begin
 
     while not Eof do
     try
-      if (nUBrand=sFlag_Yes) and
-         (FieldByName('D_Brand').AsString<>FListA.Values['Brand']) then
-         Continue;
+      nStr := Trim(FListA.Values['Brand']);
+      if (nUBrand=sFlag_Yes) and (nStr <> '') and
+         (FieldByName('D_Brand').AsString <> nStr) then Continue;
       //使用品牌时，品牌不对
+
+      nType := Trim(FListA.Values['Type']);
+      if (nType <> '') and (nType <> sFlag_TypeCommon) and
+         (nType = sFlag_TypeShip) and (nType = sFlag_TypeStation) then
+        nType := sFlag_TypeCommon;
+      //默认普通类型
+
+      if (nType <> '') and
+         (nType <> FieldByName('D_Type').AsString) then Continue;
+      //使用提货类型时,不匹配
 
       nVal := FieldByName('D_Plan').AsFloat - FieldByName('D_Sent').AsFloat +
               FieldByName('D_Rund').AsFloat - FieldByName('D_Init').AsFloat -
               StrToFloat(FListA.Values['Value']);
 
-      if FloatRelation(nVal, 0, rtLE) then Continue;
-      //超发
+      if FloatRelation(nVal, 0, rtLE) then
+      begin
+        OutuseCode(FieldByName('D_ID').AsString);
+        Continue;
+      end; //超发
+
+      nInt := FieldByName('D_ValidDays').AsInteger;
+      if Now() - FieldByName('D_UseDate').AsDateTime >= nInt then
+      begin
+        OutuseCode(FieldByName('D_ID').AsString);
+        Continue;
+      end; //编号过期
 
       nSelect   := sFlag_Yes;
       nBatchNew := FieldByName('D_ID').AsString;
@@ -941,12 +970,10 @@ begin
       nStr := Format(nStr, [FIn.FData,
                             FListA.Values['Brand']]);
       //xxxxx
+      
       FOut.FBase.FErrCode := sFlag_ForceHint;
       FOut.FBase.FErrDesc := nStr;
-
-      nStr := 'Update %s Set D_Valid=''%s'' Where D_ID=''%s''';
-      nStr := Format(nStr, [sTable_BatcodeDoc, sFlag_BatchOutUse, nBatchNew]);
-      gDBConnManager.WorkerExec(FDBConn, nStr);
+      OutuseCode(nBatchNew);
     end;
 
     nStr := 'Update %s Set D_LastDate=null Where D_Valid=''%s'' ' +

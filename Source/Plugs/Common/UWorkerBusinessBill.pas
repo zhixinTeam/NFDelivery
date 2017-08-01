@@ -806,6 +806,7 @@ begin
       //包装类型
 
       FListC.Clear;
+      FListC.Values['Type'] := FListA.Values['IsVIP'];
       FListC.Values['Brand'] := nBrand;
       FListC.Values['Value'] := FloatToStr(FOrderItems[nIdx].FKDValue);
 

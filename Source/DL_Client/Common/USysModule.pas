@@ -221,17 +221,19 @@ begin
     //xxxxx
   end;
 
-  gDisplayManager.StartDisplay;
-  //启动显示
-
   CreateBaseFormItem(cFI_FormTodo);
   //待处理事项
+
+  {$IFNDEF DEBUG}
+  gDisplayManager.StartDisplay;
+  //启动显示
 
   if FileExists(gPath + 'Printer.xml') then
   begin
     gRemotePrinter.LoadConfig(gPath + 'Printer.xml');
     gRemotePrinter.StartPrinter;
   end;
+  {$ENDIF}
 end;
 
 //Desc: 释放系统对象

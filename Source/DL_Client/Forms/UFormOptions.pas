@@ -470,7 +470,7 @@ begin
       Exit;
     end else
 
-    if FloatRelation(FStart, nEnd, rtLE) and
+    if FloatRelation(FStart, nEnd, rtLess) and
        FloatRelation(FEnd, nEnd, rtGE) and FEnabled then
     begin
       ActiveControl := EditEnd;

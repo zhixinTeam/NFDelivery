@@ -1718,6 +1718,8 @@ end;
 function PrintShipLeaveReport(nID: string; const nAsk: Boolean): Boolean;
 var nStr: string; 
     nParam: TReportParamItem;
+    nBills: TLadingBillItems;
+    nOut: TWorkerBusinessCommand;
 begin
   Result := False;
   nStr := 'Update %s Set S_LeaveMan=''%s'',S_LeaveDate=%s ' +
@@ -1736,6 +1738,21 @@ begin
     nStr := '编号为[ %s ] 的提货记录已无效!!';
     nStr := Format(nStr, [nID]);
     ShowMsg(nStr, sHint); Exit;
+  end;
+
+  if FDM.SqlTemp.FieldByName('L_OutFact').AsString = '' then
+  begin
+    if not CallBusinessSaleBill(cBC_GetPostBills, nID, sFlag_TruckOut,
+      @nOut) then Exit;
+    //读取交货单
+    
+    AnalyseBillItems(nOut.FData, nBills);
+    nBills[0].FCardUse := sFlag_Sale;
+    nStr := CombineBillItmes(nBills);
+
+    if not CallBusinessSaleBill(cBC_SavePostBills, nStr, sFlag_TruckOut,
+      @nOut) then Exit;
+    //自动出厂
   end;
 
   nStr := gPath + sReportDir + 'ShipLeave.fr3';

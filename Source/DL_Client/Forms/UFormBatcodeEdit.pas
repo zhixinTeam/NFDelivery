@@ -10,7 +10,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   UFormBase, UFormNormal, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, cxCheckBox, cxTextEdit,
-  dxLayoutControl, StdCtrls, cxMaskEdit, cxDropDownEdit;
+  dxLayoutControl, StdCtrls, cxMaskEdit, cxDropDownEdit, cxLabel;
 
 type
   TfFormBatcodeEdit = class(TfFormNormal)
@@ -35,6 +35,18 @@ type
     dxLayout1Item10: TdxLayoutItem;
     EditBrand: TcxComboBox;
     dxLayout1Item11: TdxLayoutItem;
+    cxLabel1: TcxLabel;
+    dxLayout1Item12: TdxLayoutItem;
+    dxLayout1Item13: TdxLayoutItem;
+    EditType: TcxComboBox;
+    dxLayout1Group5: TdxLayoutGroup;
+    cxTextEdit1: TcxTextEdit;
+    dxLayout1Item14: TdxLayoutItem;
+    EditDays: TcxTextEdit;
+    cxLabel2: TcxLabel;
+    dxLayout1Item15: TdxLayoutItem;
+    dxLayout1Group8: TdxLayoutGroup;
+    dxLayout1Group7: TdxLayoutGroup;
     procedure BtnOKClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditStockPropertiesEditValueChanged(Sender: TObject);
@@ -110,6 +122,20 @@ begin
   FDM.FillStringsData(EditStock.Properties.Items, nStr, 0, '.');
   AdjustCXComboBoxItem(EditStock, False);
 
+  nStr := 'D_Value=Select D_Value,D_Memo From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_TiHuoTypeItem]);
+
+  FDM.FillStringsData(EditType.Properties.Items, nStr, 1, '.');
+  AdjustCXComboBoxItem(EditType, False);
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_Brands]);
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+  begin
+    SplitStr(Fields[0].AsString, EditBrand.Properties.Items, 0, ';');
+  end;
+
   if nID <> '' then
   begin
     nStr := 'Select * From %s Where R_ID=%s';
@@ -121,6 +147,9 @@ begin
       nStr := FieldByName('D_Stock').AsString;
       SetCtrlData(EditStock, nStr);
 
+      nStr := FieldByName('D_Type').AsString;
+      SetCtrlData(EditType, nStr);
+
       EditName.Text := FieldByName('D_Name').AsString;
       EditBatch.Text := FieldByName('D_ID').AsString;
       EditBatch.Properties.ReadOnly := True;
@@ -130,6 +159,8 @@ begin
       EditInit.Text := Format('%.2f', [FieldByName('D_Init').AsFloat]);
       EditWarn.Text := Format('%.2f', [FieldByName('D_Warn').AsFloat]);
       EditRund.Text := Format('%.2f', [FieldByName('D_Rund').AsFloat]);
+
+      EditDays.Text := FieldByName('D_ValidDays').AsString;
       Check1.Checked := FieldByName('D_Valid').AsString = sFlag_Yes;
     end;
   end;
@@ -151,6 +182,12 @@ begin
     nHint := '请选择品种';
   end else
 
+  if Sender = EditType then
+  begin
+    Result := EditType.ItemIndex >= 0;
+    nHint := '请选择提货类型';
+  end else
+
   if Sender = EditPlan then
   begin
     Result := IsNumber(EditPlan.Text, True);
@@ -167,6 +204,12 @@ begin
   begin
     Result := IsNumber(EditRund.Text, True);
     nHint := '请输入退货量';
+  end else
+
+  if Sender = EditDays then
+  begin
+    Result := IsNumber(EditDays.Text, False);
+    nHint := '请输入有效天数';
   end else
 
   if Sender = EditWarn then
@@ -217,6 +260,7 @@ begin
 
   nStr := MakeSQLByStr([SF('D_ID', Trim(EditBatch.Text)),
           SF('D_Stock', GetCtrlData(EditStock)),
+          SF('D_Type', GetCtrlData(EditType)),
           SF('D_Name', EditName.Text),
           SF('D_Brand', EditBrand.Text),
 
@@ -225,6 +269,7 @@ begin
           SF('D_Warn', EditWarn.Text, sfVal),
           SF('D_Rund', EditRund.Text, sfVal),
 
+          SF('D_ValidDays', EditDays.Text, sfVal),
           SF('D_Valid', nU),
           nTime                     //时间
           ], sTable_BatcodeDoc, nStr, FRecordID = '');

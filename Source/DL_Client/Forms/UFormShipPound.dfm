@@ -48,7 +48,10 @@ inherited fFormShipPound: TfFormShipPound
       Left = 81
       Top = 61
       ParentFont = False
+      Properties.AutoSelect = False
       Properties.DropDownRows = 20
+      Properties.ImmediateDropDown = False
+      Properties.IncrementalSearch = False
       Properties.ItemHeight = 20
       Properties.MaxLength = 100
       TabOrder = 2

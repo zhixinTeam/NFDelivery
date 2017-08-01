@@ -233,6 +233,7 @@ ResourceString
   sFlag_PoundBaseValue= 'PoundBaseValue';            //磅房跳动基数
   sFlag_OutOfHaulBack = 'OutOfHaulBack';             //退货(回空)时限
   sFlag_DefaultBrand  = 'DefaultBrand';              //默认品牌
+  sFlag_Brands        = 'StockBrands';               //品牌列表
   sFlag_NetPlayVoice  = 'NetPlayVoice';              //使用网络语音卡
 
   sFlag_BusGroup      = 'BusFunction';               //业务编码组
@@ -1109,7 +1110,7 @@ const
    *.B_Base: 起始编码(基数)
    *.B_Incement: 编号增量
    *.B_Length: 编号长度
-   *.B_Type: 提货类型(H、火车;Q、汽运;N、普通)
+   *.B_Type: 提货类型(H、火车;S、船运;C、普通)
    *.B_Value:检测量
    *.B_Low,B_High:上下限(%)
    *.B_Interval: 编号周期(天)
@@ -1123,8 +1124,10 @@ const
   
   sSQL_NewBatcodeDoc = 'Create Table $Table(R_ID $Inc, D_ID varChar(32),' +
        'D_Stock varChar(32),D_Name varChar(80), D_Brand varChar(32), ' +
-       'D_Plan $Float, D_Sent $Float Default 0, D_Rund $Float, D_Init $Float, D_Warn $Float, ' +
-       'D_Man varChar(32), D_Date DateTime, D_DelMan varChar(32), D_DelDate DateTime, ' +
+       'D_Type Char(1), D_Plan $Float, D_Sent $Float Default 0, ' +
+       'D_Rund $Float, D_Init $Float, D_Warn $Float, D_ValidDays Integer,' +
+       'D_Man varChar(32), D_Date DateTime, ' +
+       'D_DelMan varChar(32), D_DelDate DateTime, ' +
        'D_UseDate DateTime, D_LastDate DateTime, D_Valid char(1))';
   {-----------------------------------------------------------------------------
    批次编码表: Batcode
@@ -1133,11 +1136,13 @@ const
    *.D_Stock: 物料号
    *.D_Name: 物料名
    *.D_Brand: 水泥品牌
+   *.D_Type: 提货类型(H、火车;S、船运;C、普通)
    *.D_Plan: 计划总量
    *.D_Sent: 已发量
    *.D_Rund: 退货量
    *.D_Init: 初始量
    *.D_Warn: 预警量
+   *.D_ValidDays: 有效天数
    *.D_Man:  操作人
    *.D_Date: 生成时间
    *.D_DelMan: 删除人
