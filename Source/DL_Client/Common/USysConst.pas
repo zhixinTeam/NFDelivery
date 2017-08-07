@@ -57,12 +57,13 @@ const
   cFI_FrameZhiKaDetail  = $0055;                     //纸卡明细
   cFI_FrameDispatchQuery = $0056;                    //调度查询
 
-  cFI_FrameProvideDetailQuery = $0057;                  //供应明细
-  cFI_FrameDiapatchDetailQuery = $0058;                 //调度明细
-  cFI_FrameTransferDetailQuery = $0059;                 //短倒明细
+  cFI_FrameProvideDetailQuery = $0057;               //供应明细
+  cFI_FrameDiapatchDetailQuery = $0058;              //调度明细
+  cFI_FrameTransferDetailQuery = $0059;              //短倒明细
 
   cFI_FrameChineseBase  = $0062;                     //汉字喷码
   cFI_FrameChineseDict  = $0063;                     //喷码字典
+  cFI_FrameTodo         = $0064;                     //手动事件
 
   cFI_FrameProvider     = $0102;                     //供应
   cFI_FrameProvideLog   = $0105;                     //供应日志
@@ -307,7 +308,7 @@ begin
   AddMenuModuleItem('MAIN_A05', cFI_FormChangePwd, mtForm);
   AddMenuModuleItem('MAIN_A07', cFI_FrameAuthorize);
   AddMenuModuleItem('MAIN_A08', cFI_FormTodo, mtForm);
-  AddMenuModuleItem('MAIN_A09', cFI_FormTodoSend, mtForm);
+  AddMenuModuleItem('MAIN_A09', cFI_FrameTodo);
   AddMenuModuleItem('MAIN_A12', cFI_FormOptions, mtForm);
 
   AddMenuModuleItem('MAIN_B01', cFI_FrameTrucks);

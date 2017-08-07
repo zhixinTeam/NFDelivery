@@ -457,7 +457,7 @@ end;
 //Parm: 交货单[FIn.FData];通道号[FIn.FExtParam]
 //Desc: 在指定通道上喷码
 function THardwareCommander.PrintCode(var nData: string): Boolean;
-var nStr,nBill,nCode,nArea,nCusCode,nSeal: string;
+var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck: string;
     nPrefixLen, nIDLen: Integer;
 begin
   Result := True;
@@ -491,7 +491,8 @@ begin
     if (nPrefixLen<0) or (nIDLen<0) then Exit;
     //无提货单配置
 
-    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area From %s Where L_ID=''%s''';
+    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck From %s ' +
+            'Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
 
     with gDBConnManager.WorkerQuery(FDBConn, nStr) do
@@ -509,6 +510,7 @@ begin
       nArea     := FieldByName('L_Area').AsString;
       nSeal     := FieldByName('L_Seal').AsString;
       nCusCode  := FieldByName('L_CusCode').AsString;
+      nTruck    := FieldByName('L_Truck').AsString;
       //xxxxx
 
       {$IFDEF PrintChinese}
@@ -543,6 +545,12 @@ begin
       nCode := nCode + FillString(nSeal, 6, '0');
       nCode := nCode + FillString(nCusCode, 2, ' ');
       nCode := nCode + Copy(nBill, nPrefixLen + 7, nIDLen-nPreFixLen-6);
+      {$ENDIF}
+
+      {$IFDEF JLNF}
+      //金鲤喷码规则：水泥批次号+客户代码(bd_cumandoc.def30)+车号后四位
+      nCode := nSeal + FillString(nCusCode, 2, ' ');
+      nCode := nCode + Copy(nTruck, Length(nTruck) - 3, 4);
       {$ENDIF}
     end;
   end;

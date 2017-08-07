@@ -40,12 +40,22 @@ uses
 
 class function TfFormTodoSend.CreateForm(const nPopedom: string;
   const nParam: Pointer): TWinControl;
+var nP: PFormCommandParam;
 begin
+  if Assigned(nParam) then
+       nP := nParam
+  else nP := nil;
+  
   Result := nil;
   with TfFormTodoSend.Create(Application) do
-  begin
+  try
     Caption := '·¢ËÍÊÂ¼þ';
-    ShowModal;
+    if Assigned(nP) then
+    begin
+      nP.FCommand := cCmd_ModalResult;
+      nP.FParamA := ShowModal;
+    end else ShowModal;
+  finally
     Free;
   end;
 end;

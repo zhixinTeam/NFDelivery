@@ -14,6 +14,13 @@ uses
   cxTextEdit, dxLayoutControl, StdCtrls, cxCheckBox, cxLabel, cxCalendar;
 
 type
+  TPoundValue = record
+    FPValue: string;
+    FMValue: string;
+    FStatus: string;
+    FNext  : string;
+  end;
+
   TfFormPoundAdjust = class(TfFormNormal)
     EditCusName: TcxTextEdit;
     dxLayout1Item9: TdxLayoutItem;
@@ -61,6 +68,8 @@ type
     //磅单类型
     FBillID: string;
     //交货单
+    FOldValue: TPoundValue;
+    //原数据
     procedure LoadFormData(const nID: string);
     //初始化界面
     function SaveProvide: Boolean;
@@ -200,7 +209,14 @@ begin
     EditMValue.Text := '0';
     EditMDate.Date := Now;
   end;
-
+   
+  with FOldValue do
+  begin
+    FPValue := EditPValue.Text;
+    FMValue := EditMValue.Text;
+    FStatus := EditStatus.Text;
+    FNext   := EditNext.Text;
+  end;
   BtnOK.Enabled := True;
 end;
 
@@ -325,7 +341,8 @@ begin
 end;
 
 procedure TfFormPoundAdjust.BtnOKClick(Sender: TObject);
-var nRet: Boolean;
+var nStr: string;
+    nRet: Boolean;
 begin
   if FPoundType = sFlag_ShipPro then //供应
     nRet := SaveProvide
@@ -337,6 +354,27 @@ begin
 
   if nRet then
   begin
+    nStr := '';
+    if EditPValue.Text <> FOldValue.FPValue then
+      nStr := Format('皮重:[ %s -> %s ] ', [FOldValue.FPValue, EditPValue.Text]);
+    //xxxxx
+
+    if EditMValue.Text <> FOldValue.FMValue then
+      nStr := nStr + Format('毛重:[ %s -> %s ] ', [FOldValue.FMValue, EditMValue.Text]);
+    //xxxxx
+
+    if EditStatus.Text <> FOldValue.FStatus then
+      nStr := nStr + Format('当前状态:[ %s -> %s ] ', [FOldValue.FStatus, EditStatus.Text]);
+    //xxxxx
+
+    if EditNext.Text <> FOldValue.FNext then
+      nStr := nStr + Format('下一状态:[ %s -> %s ] ', [FOldValue.FNext, EditNext.Text]);
+    //xxxxx
+
+    if nStr <> '' then
+      FDM.WriteSysLog(sFlag_CommonItem, FPoundID, nStr);
+    //xxxxx
+
     ModalResult := mrOk;
     ShowMsg('勘误成功', sHint);
   end;
