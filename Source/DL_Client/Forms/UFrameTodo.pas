@@ -14,7 +14,7 @@ uses
   cxTextEdit, cxMaskEdit, cxButtonEdit, ADODB, cxLabel, UBitmapPanel,
   cxSplitter, cxGridLevel, cxClasses, cxGridCustomView,
   cxGridCustomTableView, cxGridTableView, cxGridDBTableView, cxGrid,
-  ComCtrls, ToolWin;
+  ComCtrls, ToolWin, Menus;
 
 type
   TfFrameTodo = class(TfFrameNormal)
@@ -24,11 +24,15 @@ type
     dxLayout1Item6: TdxLayoutItem;
     EditTruck: TcxButtonEdit;
     dxLayout1Item1: TdxLayoutItem;
+    PMenu1: TPopupMenu;
+    N1: TMenuItem;
     procedure BtnAddClick(Sender: TObject);
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
+    procedure PMenu1Popup(Sender: TObject);
+    procedure N1Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -49,7 +53,7 @@ implementation
 {$R *.dfm}
 uses
   ULibFun, UMgrControl, USysConst, USysDB, UDataModule, UFormBase,
-  UFormDateFilter;
+  UFormDateFilter, UFormInputbox;
 
 class function TfFrameTodo.FrameID: integer;
 begin
@@ -118,6 +122,41 @@ begin
       FWhere := '(E_Date>=''$S'' and E_Date <''$E'') And ' + FWhere;
     InitFormData(FWhere);
   end
+end;
+
+procedure TfFrameTodo.PMenu1Popup(Sender: TObject);
+begin
+  N1.Enabled := BtnEdit.Enabled;
+end;
+
+procedure TfFrameTodo.N1Click(Sender: TObject);
+var nStr,nRS,nSQL: string;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    nRS := SQLQuery.FieldByName('E_Result').AsString;
+    nStr := nRS;
+
+    while True do
+    begin
+      if not ShowInputBox('请输入新的处理结果:', '变更', nStr, 12) then Exit;
+      nStr := Trim(nStr);
+      if (nStr <> '') and (nStr <> nRS) then Break;
+    end;
+
+    nSQL := 'Update %s Set E_Result=''%s'' Where R_ID=%s';
+    nSQL := Format(nSQL, [sTable_ManualEvent, nStr,
+            SQLQuery.FieldByName('R_ID').AsString]);
+    FDM.ExecuteSQL(nSQL);
+
+    nSQL := '修改标识为[ %s ]的事件,处理结果:[ %s -> %s ]';
+    nSQL := Format(nSQL, [SQLQuery.FieldByName('R_ID').AsString, nRS, nStr]);
+    FDM.WriteSysLog(sFlag_CommonItem,
+                    SQLQuery.FieldByName('E_Key').AsString, nSQL);
+    //write log
+
+    InitFormData(FWhere);
+  end;
 end;
 
 initialization

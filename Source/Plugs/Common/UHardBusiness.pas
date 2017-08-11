@@ -699,7 +699,7 @@ end;
 //Parm: 卡号;读头;打印机
 //Desc: 对nCard放行出厂
 procedure MakeTruckOut(const nCard,nReader,nPrinter: string);
-var nStr, nCardType, nPrint, nID: string;
+var nStr, nCardType,nPrint,nID: string;
     nIdx: Integer;
     nRet: Boolean;
     nReaderItem: THHReaderItem;
@@ -783,6 +783,38 @@ begin
   nStr := Format(nStr, [nTrucks[0].FTruck]);
   gDisplayManager.Display(nReader, nStr);
   //LED显示
+
+  {$IFDEF CombinePrintBill}
+  //销售尾单合单后合并打印,只针对销售散装
+  if ((nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew)) and
+     (nTrucks[0].FType = sFlag_San) then
+  begin
+    nID := '';
+    for nIdx:=Low(nTrucks) to High(nTrucks) do
+    begin
+      nID := nID + '''' + nTrucks[nIdx].FID + '''';
+      if nIdx <> High(nTrucks) then
+        nID := nID + ',';
+      //split flag
+    end;
+
+    nStr := #7 + nCardType;
+    //磁卡类型
+
+    if nPrinter = '' then
+    begin
+      gHardwareHelper.GetReaderLastOn(nCard, nReaderItem);
+      nPrint := nReaderItem.FPrinter;
+    end else nPrint := nPrinter;
+
+    if nPrint = '' then
+         nStr := nID + nStr
+    else nStr := nID + #9 + nPrint + nStr;
+
+    gRemotePrinter.PrintBill(nStr);
+    Exit;
+  end;
+  {$ENDIF}
 
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   begin

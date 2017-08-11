@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE GXNF}
+{$DEFINE SYNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -194,6 +194,8 @@
   //汉字喷码支持
   {$DEFINE JSTruck}
   //格式化计数器车牌
+  {$DEFINE CombinePrintBill}
+  //销售尾单合单后合并打印
 {$ENDIF}
 //山亚南方
 

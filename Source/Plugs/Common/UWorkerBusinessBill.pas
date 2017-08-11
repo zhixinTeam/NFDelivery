@@ -792,10 +792,13 @@ begin
     FOut.FData := '';
     //bill list
 
-    nBrand := FDefaultBrand;
     if FListA.Values['Brand'] <> '' then
-      nBrand := FListA.Values['Brand'];
-    //客户端指定品牌时,选择品牌  
+      nBrand := Trim(FListA.Values['Brand']);
+    //客户端指定品牌时,选择品牌
+
+    if nBrand = '' then
+      nBrand := FDefaultBrand;
+    //使用默认品牌
 
     for nIdx:=Low(FOrderItems) to High(FOrderItems) do
     begin
@@ -806,7 +809,8 @@ begin
       //包装类型
 
       FListC.Clear;
-      FListC.Values['Type'] := FListA.Values['IsVIP'];
+      FListC.Values['CusID'] := FOrderItems[nIdx].FCusID;
+      FListC.Values['Type']  := FListA.Values['IsVIP'];
       FListC.Values['Brand'] := nBrand;
       FListC.Values['Value'] := FloatToStr(FOrderItems[nIdx].FKDValue);
 

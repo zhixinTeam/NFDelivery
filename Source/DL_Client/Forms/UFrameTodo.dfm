@@ -18,6 +18,9 @@ inherited fFrameTodo: TfFrameTodo
     Top = 202
     Width = 773
     Height = 234
+    inherited cxView1: TcxGridDBTableView
+      PopupMenu = PMenu1
+    end
   end
   inherited dxLayout1: TdxLayoutControl
     Width = 773
@@ -46,6 +49,7 @@ inherited fFrameTodo: TfFrameTodo
     object EditTruck: TcxButtonEdit [2]
       Left = 81
       Top = 36
+      ParentFont = False
       Properties.Buttons = <
         item
           Default = True
@@ -101,5 +105,15 @@ inherited fFrameTodo: TfFrameTodo
   inherited DataSource1: TDataSource
     Left = 32
     Top = 236
+  end
+  object PMenu1: TPopupMenu
+    AutoHotkeys = maManual
+    OnPopup = PMenu1Popup
+    Left = 4
+    Top = 264
+    object N1: TMenuItem
+      Caption = #22788#29702#32467#26524
+      OnClick = N1Click
+    end
   end
 end

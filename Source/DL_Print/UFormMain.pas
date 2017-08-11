@@ -4,7 +4,7 @@
 *******************************************************************************}
 unit UFormMain;
 
-{.$DEFINE DEBUG}
+{$I Link.Inc}
 interface
 
 uses
@@ -322,15 +322,29 @@ end;
 //Date: 2012-4-1
 //Parm: 交货单号;提示;数据对象;打印机
 //Desc: 打印nBill交货单号
-function PrintBillReport(const nBill: string; var nHint: string;
+function PrintBillReport(nBill: string; var nHint: string;
  const nPrinter: string = ''; const nMoney: string = '0'): Boolean;
-var nStr: string;
+var nStr,nIDs: string;
     nDS: TDataSet;
+    nValue: Double;
+    nParam: TReportParamItem;
 begin
   Result := False;
+  {$IFDEF CombinePrintBill}
+  if Copy(nBill, 1, 1) <> '''' then
+    nBill := '''' + nBill;
+  if Copy(nBill, Length(nBill), 1) <> '''' then
+    nBill := nBill + '''';
+  //add flag
+
+  nStr := 'Select * From %s b ' +
+          'Left Join %s p on b.L_ID=p.P_Bill Where L_ID In (%s)';
+  nStr := Format(nStr, [sTable_Bill, sTable_PoundLog, nBill]);
+  {$ELSE}
   nStr := 'Select *,%s As L_ValidMoney From %s b ' +
           'Left Join %s p on b.L_ID=p.P_Bill Where L_ID=''%s''';
   nStr := Format(nStr, [nMoney, sTable_Bill, sTable_PoundLog, nBill]);
+  {$ENDIF}
 
   nDS := FDM.SQLQuery(nStr, FDM.SQLQuery1);
   if not Assigned(nDS) then Exit;
@@ -352,6 +366,35 @@ begin
   if nPrinter = '' then
        FDR.Report1.PrintOptions.Printer := 'My_Default_Printer'
   else FDR.Report1.PrintOptions.Printer := nPrinter;
+
+  nValue := 0;
+  nIDs := '';
+  {$IFDEF CombinePrintBill}
+  with nDS do
+  begin
+    First;
+    while not Eof do
+    begin
+      nValue := nValue + FieldByName('L_Value').AsFloat;
+      //累计发货量
+      nIDs := nIDs + FieldByName('L_ID').AsString;
+      //拼接单据号
+
+      Next;
+      if not Eof then
+        nIDs := nIDs + ',';
+      //xxxxx
+    end;
+  end;
+  {$ENDIF}
+
+  nParam.FName := 'L_ID';
+  nParam.FValue := nIDs;
+  FDR.AddParamItem(nParam);
+
+  nParam.FName := 'L_Value';
+  nParam.FValue := nValue;
+  FDR.AddParamItem(nParam);
 
   FDR.Dataset1.DataSet := FDM.SQLQuery1;
   FDR.PrintReport;

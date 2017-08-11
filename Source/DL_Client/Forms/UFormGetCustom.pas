@@ -11,7 +11,7 @@ uses
   Dialogs, UFormNormal, cxGraphics, cxContainer, cxEdit, cxTextEdit,
   cxMaskEdit, cxDropDownEdit, dxLayoutControl, StdCtrls, cxControls,
   ComCtrls, cxListView, cxButtonEdit, cxLabel, cxLookAndFeels,
-  cxLookAndFeelPainters;
+  cxLookAndFeelPainters, ExtCtrls;
 
 type
   TfFormGetCustom = class(TfFormNormal)
@@ -21,6 +21,7 @@ type
     dxLayout1Item6: TdxLayoutItem;
     cxLabel1: TcxLabel;
     dxLayout1Item7: TdxLayoutItem;
+    Timer1: TTimer;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure BtnOKClick(Sender: TObject);
@@ -28,6 +29,7 @@ type
     procedure EditCIDPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure ListCustomDblClick(Sender: TObject);
+    procedure Timer1Timer(Sender: TObject);
   private
     { Private declarations }
     FCusID,FCusName: string;
@@ -50,8 +52,8 @@ implementation
 {$R *.dfm}
 
 uses
-  IniFiles, ULibFun, UMgrControl, UAdjustForm, UFormCtrl, UFormBase, USysGrid,
-  USysDB, USysConst, USysBusiness, UDataModule;
+  IniFiles, ULibFun, UMgrControl, UAdjustForm, UFormCtrl, UFormBase, UFormWait,
+  USysGrid, USysDB, USysConst, USysBusiness, UDataModule;
 
 class function TfFormGetCustom.CreateForm(const nPopedom: string;
   const nParam: Pointer): TWinControl;
@@ -65,8 +67,8 @@ begin
   with TfFormGetCustom.Create(Application) do
   begin
     Caption := '选择客户';
-    InitFormData(nP.FParamA);
-
+    FCusName := nP.FParamA;
+    
     nP.FCommand := cCmd_ModalResult;
     nP.FParamA := ShowModal;
 
@@ -112,6 +114,14 @@ begin
 end;
 
 //------------------------------------------------------------------------------
+//Desc: 延迟检索
+procedure TfFormGetCustom.Timer1Timer(Sender: TObject);
+begin
+  Timer1.Enabled := False;
+  InitFormData(FCusName);
+  FCusName := '';
+end;
+
 //Desc: 初始化界面数据
 procedure TfFormGetCustom.InitFormData(const nID: string);
 begin
@@ -128,29 +138,34 @@ end;
 function TfFormGetCustom.QueryCustom(const nType: Byte): Boolean;
 var nStr: string;
 begin
-  Result := False;
-  ListCustom.Items.Clear; 
-  nStr := GetQueryCustomerSQL(EditCus.Text, EditCus.Text);
-  if nStr = '' then Exit;
+  ShowWaitForm(Self, '读取客户', True);
+  try
+    Result := False;
+    ListCustom.Items.Clear;
+    nStr := GetQueryCustomerSQL(EditCus.Text, EditCus.Text);
+    if nStr = '' then Exit;
 
-  with FDM.QueryTemp(nStr, True) do
-  if RecordCount > 0 then
-  begin
-    First;
-
-    while not Eof do
-    with ListCustom.Items.Add do
+    with FDM.QueryTemp(nStr, True) do
+    if RecordCount > 0 then
     begin
-      Caption := FieldByName('custcode').AsString;
-      SubItems.Add(FieldByName('custname').AsString);
-      SubItems.Add(FieldByName('cmnecode').AsString);
+      First;
 
-      ImageIndex := cItemIconIndex;
-      Next;
+      while not Eof do
+      with ListCustom.Items.Add do
+      begin
+        Caption := FieldByName('custcode').AsString;
+        SubItems.Add(FieldByName('custname').AsString);
+        SubItems.Add(FieldByName('cmnecode').AsString);
+
+        ImageIndex := cItemIconIndex;
+        Next;
+      end;
+
+      ListCustom.ItemIndex := 0;
+      Result := True;
     end;
-
-    ListCustom.ItemIndex := 0;
-    Result := True;
+  finally
+    CloseWaitForm;
   end;
 end;
 

@@ -10,7 +10,8 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   UFormBase, UFormNormal, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, cxCheckBox, cxTextEdit,
-  dxLayoutControl, StdCtrls, cxMaskEdit, cxDropDownEdit, cxLabel;
+  dxLayoutControl, StdCtrls, cxMaskEdit, cxDropDownEdit, cxLabel,
+  cxButtonEdit;
 
 type
   TfFormBatcodeEdit = class(TfFormNormal)
@@ -40,16 +41,25 @@ type
     dxLayout1Item13: TdxLayoutItem;
     EditType: TcxComboBox;
     dxLayout1Group5: TdxLayoutGroup;
-    cxTextEdit1: TcxTextEdit;
     dxLayout1Item14: TdxLayoutItem;
     EditDays: TcxTextEdit;
     cxLabel2: TcxLabel;
     dxLayout1Item15: TdxLayoutItem;
     dxLayout1Group8: TdxLayoutGroup;
     dxLayout1Group7: TdxLayoutGroup;
+    dxLayout1Item16: TdxLayoutItem;
+    cxLabel3: TcxLabel;
+    dxLayout1Group6: TdxLayoutGroup;
+    EditCusName: TcxButtonEdit;
+    dxLayout1Item17: TdxLayoutItem;
+    EditCusID: TcxTextEdit;
+    dxLayout1Item18: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditStockPropertiesEditValueChanged(Sender: TObject);
+    procedure EditCusNameKeyPress(Sender: TObject; var Key: Char);
+    procedure EditCusNamePropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
   protected
     { Protected declarations }
     FRecordID: string;
@@ -112,6 +122,7 @@ begin
   ReleaseCtrlData(Self);
 end;
 
+//------------------------------------------------------------------------------
 procedure TfFormBatcodeEdit.LoadFormData(const nID: string);
 var nStr: string;
 begin
@@ -164,6 +175,36 @@ begin
       Check1.Checked := FieldByName('D_Valid').AsString = sFlag_Yes;
     end;
   end;
+end;
+
+//Desc: 选择客户
+procedure TfFormBatcodeEdit.EditCusNameKeyPress(Sender: TObject; var Key: Char);
+var nStr: string;
+    nP: TFormCommandParam;
+begin
+  if Key = #13 then
+  begin
+    Key := #0;
+    if EditName.Properties.ReadOnly then Exit;
+
+    nP.FParamA := EditCusName.Text;
+    CreateBaseFormItem(cFI_FormGetCustom, '', @nP);
+    if (nP.FCommand <> cCmd_ModalResult) or (nP.FParamA <> mrOK) then Exit;
+
+    EditCusID.Text := nP.FParamB;
+    EditCusName.Text := nP.FParamC;
+
+    EditCusID.Properties.ReadOnly := True;
+    EditCusName.Properties.ReadOnly := True;
+  end;
+end;
+
+procedure TfFormBatcodeEdit.EditCusNamePropertiesButtonClick(
+  Sender: TObject; AButtonIndex: Integer);
+var nKey: Char;
+begin
+  nKey := #13;
+  EditCusNameKeyPress(EditCusName, nKey);
 end;
 
 function TfFormBatcodeEdit.OnVerifyCtrl(Sender: TObject; var nHint: string): Boolean;
@@ -254,6 +295,7 @@ begin
       end;
   end;
   //判断批次号是否重复
+
   if FRecordID = '' then
        nStr := ''
   else nStr := SF('R_ID', FRecordID, sfVal);
@@ -268,6 +310,9 @@ begin
           SF('D_Init', EditInit.Text, sfVal),
           SF('D_Warn', EditWarn.Text, sfVal),
           SF('D_Rund', EditRund.Text, sfVal),
+
+          SF('D_CusID', Trim(EditCusID.Text)),
+          SF('D_CusName', EditCusName.Text),
 
           SF('D_ValidDays', EditDays.Text, sfVal),
           SF('D_Valid', nU),

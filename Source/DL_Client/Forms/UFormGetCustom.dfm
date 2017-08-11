@@ -11,17 +11,17 @@ inherited fFormGetCustom: TfFormGetCustom
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 600
-    Height = 346
+    Width = 608
+    Height = 357
     inherited BtnOK: TButton
-      Left = 454
-      Top = 313
+      Left = 462
+      Top = 324
       Caption = #30830#23450
       TabOrder = 3
     end
     inherited BtnExit: TButton
-      Left = 524
-      Top = 313
+      Left = 532
+      Top = 324
       TabOrder = 4
     end
     object EditCus: TcxButtonEdit [2]
@@ -97,5 +97,11 @@ inherited fFormGetCustom: TfFormGetCustom
         end
       end
     end
+  end
+  object Timer1: TTimer
+    Interval = 100
+    OnTimer = Timer1Timer
+    Left = 28
+    Top = 104
   end
 end

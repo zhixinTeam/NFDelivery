@@ -913,8 +913,10 @@ begin
 
     First;
     nVal := 0;
-    nBatchNew:='';
-    nSelect:=sFlag_No;
+    nInc := 1;
+    
+    nBatchNew := '';
+    nSelect := sFlag_No;
 
     while not Eof do
     try
@@ -944,17 +946,30 @@ begin
       end; //超发
 
       nInt := FieldByName('D_ValidDays').AsInteger;
-      if Now() - FieldByName('D_UseDate').AsDateTime >= nInt then
+      if (nInt > 0) and (Now() - FieldByName('D_UseDate').AsDateTime >= nInt) then
       begin
         OutuseCode(FieldByName('D_ID').AsString);
         Continue;
       end; //编号过期
+
+      if nInc = 1 then
+      begin
+        nStr := Trim(FListA.Values['CusID']);
+        if (nStr <> '') and
+           (nStr <> FieldByName('D_CusID').AsString) then Continue;
+        //首轮检索客户专用
+      end;
 
       nSelect   := sFlag_Yes;
       nBatchNew := FieldByName('D_ID').AsString;
       Break;
     finally
       Next;
+      if Eof and (nInc = 1) and (nSelect <> sFlag_Yes) then
+      begin
+        Inc(nInc);
+        First;
+      end;
     end;
 
     if nSelect <> sFlag_Yes then

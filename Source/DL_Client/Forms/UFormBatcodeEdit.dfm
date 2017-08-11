@@ -1,24 +1,24 @@
 inherited fFormBatcodeEdit: TfFormBatcodeEdit
   Left = 476
   Top = 336
-  ClientHeight = 309
-  ClientWidth = 446
+  ClientHeight = 361
+  ClientWidth = 477
   Position = poMainFormCenter
   OnClose = FormClose
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 446
-    Height = 309
+    Width = 477
+    Height = 361
     inherited BtnOK: TButton
-      Left = 300
-      Top = 276
-      TabOrder = 13
+      Left = 331
+      Top = 328
+      TabOrder = 16
     end
     inherited BtnExit: TButton
-      Left = 370
-      Top = 276
-      TabOrder = 14
+      Left = 401
+      Top = 328
+      TabOrder = 17
     end
     object EditName: TcxTextEdit [2]
       Left = 81
@@ -81,10 +81,10 @@ inherited fFormBatcodeEdit: TfFormBatcodeEdit
     end
     object Check1: TcxCheckBox [9]
       Left = 11
-      Top = 276
+      Top = 328
       Caption = #26159#21542#21551#29992
       ParentFont = False
-      TabOrder = 12
+      TabOrder = 15
       Transparent = True
       Width = 121
     end
@@ -138,6 +138,39 @@ inherited fFormBatcodeEdit: TfFormBatcodeEdit
       ParentFont = False
       Style.Edges = []
       Transparent = True
+    end
+    object cxLabel3: TcxLabel [15]
+      Left = 23
+      Top = 232
+      AutoSize = False
+      ParentFont = False
+      Style.Edges = []
+      Properties.LineOptions.Alignment = cxllaBottom
+      Properties.LineOptions.Visible = True
+      Transparent = True
+      Height = 16
+      Width = 400
+    end
+    object EditCusName: TcxButtonEdit [16]
+      Left = 81
+      Top = 278
+      Properties.Buttons = <
+        item
+          Default = True
+          Kind = bkEllipsis
+        end>
+      Properties.MaxLength = 80
+      Properties.OnButtonClick = EditCusNamePropertiesButtonClick
+      TabOrder = 14
+      OnKeyPress = EditCusNameKeyPress
+      Width = 121
+    end
+    object EditCusID: TcxTextEdit [17]
+      Left = 81
+      Top = 253
+      Properties.MaxLength = 20
+      TabOrder = 13
+      Width = 121
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup
@@ -232,21 +265,41 @@ inherited fFormBatcodeEdit: TfFormBatcodeEdit
             object dxLayout1Group7: TdxLayoutGroup
               ShowCaption = False
               Hidden = True
-              LayoutDirection = ldHorizontal
               ShowBorder = False
-              object dxLayout1Item14: TdxLayoutItem
-                Caption = #26377#25928#22825#25968':'
-                Control = EditDays
-                ControlOptions.ShowBorder = False
-              end
-              object dxLayout1Item15: TdxLayoutItem
-                Caption = 'cxLabel2'
+              object dxLayout1Group6: TdxLayoutGroup
                 ShowCaption = False
-                Control = cxLabel2
+                Hidden = True
+                LayoutDirection = ldHorizontal
+                ShowBorder = False
+                object dxLayout1Item14: TdxLayoutItem
+                  Caption = #26377#25928#22825#25968':'
+                  Control = EditDays
+                  ControlOptions.ShowBorder = False
+                end
+                object dxLayout1Item15: TdxLayoutItem
+                  Caption = 'cxLabel2'
+                  ShowCaption = False
+                  Control = cxLabel2
+                  ControlOptions.ShowBorder = False
+                end
+              end
+              object dxLayout1Item16: TdxLayoutItem
+                ShowCaption = False
+                Control = cxLabel3
                 ControlOptions.ShowBorder = False
               end
             end
           end
+        end
+        object dxLayout1Item18: TdxLayoutItem
+          Caption = #23458#25143#32534#21495':'
+          Control = EditCusID
+          ControlOptions.ShowBorder = False
+        end
+        object dxLayout1Item17: TdxLayoutItem
+          Caption = #23458#25143#21517#31216':'
+          Control = EditCusName
+          ControlOptions.ShowBorder = False
         end
       end
       inherited dxLayout1Group1: TdxLayoutGroup
@@ -258,13 +311,5 @@ inherited fFormBatcodeEdit: TfFormBatcodeEdit
         end
       end
     end
-  end
-  object cxTextEdit1: TcxTextEdit
-    Left = 81
-    Top = 182
-    ParentFont = False
-    TabOrder = 1
-    Text = '5'
-    Width = 125
   end
 end

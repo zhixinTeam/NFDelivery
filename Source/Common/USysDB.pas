@@ -1126,6 +1126,7 @@ const
        'D_Stock varChar(32),D_Name varChar(80), D_Brand varChar(32), ' +
        'D_Type Char(1), D_Plan $Float, D_Sent $Float Default 0, ' +
        'D_Rund $Float, D_Init $Float, D_Warn $Float, D_ValidDays Integer,' +
+       'D_CusID varChar(20), D_CusName varChar(80),' +
        'D_Man varChar(32), D_Date DateTime, ' +
        'D_DelMan varChar(32), D_DelDate DateTime, ' +
        'D_UseDate DateTime, D_LastDate DateTime, D_Valid char(1))';
