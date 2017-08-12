@@ -944,6 +944,36 @@ begin
   gDisplayManager.Display(nReader, nStr);
   //LED显示
 
+  {$IFDEF CombinePrintBill}
+  //销售尾单合单后合并打印,只针对销售散装
+  if ((nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew)) and
+     (nTrucks[0].FType = sFlag_San) then
+  begin
+    nID := '';
+    for nIdx:=Low(nTrucks) to High(nTrucks) do
+    begin
+      nID := nID + '''' + nTrucks[nIdx].FID + '''';
+      if nIdx <> High(nTrucks) then
+        nID := nID + ',';
+      //split flag
+    end;
+
+    nStr := #7 + nCardType;
+    //磁卡类型
+
+    if nPrinter = '' then
+         nStr := nID + nStr
+    else nStr := nID + #9 + nPrinter + nStr;
+
+    gRemotePrinter.PrintBill(nStr);
+    if nTrucks[0].FCardKeep = sFlag_Yes then Exit;
+    //长期卡,不吞卡
+
+    Result := True;
+    Exit;
+  end;
+  {$ENDIF}
+  
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   begin
     {$IFDEF HKVDVR}

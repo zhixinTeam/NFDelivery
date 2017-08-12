@@ -188,7 +188,7 @@
   //计数器应答模式
   {$DEFINE CardProvide}
   //采用复磅模式
-  {$DEFINE LineGroup}
+  {.$DEFINE LineGroup}
   //通道进行分组
   {$DEFINE PrintChinese}
   //汉字喷码支持
@@ -196,6 +196,8 @@
   //格式化计数器车牌
   {$DEFINE CombinePrintBill}
   //销售尾单合单后合并打印
+  {$DEFINE StockPriorityInQueue}
+  //排队时使用物料优先级
 {$ENDIF}
 //山亚南方
 

@@ -492,7 +492,8 @@ const
   -----------------------------------------------------------------------------}
 
   sSQL_NewStockMatch = 'Create Table $Table(R_ID $Inc, M_Group varChar(8),' +
-       'M_ID varChar(20), M_Name varChar(80), M_Status Char(1), M_LineNo varChar(20))';
+       'M_ID varChar(20), M_Name varChar(80), M_Status Char(1), ' +
+       'M_LineNo varChar(20), M_Priority Integer Default 0)';
   {-----------------------------------------------------------------------------
    相似品种映射: StockMatch
    *.R_ID: 记录编号
@@ -500,6 +501,8 @@ const
    *.M_ID: 物料号
    *.M_Name: 物料名称
    *.M_Status: 状态
+   *.M_LineNo: 通道专用分组
+   *.M_Priority: 物料优先级(若优先级高,则使用高级别的排队,忽略低级别物料)
   -----------------------------------------------------------------------------}
 
   sSQL_NewOrder = 'Create Table $Table(R_ID $Inc, B_ID varChar(20),' +

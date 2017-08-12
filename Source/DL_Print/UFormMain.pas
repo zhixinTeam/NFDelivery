@@ -326,7 +326,8 @@ function PrintBillReport(nBill: string; var nHint: string;
  const nPrinter: string = ''; const nMoney: string = '0'): Boolean;
 var nStr,nIDs: string;
     nDS: TDataSet;
-    nValue: Double;
+    nInt: Integer;
+    nValue,nP,nM: Double;
     nParam: TReportParamItem;
 begin
   Result := False;
@@ -369,6 +370,9 @@ begin
 
   nValue := 0;
   nIDs := '';
+  nP := 0;
+  nM := 0;
+  
   {$IFDEF CombinePrintBill}
   with nDS do
   begin
@@ -380,10 +384,30 @@ begin
       nIDs := nIDs + FieldByName('L_ID').AsString;
       //拼接单据号
 
+      if nP = 0 then
+        nP := FieldByName('L_PValue').AsFloat;
+      //皮重固定
+
       Next;
       if not Eof then
         nIDs := nIDs + ',';
       //xxxxx
+    end;
+
+    if nM = 0 then
+      nM := nP + nValue;
+    //合计毛重
+
+    nInt := Pos(',', nBill);
+    if nInt > 0 then
+    begin
+      nBill := Copy(nBill, 1, nInt - 1);
+      //多张单据时取第一个
+
+      nStr := 'Select * From %s b ' +
+              'Left Join %s p on b.L_ID=p.P_Bill Where L_ID In (%s)';
+      nStr := Format(nStr, [sTable_Bill, sTable_PoundLog, nBill]);
+      FDM.SQLQuery(nStr, FDM.SQLQuery1);
     end;
   end;
   {$ENDIF}
@@ -395,6 +419,14 @@ begin
   nParam.FName := 'L_Value';
   nParam.FValue := nValue;
   FDR.AddParamItem(nParam);
+
+  nParam.FName := 'L_PValue';
+  nParam.FValue := nP;
+  FDR.AddParamItem(nParam);
+
+  nParam.FName := 'L_MValue';
+  nParam.FValue := nM;
+  FDR.AddParamItem(nParam); 
 
   FDR.Dataset1.DataSet := FDM.SQLQuery1;
   FDR.PrintReport;

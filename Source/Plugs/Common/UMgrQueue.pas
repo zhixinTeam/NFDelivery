@@ -47,8 +47,11 @@ type
     FInFact     : Boolean;     //是否进厂
     FInLade     : Boolean;     //是否提货
     FIsVIP      : string;      //特权车
+
     FIndex      : Integer;     //队列索引
     FIsReal     : Boolean;     //非虚位
+    FQueueNum   : Integer;     //队列中车数
+    FQueueStock : string;      //优先排队品种
 
     FValue      : Double;      //提货量
     FDai        : Integer;     //袋数
@@ -77,6 +80,7 @@ type
     FMate       : string;      //物料号
     FName       : string;      //物料名
     FLineNo     : string;      //通道专用分组
+    FPriority   : Integer;     //优先级,拼单时低级别物料不参与排队
   end;
 
   TTruckQueueManager = class;
@@ -107,6 +111,8 @@ type
     function IsStockMatch(nTruck: PTruckItem; nLine: PLineItem): Boolean; overload;
     function IsStockMatch(const nStock: string; nLine: PLineItem): Boolean; overload;
     //品种分组映射
+    function GetHighPriorityStock(const nStocks: TDynamicStrArray): string;
+    //品种优先级
     procedure LoadQueueParam;
     //载入排队参数
     procedure LoadLines;
@@ -118,7 +124,8 @@ type
     procedure MakePoolTruckIn(const nIdx: Integer; const nLine: PLineItem);
     //车辆入队
     procedure InvalidTruckOutofQueue;
-    function IsLineTruckLeast(const nLine: PLineItem; nIsReal: Boolean): Boolean;
+    function IsLineTruckLeast(const nLine: PLineItem; nIsReal: Boolean;
+      const nQueueStock: string = ''): Boolean;
     procedure SortTruckList(const nList: TList);
     //队列处理
     function RealTruckInQueue(const nTruck: string): Boolean;
@@ -756,7 +763,7 @@ end;
 procedure TTruckQueueDBReader.LoadStockMatck;
 var nStr: string;
     nIdx: Integer;
-    nUseLine: Boolean;
+    nUseLine,nUsePriority: Boolean;
 begin
   if FOwner.FLineLoaded then Exit;
   {$IFDEF DEBUG}
@@ -773,6 +780,9 @@ begin
     nUseLine := Assigned(FindField('M_LineNo'));
     //是否使用通道分组
 
+    nUsePriority := Assigned(FindField('M_Priority'));
+    //是否使用物料优先级
+
     SetLength(FMatchItems, RecordCount);
     nIdx := 0;
     First;
@@ -788,6 +798,10 @@ begin
         if nUseLine then
              FLineNo := FieldByName('M_LineNo').AsString
         else FLineNo := '';
+
+        if nUsePriority then
+             FPriority := FieldByName('M_Priority').AsInteger
+        else FPriority := 0;
       end;
 
       Inc(nIdx);
@@ -887,6 +901,71 @@ begin
     Result := (nLine.FStockGroup <> '') and
               (nLine.FStockGroup = GetStockMatchGroup(nStock, nLine.FLineID));
     //xxxxx
+  end;
+end;
+
+//Date: 2017-08-11
+//Parm: 品种组
+//Desc: 获取能同时装nStocks分组中,级别最高的物料号
+function TTruckQueueDBReader.GetHighPriorityStock(
+  const nStocks: TDynamicStrArray): string;
+var i,j,nIdx,nInt: Integer;
+begin
+  Result := '';
+  if Length(nStocks) < 2 then Exit;
+  //单品种无需判断优先级
+
+  for i:=Low(FMatchItems) to High(FMatchItems) do
+  begin
+    if FMatchItems[i].FMate <> nStocks[0] then Continue;
+    //品种不匹配
+
+    nInt := 1;
+    //第一个品种已匹配
+
+    for nIdx:=Length(nStocks)-1 downto 1 do
+    begin
+      for j:=Low(FMatchItems) to High(FMatchItems) do
+      begin
+        if FMatchItems[j].FGroup <> FMatchItems[i].FGroup then Continue;
+        //当前分组(i)不匹配
+
+        if FMatchItems[j].FMate = nStocks[nIdx] then
+        begin
+          Inc(nInt);
+          Break;
+        end; //该分组(i)支持当前品种(nIdx)
+      end;
+    end;
+
+    if nInt <> Length(nStocks) then Continue;
+    //当前分组(i)不支持全部品种
+
+    nInt   := FMatchItems[i].FPriority;
+    Result := FMatchItems[i].FMate;
+
+    for j:=Low(FMatchItems) to High(FMatchItems) do
+    begin
+      if FMatchItems[j].FGroup <> FMatchItems[i].FGroup then Continue;
+      //当前分组(i)不匹配
+
+      if (FMatchItems[j].FPriority = nInt) and (nInt > 0) then
+      begin
+        if Pos(FMatchItems[j].FMate, Result) < 1 then
+          Result := Result + ',' + FMatchItems[j].FMate;
+        //同优先级
+      end;
+
+      if FMatchItems[j].FPriority > nInt then
+      begin
+        nInt   := FMatchItems[j].FPriority;
+        Result := FMatchItems[j].FMate;
+      end; //当前分组(i)优先级最高品种
+    end;
+
+    if nInt = 0 then
+      Result := '';
+    //品种优先级一样,则不予处理
   end;
 end;
 
@@ -1123,7 +1202,10 @@ begin
         FLine       := FieldByName('T_Line').AsString;
         {$IFDEF LineGroup}
         FLineGroup  := FieldByName('T_LineGroup').AsString;
+        {$ELSE}
+        FLineGroup  := '';
         {$ENDIF}
+        
         FBill       := FieldByName('T_Bill').AsString;
         FHKBills    := FieldByName('T_HKBills').AsString;
         FIsVIP      := FieldByName('T_VIP').AsString;
@@ -1137,10 +1219,13 @@ begin
         FValue      := FieldByName('T_Value').AsFloat;
         FNormal     := FieldByName('T_Normal').AsInteger;
         FBuCha      := FieldByName('T_BuCha').AsInteger;
+
         FIsBuCha    := FNormal > 0;
         FDai        := 0;
+        FQueueNum   := 0;
+        FQueueStock := '';
       end;
-      
+
       Inc(nIdx);
       Next;
     end; //可进厂和已在队列车辆缓冲池
@@ -1291,11 +1376,15 @@ begin
       if FTruckPool[i].FIsReal and (FRealCount >= FQueueMax) then Continue;
       //2.实位车辆,队列已满
 
+      if (FTruckPool[i].FQueueStock <> '') and
+         (Pos(FStockNo, FTruckPool[i].FQueueStock) < 1) then Continue;
+      //3.高优先级品种,强制匹配品种
+
       if not IsStockMatch(FTruckPool[i].FStockNo, FOwner.Lines[nIdx]) then Continue;
       //3.交货单与通道品种不匹配
 
-      if not IsLineTruckLeast(FOwner.Lines[nIdx], FTruckPool[i].FIsReal) then
-        Continue;
+      if not IsLineTruckLeast(FOwner.Lines[nIdx], FTruckPool[i].FIsReal,
+        FTruckPool[i].FQueueStock) then Continue;
       //4.队列车辆不是最少
 
       if not (FTruckPool[i].FIsReal or RealTruckInQueue(FTruckPool[i].FTruck)) then
@@ -1425,7 +1514,66 @@ procedure TTruckQueueDBReader.InvalidTruckOutofQueue;
 var i,j,nIdx: Integer;
     nLine: PLineItem;
     nTruck: PTruckItem;
+    nStocks: TDynamicStrArray;
+
+    procedure AddStockList(const nStock: string);
+    var nLen: Integer;
+    begin
+      for nLen:=Low(nStocks) to High(nStocks) do
+        if nStocks[nLen] = nStock then Exit;
+      //has exists
+      
+      nLen := Length(nStocks);
+      SetLength(nStocks, nLen + 1);
+      nStocks[nLen] := nStock;
+    end;
 begin
+  {$IFDEF StockPriorityInQueue}
+  for i:=Low(FTruckPool) to High(FTruckPool) do
+  with FTruckPool[i] do
+  begin
+    if FQueueNum > 0 then Continue;
+    //已处理
+
+    SetLength(nStocks, 0);
+    AddStockList(FStockNo);
+    FQueueNum := 1;
+    
+    for j:=i+1 to High(FTruckPool) do
+    if CompareText(FTruck, FTruckPool[j].FTruck) = 0 then
+    begin
+      Inc(FQueueNum);
+      AddStockList(FTruckPool[j].FStockNo);
+    end; //同车牌交货单个数
+
+    if FQueueNum < 2 then Continue;
+    //单张交货单,无需处理物料优先级
+
+    FQueueStock := GetHighPriorityStock(nStocks);
+    if FQueueStock <> '' then
+      FEnable := Pos(FStockNo, FQueueStock) > 0;
+    //启用高优先级物料
+
+    for j:=i+1 to High(FTruckPool) do
+    if CompareText(FTruck, FTruckPool[j].FTruck) = 0 then
+    begin
+      FTruckPool[j].FQueueNum := FQueueNum;
+      FTruckPool[j].FQueueStock := FQueueStock;
+      
+      if FQueueStock <> '' then
+        FTruckPool[j].FEnable := Pos(FTruckPool[j].FStockNo, FQueueStock) > 0;
+      //启用高优先级物料
+    end;
+  end;
+  {+++++++++++++++++++++++++++++++++++++ 注意 ++++++++++++++++++++++++++++++++++
+     品种优先级排队的逻辑,有以下4点:
+     1.调度队列里,同一辆车有多个品种(混装),单一品种不存在优先级问题.
+     2.该车的多个品种,可以在同一道混装.即:某个分组可以支持该车的所有品种.
+     3.该车的多个品种,优先级不同.即: 某个品种优先级最高,该车按该品种排队.
+     4.按最高优先级排队时,严格匹配物料号.即: 只匹配当前物料,不考虑通道分组.
+  -----------------------------------------------------------------------------}
+  {$ENDIF}
+  
   with FOwner do
   begin
     for nIdx:=FLines.Count - 1 downto 0 do
@@ -1525,10 +1673,10 @@ begin
 end;
 
 //Date: 2012-4-25
-//Parm: 装车线;实位车辆
+//Parm: 装车线;实位车辆;排队时高优先级品种
 //Desc: 判断nLine的队列车辆否为同品种通道中最少
 function TTruckQueueDBReader.IsLineTruckLeast(const nLine: PLineItem;
-  nIsReal: Boolean): Boolean;
+  nIsReal: Boolean; const nQueueStock: string = ''): Boolean;
 var nIdx: Integer;
 begin
   Result := True;
@@ -1536,6 +1684,9 @@ begin
   for nIdx:=FOwner.Lines.Count - 1 downto 0 do
   with PLineItem(FOwner.Lines[nIdx])^ do
   begin
+    if FLineID = nLine.FLineID then Continue;
+    //0.排除待对比通道
+
     if (not FIsValid) or (FIsVIP <> nLine.FIsVIP) then Continue;
     //1.通道无效,或通道类型不匹配
 
@@ -1547,6 +1698,9 @@ begin
 
     if (not nIsReal) and (FTrucks.Count >= nLine.FTrucks.Count) then Continue;
     //4.虚位车辆,对比车辆列表大小
+
+    if (nQueueStock <> '') and (Pos(FStockNo, nQueueStock) < 1) then Continue;
+    //5.高优先级品种,强制匹配品种
 
     if not IsStockMatch(FStockNo, nLine) then Continue;
     //5.两个通道品种不匹配
