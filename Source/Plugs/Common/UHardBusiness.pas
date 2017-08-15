@@ -29,7 +29,8 @@ function GetJSTruck(const nTruck,nBill: string): string;
 procedure WhenSaveJS(const nTunnel: PMultiJSTunnel);
 //保存计数结果
 
-function PrepareShowInfo(const nCard: string; nTunnel: string=''):string;
+function PrepareShowInfo(const nCard: string; nTunnel: string='';
+ nLevel: Integer = 0):string;
 //计数器显示预装信息
 function GetCardUsed(const nCard: string; var nCardType: string): Boolean;
 //获取卡号类型
@@ -682,10 +683,19 @@ begin
       if nInt < 0 then Continue;
       nPTruck := nPLine.FTrucks[nInt];
 
-      nStr := 'Update %s Set T_Line=''%s'',T_PeerWeight=%d Where T_Bill=''%s''';
-      nStr := Format(nStr, [sTable_ZTTrucks, nPLine.FLineID, nPLine.FPeerWeight,
-              nPTruck.FBill]);
-      //xxxxx
+      if nPTruck.FQueueStock = '' then
+      begin
+        nStr := 'Update %s Set T_Line=''%s'',T_PeerWeight=%d Where T_Bill=''%s''';
+        nStr := Format(nStr, [sTable_ZTTrucks, nPLine.FLineID, nPLine.FPeerWeight,
+                nPTruck.FBill]);
+        //xxxxx
+      end else
+      begin
+        nStr := 'Update %s Set T_Line=''%s'',T_PeerWeight=%d Where T_Bill In (%s)';
+        nStr := Format(nStr, [sTable_ZTTrucks, nPLine.FLineID, nPLine.FPeerWeight,
+                nPTruck.FQueueBills]);
+        //按品种优先级排队时,一车对应多张交货单
+      end;
 
       gDBConnManager.WorkerExec(nDB, nStr);
       //绑定通道
@@ -696,9 +706,10 @@ begin
 end;
 
 //Date: 2012-4-22
-//Parm: 卡号;读头;打印机
+//Parm: 卡号;读头;打印机;附加参数
 //Desc: 对nCard放行出厂
-procedure MakeTruckOut(const nCard,nReader,nPrinter: string);
+procedure MakeTruckOut(const nCard,nReader,nPrinter: string;
+ const nOptions: string = '');
 var nStr, nCardType,nPrint,nID: string;
     nIdx: Integer;
     nRet: Boolean;
@@ -775,7 +786,7 @@ begin
     Exit;
   end;
 
-  if nReader <> '' then
+  if (nReader <> '') and (Pos('nodoor', LowerCase(nOptions)) < 1) then
     HardOpenDoor(nReader);
   //抬杆
 
@@ -1117,7 +1128,7 @@ begin
 
       if nReader.FType = rtOut then
       begin
-        MakeTruckOut(nStr, nReader.FID, nReader.FPrinter);
+        MakeTruckOut(nStr, nReader.FID, nReader.FPrinter, nReader.FPound);
       end else
 
       if nReader.FType = rtGate then
@@ -1247,6 +1258,38 @@ begin
   //task done
 end;
 
+//Date: 2017-08-13
+//Parm: 交货单号;袋重
+//Desc: 获取交货单可发货袋数
+function BillValue2Dai(const nBill: string; const nPeer: Integer): Integer;
+var nStr: string;
+    nWorker: PDBWorker;
+begin
+  Result := 0;
+  if nPeer < 1 then Exit;
+  
+  nWorker := nil;
+  try
+    nStr := 'Select T_Value From %s Where T_HKBills Like ''%%%s%%''';
+    nStr := Format(nStr, [sTable_ZTTrucks, nBill]);
+
+    with gDBConnManager.SQLQuery(nStr, nWorker) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nStr := '获取袋数失败,交货单[ %s ]不存在.';
+        nStr := Format(nStr, [nBill]);
+        WriteNearReaderLog(nStr);
+      end;
+
+      Result := Trunc(Fields[0].AsFloat * 1000 / nPeer);
+      //xxxxx
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+end;
+
 //Date: 2012-4-24
 //Parm: 车牌;通道;交货单;启动计数
 //Desc: 对在nTunnel的车辆开启计数器
@@ -1289,8 +1332,15 @@ begin
     begin
       nTask := gTaskMonitor.AddTask('UHardBusiness.AddJS', cTaskTimeoutLong);
       //to mon
-      
-      gMultiJSManager.AddJS(nTunnel, nTruck, nBill, nPTruck.FDai, True);
+
+      nIdx := nPTruck.FDai;
+      {$IFDEF StockPriorityInQueue}
+      if nBill <> nPTruck.FBill then
+        nIdx := BillValue2Dai(nBill, nPLine.FPeerWeight);
+      //按品种优先级排队时,当前装车的单据和车辆单据有可能不一致.
+      {$ENDIF}
+
+      gMultiJSManager.AddJS(nTunnel, nTruck, nBill, nIdx, True);
       gTaskMonitor.DelTask(nTask);
     end;
   finally
@@ -1408,6 +1458,49 @@ begin
   nStr := '';
   nInt := 0;
 
+  {$IFDEF StockPriorityInQueue}
+  //使用品种优先级排队
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    FSelected := False;
+
+    if FNextStatus = sFlag_TruckZT then
+    begin
+      if (Pos(FID, nPTruck.FQueueBills) > 0) and (nInt = 0) then
+      begin
+        FSelected := True;
+        FLineGroup := nPLine.FLineGroup;
+      end;
+
+      Inc(nInt);
+      //优先选择未刷卡装车的第一张单据
+    end;
+  end;
+
+  if nInt < 1 then
+  begin
+    for nIdx:=Low(nTrucks) to High(nTrucks) do
+    with nTrucks[nIdx] do
+    begin
+      if FStatus = sFlag_TruckZT then
+      begin
+        FSelected := Pos(FID, nPTruck.FQueueBills) > 0;
+        if FSelected then
+        begin
+          FLineGroup := nPLine.FLineGroup;
+          Inc(nInt);
+        end;
+        //刷卡通道对应的交货单
+        Continue;
+      end;
+      
+      FSelected := False;
+      nStr := '车辆[ %s ]下一状态为:[ %s ],无法栈台提货.';
+      nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
+    end;
+  end;
+  {$ELSE}
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
@@ -1431,6 +1524,7 @@ begin
     nStr := '车辆[ %s ]下一状态为:[ %s ],无法栈台提货.';
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
   end;
+  {$ENDIF}
 
   if nInt < 1 then
   begin
@@ -1448,9 +1542,20 @@ begin
     nStr := Format(nStr, [nPTruck.FTruck]);
     WriteNearReaderLog(nStr);
 
+    {$IFDEF PrepareShowOnLading}
+    MakeTruckShowPreInfo(nTrucks[0].FCard, nTunnel);
+    //显示与刷卡信息
+    {$ENDIF}
+
+    {$IFDEF StockPriorityInQueue}
+    if not TruckStartJS(nPTruck.FTruck, nTunnel, FID, nStr,
+       GetHasDai(FID) < 1) then
+      WriteNearReaderLog(nStr);
+    {$ELSE}
     if not TruckStartJS(nPTruck.FTruck, nTunnel, nPTruck.FBill, nStr,
        GetHasDai(nPTruck.FBill) < 1) then
       WriteNearReaderLog(nStr);
+    {$ENDIF}
     Exit;
   end;
 
@@ -1463,8 +1568,27 @@ begin
     Exit;
   end;
 
+  {$IFDEF PrepareShowOnLading}
+  MakeTruckShowPreInfo(nTrucks[0].FCard, nTunnel);
+  //显示与刷卡信息
+  {$ENDIF}
+
+  {$IFDEF StockPriorityInQueue}
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    if not FSelected then Continue;
+    //xxxxxx
+    
+    if not TruckStartJS(nPTruck.FTruck, nTunnel, FID, nStr) then
+      WriteNearReaderLog(nStr);
+    Break;
+  end;  
+
+  {$ELSE}
   if not TruckStartJS(nPTruck.FTruck, nTunnel, nPTruck.FBill, nStr) then
     WriteNearReaderLog(nStr);
+  {$ENDIF}
   Exit;
 end;
 
@@ -1890,10 +2014,16 @@ begin
   end;
 end;
 
-function PrepareShowInfo(const nCard:string; nTunnel: string=''):string;
-var nStr: string;
+//Date: 2017-08-13
+//Parm: 磁卡号;通道号;调用深度
+//Desc: 在nTunnel通道上显示nCard的预刷卡信息
+function PrepareShowInfo(const nCard:string; nTunnel: string='';
+ nLevel: Integer = 0):string;
+var nStr,nNewCard: string;
     nDai: Double;
     nIdx,nInt: Integer;
+    nWorker: PDBWorker;
+
     nPLine: PLineItem;
     nPTruck: PTruckItem;
     nTrucks: TLadingBillItems;
@@ -1951,21 +2081,87 @@ begin
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
-     nStr := '';
-     if FNextStatus= sFlag_TruckZT then
-     begin
-        nDai := Int(FValue * 1000) / nPLine.FPeerWeight;
+    nStr := '';
+    if FNextStatus= sFlag_TruckZT then
+    begin
+      nDai := Int(FValue * 1000) / nPLine.FPeerWeight;
 
-        nStr := GetStockType(FID);
-        Result := Result + nStr + StringOfChar(' ' , 7 - Length(nStr));
+      nStr := GetStockType(FID);
+      Result := Result + nStr + StringOfChar(' ' , 7 - Length(nStr));
 
-        nStr := FormatFloat('00000' , nDai);
-        Result := Result + StringOfChar('0' , 5 - Length(nStr)) + nStr;
-     end else
-     begin
-        Result := Format('下一状态 %s', [TruckStatusToStr(FNextStatus)]);
-     end;  
+      nStr := FormatFloat('00000' , nDai);
+      Result := Result + StringOfChar('0' , 5 - Length(nStr)) + nStr;
+      Break;
+    end else
+    begin
+      Result := Format('下一状态 %s', [TruckStatusToStr(FNextStatus)]);
+      {$IFDEF PrepareShowOnLading}
+      if nLevel < 1 then
+      begin
+        nStr := '预刷卡: 车辆[ %s.%s -> %s ]不符合条件,准备切换后面车辆.';
+        nStr := Format(nStr, [FTruck, FID, TruckStatusToStr(FNextStatus)]);
+
+        WriteNearReaderLog(nStr);
+        Result := '';
+      end;
+      {$ENDIF}
+    end;
   end;
+
+  {$IFDEF PrepareShowOnLading}
+  if (Result = '') and (nLevel < 1) then
+  begin
+    Inc(nLevel);
+    nIdx := nPLine.FTrucks.IndexOf(nPTruck);
+    
+    if (nIdx >= 0) and (nIdx < nPLine.FTrucks.Count - 1) then
+    begin
+      nPTruck := nPLine.FTrucks[nIdx+1];
+      //后面车辆
+
+      nStr := 'Select S_Card From %s Where L_ID=''%s''';
+      nStr := Format(nStr, [sTable_Bill, nPTruck.FBill]);
+
+      nNewCard := '';
+      nWorker := nil;
+      
+      with gDBConnManager.SQLQuery(nStr, nWorker) do
+      try
+        if RecordCount > 0 then
+        begin
+          nNewCard := Fields[0].AsString;
+          //后车磁卡
+        end else
+        begin
+          nStr := '预刷卡: 后面车辆[ %s.%s ]交货单不存在.';
+          nStr := Format(nStr, [nPTruck.FTruck, nPTruck.FBill]);
+          WriteNearReaderLog(nStr);
+        end;
+      finally
+        gDBConnManager.ReleaseConnection(nWorker); 
+      end;
+
+      if nNewCard = '' then
+      begin
+        nStr := '预刷卡: 后面车辆[ %s.%s ]磁卡号为空.';
+        nStr := Format(nStr, [nPTruck.FTruck, nPTruck.FBill]);
+        WriteNearReaderLog(nStr);
+
+        Result := '%s 后车磁卡错误';
+        nStr := Format(nStr, [nTrucks[0].FTruck]);
+      end else
+      begin
+        PrepareShowInfo(nNewCard, nPLine.FLineID, nLevel);
+        //后车预刷卡信息
+      end;
+    end else
+    begin
+      Result := '%s 后面没车';
+      nStr := Format(nStr, [nTrucks[0].FTruck]);
+    end;
+  end;
+  //当前卡没有可装品种时,显示下一辆车
+  {$ENDIF}
 
   WriteNearReaderLog('PrepareShowInfo: [' + Result + ']');
 end;

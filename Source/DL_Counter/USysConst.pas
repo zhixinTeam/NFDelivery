@@ -50,6 +50,7 @@ type
     FInFact   : Boolean;     //是否进厂
     FIsRun    : Boolean;     //是否运行
     FHKBills  : string;      //合卡列表
+    FQueueBills: string;     //优先级排队时,一车多单
   end;
 
   TZTLineItems = array of TZTLineItem;
@@ -249,6 +250,10 @@ begin
       FLine     := Values['Line'];
       FBill     := Values['Bill'];
       FHKBills  := Values['HKBills'];
+
+      FQueueBills := Values['QueueBills'];
+      FQueueBills := StringReplace(FQueueBills, '''', '', [rfReplaceAll]);
+      FQueueBills := StringReplace(FQueueBills, ',', '.', [rfReplaceAll]);
 
       if IsNumber(Values['Value'], True) then
            FValue := StrToFloat(Values['Value'])

@@ -126,7 +126,7 @@ begin
 
     if nInt < 100 then
       nInt := 100;
-    dxChart1.Height := nInt;
+    dxChart1.Tag := nInt;
 
     {$IFDEF USE_MIT}
     //ToolBar1.Visible := True;
@@ -207,6 +207,7 @@ end;
 procedure TfFormMain.Timer1Timer(Sender: TObject);
 begin
   Timer1.Enabled := False;
+  dxChart1.Height := dxChart1.Tag;
   InitFormData;
   //³õÊ¼»¯
 

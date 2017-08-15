@@ -168,6 +168,8 @@
   //采用复磅模式
   {$DEFINE LineGroup}
   //通道进行分组
+  {$DEFINE CombinePrintBill}
+  //销售尾单合单后合并打印
 {$ENDIF}
 //桐庐南方
 
@@ -198,6 +200,8 @@
   //销售尾单合单后合并打印
   {$DEFINE StockPriorityInQueue}
   //排队时使用物料优先级
+  {$DEFINE PrepareShowOnLading}
+  //刷卡装车时控制预刷卡(不使用预刷卡读卡器)
 {$ENDIF}
 //山亚南方
 

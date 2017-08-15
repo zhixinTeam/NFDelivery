@@ -3192,7 +3192,7 @@ begin
     end;
 
     gDBConnManager.WorkerExec(FDBConn, nSQL);
-  end;
+  end else nData := nOut.FData;
 end;
 
 //Date: 2017/6/12

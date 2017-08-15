@@ -52,6 +52,7 @@ type
     FIsReal     : Boolean;     //非虚位
     FQueueNum   : Integer;     //队列中车数
     FQueueStock : string;      //优先排队品种
+    FQueueBills : string;      //有限排队单据
 
     FValue      : Double;      //提货量
     FDai        : Integer;     //袋数
@@ -1224,6 +1225,7 @@ begin
         FDai        := 0;
         FQueueNum   := 0;
         FQueueStock := '';
+        FQueueBills := '''' + FBill + '''';
       end;
 
       Inc(nIdx);
@@ -1442,9 +1444,20 @@ begin
   if (nLine.FPeerWeight > 0) and
      (nTruck.FInFact or (nTruck.FIsVIP = sFlag_TypeShip)) then
   begin
-    nStr := 'Update %s Set T_Line=''%s'',T_PeerWeight=%d Where T_Bill=''%s''';
-    nStr := Format(nStr, [sTable_ZTTrucks, nLine.FLineID, nLine.FPeerWeight,
-                          nTruck.FBill]);
+    if nTruck.FQueueStock = '' then
+    begin
+      nStr := 'Update %s Set T_Line=''%s'',T_PeerWeight=%d Where T_Bill=''%s''';
+      nStr := Format(nStr, [sTable_ZTTrucks, nLine.FLineID, nLine.FPeerWeight,
+                            nTruck.FBill]);
+      //xxxxx
+    end else
+    begin
+      nStr := 'Update %s Set T_Line=''%s'',T_PeerWeight=%d Where T_Bill In (%s)';
+      nStr := Format(nStr, [sTable_ZTTrucks, nLine.FLineID, nLine.FPeerWeight,
+                            nTruck.FQueueBills]);
+      //xxxxx
+    end;
+
     gDBConnManager.WorkerExec(FDBConn, nStr);
   end;
 
@@ -1503,7 +1516,8 @@ begin
   for nIdx:=Low(FTruckPool) to High(FTruckPool) do
   if CompareText(nBill, FTruckPool[nIdx].FBill) = 0 then
   begin
-    Result := nIdx;
+    if FTruckPool[nIdx].FEnable then
+      Result := nIdx;
     Break;
   end;
 end;
@@ -1538,12 +1552,13 @@ begin
     SetLength(nStocks, 0);
     AddStockList(FStockNo);
     FQueueNum := 1;
-    
+
     for j:=i+1 to High(FTruckPool) do
     if CompareText(FTruck, FTruckPool[j].FTruck) = 0 then
     begin
       Inc(FQueueNum);
       AddStockList(FTruckPool[j].FStockNo);
+      FQueueBills := FQueueBills + ',' +  FTruckPool[j].FQueueBills;
     end; //同车牌交货单个数
 
     if FQueueNum < 2 then Continue;
@@ -1551,7 +1566,7 @@ begin
 
     FQueueStock := GetHighPriorityStock(nStocks);
     if FQueueStock <> '' then
-      FEnable := Pos(FStockNo, FQueueStock) > 0;
+      FEnable := (FLine <> '') or (Pos(FStockNo, FQueueStock) > 0);
     //启用高优先级物料
 
     for j:=i+1 to High(FTruckPool) do
@@ -1559,9 +1574,11 @@ begin
     begin
       FTruckPool[j].FQueueNum := FQueueNum;
       FTruckPool[j].FQueueStock := FQueueStock;
+      FTruckPool[j].FQueueBills := FQueueBills;
       
       if FQueueStock <> '' then
-        FTruckPool[j].FEnable := Pos(FTruckPool[j].FStockNo, FQueueStock) > 0;
+        FTruckPool[j].FEnable := (FTruckPool[j].FLine <> '') or
+                                 (Pos(FTruckPool[j].FStockNo, FQueueStock) > 0);
       //启用高优先级物料
     end;
   end;
