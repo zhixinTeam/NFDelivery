@@ -24,6 +24,7 @@ type
 
     FDriver : string;            //驱动
     FVersoin: Integer;           //版本
+    FResponse  : Boolean;        //带应答
     FOnline : Boolean;           //在线
     FLastOn : Int64;             //上次在线
     FEnable : Boolean;           //启用
@@ -527,6 +528,7 @@ end;
 //Desc: 读取nFile喷码机配置文件
 procedure TCodePrinterManager.LoadConfig(const nFile: string);
 var nIdx: Integer;
+    nResponse: Boolean;
     nXML: TNativeXml;
     nNode,nTmp,nPNode: TXmlNode;
     nPrinter: PCodePrinter;
@@ -544,6 +546,11 @@ begin
 
       nIdx := nTmp.NodeByName('enablejsq').ValueAsInteger;
       FEnableJSQ := nIdx = 1;
+
+      nNode := nTmp.FindNode('response');
+      if Assigned(nNode) then
+        nResponse := nNode.ValueAsInteger = 1;
+      //全局配置: 是否带应答反馈
     end;
 
     nTmp := nXML.Root.FindNode('printers');
@@ -566,6 +573,11 @@ begin
           FVersoin:= StrToIntDef(nNode.NodeByName('driver').AttributeByName['Version'],0);
           FEnable := nNode.NodeByName('enable').ValueAsInteger = 1;
 
+          FResponse := nResponse;
+          if Assigned(nNode.FindNode('response')) then
+            FResponse := nNode.NodeByName('response').ValueAsInteger = 1;
+          //xxxxx
+          
           nPNode  := nNode.FindNode('chinaenable');
           if not Assigned(nPNode) then
                 FChinaEnable := False
@@ -743,11 +755,10 @@ end;
 //Desc: 打印编码
 function TPrinterZero.PrintCode(const nCode: string;
   var nHint: string; const nVersion: Integer=0): Boolean;
-  var nData: string;
+var nStr,nData: string;
     nCrc: TByteWord;
     nBuf: TIdBytes;
     nDatatemp: string;
-    nstr: string  ;
 begin
   //protocol: 55 7F len order datas crc16 AA
   nData := Char($55) + Char($7F) + Char(Length(nCode) + 1);
@@ -756,24 +767,26 @@ begin
 
   nCrc := TByteWord(CRC16(nData, 5, Length(nData)));
   nData := nData + Char(nCrc.FH) + Char(nCrc.FL) + Char($AA);
+
   FClient.Socket.Write(nData, Indy8BitEncoding);
+  Sleep(200);
+  
+  if FPrinter.FResponse then
+  begin
+    SetLength(nBuf, 0);
+    FClient.Socket.ReadBytes(nBuf, 9, False);
+    nStr := BytesToString(nBuf,Indy8BitEncoding);
 
-  SetLength(nBuf, 0);
-  FClient.Socket.ReadBytes(nBuf, 9, False);
+    nData :=  Char($55) + Char($FF) + Char($02)+ Char($54)+ Char($4F);
+    nData :=  nData + Char($4B)+ Char($5D) + Char($E4) + Char($AA);
 
-  nstr:= BytesToString(nBuf,Indy8BitEncoding);
-
-  nDatatemp :=  Char($55) + Char($FF) + Char($02)+ Char($54)+ Char($4F);
-  nDatatemp :=  nDatatemp + Char($4B)+ Char($5D) + Char($E4) + Char($AA);
-
-
-  if nstr <> nDatatemp then
-   begin
+    if nstr <> nData then
+    begin
       nHint := '喷码机应答错误!';
       Result := False;
       Exit;
-   end;
-                    
+    end;
+  end;
 
   Result := True;
 end;
@@ -795,9 +808,8 @@ end;
 
 function TPrinterJY.PrintCode(const nCode: string;
   var nHint: string; const nVersion: Integer=0): Boolean;
-  var nData: string;
+var nStr,nData: string;
   nBuf: TIdBytes;
-  nstr: string;
 begin
 
   //久易喷码机
@@ -813,18 +825,23 @@ begin
   nData := Char($1B) + Char($41) + Char($29)+ Char(Length(nCode) + 38);
   nData := nData + Char(2 + 31) + Char($40) + Char($37);
   nData := nData + nCode + Char($40) + Char($39)+ Char($0D);
+
   FClient.Socket.Write(nData, Indy8BitEncoding);
+  Sleep(200);
 
-  SetLength(nBuf, 0);
-  FClient.Socket.ReadBytes(nBuf, Length(nData), False);
+  if FPrinter.FResponse then
+  begin
+    SetLength(nBuf, 0);
+    FClient.Socket.ReadBytes(nBuf, Length(nData), False);
 
-  nstr:= BytesToString(nBuf, Indy8BitEncoding);
-  if nstr <> nData then
-   begin
+    nStr := BytesToString(nBuf, Indy8BitEncoding);
+    if nStr <> nData then
+    begin
       nHint := '喷码机应答错误!';
       Result := False;
       Exit;
-   end;
+    end;
+  end;
 
   Result := True;
 end;
@@ -847,9 +864,8 @@ end;
 
 function TPrinterWSD.PrintCode(const nCode: string;
   var nHint: string; const nVersion: Integer=0): Boolean;
-  var nData: string;
+var nStr,nData: string;
   nBuf: TIdBytes;
-  nstr: string;
 begin
   //威士德喷码机
   //1B 41 29 2A 20 40 37 32 33 34 35 40 39 0D
@@ -867,17 +883,21 @@ begin
   nData := nData+Char($40)+Char($39)+Char($0D);
 
   FClient.Socket.Write(nData, Indy8BitEncoding);
+  Sleep(200);
 
-  SetLength(nBuf, 0);
-  FClient.Socket.ReadBytes(nBuf, Length(nData), False);
+  if FPrinter.FResponse then
+  begin
+    SetLength(nBuf, 0);
+    FClient.Socket.ReadBytes(nBuf, Length(nData), False);
 
-  nstr:= BytesToString(nBuf, Indy8BitEncoding);
-  if nstr <> nData then
-   begin
+    nStr := BytesToString(nBuf, Indy8BitEncoding);
+    if nStr <> nData then
+    begin
       nHint := '喷码机应答错误!';
       Result := False;
       Exit;
-   end;
+    end;
+  end;
 
   Result := True;
 end;
@@ -900,7 +920,7 @@ end;
 function TPrinterSGB.PrintCode(const nCode: string;
   var nHint: string; const nVersion: Integer=0): Boolean;
 var nData: string;
-    //nBuf: TIdBytes;
+    nBuf: TIdBytes;
 begin
   //仕贵宝喷码机
   //1B 41 len(start 38) channel(start 31) 40 37 datas 40 39 0D
@@ -912,14 +932,19 @@ begin
   nData := nData + nCode + Char($40) + Char($39)+ Char($0D);
 
   FClient.Socket.Write(nData, Indy8BitEncoding);
-  Sleep(500);
+  Sleep(200);
 
   nData := Char($1B) + Char($41) + Char($2C) +Char($22);
   nData := nData + Char(2 + 31) + Char($0D);
+  
   FClient.Socket.Write(nData, Indy8BitEncoding);
+  Sleep(200);
 
-  //SetLength(nBuf, 0);
-  //FClient.Socket.ReadBytes(nBuf, Length(nData), False);
+  if FPrinter.FResponse then
+  begin
+    SetLength(nBuf, 0);
+    FClient.Socket.ReadBytes(nBuf, Length(nData), False);
+  end;
 
   Result := True;
 end;

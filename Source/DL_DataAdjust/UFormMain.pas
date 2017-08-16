@@ -262,7 +262,7 @@ var nStr: string;
     nVal,nMaxVal: Double;
     nIdx,nMaxDai: Integer;
 begin
-   ShowWaitForm(Self, '正在校正');
+  ShowWaitForm(Self, '正在校正');
   try
     FList.Clear;
     nMaxVal := StrToFloat(EditMax.Text);
@@ -361,9 +361,9 @@ begin
           nVal := Float2Float(nVal, 100);
         end;
 
-        nStr := 'Update %s Set P_LimValue=%.2f,P_MValue=P_PValue+%.2f ' +
+        nStr := 'Update %s Set P_LimValue=%d,P_MValue=P_PValue+%.2f ' +
                 'Where P_ID=''%s''';
-        nStr := Format(nStr, [sTable_PoundLog, Trunc(nVal), nVal,
+        nStr := Format(nStr, [sTable_PoundLog, Round(nVal), nVal,
                 FieldByName('P_ID').AsString]);
         FList.Add(nStr);
 
@@ -383,6 +383,9 @@ begin
         FDM.SQLQuery1.Close;
         FDM.SQLQuery1.SQL.Text := FList[nIdx];
         FDM.SQLQuery1.ExecSQL;
+
+        nStr := Format('正在校正: %d/%d', [nIdx, FList.Count]);
+        ShowWaitForm(Self, nStr);
       end;
 
       FDM.ADOConn.CommitTrans;
