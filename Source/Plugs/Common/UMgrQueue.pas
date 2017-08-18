@@ -47,12 +47,14 @@ type
     FInFact     : Boolean;     //是否进厂
     FInLade     : Boolean;     //是否提货
     FIsVIP      : string;      //特权车
-
     FIndex      : Integer;     //队列索引
     FIsReal     : Boolean;     //非虚位
+
     FQueueNum   : Integer;     //队列中车数
     FQueueStock : string;      //优先排队品种
     FQueueBills : string;      //有限排队单据
+    FQueueCard  : string;      //当前车磁卡号
+    FQueueNext  : string;      //后车牌号
 
     FValue      : Double;      //提货量
     FDai        : Integer;     //袋数
@@ -145,6 +147,9 @@ type
     //启停线程
   end;
 
+  TQueueChanged = procedure (const nManager: TTruckQueueManager);
+  //队列变动事件
+
   TTruckQueueManager = class(TObject)
   private
     FDBName: string;
@@ -163,6 +168,8 @@ type
     //SQL语句
     FLastQueueVoice: string;
     //队列内容
+    FOnQueueChanged: TQueueChanged;
+    //队列变动
   protected
     procedure FreeLine(nItem: PLineItem; nIdx: Integer = -1);
     procedure ClearLines(const nFree: Boolean);
@@ -210,6 +217,8 @@ type
     property LineChanged: Int64 read FLineChanged;
     property SyncLock: TCriticalSection read FSyncLock;
     //属性相关
+    property OnChanged: TQueueChanged read FOnQueueChanged write FOnQueueChanged;
+    //事件相关
   end;
 
 var
@@ -740,6 +749,10 @@ begin
     finally
       gDBConnManager.ReleaseConnection(FDBConn);
     end;
+
+    if FTruckChanged and Assigned(FOwner.FOnQueueChanged) then
+      FOwner.FOnQueueChanged(FOwner);
+    //event
   except
     on E: Exception do
     begin
@@ -913,8 +926,7 @@ function TTruckQueueDBReader.GetHighPriorityStock(
 var i,j,nIdx,nInt: Integer;
 begin
   Result := '';
-  if Length(nStocks) < 2 then Exit;
-  //单品种无需判断优先级
+  //default
 
   for i:=Low(FMatchItems) to High(FMatchItems) do
   begin
@@ -947,6 +959,9 @@ begin
 
     for j:=Low(FMatchItems) to High(FMatchItems) do
     begin
+      if Length(nStocks) < 2 then Break;
+      //单品种无需判断同组优先级
+
       if FMatchItems[j].FGroup <> FMatchItems[i].FGroup then Continue;
       //当前分组(i)不匹配
 
@@ -1561,7 +1576,7 @@ begin
       FQueueBills := FQueueBills + ',' +  FTruckPool[j].FQueueBills;
     end; //同车牌交货单个数
 
-    if FQueueNum < 2 then Continue;
+    //if FQueueNum < 2 then Continue;
     //单张交货单,无需处理物料优先级
 
     FQueueStock := GetHighPriorityStock(nStocks);

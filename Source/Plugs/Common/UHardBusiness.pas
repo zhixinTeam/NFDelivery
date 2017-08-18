@@ -29,6 +29,8 @@ function GetJSTruck(const nTruck,nBill: string): string;
 procedure WhenSaveJS(const nTunnel: PMultiJSTunnel);
 //保存计数结果
 
+procedure WhenQueueTruckChanged(const nManager: TTruckQueueManager);
+//队列车辆变更
 function PrepareShowInfo(const nCard: string; nTunnel: string='';
  nLevel: Integer = 0):string;
 //计数器显示预装信息
@@ -2014,6 +2016,52 @@ begin
   end;
 end;
 
+//Date: 2017-08-18
+//Parm: 队列管理器
+//Desc: 车辆变更时,更新相关业务
+procedure WhenQueueTruckChanged(const nManager: TTruckQueueManager);
+var i,nIdx,nInt,nLen: Integer;
+    nLine: PLineItem;
+    nTruck: PTruckItem;
+begin
+  {$IFDEF PrepareShowOnLading}
+  //通道刷卡时显示预刷卡,队列车辆有变时,更新预刷卡信息
+  nManager.SyncLock.Enter;
+  try
+    for nIdx:=0 to nManager.Lines.Count - 1 do
+    begin
+      nLine := nManager.Lines[nIdx];
+      //line item
+      nLen := nLine.FTrucks.Count - 1;
+
+      for i:=0 to nLen do
+      begin
+        nTruck := nLine.FTrucks[i];
+        if not nTruck.FStarted then Continue;
+        //车辆未启动,预刷卡信息和该车无关
+
+        if (nTruck.FQueueCard = '') then Continue;
+        //磁卡为空,标识未使用自动预刷卡
+
+        if (nTruck.FQueueNext = '') and (i = nLen) then
+          Continue;
+        //该车在末尾,且后面确实没车,无需更新
+
+        if (i < nLen) and (nTruck.FQueueNext <> '') and
+           (nTruck.FQueueNext = PTruckItem(nLine.FTrucks[i+1]).FTruck) then
+          Continue;
+        //排在后面的车辆正常,未移动位置,无需更新
+
+        MakeTruckShowPreInfo(nTruck.FQueueCard, nLine.FLineID);
+        //更新预刷卡
+      end;
+    end;
+  finally
+    nManager.SyncLock.Leave;
+  end;
+  {$ENDIF}
+end;
+
 //Date: 2017-08-13
 //Parm: 磁卡号;通道号;调用深度
 //Desc: 在nTunnel通道上显示nCard的预刷卡信息
@@ -2077,12 +2125,16 @@ begin
   end;
   //通道错误
 
+  nPTruck.FQueueCard := nCard;
+  nPTruck.FQueueNext := '';
   Result := '';
+
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
     nStr := '';
-    if FNextStatus= sFlag_TruckZT then
+    if (FNextStatus = sFlag_TruckZT) or ((nLevel > 0) and
+       (FStatus = sFlag_TruckIn)) then //待装车,或后车刚进厂
     begin
       nDai := Int(FValue * 1000) / nPLine.FPeerWeight;
 
@@ -2091,10 +2143,24 @@ begin
 
       nStr := FormatFloat('00000' , nDai);
       Result := Result + StringOfChar('0' , 5 - Length(nStr)) + nStr;
+
+      {$IFDEF PrepareShowTruck}
+      Result := Result + nTrucks[0].FTruck;
+      {$ENDIF}
       Break;
-    end else
+    end;
+  end;
+
+  if Result = '' then
+  begin
+    with nTrucks[0] do
     begin
+      {$IFDEF PrepareShowTruck}
+      Result := Format('车辆: %s %s', [FTruck, TruckStatusToStr(FNextStatus)]);
+      {$ELSE}
       Result := Format('下一状态 %s', [TruckStatusToStr(FNextStatus)]);
+      {$ENDIF}
+
       {$IFDEF PrepareShowOnLading}
       if nLevel < 1 then
       begin
@@ -2119,7 +2185,7 @@ begin
       nPTruck := nPLine.FTrucks[nIdx+1];
       //后面车辆
 
-      nStr := 'Select S_Card From %s Where L_ID=''%s''';
+      nStr := 'Select L_Card,L_Truck From %s Where L_ID=''%s''';
       nStr := Format(nStr, [sTable_Bill, nPTruck.FBill]);
 
       nNewCard := '';
@@ -2131,6 +2197,8 @@ begin
         begin
           nNewCard := Fields[0].AsString;
           //后车磁卡
+          nPTruck.FQueueNext := Fields[1].AsString;
+          //后车车牌
         end else
         begin
           nStr := '预刷卡: 后面车辆[ %s.%s ]交货单不存在.';
@@ -2148,16 +2216,16 @@ begin
         WriteNearReaderLog(nStr);
 
         Result := '%s 后车磁卡错误';
-        nStr := Format(nStr, [nTrucks[0].FTruck]);
+        Result := Format(Result, [nTrucks[0].FTruck]);
       end else
       begin
-        PrepareShowInfo(nNewCard, nPLine.FLineID, nLevel);
+        Result := PrepareShowInfo(nNewCard, nPLine.FLineID, nLevel);
         //后车预刷卡信息
       end;
     end else
     begin
       Result := '%s 后面没车';
-      nStr := Format(nStr, [nTrucks[0].FTruck]);
+      Result := Format(Result, [nTrucks[0].FTruck]);
     end;
   end;
   //当前卡没有可装品种时,显示下一辆车

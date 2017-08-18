@@ -164,6 +164,7 @@ end;
 
 procedure THardwareWorker.BeforeStartServer;
 begin
+  gTruckQueueManager.OnChanged := WhenQueueTruckChanged;
   gTruckQueueManager.StartQueue(gParamManager.ActiveParam.FDB.FID);
   //truck queue
 

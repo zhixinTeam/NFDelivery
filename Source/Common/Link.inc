@@ -196,10 +196,14 @@
   //汉字喷码支持
   {$DEFINE JSTruck}
   //格式化计数器车牌
+  {$DEFINE DaiStepWuCha}
+  //包装阶梯误差
   {$DEFINE CombinePrintBill}
   //销售尾单合单后合并打印
   {$DEFINE StockPriorityInQueue}
   //排队时使用物料优先级
+  {$DEFINE PrepareShowTruck}
+  //预刷卡显示车牌
   {$DEFINE PrepareShowOnLading}
   //刷卡装车时控制预刷卡(不使用预刷卡读卡器)
 {$ENDIF}
@@ -268,6 +272,40 @@
   //包装阶梯误差
 {$ENDIF}
 //广西南方
+
+//临桂,荔浦
+{$IFDEF LPNF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+  {$DEFINE MITTruckProber}
+  //中间件控制车检
+  {$DEFINE MultiReplay}
+  //计数器应答模式
+  {$DEFINE CardProvide}
+  //采用复磅模式
+  {$DEFINE LineGroup}
+  //通道进行分组
+  {$DEFINE PrintChinese}
+  //汉字喷码支持
+  {$DEFINE JSTruck}
+  //格式化计数器车牌
+  {$DEFINE ORDERVALUE}
+  //显示订单量
+  {$DEFINE FORCEPSTATION}
+  //强制地磅磅站
+  {$DEFINE ERROPENONEDOOR}
+  //过磅失败倒车下磅
+  {$DEFINE DaiStepWuCha}
+  //包装阶梯误差
+{$ENDIF}
 
 //金鲤南方
 {$IFDEF JLNF}

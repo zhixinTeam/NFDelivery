@@ -24,6 +24,7 @@ type
   TStockMatchItem = record
     FStock: string;         //品种
     FGroup: string;         //分组
+    FPriority: Integer;     //级别
     FRecord: string;        //记录
   end;
 
@@ -85,10 +86,11 @@ type
     function LoadStockInfo(var nData: string): Boolean;
     function GetStockInfo(const nID: string): Integer;
     //物料信息
-    function GetStockGroup(const nStock: string): string;
+    function GetStockGroup(const nStock: string; var nPriority: Integer): string;
     function GetMatchRecord(const nStock: string): string;
     //物料分组
-    function DefaultBrand: string;                                              //默认品牌
+    function DefaultBrand: string;
+    //默认品牌
     function GetInBillInterval: Integer;
     function AllowedSanMultiBill: Boolean;
     function VerifyBeforSave(var nData: string): Boolean;
@@ -204,9 +206,10 @@ end;
 
 //------------------------------------------------------------------------------
 //Date: 2014/7/30
-//Parm: 品种编号
+//Parm: 品种编号;优先级
 //Desc: 检索nStock对应的物料分组
-function TWorkerBusinessBills.GetStockGroup(const nStock: string): string;
+function TWorkerBusinessBills.GetStockGroup(const nStock: string;
+ var nPriority: Integer): string;
 var nIdx: Integer;
 begin
   Result := '';
@@ -216,6 +219,7 @@ begin
   if FStockItems[nIdx].FStock = nStock then
   begin
     Result := FStockItems[nIdx].FGroup;
+    nPriority := FStockItems[nIdx].FPriority;
     Exit;
   end;
 end;
@@ -225,7 +229,7 @@ end;
 //Desc: 检索车辆队列中与nStock同品种,或同组的记录
 function TWorkerBusinessBills.GetMatchRecord(const nStock: string): string;
 var nStr: string;
-    nIdx: Integer;
+    nIdx,nInt: Integer;
 begin
   Result := '';
   //init
@@ -237,11 +241,12 @@ begin
     Exit;
   end;
 
-  nStr := GetStockGroup(nStock);
-  if nStr = '' then Exit;  
+  nStr := GetStockGroup(nStock, nInt);
+  if nStr = '' then Exit;
 
   for nIdx:=Low(FMatchItems) to High(FMatchItems) do
-  if FMatchItems[nIdx].FGroup = nStr then
+  if (FMatchItems[nIdx].FGroup = nStr) and
+     (FMatchItems[nIdx].FPriority = nInt) then
   begin
     Result := FMatchItems[nIdx].FRecord;
     Exit;
@@ -453,8 +458,13 @@ begin
 
   FDefaultBrand := DefaultBrand;
   //选择批次号时默认品牌
-  
+
+  {$IFDEF StockPriorityInQueue}
+  nStr := 'Select M_ID,M_Group,M_Priority From %s Where M_Status=''%s'' ';
+  {$ELSE}
   nStr := 'Select M_ID,M_Group From %s Where M_Status=''%s'' ';
+  {$ENDIF}
+  
   nStr := Format(nStr, [sTable_StockMatch, sFlag_Yes]);
   //品种分组匹配
 
@@ -469,6 +479,12 @@ begin
     begin
       FStockItems[nIdx].FStock := Fields[0].AsString;
       FStockItems[nIdx].FGroup := Fields[1].AsString;
+
+      {$IFDEF StockPriorityInQueue}
+      FStockItems[nIdx].FPriority := Fields[2].AsInteger;
+      {$ELSE}
+      FStockItems[nIdx].FPriority := 0;
+      {$ENDIF}
 
       Inc(nIdx);
       Next;
@@ -527,7 +543,9 @@ begin
       with FMatchItems[nIdx] do
       begin
         FStock := FieldByName('T_StockNo').AsString;
-        FGroup := GetStockGroup(FStock);
+        FGroup := GetStockGroup(FStock, nInt);
+
+        FPriority := nInt;
         FRecord := FieldByName('R_ID').AsString;
       end;
 
@@ -1002,7 +1020,9 @@ begin
           with FMatchItems[nInt] do
           begin
             FStock := FOrderItems[nIdx].FStockID;
-            FGroup := GetStockGroup(FStock);
+            FGroup := GetStockGroup(FStock, nInt);
+            
+            FPriority := nInt;
             FRecord := nStr;
           end;
         end;
@@ -2961,7 +2981,9 @@ begin
       with FMatchItems[nIdx] do
       begin
         FStock := FieldByName('T_StockNo').AsString;
-        FGroup := GetStockGroup(FStock);
+        FGroup := GetStockGroup(FStock, nInt);
+
+        FPriority := nInt;
         FRecord := FieldByName('R_ID').AsString;
       end;
 
@@ -3060,7 +3082,9 @@ begin
       with FMatchItems[nInt] do
       begin
         FStock := FListA.Values['StockNO'];
-        FGroup := GetStockGroup(FStock);
+        FGroup := GetStockGroup(FStock, nInt);
+
+        FPriority := nInt;
         FRecord := nStr;
       end;
     end;
