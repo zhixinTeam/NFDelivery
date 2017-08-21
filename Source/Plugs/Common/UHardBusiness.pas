@@ -1264,15 +1264,16 @@ end;
 //Parm: 交货单号;袋重
 //Desc: 获取交货单可发货袋数
 function BillValue2Dai(const nBill: string; const nPeer: Integer): Integer;
-var nStr: string;
+var nStr,nBills: string;
     nWorker: PDBWorker;
 begin
   Result := 0;
   if nPeer < 1 then Exit;
+  nBills := '';
   
   nWorker := nil;
   try
-    nStr := 'Select T_Value From %s Where T_HKBills Like ''%%%s%%''';
+    nStr := 'Select T_Value,T_HKBills From %s Where T_HKBills Like ''%%%s%%''';
     nStr := Format(nStr, [sTable_ZTTrucks, nBill]);
 
     with gDBConnManager.SQLQuery(nStr, nWorker) do
@@ -1285,7 +1286,47 @@ begin
       end;
 
       Result := Trunc(Fields[0].AsFloat * 1000 / nPeer);
-      //xxxxx
+      nBills := AdjustListStrFormat(Fields[1].AsString, '''', True, '.');
+      nBills := StringReplace(nBills, '.', ',', [rfReplaceAll]);
+    end;
+
+    if (nBill = '') or (Pos(',', nBills) < 1) then Exit;
+    //单张交货单,不予处理
+
+    nStr := 'Select L_ID,L_Value,L_StockNo From %s Where L_ID In (%s)';
+    nStr := Format(nStr, [sTable_Bill, nBills]);
+
+    with gDBConnManager.WorkerQuery(nWorker, nStr) do
+    if RecordCount > 0 then
+    begin
+      First;
+      nStr := Fields[2].AsString;
+
+      while not Eof do
+      begin
+        if Fields[2].AsString <> nStr then
+        begin
+          nStr := '';
+          Break;
+        end; //品种不一致
+
+        Next;
+      end;
+
+      if nStr <> '' then Exit;
+      //品种一致,使用并单数据
+
+      First;
+      while not Eof do
+      begin
+        if Fields[0].AsString = nBill then
+        begin
+          Result := Trunc(Fields[1].AsFloat * 1000 / nPeer);
+          Exit;
+        end; //品种不一致时,使用开单量
+
+        Next;
+      end;
     end;
   finally
     gDBConnManager.ReleaseConnection(nWorker);
@@ -1337,9 +1378,8 @@ begin
 
       nIdx := nPTruck.FDai;
       {$IFDEF StockPriorityInQueue}
-      if nBill <> nPTruck.FBill then
-        nIdx := BillValue2Dai(nBill, nPLine.FPeerWeight);
-      //按品种优先级排队时,当前装车的单据和车辆单据有可能不一致.
+      nIdx := BillValue2Dai(nBill, nPLine.FPeerWeight);
+      //按品种优先级排队时,当前装车的袋数可能是不同品种拼单,需重新计算.
       {$ENDIF}
 
       gMultiJSManager.AddJS(nTunnel, nTruck, nBill, nIdx, True);
@@ -1460,8 +1500,13 @@ begin
   nStr := '';
   nInt := 0;
 
+  //----------------------------------------------------------------------------
   {$IFDEF StockPriorityInQueue}
   //使用品种优先级排队
+  nStr := Format('QueueBills: %s', [nPTruck.FQueueBills]);
+  WriteNearReaderLog(nStr); //for log
+  nStr := '';
+
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
@@ -1469,14 +1514,22 @@ begin
 
     if FNextStatus = sFlag_TruckZT then
     begin
+      if (nInt > 0) and (FStockNo = nStr) then
+      begin
+        FSelected := True;
+        //同品种拼单
+        Inc(nInt);
+      end;
+
       if (Pos(FID, nPTruck.FQueueBills) > 0) and (nInt = 0) then
       begin
         FSelected := True;
         FLineGroup := nPLine.FLineGroup;
-      end;
+        nStr := FStockNo;
 
-      Inc(nInt);
-      //优先选择未刷卡装车的第一张单据
+        Inc(nInt);
+        //优先选择未刷卡装车的第一张单据
+      end; 
     end;
   end;
 
@@ -1503,6 +1556,7 @@ begin
     end;
   end;
   {$ELSE}
+  //----------------------------------------------------------------------------
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
@@ -2043,13 +2097,13 @@ begin
         if (nTruck.FQueueCard = '') then Continue;
         //磁卡为空,标识未使用自动预刷卡
 
-        if (nTruck.FQueueNext = '') and (i = nLen) then
-          Continue;
+        //if (nTruck.FQueueNext = '') and (i = nLen) then
+        //  Continue;
         //该车在末尾,且后面确实没车,无需更新
 
-        if (i < nLen) and (nTruck.FQueueNext <> '') and
-           (nTruck.FQueueNext = PTruckItem(nLine.FTrucks[i+1]).FTruck) then
-          Continue;
+        //if (i < nLen) and (nTruck.FQueueNext <> '') and
+        //   (nTruck.FQueueNext = PTruckItem(nLine.FTrucks[i+1]).FTruck) then
+        //  Continue;
         //排在后面的车辆正常,未移动位置,无需更新
 
         MakeTruckShowPreInfo(nTruck.FQueueCard, nLine.FLineID);

@@ -1238,9 +1238,15 @@ begin
 
         FIsBuCha    := FNormal > 0;
         FDai        := 0;
+
         FQueueNum   := 0;
         FQueueStock := '';
-        FQueueBills := '''' + FBill + '''';
+        FQueueBills := AdjustListStrFormat(FHKBills, '''', True, '.');
+        FQueueBills := StringReplace(FQueueBills, '.', ',', [rfReplaceAll]);
+        //参与并单的订单列表
+
+        FQueueCard  := '';
+        FQueueNext  := '';
       end;
 
       Inc(nIdx);
@@ -1648,8 +1654,9 @@ begin
           nTruck.FIndex := FIndex;
 
           nTruck.FValue := FValue;
-          if nLine.FPeerWeight>0 then
+          if nLine.FPeerWeight > 0 then
             nTruck.FDai := Trunc(FValue * 1000 / nLine.FPeerWeight);
+          //xxxxx
 
           nTruck.FBill  := FBill;
           nTruck.FHKBills := FHKBills;
@@ -1657,6 +1664,11 @@ begin
           if FIsVIP = sFlag_TypeShip then
             nTruck.FInFact := True;
           //进队视为进厂
+
+          nTruck.FQueueNum   := FQueueNum;
+          nTruck.FQueueStock := FQueueStock;
+          nTruck.FQueueBills := FQueueBills;
+          //更新物料优先排队参数
         end else
         begin
           {$IFDEF DEBUG}
