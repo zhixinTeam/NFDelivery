@@ -48,6 +48,8 @@ procedure HardOpenDoor(const nReader: String);
 procedure WhenCaptureFinished(const nPtr: Pointer);
 //保存图片
 {$ENDIF}
+procedure SaveGrabCard(const nCard: string; nTunnel: string='');
+//检索并保存抓斗秤工作卡号
 
 implementation
 
@@ -986,7 +988,7 @@ begin
     Exit;
   end;
   {$ENDIF}
-  
+
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   begin
     {$IFDEF HKVDVR}
@@ -1120,7 +1122,7 @@ begin
       WriteHardHelperLog(nStr);
       Exit;
     end;
-    //读卡器分组与卡片分组不匹配 
+    //读卡器分组与卡片分组不匹配
 
     try
       if nReader.FType = rtIn then
@@ -1833,6 +1835,16 @@ begin
     {$ELSE}
     nReader := '';
     {$ENDIF}
+
+    if Assigned(nHost.FOptions) then
+    begin
+      if nHost.FOptions.Values['IsGrab'] = 'Y' then
+      begin
+        SaveGrabCard(nCard, nHost.FTunnel);
+        Exit;
+      end;
+    end;
+
     if nHost.FFun = rfOut then
          MakeTruckOut(nCard, nReader, nHost.FPrinter)
     else MakeTruckLadingDai(nCard, nHost.FTunnel);
@@ -1852,7 +1864,7 @@ begin
       begin
         MakeTruckAddWater(nCard, nHost.FTunnel);
         Exit;
-      end;   
+      end;
     end;
 
     MakeTruckLadingSan(nCard, nHost.FTunnel);
@@ -2546,4 +2558,50 @@ begin
   end;
 end;
 {$ENDIF}
+
+//Date: 2017-8-17
+//Parm: 卡号;通道号
+//Desc: 检索nReader读到的卡号并进行相应处理
+procedure SaveGrabCard(const nCard: string; nTunnel: string);
+var nStr, nGroup,nLs: string;
+    nErrNum: Integer;
+    nDBConn: PDBWorker;
+begin
+  nDBConn := nil;
+
+  with gParamManager.ActiveParam^ do
+  try
+    nDBConn := gDBConnManager.GetConnection(FDB.FID, nErrNum);
+    if not Assigned(nDBConn) then
+    begin
+      WriteHardHelperLog('连接数据库失败(DBConn Is Null).');
+      Exit;
+    end;
+
+    if not nDBConn.FConn.Connected then
+      nDBConn.FConn.Connected := True;
+    //conn db
+
+    nStr := 'Select * From $TB Where P_Tunnel=''$T''';
+    nStr := MacroValue(nStr, [MI('$TB', sTable_CardGrab), MI('$T', nTunnel)]);
+
+    with gDBConnManager.WorkerQuery(nDBConn, nStr) do
+    if RecordCount <= 0 then
+    begin
+      nLs := Date2Str(Now,False) + Time2Str(Now,False);
+      //生成此次刷卡流水号
+      nStr := 'Insert Into %s(P_Ls, P_Card, P_Tunnel) Values(''%s'', ''%s'', ''%s'')';
+      nStr := Format(nStr, [sTable_CardGrab, nLs, nCard, nTunnel]);
+      gDBConnManager.WorkerExec(nDBConn, nStr);
+    end else
+    begin
+      nStr := Format('通道号[ %s ]正在称重，请勿重复刷卡.', [nTunnel]);
+      WriteHardHelperLog(nStr);
+      Exit;
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nDBConn);
+  end;
+end ;
+
 end.
