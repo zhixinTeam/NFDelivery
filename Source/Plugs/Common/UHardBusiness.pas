@@ -1229,7 +1229,33 @@ begin
     nPTruck := nPLine.FTrucks[nIdx];
     nPTruck.FStockName := nPLine.FName;
     //同步物料名
+
     Result := True;
+    if (not nQueued) or (nIdx < 1) then Exit;
+    //不检查队列,或头车
+
+    //--------------------------------------------------------------------------
+    nInt := -1;
+    //init
+
+    for i:=nPline.FTrucks.Count-1 downto 0 do
+    if PTruckItem(nPLine.FTrucks[i]).FStarted then
+    begin
+      nInt := i;
+      Break;
+    end;
+
+    if nInt < 0 then Exit;
+    //没有在装车车辆,无需排队
+
+    if nIdx - nInt <> 1 then
+    begin
+      nHint := '车辆[ %s ]需要在[ %s ]排队等候.';
+      nHint := Format(nHint, [nPTruck.FTruck, nPLine.FName]);
+
+      Result := False;
+      Exit;
+    end;
   finally
     SyncLock.Leave;
   end;
@@ -1439,6 +1465,7 @@ end;
 //Desc: 对nCard执行袋装装车操作
 procedure MakeTruckLadingDai(const nCard: string; nTunnel: string);
 var nStr: string;
+    nBool: Boolean;
     nIdx,nInt: Integer;
     nPLine: PLineItem;
     nPTruck: PTruckItem;
@@ -1490,7 +1517,19 @@ begin
     if IsJSRun then Exit;
   end;
 
-  if not IsTruckInQueue(nTrucks[0].FTruck, nTunnel, False, nStr,
+  {$IFDEF DaiForceQueue}
+  nBool := True;
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  begin
+    nBool := nTrucks[nIdx].FNextStatus = sFlag_TruckZT;
+    //未装车,检查排队顺序
+    if not nBool then Break;
+  end;
+  {$ELSE}
+  nBool := False;
+  {$ENDIF}
+
+  if not IsTruckInQueue(nTrucks[0].FTruck, nTunnel, nBool, nStr,
          nPTruck, nPLine, sFlag_Dai) then
   begin
     WriteNearReaderLog(nStr);

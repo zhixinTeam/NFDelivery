@@ -198,6 +198,8 @@
   //格式化计数器车牌
   {$DEFINE DaiStepWuCha}
   //包装阶梯误差
+  {$DEFINE DaiForceQueue}
+  //包装发货强制队列
   {$DEFINE CombinePrintBill}
   //销售尾单合单后合并打印
   {$DEFINE StockPriorityInQueue}
@@ -236,6 +238,8 @@
   //显示订单量
   {$DEFINE GROUPBYBRAND}
   //根据品牌分组
+  {$DEFINE DaiStepWuCha}
+  //包装阶梯误差
 {$ENDIF}
 //诸葛南方
 
