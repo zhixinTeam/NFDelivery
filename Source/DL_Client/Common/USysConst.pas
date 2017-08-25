@@ -48,6 +48,8 @@ const
   cFI_FrameZTDispatch   = $0037;                     //栈台调度
   cFI_FramePoundManual  = $0038;                     //手动称重
   cFI_FramePoundAuto    = $0039;                     //自动称重
+  cFI_FramePoundMtAuto  = $0040;                   //码头抓斗秤
+  cFI_FramePoundMtQuery = $0041;                   //码头抓斗秤查询
 
   cFI_FrameTruckQuery   = $0050;                     //车辆查询
   cFI_FrameCusAccountQuery = $0051;                  //客户账户
@@ -340,6 +342,8 @@ begin
   AddMenuModuleItem('MAIN_E02', cFI_FormDisPound, mtForm);
   AddMenuModuleItem('MAIN_E03', cFI_FramePoundQuery);
   AddMenuModuleItem('MAIN_E05', cFI_FramePoundAuto);
+  AddMenuModuleItem('MAIN_E06', cFI_FramePoundMtAuto);
+  AddMenuModuleItem('MAIN_E07', cFI_FramePoundMtQuery);
 
   AddMenuModuleItem('MAIN_F01', cFI_FormLadDai, mtForm);
   AddMenuModuleItem('MAIN_F03', cFI_FrameZhanTaiQuery);

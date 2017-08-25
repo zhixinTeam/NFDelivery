@@ -42,7 +42,8 @@ uses
   //船运离岸单
   UFormpoundAdjust,
   //磅单勘误
-
+  UFramePoundMtAuto,UFramePoundMtAutoItem,UFramePoundMtQuery,
+  //码头抓斗秤
   UFrameBillHaulBack, UFormBillHaulBack, UFormGetPoundHis
   {$IFDEF PrintChinese},
   UFrameChineseBase, UFormChineseBase, UFrameChineseDict ,UFormChineseDict,

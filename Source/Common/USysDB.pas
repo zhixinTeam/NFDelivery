@@ -320,6 +320,10 @@ ResourceString
   sTable_WebSyncStatus= 'S_WebSyncStatus';           //订单状态同步
   sTable_WebSendMsgInfo = 'S_WebSendMsgInfo';        //发送模板消息
 
+  sTable_CardGrab     = 'P_CardGrab';                //抓斗秤刷卡记录表
+  sTable_Grab         = 'P_Grab';                    //抓斗秤称重记录表
+  sTable_GrabBak      = 'P_GrabBak';                 //抓斗秤称重记录表
+
 const
   sFlag_Departments   = 'Departments';               //部门列表
   sFlag_DepDaTing     = '大厅';                      //服务大厅
@@ -577,7 +581,7 @@ const
    *.L_ZhiKa: 纸卡号
    *.L_Area: 区域
    *.L_CusID,L_CusName,L_CusPY:客户
-   *.L_CusCode:客户代码
+   *.L_CusCode:客户代码                                           匈牙利命名法
    *.L_SaleID,L_SaleMan:业务员
    *.L_Type: 类型(袋,散)
    *.L_StockNo: 物料编号
@@ -1296,6 +1300,35 @@ const
    *.E_Memo: 备注
   -----------------------------------------------------------------------------}
 
+  sSQL_CardGrab = 'Create Table $Table(R_ID $Inc,P_Ls varChar(32), P_Card varChar(32),' +
+       'P_Tunnel varChar(50))';
+  {-----------------------------------------------------------------------------
+   抓斗秤刷卡记录:
+   *.P_Card: 磁卡编号
+   *.P_Ls: 刷卡流水号
+   *.P_Tunnel: 抓斗秤通道
+  -----------------------------------------------------------------------------}
+
+  sSQL_Grab = 'Create Table $Table(R_ID $Inc, ' +
+       'Rec_Id varChar(32), Card varChar(32), Num Integer, ' +
+       'Truck varChar(60), CusName varChar(128), ' +
+       'StockName varChar(128), EachWeight $Float, TotalWeight varChar(20),'+
+       'WeightTime DateTime, P_DelMan varChar(32), P_DelDate DateTime)';
+  {-----------------------------------------------------------------------------
+   商城发送模板消息表: WebSendMsgInfo
+   *.R_ID: 编号
+   *.Rec_ID: 每条船流水号
+   *.Card: 卡号
+   *.Num: 第Num次称重
+   *.Truck: 车船号
+   *.CusName: 客户名称
+   *.StockName: 物料名称
+   *.EachWeight: 第Num次称重重量
+   *.TotalWeight: 总累计重量
+   *.WeightTime: 第Num次称重时间
+   *.P_DelMan,P_DelDate: 删除记录
+  -----------------------------------------------------------------------------}
+
 //------------------------------------------------------------------------------
 // 数据查询
 //------------------------------------------------------------------------------
@@ -1462,6 +1495,10 @@ begin
   AddSysTableItem(sTable_WebOrderInfo, sSQL_NewWebOrderInfo);
   AddSysTableItem(sTable_WebSyncStatus, sSQL_NewWebSyncStatus);
   AddSysTableItem(sTable_WebSendMsgInfo, sSQL_NewWebSendMsgInfo);
+
+  AddSysTableItem(sTable_CardGrab, sSQL_CardGrab);
+  AddSysTableItem(sTable_Grab, sSQL_Grab);
+  AddSysTableItem(sTable_GrabBak, sSQL_Grab);
 end;
 
 //Desc: 清理系统表
