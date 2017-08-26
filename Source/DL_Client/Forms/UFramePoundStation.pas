@@ -176,8 +176,12 @@ begin
     begin
       nT := Tunnels[nIdx];
       //tunnel
-      nStr := '';
+
+      if Assigned(nT.FOptions) and (nT.FOptions.Values['IsGrab'] = 'Y') then
+        Continue;
+      //ÂëÍ·Í¨µÀ
       
+      nStr := '';
       for nInt:=nList.Count - 1 downto 0 do
       begin
         nStr := nT.FID + ':';

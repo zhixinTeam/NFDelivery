@@ -179,8 +179,7 @@ end;
 
 //Desc: Ñ¡Ôñ¿Í»§
 procedure TfFormBatcodeEdit.EditCusNameKeyPress(Sender: TObject; var Key: Char);
-var nStr: string;
-    nP: TFormCommandParam;
+var nP: TFormCommandParam;
 begin
   if Key = #13 then
   begin
