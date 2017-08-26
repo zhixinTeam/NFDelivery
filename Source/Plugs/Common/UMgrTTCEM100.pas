@@ -212,6 +212,7 @@ destructor TM100ReaderManager.Destroy;
 begin
   StopReader;
   ClearReaders(True);
+  FCardPrefix.Free;
 
   FSyncLock.Free;
   inherited;

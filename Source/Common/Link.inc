@@ -98,6 +98,8 @@
   //校验过磅方式
   {$DEFINE ORDERVALUE}
   //显示大票量发货量
+  {$DEFINE MultiReplay}
+  //计数器应答模式
 {$ENDIF}
 //江山南方
 

@@ -147,6 +147,7 @@ inherited fFormCardTemp: TfFormCardTemp
       Top = 403
       Caption = #36710#36742#20986#21378
       ParentFont = False
+      State = cbsChecked
       TabOrder = 14
       Transparent = True
       Width = 121
