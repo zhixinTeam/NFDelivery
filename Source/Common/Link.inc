@@ -100,6 +100,8 @@
   //显示大票量发货量
   {$DEFINE MultiReplay}
   //计数器应答模式
+  {$DEFINE JSTruckNone}
+  //不格式化计数器车牌
 {$ENDIF}
 //江山南方
 

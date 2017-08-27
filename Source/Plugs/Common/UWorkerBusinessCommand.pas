@@ -927,7 +927,7 @@ begin
 
       nType := Trim(FListA.Values['Type']);
       if (nType <> '') and (nType <> sFlag_TypeCommon) and
-         (nType = sFlag_TypeShip) and (nType = sFlag_TypeStation) then
+         (nType <> sFlag_TypeShip) and (nType <> sFlag_TypeStation) then
         nType := sFlag_TypeCommon;
       //默认普通类型
 
