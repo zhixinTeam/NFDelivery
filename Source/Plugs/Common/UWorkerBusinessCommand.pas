@@ -777,6 +777,11 @@ begin
           nType := sFlag_TypeCommon
     else  nType := FListA.Values['Type'];
 
+    if (nType <> '') and (nType <> sFlag_TypeCommon) and
+       (nType <> sFlag_TypeShip) and (nType <> sFlag_TypeStation) then
+      nType := sFlag_TypeCommon;
+    //default
+
     nStr := 'Select *,%s as ServerNow From %s Where B_Stock=''%s'' ' +
             'And B_Type=''%s''';
     nStr := Format(nStr, [sField_SQLServer_Now,sTable_Batcode,FIn.FData,nType]);

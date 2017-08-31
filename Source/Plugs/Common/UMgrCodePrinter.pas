@@ -538,7 +538,9 @@ begin
     ClearPrinters(False);
     nXML.LoadFromFile(nFile);
 
+    nResponse := False;
     nTmp := nXML.Root.FindNode('config');
+
     if Assigned(nTmp) then
     begin
       nIdx := nTmp.NodeByName('enableprinter').ValueAsInteger;

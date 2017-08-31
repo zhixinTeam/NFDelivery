@@ -88,8 +88,6 @@
 {$IFDEF JSNF}
   {$DEFINE HYRFID201}
   //华益读头
-  {$DEFINE JSTruck}
-  //格式化计数器车牌
   {$DEFINE AppAtTaskBar}
   //状态栏显示
   {$DEFINE PrintChinese}
@@ -100,8 +98,14 @@
   //显示大票量发货量
   {$DEFINE MultiReplay}
   //计数器应答模式
-  {$DEFINE JSTruckNone}
+  {.$DEFINE JSTruck}
+  //格式化计数器车牌
+  {.$DEFINE JSTruckNone}
   //不格式化计数器车牌
+  {$DEFINE JSTruckPackStyle}
+  //格式化计数器车牌(包装类型)
+  {$DEFINE StockTypeByPackStyle}
+  //预刷卡品种类型(包装类型)
 {$ENDIF}
 //江山南方
 

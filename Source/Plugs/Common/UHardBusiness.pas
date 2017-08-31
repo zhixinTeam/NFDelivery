@@ -2016,6 +2016,27 @@ function GetStockType(nBill: string):string;
 var nStr, nStockMap: string;
     nWorker: PDBWorker;
 begin
+  {$IFDEF StockTypeByPackStyle}
+  Result := '普通';
+  nStr := 'Select L_PackStyle From %s Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, nBill]);
+
+  nWorker := nil;
+  try
+    with gDBConnManager.SQLQuery(nStr, nWorker) do
+    if RecordCount > 0 then
+    begin
+      nStr := Trim(Fields[0].AsString);
+      if nStr = 'Z' then Result := '纸袋';
+      if nStr = 'R' then Result := '早强';
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+
+  Exit;
+  {$ENDIF}
+
   Result := 'C';
   nStr := 'Select L_PackStyle, L_StockBrand, L_StockNO From %s ' +
           'Where L_ID=''%s''';
@@ -2055,6 +2076,29 @@ begin
   Result := nTruck;
   if nBill = '' then Exit;
 
+  {$IFDEF JSTruckPackStyle}
+  nWorker := nil;
+  try
+    nStr := 'Select L_PackStyle From %s Where L_ID=''%s''';
+    nStr := Format(nStr, [sTable_Bill, nBill]);
+
+    with gDBConnManager.SQLQuery(nStr, nWorker) do
+    if RecordCount > 0 then
+    begin
+      nStr := Trim(Fields[0].AsString);
+      if (nStr = '') or (nStr = 'C') then Exit;
+      //普通模式,车牌全显
+
+      nLen := cMultiJS_Truck - 2;
+      Result := nStr + '-' + Copy(nTruck, Length(nTruck) - nLen + 1, nLen);
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+
+  Exit;  
+  {$ENDIF}
+
   {$IFDEF JSTruckSimple}
   nWorker := nil;
   try
@@ -2089,6 +2133,7 @@ begin
   nLen := cMultiJS_Truck - 2;
   Result := Copy(nStr, 1, 2) +    //取前两位
             Copy(nTruck, Length(nTruck) - nLen + 1, nLen);
+  Exit;
   {$ENDIF}
 end;
 
