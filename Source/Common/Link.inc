@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE SYNF}
+{$DEFINE GXNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -280,8 +280,12 @@
   //强制地磅磅站
   {$DEFINE ERROPENONEDOOR}
   //过磅失败倒车下磅
+  {$DEFINE VerifyInTimeWhenP}
+  //过皮重验证进厂时间
   {$DEFINE DaiStepWuCha}
   //包装阶梯误差
+  {$DEFINE DaiForceQueue}
+  //包装发货强制队列
 {$ENDIF}
 //广西南方
 

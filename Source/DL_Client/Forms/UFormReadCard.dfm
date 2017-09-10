@@ -2,24 +2,24 @@ inherited fFormReadCard: TfFormReadCard
   Left = 633
   Top = 413
   Caption = #35835#21462#30913#21345
-  ClientHeight = 101
-  ClientWidth = 326
+  ClientHeight = 125
+  ClientWidth = 308
   Position = poMainFormCenter
   OnClose = FormClose
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 326
-    Height = 101
+    Width = 308
+    Height = 125
     inherited BtnOK: TButton
-      Left = 180
-      Top = 68
+      Left = 162
+      Top = 92
       Caption = #30830#23450
       TabOrder = 1
     end
     inherited BtnExit: TButton
-      Left = 250
-      Top = 68
+      Left = 232
+      Top = 92
       TabOrder = 2
     end
     object EditCard: TcxTextEdit [2]

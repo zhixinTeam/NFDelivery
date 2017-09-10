@@ -222,6 +222,7 @@ ResourceString
   sFlag_OtherAutoOut  = 'Truck_OtherAutoOut';        //自动出厂(非销售)
   sFlag_InTimeout     = 'InFactTimeOut';             //进厂超时(队列)
   sFlag_InAndBill     = 'InFactAndBill';             //进厂开单间隔
+  sFlag_InAndPound    = 'InFactAndPound';            //进厂过皮间隔(分钟)
   sFlag_SanMultiBill  = 'SanMultiBill';              //散装预开多单
   sFlag_NoDaiQueue    = 'NoDaiQueue';                //袋装禁用队列
   sFlag_NoSanQueue    = 'NoSanQueue';                //散装禁用队列

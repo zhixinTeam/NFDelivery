@@ -34,7 +34,7 @@ uses
   UFrameStationStandard, UFormStationStandard,
   //火车衡业务
 
-  UFrameCardProvide, UFormCardProvide, UFrameCardProPQuery,
+  UFrameCardProvide, UFormCardProvide, UFrameCardProPQuery, UFormCardInfo,
   UFrameCardTemp, UFormCardTemp, UFrameCardTmpPQuery,
   UFormReadCard,
   //码头业务

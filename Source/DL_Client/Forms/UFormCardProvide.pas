@@ -75,7 +75,7 @@ implementation
 {$R *.dfm}
 uses
   IniFiles, ULibFun, UMgrControl, USmallFunc, USysConst, USysDB,
-  UBusinessPacker, UAdjustForm;
+  UBusinessPacker, UAdjustForm, UDataModule;
 
 type
   TReaderType = (ptT800, pt8142);
@@ -272,7 +272,8 @@ begin
 end;
 
 function TfFormCardProvide.OnVerifyCtrl(Sender: TObject; var nHint: string): Boolean;
-var nVal: Double;
+var nStr: string;
+    nVal: Double;
 begin
   Result := True;
 
@@ -280,12 +281,6 @@ begin
   begin
     Result := Length(EditOrder.Text) > 0;
     nHint := '采购订单不能为空';
-  end else
-
-  if Sender = EditTruck then
-  begin
-    Result := Length(EditTruck.Text) > 2;
-    nHint := '车牌号长度应大于2位';
   end else
 
   if Sender = EditValue then
@@ -303,6 +298,27 @@ begin
   begin
     Result := Length(EditCard.Text) > 0;
     nHint := '请输入有效卡号';
+  end else
+
+  if Sender = EditTruck then
+  begin
+    Result := Length(EditTruck.Text) > 2;
+    nHint := '车牌号长度应大于2位';
+    if not Result then Exit;
+
+    nStr := 'Select Count(*) From %s ' +
+            'Where P_Truck=''%s'' And P_Card<>''''';
+    nStr := Format(nStr, [sTable_CardProvide, EditTruck.Text]);
+
+    with FDM.QueryTemp(nStr) do
+    if Fields[0].AsInteger > 0 then
+    begin
+      nStr := '车辆[ %s ]已办理磁卡[ %d ]张,是否办理新卡?';
+      nStr := Format(nStr, [EditTruck.Text, Fields[0].AsInteger]);
+      
+      Result := QueryDlg(nStr, sAsk);
+      nHint := '';
+    end;
   end;
 end;  
 

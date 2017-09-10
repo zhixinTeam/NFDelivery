@@ -963,7 +963,7 @@ begin
         if not VerifyManualEventRecord(FID + sFlag_ManualC, nHint) then
         begin
           AddManualEventRecord(FID + sFlag_ManualC, FTruck, nHint,
-            sFlag_DepBangFang, sFlag_Solution_YN, sFlag_DepJianZhuang);
+            sFlag_DepBangFang, sFlag_Solution_YN, sFlag_DepJianZhuang, True);
           WriteSysLog(nHint);
 
           nHint := '车辆[n1]%s净重[n2]%.2f吨,开票量[n2]%.2f吨,'+

@@ -91,6 +91,9 @@ type
     //物料分组
     function DefaultBrand: string;
     //默认品牌
+    function VerifyTruckTimeWhenP(const nTruck: string;
+      var nData: string): Boolean;
+    //车辆过皮超时
     function GetInBillInterval: Integer;
     function AllowedSanMultiBill: Boolean;
     function VerifyBeforSave(var nData: string): Boolean;
@@ -393,6 +396,41 @@ var nOut: TWorkerBusinessCommand;
 begin
   Result := TWorkerBusinessCommander.CallMe(cBC_IsTruckValid, nTruck, '', @nOut);
   if not Result then nData := nOut.FData;
+end;
+
+//Date: 2017-09-10
+//Parm: 车牌号
+//Desc: 车辆过皮时,验证是否进厂超时
+function TWorkerBusinessBills.VerifyTruckTimeWhenP(const nTruck: string;
+ var nData: string): Boolean;
+var nStr: string;
+    nMin: Integer;
+begin
+  Result := True;
+  nStr := 'Select getDate() as S_Now,Max(T_InFact) as T_InFact From %s ' +
+          'Where T_Truck=''%s''';
+  nStr := Format(nStr, [sTable_ZTTrucks, nTruck]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if (RecordCount < 1) or (Fields[1].AsFloat < 1) then Exit;
+    //进厂时间无效
+
+    nMin := Trunc((Fields[0].AsFloat - Fields[1].AsFloat) / (1 / (24 * 60)));
+    //距离进厂分钟数
+  end;
+
+  nStr := 'Select D_Value From %s ' +
+          'Where D_Name=''%s'' And D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_InAndPound]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if (RecordCount > 0) and (Fields[0].AsInteger < nMin) then
+  begin
+    nData := '车辆[ %s ]进厂后[ %d ]分钟未过磅,超时[ %d ]分钟.';
+    nData := Format(nData, [nTruck, Fields[0].AsInteger, nMin]);
+    Result := False;
+  end;
 end;
 
 //Date: 2014-09-15
@@ -1825,6 +1863,11 @@ begin
   //----------------------------------------------------------------------------
   if FIn.FExtParam = sFlag_TruckBFP then //称量皮重
   begin
+    {$IFDEF VerifyInTimeWhenP}
+    if not VerifyTruckTimeWhenP(nBills[0].FTruck, nData) then Exit;
+    //验证车辆进厂时间是否超时,避免代刷进厂
+    {$ENDIF}
+
     FListB.Clear;
     nStr := 'Select D_Value From %s Where D_Name=''%s''';
     nStr := Format(nStr, [sTable_SysDict, sFlag_NFStock]);

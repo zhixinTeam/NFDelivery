@@ -152,6 +152,7 @@ const
   cFI_FormStationStandard= $1133;                    //火车厢档案
   cFI_FormPoundVerify   = $1134;                     //
 
+  cFI_FormCardInfo      = $1150;                     //磁卡信息
   cFI_FormCardProvide   = $1151;                     //供应制卡
   cFI_FormCardTemp      = $1152;                     //临时制卡
   cFI_FormReadCard      = $1153;                     //读取卡片
@@ -163,7 +164,8 @@ const
   cFI_FormSelPoundSta   = $1162;                     //选择指定地磅编号
   cFI_FormPoundAjdust   = $1163;                     //磅单勘误
 
-  cFI_FormShipPound     = $1170;                     //船运离岸单
+  cFI_FormShipPound     = $1170;                     //船运离岸单(销售)
+  cFI_FormShipPoundCG   = $1171;                     //船运离岸单(采购)
 
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据
@@ -337,6 +339,7 @@ begin
   AddMenuModuleItem('MAIN_D06', cFI_FrameBill);
   AddMenuModuleItem('MAIN_D08', cFI_FormBillNew, mtForm);
   AddMenuModuleItem('MAIN_D09', cFI_FrameBillNew);
+  AddMenuModuleItem('MAIN_D10', cFI_FormCardInfo, mtForm);
 
   AddMenuModuleItem('MAIN_E01', cFI_FramePoundManual);
   AddMenuModuleItem('MAIN_E02', cFI_FormDisPound, mtForm);
