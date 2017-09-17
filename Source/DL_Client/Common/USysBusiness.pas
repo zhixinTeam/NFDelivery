@@ -202,7 +202,9 @@ function PrintOrderReport(nOrder: string; const nAsk: Boolean): Boolean;
 function PrintDuanDaoReport(nID: string; const nAsk: Boolean): Boolean;
 //打印短倒单
 function PrintShipLeaveReport(nID: string; const nAsk: Boolean): Boolean;
-//船运离岗通知单
+//船运离岗销售通知单
+function PrintShipLeaveCGReport(nID: string; const nAsk: Boolean): Boolean;
+//船运离岗采购通知单
 
 //保存电子标签
 function SetTruckRFIDCard(nTruck: string; var nRFIDCard: string;
@@ -1756,6 +1758,54 @@ begin
   end;
 
   nStr := gPath + sReportDir + 'ShipLeave.fr3';
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nStr := '无法正确加载报表文件';
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nParam.FName := 'UserName';
+  nParam.FValue := gSysParam.FUserID;
+  FDR.AddParamItem(nParam);
+
+  nParam.FName := 'Company';
+  nParam.FValue := gSysParam.FHintText;
+  FDR.AddParamItem(nParam);
+
+  FDR.Dataset1.DataSet := FDM.SqlTemp;
+  FDR.ShowReport;
+  Result := FDR.PrintSuccess;
+end;
+
+//Date: 2017-09-17
+//Parm: 船运单记录号;询问
+//Desc: 打印采购离岸通知单
+function PrintShipLeaveCGReport(nID: string; const nAsk: Boolean): Boolean;
+var nStr: string; 
+    nParam: TReportParamItem;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
+  nStr := 'Select * From %s s ' +
+          '  Left Join %s p on p.P_Bill=s.R_ID ' +
+          'Where s.R_ID=%s';
+  nStr := Format(nStr, [sTable_PoundShip, sTable_PoundLog, nID]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nStr := '编号为[ %s ] 的船运记录已无效!!';
+      nStr := Format(nStr, [nID]);
+      ShowMsg(nStr, sHint); Exit;
+    end;
+
+    nStr := FieldByName('P_ID').AsString; 
+    CallBusinessCommand(cBC_SyncME03, nStr, '', @nOut);
+    //自动推送原料单
+  end;
+
+  nStr := gPath + sReportDir + 'ShipLeaveCG.fr3';
   if not FDR.LoadReportFile(nStr) then
   begin
     nStr := '无法正确加载报表文件';

@@ -48,6 +48,7 @@ type
     N9: TMenuItem;
     N10: TMenuItem;
     N11: TMenuItem;
+    N12: TMenuItem;
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
@@ -63,6 +64,7 @@ type
     procedure N8Click(Sender: TObject);
     procedure N9Click(Sender: TObject);
     procedure N11Click(Sender: TObject);
+    procedure N12Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -235,6 +237,7 @@ begin
   N3.Enabled := BtnPrint.Enabled and (not Check1.Checked);
   N9.Enabled := N3.Enabled;
   N11.Enabled := BtnEdit.Enabled;
+  N12.Enabled := BtnEdit.Enabled;
 end;
 
 //Desc: 打印磅单
@@ -464,6 +467,21 @@ begin
   nP.FCommand := cCmd_EditData;
   nP.FParamA := SQLQuery.FieldByName('P_ID').AsString;
   CreateBaseFormItem(cFI_FormPoundAjdust, PopedomItem, @nP);
+end;
+
+//Desc: 船运采购单
+procedure TfFramePoundQuery.N12Click(Sender: TObject);
+var nP: TFormCommandParam;
+begin
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('请选择船运记录', sHint);
+    Exit;
+  end;
+
+  nP.FCommand := cCmd_EditData;
+  nP.FParamA := SQLQuery.FieldByName('P_ID').AsString;
+  CreateBaseFormItem(cFI_FormShipPoundCG, PopedomItem, @nP);
 end;
 
 initialization

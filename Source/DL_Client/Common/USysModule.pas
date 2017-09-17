@@ -38,7 +38,7 @@ uses
   UFrameCardTemp, UFormCardTemp, UFrameCardTmpPQuery,
   UFormReadCard,
   //码头业务
-  UFormShipPound,
+  UFormShipPound, UFormShipProvide,
   //船运离岸单
   UFormpoundAdjust,
   //磅单勘误
@@ -90,17 +90,6 @@ begin
   begin
     FLocalMAC   := MakeActionID_MAC;
     GetLocalIPConfig(FLocalName, FLocalIP);
-  end;
-
-  nStr := 'Select W_Factory,W_Serial From %s ' +
-          'Where W_MAC=''%s'' And W_Valid=''%s''';
-  nStr := Format(nStr, [sTable_WorkePC, gSysParam.FLocalMAC, sFlag_Yes]);
-
-  with FDM.QueryTemp(nStr) do
-  if RecordCount > 0 then
-  begin
-    gSysParam.FFactNum := Fields[0].AsString;
-    gSysParam.FSerialID := Fields[1].AsString;
   end;
 
   nStr := 'Select W_Factory,W_Serial,W_Departmen,W_HardUrl,W_MITUrl From %s ' +

@@ -379,6 +379,7 @@ begin
   AddMenuModuleItem('MAIN_M05', cFI_FrameProvBase);
   AddMenuModuleItem('MAIN_M06', cFI_FrameProvTruckQuery);
   AddMenuModuleItem('MAIN_M07', cFI_FrameMine);
+  AddMenuModuleItem('MAIN_M08', cFI_FormShipPoundCG, mtForm);
 
   AddMenuModuleItem('MAIN_N01', cFI_FrameCardProvide);
   AddMenuModuleItem('MAIN_N02', cFI_FormCardProvide, mtForm);
