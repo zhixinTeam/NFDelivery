@@ -479,6 +479,13 @@ begin
     Exit;
   end;
 
+  if (SQLQuery.FieldByName('P_PStation').AsString <> sFlag_TypeShip) or
+     (SQLQuery.FieldByName('P_MStation').AsString <> sFlag_TypeShip) then
+  begin
+    ShowMsg('不是船运采购单据', sHint);
+    Exit;
+  end;
+
   nP.FCommand := cCmd_EditData;
   nP.FParamA := SQLQuery.FieldByName('P_ID').AsString;
   CreateBaseFormItem(cFI_FormShipPoundCG, PopedomItem, @nP);

@@ -150,10 +150,10 @@ begin
     EditDuiChang.Properties.Items.LoadFromFile(gPath + cDuiChangeFile);
   if nID = '' then Exit;
 
-  nStr := 'Select ps.*,P_Order,P_CusName,P_Truck,P_MName,P_MStation From %s pl ' +
-          '  Left Join %s ps On ps.R_ID=pl.P_Bill ' +
-          'Where P_ID=''%s''';
-  nStr := Format(nStr, [sTable_PoundLog, sTable_PoundShip, nID]);
+  nStr := 'Select ps.*,P_Order,P_CusName,P_Truck,P_MName,P_MStation From %s ps ' +
+          '  Left Join %s pl On pl.P_ID=ps.S_Bill ' +
+          'Where S_Bill=''%s''';
+  nStr := Format(nStr, [sTable_PoundShip, sTable_PoundLog, nID]);
 
   with FDM.QueryTemp(nStr) do
   begin
@@ -245,7 +245,7 @@ begin
 end;
 
 procedure TfFormShipProvide.BtnOKClick(Sender: TObject);
-var nStr,nRID: string;
+var nStr: string;
 begin
   if not IsNumber(EditValue.Text, True) then
   begin
@@ -258,12 +258,15 @@ begin
        nStr := SF('R_ID', FShip, sfVal)
   else nStr := '';
 
-  nRID := FShip;
   EditYuShu.Text := Trim(EditYuShu.Text);
   EditDuiChang.Text := Trim(EditDuiChang.Text);
 
   FDM.ADOConn.BeginTrans;
   try
+    if FBill = '' then
+      FBill := GetSerialNo(sFlag_BusGroup, sFlag_PoundID);
+    //pound id
+
     nStr := MakeSQLByStr([SF('S_Bill', FBill),
             SF('S_YunShu', EditYuShu.Text),
             SF('S_Value', EditValue.Text, sfVal),
@@ -291,14 +294,9 @@ begin
 
     if FShip = '' then
     begin
-      nRID := IntToStr(FDM.GetFieldMax(sTable_PoundShip, 'R_ID'));
-      nStr := GetSerialNo(sFlag_BusGroup, sFlag_PoundID);
-      //pound id
-
-      nStr := MakeSQLByStr([SF('P_ID', nStr),
+      nStr := MakeSQLByStr([SF('P_ID', FBill),
               SF('P_Type', sFlag_ShipPro),
               SF('P_Order', EditBill.Text),
-              SF('P_Bill', nRID),
               SF('P_Truck', EditShip.Text),
               SF('P_CusID', FOrderItem.FCusID),
               SF('P_CusName', FOrderItem.FCusName),
@@ -327,16 +325,12 @@ begin
       FDM.ExecuteSQL(nStr);
     end else
     begin
-      nStr := 'P_Bill=''%s'' And P_MStation=''%s''';
-      nStr := Format(nStr, [FShip, sFlag_TypeShip]);
-      //ship pound
-
       nStr := MakeSQLByStr([
               SF('P_Truck', EditShip.Text),
               SF('P_MValue', EditValue.Text, sfVal),
               SF('P_MMan', gSysParam.FUserID),
               SF('P_MDate', sField_SQLServer_Now, sfVal)
-              ], sTable_PoundLog, nStr, False);
+              ], sTable_PoundLog, SF('P_ID', FBill), False);
       FDM.ExecuteSQL(nStr);
     end;
 
@@ -365,7 +359,7 @@ begin
     Items.SaveToFile(gPath + cDuiChangeFile);
   end;
 
-  PrintShipLeaveCGReport(nRID, False);
+  PrintShipLeaveCGReport(FBill, False);
   ModalResult := mrOk;
 end;
 

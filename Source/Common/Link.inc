@@ -347,6 +347,8 @@
   //显示订单量
   {$DEFINE DaiStepWuCha}
   //包装阶梯误差
+  {$DEFINE DaiForceQueue}
+  //包装发货强制队列
   {$DEFINE PrintShipReport}
   //船运开单时强制打单
   {$DEFINE NoVerifyTruckNo}

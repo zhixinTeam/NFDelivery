@@ -1787,8 +1787,8 @@ var nStr: string;
 begin
   Result := False;
   nStr := 'Select * From %s s ' +
-          '  Left Join %s p on p.P_Bill=s.R_ID ' +
-          'Where s.R_ID=%s';
+          '  Left Join %s p on p.P_ID=s.S_Bill ' +
+          'Where s.S_Bill=''%s''';
   nStr := Format(nStr, [sTable_PoundShip, sTable_PoundLog, nID]);
 
   with FDM.QueryTemp(nStr) do
