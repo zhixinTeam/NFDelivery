@@ -173,7 +173,7 @@ end;
 function TfFormTodo.LoadEventFromDB: Boolean;
 var nStr: string;
     nIdx: Integer;
-    nBool: Boolean;
+    nBool,nChange: Boolean;
     nItem: PEventItem;
 begin
   Result := False;
@@ -198,16 +198,20 @@ begin
       First;
       while not Eof do
       begin
+        nItem := nil;
         nBool := False;
-        nStr := FieldByName('R_ID').AsString;
-        
+        nChange := False;
+
+        nStr := FieldByName('R_ID').AsString;        
         for nIdx:=gEventList.Count - 1 downto 0 do
         begin
           nItem := gEventList[nIdx];
           if nItem.FRecord = nStr then
           begin
-            nItem.FEnable := True;
+            nChange := nItem.FDate < FieldByName('E_Date').AsDateTime;
             nBool := True;
+
+            nItem.FEnable := True;
             Break;
           end;
         end;
@@ -217,7 +221,10 @@ begin
           Result := True;
           New(nItem);
           gEventList.Add(nItem);
+        end;
 
+        if Assigned(nItem) and ((not nBool) or nChange) then
+        begin
           nItem.FEnable := True;
           nItem.FRecord := nStr;
 

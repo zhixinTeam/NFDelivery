@@ -1066,7 +1066,15 @@ begin
         end;
       end;
 
-      if FListA.Values['BuDan'] = sFlag_Yes then //补单
+      nStr := '';
+      {$IFDEF DaiQuickSync}
+      if FOrderItems[nIdx].FStockType = sFlag_Dai then
+        nStr := sFlag_Yes;
+      //xxxxx
+      {$ENDIF}
+
+      //补单 or 包装提前推单
+      if (FListA.Values['BuDan'] = sFlag_Yes) or (nStr = sFlag_Yes) then
       begin
         nStr := 'Update %s Set B_HasDone=B_HasDone+%.2f Where B_ID=''%s''';
         nStr := Format(nStr, [sTable_Order, FOrderItems[nIdx].FKDValue,
@@ -1128,6 +1136,17 @@ begin
     //还原链路
     raise;
   end;
+
+  {$IFDEF DaiQuickSync}
+  if FOrderItems[0].FStockType = sFlag_Dai then
+  begin
+    SplitStr(FOut.FData, FListC, 0, ',');
+    if not TWorkerBusinessCommander.CallMe(cBC_SyncME25,
+          FListC.Text, '', @nOut) then
+      raise Exception.Create(nOut.FData);
+    //袋装开单及推单,同步到NC榜单
+  end;
+  {$ENDIF}
 
   FListC.Clear;
   FListC.Values['DLID']  := FOut.FData;
@@ -1253,13 +1272,13 @@ var nVal: Double;
     nIdx: Integer;
     nHasOut, nIsAdmin: Boolean;
     nOut: TWorkerBusinessCommand;
-    nStr,nP,nRID,nBill,nZK,nSN,nHY: string;
+    nStr,nP,nRID,nBill,nZK,nSN,nHY,nTP: string;
 begin
   Result := False;
   nIsAdmin := FIn.FExtParam = 'Y';
   //init
 
-  nStr := 'Select L_ZhiKa,L_Value,L_Seal,L_StockNO,L_OutFact From %s ' +
+  nStr := 'Select L_ZhiKa,L_Value,L_Seal,L_StockNO,L_Type,L_OutFact From %s ' +
           'Where L_ID=''%s''';
   nStr := Format(nStr, [sTable_Bill, FIn.FData]);
 
@@ -1282,6 +1301,7 @@ begin
       Exit;
     end;
 
+    nTP  := FieldByName('L_Type').AsString;
     nSN  := FieldByName('L_StockNO').AsString;
     nZK  := FieldByName('L_ZhiKa').AsString;
     nHY  := FieldByName('L_Seal').AsString;
@@ -1342,7 +1362,14 @@ begin
     end;
 
     //--------------------------------------------------------------------------
-    if nHasOut then
+    nStr := '';
+    {$IFDEF DaiQuickSync}
+    if nTP = sFlag_Dai then
+      nStr := sFlag_Yes;
+    //xxxxx
+    {$ENDIF}
+
+    if nHasOut or (nStr = sFlag_Yes) then
     begin
       nStr := 'Update %s Set B_HasDone=B_HasDone-(%.2f) Where B_ID=''%s''';
       nStr := Format(nStr, [sTable_Order, nVal, nZK]);
@@ -1768,6 +1795,7 @@ function TWorkerBusinessBills.SavePostBillItems(var nData: string): Boolean;
 var nStr,nSQL,nTmp: string;
     nVal,nMVal,nTotal,nDec,nNet: Double;
     i,nIdx,nInt: Integer;
+    nDaiQuickSync: Boolean;
     {$IFDEF HardMon}
     nReader: THHReaderItem;
     {$ENDIF}
@@ -1816,6 +1844,13 @@ begin
     end;
   end;
   //过磅时，验证读卡器与卡片分组
+  {$ENDIF}
+
+  nDaiQuickSync := False;
+  {$IFDEF DaiQuickSync}
+  if nBills[0].FType = sFlag_Dai then
+    nDaiQuickSync := True;
+  //袋装开单及推单,影响出厂推单和冻结业务
   {$ENDIF}
 
   FListA.Clear;
@@ -2281,13 +2316,17 @@ begin
               ], sTable_Bill, SF('L_ID', FID), False);
       FListA.Add(nSQL); //更新交货单
 
-      nSQL := 'Update %s Set B_HasDone=B_HasDone+(%.2f),' +
-              'B_Freeze=B_Freeze-(%.2f) Where B_ID=''%s''';
-      nSQL := Format(nSQL, [sTable_Order, FValue, FValue, FZhiKa]);
-      FListA.Add(nSQL); //更新订单
+      if not nDaiQuickSync then
+      begin
+        nSQL := 'Update %s Set B_HasDone=B_HasDone+(%.2f),' +
+                'B_Freeze=B_Freeze-(%.2f) Where B_ID=''%s''';
+        nSQL := Format(nSQL, [sTable_Order, FValue, FValue, FZhiKa]);
+        FListA.Add(nSQL);
+      end; //更新订单
     end;
 
-    if not TWorkerBusinessCommander.CallMe(cBC_SyncME25,
+    if not nDaiQuickSync then
+     if not TWorkerBusinessCommander.CallMe(cBC_SyncME25,
           FListB.Text, '', @nOut) then
       raise Exception.Create(nOut.FData);
     //同步销售到NC榜单

@@ -1403,11 +1403,12 @@ begin
     begin
       nTask := gTaskMonitor.AddTask('UHardBusiness.AddJS', cTaskTimeoutLong);
       //to mon
-
-      nIdx := nPTruck.FDai;
+                   
       {$IFDEF StockPriorityInQueue}
       nIdx := BillValue2Dai(nBill, nPLine.FPeerWeight);
       //按品种优先级排队时,当前装车的袋数可能是不同品种拼单,需重新计算.
+      {$ELSE}
+      nIdx := nPTruck.FDai;
       {$ENDIF}
 
       gMultiJSManager.AddJS(nTunnel, nTruck, nBill, nIdx, True);

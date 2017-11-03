@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE GXNF}
+{$DEFINE JLNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -204,6 +204,8 @@
   //汉字喷码支持
   {$DEFINE JSTruck}
   //格式化计数器车牌
+  {$DEFINE DaiQuickSync}
+  //包装开单及推单
   {$DEFINE DaiStepWuCha}
   //包装阶梯误差
   {$DEFINE DaiForceQueue}
