@@ -251,14 +251,43 @@ begin
 end;
 
 function TfFormBill.OnVerifyCtrl(Sender: TObject; var nHint: string): Boolean;
-var nVal: Double;
+var nStr: string;
+    nVal: Double;
 begin
   Result := True;
 
   if Sender = EditTruck then
   begin
+    EditTruck.Text := Trim(EditTruck.Text);
     Result := Length(EditTruck.Text) > 2;
+
     nHint := '车牌号长度应大于2位';
+    if not Result then Exit;
+
+    nStr := 'Select L_ID From %s ' +
+            'Where L_OutFact Is Null And L_Truck=''%s''';
+    nStr := Format(nStr, [sTable_Bill, EditTruck.Text]);
+
+    with FDM.QueryTemp(nStr) do
+    if RecordCount > 0 then
+    begin
+      nStr := '';
+      First;
+
+      while not Eof do
+      begin
+        nStr := Fields[0].AsString;
+        Next;
+        
+        if not Eof then
+          nStr := nStr + ',';
+        //xxxxx
+      end;
+
+      nHint := '车辆[ %s ]已开交货单[ %s ],是否继续开新单?';
+      Result := QueryDlg(Format(nHint, [EditTruck.Text, nStr]), sAsk);
+      nHint := '';
+    end;
   end else
 
   if Sender = EditLading then

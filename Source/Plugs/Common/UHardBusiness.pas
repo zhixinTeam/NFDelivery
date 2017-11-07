@@ -284,6 +284,7 @@ begin
   end;
 end;
 
+//------------------------------------------------------------------------------
 //Date: 2016-06-15
 //Parm: 磁卡号
 //Desc: 获取磁卡使用类型
@@ -755,6 +756,17 @@ begin
     WriteHardHelperLog(nStr, sPost_Out);
     Exit;
   end;
+
+  {$IFDEF NoShipTruckOut}
+  if nTrucks[0].FIsVIP = sFlag_TypeShip then
+  begin
+    nStr := '船号[ %s ]在门岗出厂业务无效.';
+    nStr := Format(nStr, [nTrucks[0].FTruck]);
+
+    WriteHardHelperLog(nStr, sPost_Out);
+    Exit;
+  end;
+  {$ENDIF}
 
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do

@@ -511,7 +511,7 @@ const
   -----------------------------------------------------------------------------}
 
   sSQL_NewOrder = 'Create Table $Table(R_ID $Inc, B_ID varChar(20),' +
-       'B_Freeze $Float, B_HasDone $Float)';
+       'B_Freeze $Float Default 0, B_HasDone $Float Default 0)';
   {-----------------------------------------------------------------------------
    ¶©µ¥±í: Order
    *.R_ID: ¼ÇÂ¼±àºÅ

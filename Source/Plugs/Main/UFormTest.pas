@@ -96,11 +96,43 @@ begin
   end;
 end;
 
+function CallBusinessBill(const nCmd: Integer; const nData,nParma: string;
+  const nOut: PWorkerBusinessCommand): Boolean;
+var nStr: string;
+    nIn: TWorkerBusinessCommand;
+    nPack: TBusinessPackerBase;
+    nWorker: TBusinessWorkerBase;
+begin
+  nPack := nil;
+  nWorker := nil;
+  try
+    nPack := gBusinessPackerManager.LockPacker(sBus_BusinessCommand);
+    nWorker := gBusinessWorkerManager.LockWorker(sBus_BusinessSaleBill);
+
+    nIn.FCommand := nCmd;
+    nIn.FData := nData;
+    nIn.FExtParam := nParma;
+    nStr := nPack.PackIn(@nIn);
+
+    Result := nWorker.WorkActive(nStr);
+    if not Result then
+    begin
+      ShowDlg(nStr, '');
+      Exit;
+    end;
+
+    nPack.UnPackOut(nStr, nOut);
+  finally
+    gBusinessPackerManager.RelasePacker(nPack);
+    gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
 //------------------------------------------------------------------------------
 procedure TBaseForm1.Button1Click(Sender: TObject);
 var nOut: TWorkerBusinessCommand;
 begin
-  if CallBusinessCommand(cBC_GetSerialNO, edit1.Text, '', @nOut) then
+  if CallBusinessBill(cBC_SaveBillCard, 'SYTH170819064', '111', @nOut) then
   begin
     Memo1.lines.Add('done')
   end;

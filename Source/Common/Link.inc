@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE JLNF}
+{$DEFINE SYNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -355,4 +355,6 @@
   //船运开单时强制打单
   {$DEFINE NoVerifyTruckNo}
   //不校验车牌号(船号不符合规则)
+  {$DEFINE NoShipTruckOut}
+  //不处理船运在门岗的出厂业务
 {$ENDIF}

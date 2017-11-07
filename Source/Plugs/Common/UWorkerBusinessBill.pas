@@ -1068,7 +1068,7 @@ begin
 
       nStr := '';
       {$IFDEF DaiQuickSync}
-      if FOrderItems[nIdx].FStockType = sFlag_Dai then
+      if FOrderItems[0].FStockType = sFlag_Dai then
         nStr := sFlag_Yes;
       //xxxxx
       {$ENDIF}
@@ -1085,6 +1085,7 @@ begin
         begin
           nSQL := MakeSQLByStr([
             SF('B_ID', FOrderItems[nIdx].FOrder),
+            SF('B_Freeze', '0', sfVal),
             SF('B_HasDone', FOrderItems[nIdx].FKDValue, sfVal)
             ], sTable_Order, '', True);
           gDBConnManager.WorkerExec(FDBConn, nSQL);
@@ -1100,6 +1101,7 @@ begin
         begin
           nStr := MakeSQLByStr([
             SF('B_ID', FOrderItems[nIdx].FOrder),
+            SF('B_HasDone', '0', sfVal),
             SF('B_Freeze', FOrderItems[nIdx].FKDValue, sfVal)
             ], sTable_Order, '', True);
           gDBConnManager.WorkerExec(FDBConn, nStr);
@@ -1520,6 +1522,13 @@ begin
   end;
 
   //----------------------------------------------------------------------------
+  if nTruck = '' then
+  begin
+    nData := '交货单[ %s ]车牌号无效(Truck Is Blank).';
+    nData := Format(nData, [FIn.FData]);
+    Exit;
+  end;
+
   SplitStr(FIn.FData, FListA, 0, ',');
   //交货单列表
   nStr := AdjustListStrFormat2(FListB, '''', True, ',', False);
@@ -1549,6 +1558,33 @@ begin
       begin
         nData := '车辆[ %s ]正在使用该卡,相同牌号才能并单.';
         nData := Format(nData, [nStr]);
+        Exit;
+      end;
+
+      nStr := FieldByName('L_ID').AsString;
+      if FListA.IndexOf(nStr) < 0 then
+        FListA.Add(nStr);
+      Next;
+    end;
+  end;
+
+  //----------------------------------------------------------------------------
+  nSQL := 'Select L_ID,L_Type From %s ' +
+          'Where L_OutFact Is Null And L_Truck=''%s''';
+  nSQL := Format(nSQL, [sTable_Bill, nTruck]); //该车其它交货单
+
+  with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+  if RecordCount > 0 then
+  begin
+    First;
+
+    while not Eof do
+    begin
+      nStr := FieldByName('L_Type').AsString;
+      if ((nType <> '') and (nStr <> nType)) then
+      begin
+        nData := '交货单[ %s ]水泥品种不符,无法并单.';
+        nData := Format(nData, [FieldByName('L_ID').AsString]);
         Exit;
       end;
 
