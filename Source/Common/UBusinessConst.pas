@@ -181,6 +181,8 @@ type
     FPoundID    : string;          //称重记录
 
     FSelected   : Boolean;         //选中状态
+    FPrintHY    : Boolean;         //打印化验单
+    FHYDan      : string;          //化验单号
     FLocked     : Boolean;         //锁定状态，更新预置皮重
     FPreTruckP  : Boolean;         //预置皮重；
 

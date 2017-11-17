@@ -1,26 +1,26 @@
 inherited fFormBill: TfFormBill
-  Left = 423
-  Top = 232
-  ClientHeight = 428
-  ClientWidth = 409
+  Left = 817
+  Top = 344
+  ClientHeight = 454
+  ClientWidth = 423
   Position = poDesktopCenter
   OnClose = FormClose
   OnCreate = FormCreate
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 409
-    Height = 428
+    Width = 423
+    Height = 454
     inherited BtnOK: TButton
-      Left = 263
-      Top = 395
+      Left = 277
+      Top = 421
       Caption = #24320#21333
-      TabOrder = 11
+      TabOrder = 12
     end
     inherited BtnExit: TButton
-      Left = 333
-      Top = 395
-      TabOrder = 12
+      Left = 347
+      Top = 421
+      TabOrder = 13
     end
     object ListInfo: TcxMCListBox [2]
       Left = 23
@@ -138,6 +138,15 @@ inherited fFormBill: TfFormBill
       TabOrder = 9
       Width = 121
     end
+    object PrintHY: TcxCheckBox [13]
+      Left = 11
+      Top = 421
+      Caption = #25171#21360#21270#39564#21333
+      ParentFont = False
+      TabOrder = 11
+      Transparent = True
+      Width = 95
+    end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup
         object dxLayout1Item3: TdxLayoutItem
@@ -226,6 +235,13 @@ inherited fFormBill: TfFormBill
         object dxLayout1Item11: TdxLayoutItem
           Caption = #22791#27880#20449#24687':'
           Control = EditMemo
+          ControlOptions.ShowBorder = False
+        end
+      end
+      inherited dxLayout1Group1: TdxLayoutGroup
+        object dxLayout1Item14: TdxLayoutItem [0]
+          ShowCaption = False
+          Control = PrintHY
           ControlOptions.ShowBorder = False
         end
       end

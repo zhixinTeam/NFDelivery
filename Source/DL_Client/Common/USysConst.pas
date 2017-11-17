@@ -67,6 +67,11 @@ const
   cFI_FrameChineseDict  = $0063;                     //喷码字典
   cFI_FrameTodo         = $0064;                     //手动事件
 
+  cFI_FrameStock        = $0070;                     //品种管理
+  cFI_FrameStockRecord  = $0071;                     //检验记录
+  cFI_FrameStockHuaYan  = $0072;                     //开化验单
+  cFI_FrameStockHY_Each = $0073;                     //随车开单
+
   cFI_FrameProvider     = $0102;                     //供应
   cFI_FrameProvideLog   = $0105;                     //供应日志
   cFI_FrameMaterails    = $0106;                     //原材料
@@ -139,6 +144,10 @@ const
   cFI_FormChangeTunnel  = $1061;                     //定道装车
   cFI_FormChineseBase   = $1062;                     //汉字喷码
   cFI_FormChineseDict   = $1063;                     //喷码字典
+
+  cFI_FormStockParam    = $1070;                     //品种管理
+  cFI_FormStockHuaYan   = $1071;                     //开化验单
+  cFI_FormStockHY_Each  = $1072;                     //随车开单
 
   cFI_FormWXAccount     = $1091;                     //微信账户
   cFI_FormWXSendlog     = $1092;                     //微信日志
@@ -223,6 +232,9 @@ type
     FPicPath    : string;                            //图片目录
     FVoiceUser  : Integer;                           //语音计数
     FProberUser : Integer;                           //检测器计数
+
+    FPrinterBill: string;                            //小票打印机
+    FPrinterHYDan : string;                          //化验单打印机
   end;
   //系统参数
 
@@ -358,6 +370,15 @@ begin
   AddMenuModuleItem('MAIN_H01', cFI_FormTruckIn, mtForm);
   AddMenuModuleItem('MAIN_H02', cFI_FormTruckOut, mtForm);
   AddMenuModuleItem('MAIN_H03', cFI_FrameTruckQuery);
+
+  AddMenuModuleItem('MAIN_K01', cFI_FrameStock);
+  AddMenuModuleItem('MAIN_K02', cFI_FrameStockRecord);
+  AddMenuModuleItem('MAIN_K03', cFI_FrameStockHuaYan);
+  AddMenuModuleItem('MAIN_K04', cFI_FormStockHuaYan, mtForm);
+  AddMenuModuleItem('MAIN_K05', cFI_FormStockHY_Each, mtForm);
+  //AddMenuModuleItem('MAIN_K06', cFI_FrameBatchRecord);
+  AddMenuModuleItem('MAIN_K07', cFI_FrameBatch);
+  AddMenuModuleItem('MAIN_K08', cFI_FormBatch, mtForm);
 
   AddMenuModuleItem('MAIN_L01', cFI_FrameTruckQuery);
   AddMenuModuleItem('MAIN_L02', cFI_FrameCusAccountQuery);

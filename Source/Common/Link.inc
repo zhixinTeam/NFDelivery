@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE SYNF}
+{$DEFINE NCNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -156,6 +156,10 @@
   //计数器应答模式
   {$DEFINE ShowDaiWC}
   //显示袋装误差提示
+  {$DEFINE PrintHYEach}
+  //随车开化验单
+  {.$DEFINE HeGeZhengOnly}
+  //随车开单时只打合格证
 {$ENDIF}
 //南城南方
 

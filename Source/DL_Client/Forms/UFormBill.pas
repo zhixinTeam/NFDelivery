@@ -12,7 +12,7 @@ uses
   UFormNormal, USysBusiness, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, ComCtrls, cxMaskEdit,
   cxDropDownEdit, cxListView, cxTextEdit, cxMCListBox, dxLayoutControl,
-  StdCtrls, cxButtonEdit, cxGraphics;
+  StdCtrls, cxButtonEdit, cxGraphics, cxCheckBox;
 
 type
   TfFormBill = class(TfFormNormal)
@@ -43,6 +43,8 @@ type
     dxLayout1Group7: TdxLayoutGroup;
     EditPoundStation: TcxComboBox;
     dxLayout1Item13: TdxLayoutItem;
+    dxLayout1Item14: TdxLayoutItem;
+    PrintHY: TcxCheckBox;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure BtnOKClick(Sender: TObject);
@@ -161,11 +163,20 @@ begin
       dxLayout1Item5.Caption := nStr;
     //xxxxx
 
+    PrintHY.Checked := nIni.ReadBool(Name, 'PrintHY', False);
+    //Ëæ³µ¿ªµ¥
     LoadMCListBoxConfig(Name, ListInfo, nIni);
   finally
     nIni.Free;
   end;
 
+  {$IFDEF PrintHYEach}
+  dxLayout1Item14.Visible := True;
+  {$ELSE}
+  dxLayout1Item14.Visible := False;
+  PrintHY.Checked := False;
+  {$ENDIF}
+  
   AdjustCtrlData(Self);
 end;
 
@@ -174,6 +185,7 @@ var nIni: TIniFile;
 begin
   nIni := TIniFile.Create(gPath + sFormConfig);
   try
+    nIni.WriteBool(Name, 'PrintHY', PrintHY.Checked);
     SaveMCListBoxConfig(Name, ListInfo, nIni);
   finally
     nIni.Free;
@@ -361,6 +373,10 @@ begin
 
     Values['PoundStation'] := GetCtrlData(EditPoundStation);
     Values['PoundName']    := EditPoundStation.Text;
+
+    if PrintHY.Checked  then
+         Values['PrintHY'] := sFlag_Yes
+    else Values['PrintHY'] := sFlag_No;
   end;
 
   FBills := SaveBill(PackerEncodeStr(FListA.Text));

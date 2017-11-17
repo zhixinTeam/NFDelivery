@@ -34,6 +34,9 @@ uses
   UFrameStationStandard, UFormStationStandard,
   //火车衡业务
 
+  UFrameHYStock, UFormHYStock, UFrameHYRecord, UFormHYRecord, UFrameHYData,
+  //化验单
+
   UFrameCardProvide, UFormCardProvide, UFrameCardProPQuery, UFormCardInfo,
   UFrameCardTemp, UFormCardTemp, UFrameCardTmpPQuery,
   UFormReadCard,
@@ -90,6 +93,29 @@ begin
   begin
     FLocalMAC   := MakeActionID_MAC;
     GetLocalIPConfig(FLocalName, FLocalIP);
+  end;
+
+  //----------------------------------------------------------------------------
+  nStr := 'Select D_Value,D_Memo From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam]);
+
+  with FDM.QueryTemp(nStr),gSysParam do
+  if RecordCount > 0 then
+  begin
+    First;
+    while not Eof do
+    begin
+      nStr := Fields[1].AsString;
+      if nStr = sFlag_PrinterBill then
+        FPrinterBill := Fields[0].AsString;
+      //xxxxx
+
+      if nStr = sFlag_PrinterHYDan then
+        FPrinterHYDan := Fields[0].AsString;
+      //xxxxx
+      
+      Next;
+    end;
   end;
 
   nStr := 'Select W_Factory,W_Serial,W_Departmen,W_HardUrl,W_MITUrl From %s ' +

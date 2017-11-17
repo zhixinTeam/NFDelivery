@@ -4,6 +4,7 @@
 *******************************************************************************}
 unit UFrameBill;
 
+{$I Link.Inc}
 interface
 
 uses
@@ -55,6 +56,7 @@ type
     N12: TMenuItem;
     N13: TMenuItem;
     N14: TMenuItem;
+    N15: TMenuItem;
     procedure EditIDPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnDelClick(Sender: TObject);
@@ -70,6 +72,7 @@ type
     procedure CheckDelButtonClick(Sender: TObject);
     procedure N12Click(Sender: TObject);
     procedure N13Click(Sender: TObject);
+    procedure N15Click(Sender: TObject);
   protected
     FStart,FEnd: TDate;
     //时间区间
@@ -90,8 +93,9 @@ implementation
 
 {$R *.dfm}
 uses
-  ULibFun, UMgrControl, UDataModule, UFormBase, UFormInputbox, USysPopedom,
-  USysConst, USysDB, USysBusiness, UFormDateFilter, UMgrRemotePrint;
+  ULibFun, UMgrControl, UDataModule, UFormBase, UFormInputbox, UFormCtrl,
+  USysPopedom, USysConst, USysDB, USysBusiness, UFormDateFilter,
+  UMgrRemotePrint;
 
 //------------------------------------------------------------------------------
 class function TfFrameBill.FrameID: integer;
@@ -257,6 +261,13 @@ begin
   N5.Enabled := BtnEdit.Enabled;
   N7.Enabled := BtnEdit.Enabled;
   N12.Enabled := BtnEdit.Enabled;
+
+  {$IFDEF PrintHYEach}
+  N15.Visible := True;
+  N15.Enabled := BtnEdit.Enabled;
+  {$ELSE}
+  N15.Visible := False;
+  {$ENDIF}
 end;
 
 //Desc: 修改未进厂车牌号
@@ -396,6 +407,66 @@ begin
 
   nStr := SQLQuery.FieldByName('L_ID').AsString + nP + #7 + sFlag_Sale;
   gRemotePrinter.PrintBill(nStr);
+end;
+
+//------------------------------------------------------------------------------
+//Date: 2017-11-10
+//Parm: 交货单号
+//Desc: 获取nBill的化验单记录号
+function GetHYRecord(const nBill: string): string;
+var nStr: string;
+begin
+  nStr := 'Select H_ID From %s Where H_Bill=''%S''';
+  nStr := Format(nStr, [sTable_StockHuaYan, nBill]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+       Result := Fields[0].AsString
+  else Result := '';
+end;
+
+procedure TfFrameBill.N15Click(Sender: TObject);
+var nStr: string;
+begin
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('请选择要开单的记录', sHint);
+    Exit;
+  end;
+
+  nStr := SQLQuery.FieldByName('L_ID').AsString;
+  nStr := GetHYRecord(nStr);
+
+  if nStr = '' then
+  begin
+    nStr := GetSerialNo(sFlag_BusGroup, sFlag_HYDan);
+    if nStr = '' then Exit;
+
+    with SQLQuery do
+    nStr := MakeSQLByStr([SF('H_No', nStr),
+            SF('H_Custom', FieldByName('L_CusID').AsString),
+            SF('H_CusName', FieldByName('L_CusName').AsString),
+            SF('H_SerialNo', FieldByName('L_Seal').AsString),
+            SF('H_Truck', FieldByName('L_Truck').AsString),
+            SF('H_Value', FieldByName('L_Value').AsString, sfVal),
+            SF('H_Bill', FieldByName('L_ID').AsString),
+            SF('H_BillDate', sField_SQLServer_Now, sfVal),
+            SF('H_ReportDate', sField_SQLServer_Now, sfVal),
+            SF('H_Reporter', 'NFDelivery')], sTable_StockHuaYan, '', True);
+    FDM.ExecuteSQL(nStr);
+
+    nStr := SQLQuery.FieldByName('L_ID').AsString;
+    nStr := GetHYRecord(nStr);
+  end;
+
+  if nStr = '' then
+  begin
+    ShowMsg('创建化验单失败', sHint);
+    Exit;
+  end;
+
+  PrintHuaYanReport(nStr, True);
+  PrintHeGeReport(nStr, True);
 end;
 
 initialization

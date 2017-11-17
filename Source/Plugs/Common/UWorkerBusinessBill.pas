@@ -816,12 +816,16 @@ end;
 function TWorkerBusinessBills.SaveBills(var nData: string): Boolean;
 var nStr,nSQL,nBill,nBrand: string;
     nIdx,nInt,nErrCode: Integer;
+    nDaiQuickSync: Boolean;
     nDBWorker: PDBWorker;
     nOut: TWorkerBusinessCommand;
 begin
   Result := False;
   FListA.Text := PackerDecodeStr(FIn.FData);
   if not VerifyBeforSave(nData) then Exit;
+
+  nDaiQuickSync := False;
+  //不使用袋装开单即推单业务
 
   nDBWorker := FDBConn;
   FDBConn := nil;
@@ -921,6 +925,10 @@ begin
               SF('L_Value', FOrderItems[nIdx].FKDValue, sfVal),
               SF('L_Price', 0, sfVal),
 
+              {$IFDEF PrintHYEach}
+              SF('L_PrintHY',     FListA.Values['PrintHY']),
+              {$ENDIF} //随车打印化验单
+
               SF('L_Truck', FListA.Values['Truck']),
               SF('L_Status', sFlag_BillNew),
               SF('L_Lading', FListA.Values['Lading']),
@@ -936,6 +944,20 @@ begin
               SF('L_Date', sField_SQLServer_Now, sfVal)
               ], sTable_Bill, '', True);
       gDBConnManager.WorkerExec(FDBConn, nStr);
+
+      {$IFDEF DaiQuickSync}
+      if (not nDaiQuickSync) and (FOrderItems[nIdx].FStockType = sFlag_Dai) then
+        nDaiQuickSync := True;
+      //袋装开单及推单,影响出厂推单和冻结业务
+
+      if nDaiQuickSync then
+      with FOrderItems[nIdx] do
+      begin
+        nStr := '订单[ %s.%s ]使用开单即推单业务.';
+        nStr := Format(nStr, [FOrder, FStockName]);
+        WriteLog(nStr);
+      end;
+      {$ENDIF}
 
       if FListA.Values['Post'] = sFlag_TruckBFM then //散装称重时并单
       begin
@@ -1066,15 +1088,8 @@ begin
         end;
       end;
 
-      nStr := '';
-      {$IFDEF DaiQuickSync}
-      if FOrderItems[0].FStockType = sFlag_Dai then
-        nStr := sFlag_Yes;
-      //xxxxx
-      {$ENDIF}
-
       //补单 or 包装提前推单
-      if (FListA.Values['BuDan'] = sFlag_Yes) or (nStr = sFlag_Yes) then
+      if nDaiQuickSync or (FListA.Values['BuDan'] = sFlag_Yes) then
       begin
         nStr := 'Update %s Set B_HasDone=B_HasDone+%.2f Where B_ID=''%s''';
         nStr := Format(nStr, [sTable_Order, FOrderItems[nIdx].FKDValue,
@@ -1140,7 +1155,7 @@ begin
   end;
 
   {$IFDEF DaiQuickSync}
-  if FOrderItems[0].FStockType = sFlag_Dai then
+  if nDaiQuickSync then
   begin
     SplitStr(FOut.FData, FListC, 0, ',');
     if not TWorkerBusinessCommander.CallMe(cBC_SyncME25,
@@ -1767,6 +1782,11 @@ begin
       FStatus     := FieldByName('L_Status').AsString;
       FNextStatus := FieldByName('L_NextStatus').AsString;
 
+      FHYDan      := FieldByName('L_Seal').AsString;
+      {$IFDEF PrintHYEach}
+      FPrintHY    := FieldByName('L_PrintHY').AsString = sFlag_Yes;
+      {$ENDIF}
+      
       if FIsVIP = sFlag_TypeShip then
       begin
         FStatus    := sFlag_TruckZT;
@@ -2359,6 +2379,33 @@ begin
         nSQL := Format(nSQL, [sTable_Order, FValue, FValue, FZhiKa]);
         FListA.Add(nSQL);
       end; //更新订单
+
+      {$IFDEF PrintHYEach}
+      //if FPrintHY then
+      begin
+        FListC.Values['Group'] :=sFlag_BusGroup;
+        FListC.Values['Object'] := sFlag_HYDan;
+        //to get serial no
+
+        if not TWorkerBusinessCommander.CallMe(cBC_GetSerialNO,
+            FListC.Text, sFlag_Yes, @nOut) then
+          raise Exception.Create(nOut.FData);
+        //xxxxx
+
+        nSQL := MakeSQLByStr([SF('H_No', nOut.FData),
+                SF('H_Custom', FCusID),
+                SF('H_CusName', FCusName),
+                SF('H_SerialNo', FHYDan),
+                SF('H_Truck', FTruck),
+                SF('H_Value', FValue, sfVal),
+                SF('H_Bill', FID),
+                SF('H_BillDate', sField_SQLServer_Now, sfVal),
+                SF('H_ReportDate', sField_SQLServer_Now, sfVal),
+                //SF('H_EachTruck', sFlag_Yes),
+                SF('H_Reporter', 'NFDelivery')], sTable_StockHuaYan, '', True);
+        FListA.Add(nSQL); //自动生成化验单
+      end;
+      {$ENDIF}
     end;
 
     if not nDaiQuickSync then

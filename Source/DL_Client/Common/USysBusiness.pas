@@ -279,6 +279,10 @@ function GetTruckEmptyValue(nTruck: string): Double;
 function GetStockTruckSort(nID: string=''): string;
 //车辆排队序列
 
+function PrintHuaYanReport(const nHID: string; const nAsk: Boolean): Boolean;
+function PrintHeGeReport(const nHID: string; const nAsk: Boolean): Boolean;
+//化验单,合格证
+
 implementation
 
 //Desc: 记录日志
@@ -2583,6 +2587,122 @@ begin
       Result := Format(nStr, [Fields[0].AsInteger]);
     end;
   end;
+end;
+
+//------------------------------------------------------------------------------
+//Desc: 获取nStock品种的报表文件
+function GetReportFileByStock(const nStock: string): string;
+begin
+  Result := GetPinYinOfStr(nStock);
+
+  if Pos('dj', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan42_DJ.fr3'
+  else if Pos('gsysl', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan_gsl.fr3'
+  else if Pos('kzf', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan_kzf.fr3'
+  else if Pos('qz', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan_qz.fr3'
+  else if Pos('32', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan32.fr3'
+  else if Pos('42', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan42.fr3'
+  else if Pos('52', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan42.fr3'
+  else Result := '';
+end;
+
+//Desc: 打印标识为nHID的化验单
+function PrintHuaYanReport(const nHID: string; const nAsk: Boolean): Boolean;
+var nStr: string;
+begin
+  if nAsk then
+  begin
+    Result := True;
+    nStr := '是否要打印化验单?';
+    if not QueryDlg(nStr, sAsk) then Exit;
+  end else Result := False;
+
+  nStr := 'Select hy.*,b.*,sp.*,sr.* From $HY hy ' +
+          ' Left Join $Bill b On b.L_ID=hy.H_Bill ' +
+          ' Left Join $SR sr on sr.R_SerialNo=H_SerialNo ' +
+          ' Left Join $SP sp on sp.P_ID=sr.R_PID ' +        
+          'Where H_ID in ($ID)';
+  //xxxxx
+
+  nStr := MacroValue(nStr, [MI('$HY', sTable_StockHuaYan),
+          MI('$Bill', sTable_Bill), MI('$SP', sTable_StockParam),
+          MI('$SR', sTable_StockRecord), MI('$ID', nHID)]);
+  //xxxxx
+
+  if FDM.QueryTemp(nStr).RecordCount < 1 then
+  begin
+    nStr := '编号为[ %s ] 的化验单记录已无效!!';
+    nStr := Format(nStr, [nHID]);
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nStr := FDM.SqlTemp.FieldByName('P_Stock').AsString;
+  nStr := GetReportFileByStock(nStr);
+
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nStr := '无法正确加载报表文件';
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  if gSysParam.FPrinterHYDan = '' then
+       FDR.Report1.PrintOptions.Printer := 'My_Default_HYPrinter'
+  else FDR.Report1.PrintOptions.Printer := gSysParam.FPrinterHYDan;
+
+  FDR.Dataset1.DataSet := FDM.SqlTemp;
+  FDR.ShowReport;
+  Result := FDR.PrintSuccess;
+end;
+
+//Desc: 打印标识为nID的合格证
+function PrintHeGeReport(const nHID: string; const nAsk: Boolean): Boolean;
+var nStr: string;
+begin
+  if nAsk then
+  begin
+    Result := True;
+    nStr := '是否要打印合格证?';
+    if not QueryDlg(nStr, sAsk) then Exit;
+  end else Result := False;
+
+  nStr := 'Select * From $HY hy ' +
+          '  Left Join $Bill b On b.L_ID=hy.H_Bill ' +
+          '  Left Join $SP sp On sp.P_Stock=b.L_StockNo ' +
+          'Where H_ID in ($ID)';
+  //xxxxx
+
+  nStr := MacroValue(nStr, [MI('$HY', sTable_StockHuaYan),
+          MI('$SP', sTable_StockParam), MI('$SR', sTable_StockRecord),
+          MI('$Bill', sTable_Bill), MI('$ID', nHID)]);
+  //xxxxx
+
+  if FDM.QueryTemp(nStr).RecordCount < 1 then
+  begin
+    nStr := '编号为[ %s ] 的化验单记录已无效!!';
+    nStr := Format(nStr, [nHID]);
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nStr := gPath + sReportDir + 'HeGeZheng.fr3';
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nStr := '无法正确加载报表文件';
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  if gSysParam.FPrinterHYDan = '' then
+       FDR.Report1.PrintOptions.Printer := 'My_Default_HYPrinter'
+  else FDR.Report1.PrintOptions.Printer := gSysParam.FPrinterHYDan;
+  
+  FDR.Dataset1.DataSet := FDM.SqlTemp;
+  FDR.ShowReport;
+  Result := FDR.PrintSuccess;
 end;
 
 end.
