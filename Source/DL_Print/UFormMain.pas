@@ -43,12 +43,21 @@ type
     FBillList: TStrings;
     FSyncLock: TCriticalSection;
     //同步锁
+    FNoPrintLoad: Boolean;
+    FNoPrint: TStrings;
+    //无需打印
     procedure ShowLog(const nStr: string);
     //显示日志
     procedure DoExecute(const nContext: TIdContext);
     //执行动作
+    function IsPrintStock(const nStock: string): Boolean;
+    //是否打印
+    function PrintOrderReport(const nOrder: string; var nHint: string;
+      const nPrinter: string = ''; const nMoney: string = '0'): Boolean;
+    function PrintPoundReport(const nPID: string; var nHint: string;
+      const nPrinter: string = ''): Boolean;
     procedure PrintBill(var nBase: TRPDataBase;var nBuf: TIdBytes;nCtx: TIdContext);
-    //打印单据
+    //打印单据 
   public
     { Public declarations }
   end;
@@ -94,9 +103,10 @@ begin
   FTrayIcon.Visible := True;
 
   FIsBusy   := False;
+  FNoPrint  := TStringList.Create;
   FBillList := TStringList.Create;
   FSyncLock := TCriticalSection.Create;
-  //new item 
+  //new item
 
   nIni := nil;
   nReg := nil;
@@ -145,9 +155,9 @@ begin
     nReg.Free;
   end;
 
+  FNoPrint.Free;
   FBillList.Free;
   FSyncLock.Free;
-  //lock
 end;
 
 procedure TfFormMain.Timer1Timer(Sender: TObject);
@@ -167,6 +177,9 @@ begin
 
   FSyncLock.Enter;
   try
+    FNoPrint.Clear;
+    FNoPrintLoad := False;
+    
     FBillList.Clear;
     Timer2.Enabled := CheckSrv.Checked;
   finally
@@ -245,11 +258,40 @@ begin
   end;
 end;
 
+//Date: 2017-12-07
+//Parm: 物料号
+//Desc: 判断nStock是否需要打印
+function TfFormMain.IsPrintStock(const nStock: string): Boolean;
+var nStr: string;
+begin
+  if not FNoPrintLoad then
+  begin
+    FNoPrintLoad := True;
+    nStr := 'Select D_Value From %s Where D_Name=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_NOPrintBill]);
+
+    with FDM.SQLQuery(nStr, FDM.SQLTemp) do
+    if RecordCount > 0 then
+    begin
+      First;
+      while not Eof do
+      begin
+        nStr := Trim(Fields[0].AsString);
+        FNoPrint.Add(nStr);
+        Next;
+      end;
+    end;
+  end;
+
+  Result := (FNoPrint.Count < 1) or (FNoPrint.IndexOf(nStock) < 0);
+  //不在无需打印列表
+end;
+
 //Date: 2012-4-1
 //Parm: 采购单号;提示;数据对象;打印机
 //Desc: 打印nOrder采购单号
-function PrintOrderReport(const nOrder: string; var nHint: string;
- const nPrinter: string = ''; const nMoney: string = '0'): Boolean;
+function TfFormMain.PrintOrderReport(const nOrder: string; var nHint: string;
+ const nPrinter: string; const nMoney: string): Boolean;
 var nStr: string;
     nDS: TDataSet;
 begin
@@ -283,8 +325,8 @@ begin
   Result := FDR.PrintSuccess;
 end;
 
-function PrintPoundReport(const nPID: string; var nHint: string;
- const nPrinter: string = ''): Boolean;
+function TfFormMain.PrintPoundReport(const nPID: string; var nHint: string;
+ const nPrinter: string): Boolean;
 var nStr: string;
     nDS: TDataSet;
 begin
@@ -299,6 +341,14 @@ begin
   begin
     nHint := '磅单[ %s ] 已无效!!';
     nHint := Format(nHint, [nPID]);
+    Exit;
+  end;
+
+  nStr := nDS.FieldByName('P_MID').AsString;
+  if not IsPrintStock(nStr) then
+  begin
+    nHint := '品种[ %s.%s]无需打印';
+    nHint := Format(nHint, [nStr, nDS.FieldByName('P_MName').AsString]);
     Exit;
   end;
 

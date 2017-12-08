@@ -168,7 +168,8 @@ ResourceString
   sFlag_SysParam      = 'SysParam';                  //系统参数
   sFlag_EnableBakdb   = 'Uses_BackDB';               //备用库
   sFlag_ValidDate     = 'SysValidDate';              //有效期
-  sFlag_PrintBill     = 'PrintStockBill';            //需打印订单
+  sFlag_PrintBill     = 'PrintStockBill';            //需打印品种
+  sFlag_NOPrintBill   = 'NOPrintStock';              //无需打印品种
   sFlag_NFStock       = 'NoFaHuoStock';              //现场无需发货
   sFlag_StockIfYS     = 'StockIfYS';                 //现场是否验收
   sFlag_ViaBillCard   = 'ViaBillCard';               //直接制卡
