@@ -12,7 +12,8 @@ uses
   UBusinessWorker, UBusinessConst, UBusinessPacker, UMgrQueue,
   UMgrHardHelper, U02NReader, UMgrERelay, UMgrTTCEM100,
   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}UMgrRemotePrint,
-  UMgrLEDDisp, UMgrRFID102, {$IFDEF HKVDVR}UMgrCamera, {$ENDIF}Graphics, DB;
+  UMgrLEDDisp, UMgrRFID102, {$IFDEF HKVDVR}UMgrCamera, {$ENDIF}Graphics, DB,
+  UMgrLEDDispCounter, UJSDoubleChannel;
 
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
 procedure WhenTTCE_M100_ReadCard(const nItem: PM100ReaderItem);
@@ -50,6 +51,9 @@ procedure WhenCaptureFinished(const nPtr: Pointer);
 {$ENDIF}
 procedure SaveGrabCard(const nCard: string; nTunnel: string='');
 //检索并保存抓斗秤工作卡号
+
+procedure UpdateDoubleChannel(const nTunnel: PMultiJSTunnel);
+//更新通道信息
 
 implementation
 
@@ -1431,6 +1435,102 @@ begin
   end;
 end;
 
+//Date: 2017-12-07
+//Parm: 车牌;通道;交货单;启动计数
+//lih: 对在nTunnel的车辆开启计数器
+function TruckStartJSDouble(const nTruck,nTunnel,nMutexTunnel,nBill,nStockName: string;
+  var nHint: string; const nAddJS: Boolean = True): Boolean;
+var nIdx: Integer;
+    nTask: Int64;
+    nPLine: PLineItem;
+    nPTruck: PTruckItem;
+    nStr: string;
+    
+    function IsMutexJSRun: Boolean;
+    begin
+      Result := False;
+      if nMutexTunnel = '' then Exit;
+      Result := gMultiJSManager.IsJSRun(nMutexTunnel);
+
+      if Result then
+      begin
+        nHint := '互斥通道[ %s ]装车中,业务无效.';
+        nHint := Format(nHint, [nMutexTunnel]);
+        WriteNearReaderLog(nHint);
+      end;
+    end;
+begin
+  with gTruckQueueManager do
+  try
+    Result := False;
+    SyncLock.Enter;
+    nIdx := GetLine(nTunnel);
+
+    if nIdx < 0 then
+    begin
+      nHint := Format('通道[ %s ]无效.', [nTunnel]);
+      Exit;
+    end;
+
+    nPLine := Lines[nIdx];
+    nIdx := TruckInLine(nTruck, nPLine.FTrucks);
+
+    if nIdx < 0 then
+    begin
+      nHint := Format('车辆[ %s ]已不再队列.', [nTruck]);
+      Exit;
+    end;
+
+    Result := True;
+    nPTruck := nPLine.FTrucks[nIdx];
+
+    for nIdx:=nPLine.FTrucks.Count - 1 downto 0 do
+      PTruckItem(nPLine.FTrucks[nIdx]).FStarted := False;
+    nPTruck.FStarted := True;
+    
+    if IsMutexJSRun then
+    begin
+      nTask := gTaskMonitor.AddTask('UHardBusiness.AddJS', cTaskTimeoutLong);
+      //to mon
+
+      {$IFDEF StockPriorityInQueue}
+      nIdx := BillValue2Dai(nBill, nPLine.FPeerWeight);
+      //按品种优先级排队时,当前装车的袋数可能是不同品种拼单,需重新计算.
+      {$ELSE}
+      nIdx := nPTruck.FDai;
+      {$ENDIF}
+
+      if gMultiJSManager.AddJS(nTunnel, nTruck, nBill, nIdx, True) then
+      begin
+        nStr := '%s 请等待';
+        nStr := Format(nstr,[nPTruck.FTruck]);
+        gCounterDisplayManager.Display(nTunnel, cCounterDisp_CardID_tdk, nStr);
+      end;
+      gTaskMonitor.DelTask(nTask);
+    end else
+    if PrintBillCode(nTunnel, nBill, nHint) and nAddJS then
+    begin
+      nTask := gTaskMonitor.AddTask('UHardBusiness.AddJS', cTaskTimeoutLong);
+      //to mon
+
+      {$IFDEF StockPriorityInQueue}
+      nIdx := BillValue2Dai(nBill, nPLine.FPeerWeight);
+      //按品种优先级排队时,当前装车的袋数可能是不同品种拼单,需重新计算.
+      {$ELSE}
+      nIdx := nPTruck.FDai;
+      {$ENDIF}
+
+      if gMultiJSManager.AddJS(nTunnel, nTruck, nBill, nIdx, True) then
+      begin
+        gCounterDisplayManager.SendCounterLedDispInfo(nTruck, nTunnel, nIdx, nStockName);
+      end;
+      gTaskMonitor.DelTask(nTask);
+    end;
+  finally
+    SyncLock.Leave;
+  end;
+end;
+
 //Date: 2013-07-17
 //Parm: 交货单号
 //Desc: 查询nBill上的已装量
@@ -1702,6 +1802,268 @@ begin
   Exit;
 end;
 
+//Date: 2017-12-07
+//Parm: 磁卡号;通道号
+//lih: 对nCard执行袋装装车操作
+procedure MakeTruckLadingDaiDouble(const nCard: string; nTunnel,nMutexTunnel: string);
+var nStr: string;
+    nBool: Boolean;
+    nIdx,nInt: Integer;
+    nPLine: PLineItem;
+    nPTruck: PTruckItem;
+    nTrucks: TLadingBillItems;
+    nLen, i: Integer;
+    nAlready: Boolean;
+
+    function IsJSRun: Boolean;
+    begin
+      Result := False;
+      if nTunnel = '' then Exit;
+      Result := gMultiJSManager.IsJSRun(nTunnel);
+
+      if Result then
+      begin
+        nStr := '通道[ %s ]装车中,业务无效.';
+        nStr := Format(nStr, [nTunnel]);
+        WriteNearReaderLog(nStr);
+      end;
+    end;
+begin
+  {$IFDEF DEBUG}
+  WriteNearReaderLog('MakeTruckLadingDaiDouble进入.');
+  {$ENDIF}
+
+  if IsJSRun then Exit;
+  //tunnel is busy
+
+  if not GetLadingBills(nCard, sFlag_TruckZT, nTrucks) then
+  begin
+    nStr := '读取磁卡[ %s ]交货单信息失败.';
+    nStr := Format(nStr, [nCard]);
+
+    WriteNearReaderLog(nStr);
+    Exit;
+  end;
+
+  if Length(nTrucks) < 1 then
+  begin
+    nStr := '磁卡[ %s ]没有需要栈台提货车辆.';
+    nStr := Format(nStr, [nCard]);
+
+    WriteNearReaderLog(nStr);
+    Exit;
+  end;
+
+  if nTunnel = '' then
+  begin
+    nTunnel := gTruckQueueManager.GetTruckTunnel(nTrucks[0].FTruck);
+    //重新定位车辆所在车道
+    if IsJSRun then Exit;
+  end;
+
+  {$IFDEF DaiForceQueue}
+  nBool := True;
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  begin
+    nBool := nTrucks[nIdx].FNextStatus = sFlag_TruckZT;
+    //未装车,检查排队顺序
+    if not nBool then Break;
+  end;
+  {$ELSE}
+  nBool := False;
+  {$ENDIF}
+
+  if not IsTruckInQueue(nTrucks[0].FTruck, nTunnel, nBool, nStr,
+         nPTruck, nPLine, sFlag_Dai) then
+  begin
+    WriteNearReaderLog(nStr);
+    Exit;
+  end; //检查通道
+
+  nStr := '';
+  nInt := 0;
+
+  //----------------------------------------------------------------------------
+  {$IFDEF StockPriorityInQueue}
+  //使用品种优先级排队
+  nStr := Format('QueueBills: %s', [nPTruck.FQueueBills]);
+  WriteNearReaderLog(nStr); //for log
+  nStr := '';
+
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    FSelected := False;
+
+    if FNextStatus = sFlag_TruckZT then
+    begin
+      if (nInt > 0) and (FStockNo = nStr) then
+      begin
+        FSelected := True;
+        //同品种拼单
+        Inc(nInt);
+      end;
+
+      if (Pos(FID, nPTruck.FQueueBills) > 0) and (nInt = 0) then
+      begin
+        FSelected := True;
+        FLineGroup := nPLine.FLineGroup;
+        nStr := FStockNo;
+
+        Inc(nInt);
+        //优先选择未刷卡装车的第一张单据
+      end; 
+    end;
+  end;
+
+  if nInt < 1 then
+  begin
+    for nIdx:=Low(nTrucks) to High(nTrucks) do
+    with nTrucks[nIdx] do
+    begin
+      if FStatus = sFlag_TruckZT then
+      begin
+        FSelected := Pos(FID, nPTruck.FQueueBills) > 0;
+        if FSelected then
+        begin
+          FLineGroup := nPLine.FLineGroup;
+          Inc(nInt);
+        end;
+        //刷卡通道对应的交货单
+        Continue;
+      end;
+      
+      FSelected := False;
+      nStr := '车辆[ %s ]下一状态为:[ %s ],无法栈台提货.';
+      nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
+    end;
+  end;
+  {$ELSE}
+  //----------------------------------------------------------------------------
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    nStr := Format('单据匹配: %s in %s', [FID, nPTruck.FHKBills]);
+    WriteNearReaderLog(nStr);
+    //for log
+
+    if (FStatus = sFlag_TruckZT) or (FNextStatus = sFlag_TruckZT) then
+    begin
+      FSelected := Pos(FID, nPTruck.FHKBills) > 0;
+      if FSelected then
+      begin
+        FLineGroup := nPLine.FLineGroup;
+        Inc(nInt);
+      end;
+      //刷卡通道对应的交货单
+      Continue;
+    end;
+
+    FSelected := False;
+    nStr := '车辆[ %s ]下一状态为:[ %s ],无法栈台提货.';
+    nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
+  end;
+  {$ENDIF}
+
+  if nInt < 1 then
+  begin
+    WriteHardHelperLog(nStr);
+    Exit;
+  end;
+
+  nAlready := False;
+  nLen:= Length(gDoubleChannel);
+  if nLen > 0 then
+  for i := 0 to nLen - 1 do
+  with gDoubleChannel[i] do
+  begin
+    if FTunnel = nTunnel  then
+    begin
+      FMutexTunnel := nMutexTunnel;
+      FBill := nPTruck.FBill;
+      FTruck := nPTruck.FTruck;
+      FStockNo := nPTruck.FStockNo;
+      FStockName := nPTruck.FStockName;
+      FDaiNum := nPTruck.FDai;
+
+      nAlready := True;
+      Break;
+    end;
+  end;
+  if not nAlready then
+  begin
+    SetLength(gDoubleChannel, nLen+1);
+    with gDoubleChannel[High(gDoubleChannel)] do
+    begin
+      FTunnel := nTunnel;
+      FMutexTunnel := nMutexTunnel;
+      FBill := nPTruck.FBill;
+      FTruck := nPTruck.FTruck;
+      FStockNo := nPTruck.FStockNo;
+      FStockName := nPTruck.FStockName;
+      FDaiNum := nPTruck.FDai;
+    end;
+  end;
+
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    if not FSelected then Continue;
+    if FStatus <> sFlag_TruckZT then Continue;
+
+    nStr := '袋装车辆[ %s ]再次刷卡装车.';
+    nStr := Format(nStr, [nPTruck.FTruck]);
+    WriteNearReaderLog(nStr);
+
+    {$IFDEF PrepareShowOnLading}
+    MakeTruckShowPreInfo(nTrucks[0].FCard, nTunnel);
+    //显示与刷卡信息
+    {$ENDIF}
+
+    {$IFDEF StockPriorityInQueue}
+    if not TruckStartJSDouble(nPTruck.FTruck, nTunnel, nMutexTunnel, FID, FStockName, nStr,
+       GetHasDai(FID) < 1) then
+      WriteNearReaderLog(nStr);
+    {$ELSE}
+    if not TruckStartJSDouble(nPTruck.FTruck, nTunnel, nMutexTunnel, nPTruck.FBill, nPTruck.FStockName, nStr,
+       GetHasDai(nPTruck.FBill) < 1) then
+      WriteNearReaderLog(nStr);
+    {$ENDIF}
+    Exit;
+  end;
+
+  if not SaveLadingBills(sFlag_TruckZT, nTrucks) then
+  begin
+    nStr := '车辆[ %s ]栈台提货失败.';
+    nStr := Format(nStr, [nTrucks[0].FTruck]);
+
+    WriteNearReaderLog(nStr);
+    Exit;
+  end;
+
+  {$IFDEF PrepareShowOnLading}
+  MakeTruckShowPreInfo(nTrucks[0].FCard, nTunnel);
+  //显示与刷卡信息
+  {$ENDIF}
+
+  {$IFDEF StockPriorityInQueue}
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    if not FSelected then Continue;
+    //xxxxxx
+    
+    if not TruckStartJSDouble(nPTruck.FTruck, nTunnel, nMutexTunnel, FID, FStockName, nStr) then
+      WriteNearReaderLog(nStr);
+    Break;
+  end;  
+
+  {$ELSE}
+  if not TruckStartJSDouble(nPTruck.FTruck, nTunnel, nMutexTunnel, nPTruck.FBill, nPTruck.FStockName, nStr) then
+    WriteNearReaderLog(nStr);
+  {$ENDIF}
+end;
+
 //Date: 2012-4-25
 //Parm: 车辆;通道
 //Desc: 授权nTruck在nTunnel车道放灰
@@ -1801,6 +2163,7 @@ begin
     Exit;
   end; //检查通道
 
+  {$IFNDEF CZNF}
   if nTrucks[0].FIsVIP = sFlag_TypeShip then
   begin
     nStr := '货船[ %s ]在码头刷卡装船.';
@@ -1810,7 +2173,8 @@ begin
     TruckStartFH(nPTruck, nTunnel);
     Exit;
   end;
-
+  {$ENDIF}
+  
   if nTrucks[0].FStatus = sFlag_TruckFH then
   begin
     nStr := '散装车辆[ %s ]再次刷卡装车.';
@@ -1840,6 +2204,7 @@ end;
 //Desc: 对nHost.nCard新到卡号作出动作
 procedure WhenReaderCardIn(const nCard: string; const nHost: PReaderHost);
 var nReader: string;
+    nMutexTunnel: string;
 begin
   if nHost.FType = rtOnce then
   begin
@@ -1856,11 +2221,17 @@ begin
         SaveGrabCard(nCard, nHost.FTunnel);
         Exit;
       end;
+      nMutexTunnel := nHost.FOptions.Values['mutextunnel'];
     end;
 
     if nHost.FFun = rfOut then
          MakeTruckOut(nCard, nReader, nHost.FPrinter)
-    else MakeTruckLadingDai(nCard, nHost.FTunnel);
+    else
+    {$IFDEF JSDoubleChannel}
+    MakeTruckLadingDaiDouble(nCard, nHost.FTunnel, nMutexTunnel);
+    {$ELSE}
+    MakeTruckLadingDai(nCard, nHost.FTunnel);
+    {$ENDIF}
   end else
 
   if nHost.FType = rtKeep then
@@ -2148,6 +2519,65 @@ begin
             Copy(nTruck, Length(nTruck) - nLen + 1, nLen);
   Exit;
   {$ENDIF}
+end;
+
+//lih 2017-12-07  更新通道信息
+procedure UpdateDoubleChannel(const nTunnel: PMultiJSTunnel);
+var
+  nIdx: Integer;
+  nStr, nHint: string;
+  nMutexTunnel: string;
+  
+  function IsMutexJSRun: Boolean;
+  begin
+    Result := False;
+    if nMutexTunnel = '' then Exit;
+    Result := gMultiJSManager.IsJSRun(nMutexTunnel);
+
+    if Result then
+    begin
+      nHint := '互斥通道[ %s ]装车中,业务无效.';
+      nHint := Format(nHint, [nMutexTunnel]);
+      WriteNearReaderLog(nHint);
+    end;
+  end;
+begin
+  for nIdx := Low(gDoubleChannel) to High(gDoubleChannel) do
+  with gDoubleChannel[nIdx] do
+  begin
+    if FTunnel = nTunnel.FID then
+    begin
+      nMutexTunnel := FMutexTunnel;
+      FHasDone := nTunnel.FHasDone;
+      FIsRun := nTunnel.FIsRun;
+      FLastTime := GetTickCount;
+      WriteHardHelperLog('在用通道：' + FTunnel + '  扳道：' + IntToStr(FBanDaoNum) + '/' + IntToStr(nTunnel.FBanDaoNum) + '  已装袋数：' + IntToStr(FHasDone));
+      if FBanDaoNum <> nTunnel.FBanDaoNum then
+      begin
+        FBanDaoNum := nTunnel.FBanDaoNum;
+        if FBanDaoNum <> 0 then
+        begin
+          if not PrintBillCode(FTunnel, FBill, nStr) then
+            WriteHardHelperLog(nStr);
+        end;
+      end;
+      if FBanDaoNum = 0 then
+      begin
+        if not FIsRun then gCounterDisplayManager.SendFreeToLedDispInfo(FTunnel);
+        if not IsMutexJSRun then gCounterDisplayManager.OnSyncChange(nTunnel);
+      end else
+        gCounterDisplayManager.OnSyncChange(nTunnel);
+      Break;
+    end else
+    begin
+      WriteHardHelperLog('空闲通道：' + FTunnel + '  扳道：' + IntToStr(FBanDaoNum) + '/' + IntToStr(nTunnel.FBanDaoNum));
+      if FBanDaoNum = 0 then
+      begin
+        if not FIsRun then gCounterDisplayManager.SendFreeToLedDispInfo(FTunnel);
+        if not IsMutexJSRun then gCounterDisplayManager.OnSyncChange(nTunnel);
+      end;
+    end;
+  end;
 end;
 
 //Date: 2013-07-17

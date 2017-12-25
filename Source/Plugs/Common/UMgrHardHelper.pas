@@ -393,60 +393,67 @@ begin
     if Assigned(nTP) then
          FUDPPort := nTP.ValueAsInteger
     else FUDPPort := 5005;
-
-    nNode := nXML.Root.NodeByName('readers');
-    nInt := 0;
-    SetLength(FItems, nNode.NodeCount);
-
-    for nIdx:=0 to nNode.NodeCount - 1 do
-    with nNode.Nodes[nIdx],FItems[nInt] do
-    begin
-      FCard := '';
-      FCardExt := '';
-
-      FLast := 0;
-      FOKTime := 0;
-      FID := AttributeByName['ID'];
-
-      i := NodeByName('type').ValueAsInteger;
-      case i of
-       1: FType := rtIn;
-       2: FType := rtOut;
-       3: FType := rtPound;
-       4: FType := rtGate;
-       5: FType := rtQueueGate else FType := rtGate;
-      end;
-
-      nTP := NodeByName('pound');
-      if Assigned(nTP) then
-           FPound := nTP.ValueAsString
-      else FPound := '';
-
-      nTP := NodeByName('printer');
-      if Assigned(nTP) then
-           FPrinter := nTP.ValueAsString
-      else FPrinter := '';
-
-      nTP := NodeByName('group');
-      if Assigned(nTP) then
-           FGroup := nTP.ValueAsString
-      else FGroup := '';
+    
+    try
+      nNode := nXML.Root.NodeByName('readers');
+      nInt := 0;
+      SetLength(FItems, nNode.NodeCount);
       
-      nTP := NodeByName('keeptime');
-      if Assigned(nTP) then
+      for nIdx:=0 to nNode.NodeCount - 1 do
+      with nNode.Nodes[nIdx],FItems[nInt] do
       begin
-        i := nTP.ValueAsInteger;
-        if i < 1 then
-             FKeep := 1
-        else FKeep := i;
-      end else
-      begin
-        if FType = rtPound then
-             FKeep := 20
-        else FKeep := 3;
-      end;
+        FCard := '';
+        FCardExt := '';
 
-      Inc(nInt);
+        FLast := 0;
+        FOKTime := 0;
+        FID := AttributeByName['ID'];
+
+        i := NodeByName('type').ValueAsInteger;
+        case i of
+         1: FType := rtIn;
+         2: FType := rtOut;
+         3: FType := rtPound;
+         4: FType := rtGate;
+         5: FType := rtQueueGate else FType := rtGate;
+        end;
+
+        nTP := NodeByName('pound');
+        if Assigned(nTP) then
+             FPound := nTP.ValueAsString
+        else FPound := '';
+
+        nTP := NodeByName('printer');
+        if Assigned(nTP) then
+             FPrinter := nTP.ValueAsString
+        else FPrinter := '';
+
+        nTP := NodeByName('group');
+        if Assigned(nTP) then
+             FGroup := nTP.ValueAsString
+        else FGroup := '';
+      
+        nTP := NodeByName('keeptime');
+        if Assigned(nTP) then
+        begin
+          i := nTP.ValueAsInteger;
+          if i < 1 then
+               FKeep := 1
+          else FKeep := i;
+        end else
+        begin
+          if FType = rtPound then
+               FKeep := 20
+          else FKeep := 3;
+        end;
+        
+        Inc(nInt);
+      end;
+    except
+      on e:Exception do
+      begin
+        WriteLog('加载[readers]失败：节点总数[' +IntToStr(nNode.NodeCount)+']，第['+IntToStr(nInt)+']节点，' + e.Message);
+      end;
     end;
   finally
     nXML.Free;

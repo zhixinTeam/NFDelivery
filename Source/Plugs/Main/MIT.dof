@@ -101,7 +101,7 @@ DebugSourceDirs=
 UsePackages=0
 [Parameters]
 RunParams=Bus_MIT_1
-HostApplication=
+HostApplication=D:\NFDelivery\trunk\Bin\Bus_MIT\MIT.exe
 Launcher=
 UseLauncher=0
 DebugCWD=

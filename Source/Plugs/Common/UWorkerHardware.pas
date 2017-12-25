@@ -92,7 +92,7 @@ implementation
 uses
   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}
   UMgrHardHelper, UMgrCodePrinter, UMgrQueue, UTaskMonitor,
-  UMgrTruckProbe;
+  UMgrTruckProbe, UMgrLEDDispCounter;
 
 //Date: 2012-3-13
 //Parm: 如参数护具
@@ -549,7 +549,13 @@ begin
       {$ENDIF}
 
       {$IFDEF JLNF}
-      //金鲤喷码规则：水泥批次号+客户代码(bd_cumandoc.def30)+车号后四位
+      //崇左、金鲤喷码规则：水泥批次号+客户代码(bd_cumandoc.def30)+车号后四位
+      nCode := nSeal + FillString(nCusCode, 2, ' ');
+      nCode := nCode + Copy(nTruck, Length(nTruck) - 3, 4);
+      {$ENDIF}
+
+      {$IFDEF CZNF}
+      //崇左、金鲤喷码规则：水泥批次号+客户代码(bd_cumandoc.def30)+车号后四位
       nCode := nSeal + FillString(nCusCode, 2, ' ');
       nCode := nCode + Copy(nTruck, Length(nTruck) - 3, 4);
       {$ENDIF}
@@ -693,7 +699,13 @@ begin
             FListA.Values['Truck'], FListA.Values['Bill'],
             StrToInt(FListA.Values['DaiNum']), True);
   //xxxxx
-
+  {$IFDEF JSLED}
+  if Result then
+    gCounterDisplayManager.SendCounterLedDispInfo(FListA.Values['Truck'],
+                                                  FListA.Values['Tunnel'],
+                                                  StrToInt(FListA.Values['DaiNum']),
+                                                  FListA.Values['StockName']);
+  {$ENDIF}
   if not Result then
     nData := '启动计数器失败';
   //xxxxx
@@ -715,6 +727,10 @@ begin
   if not Result then
     nData := '停止计数器失败';
   //xxxxx
+  {$IFDEF JSLED}
+  if Result then
+    gCounterDisplayManager.SendFreeToLedDispInfo(FIn.FData);
+  {$ENDIF}
 end;
 
 //Desc: 计数器状态

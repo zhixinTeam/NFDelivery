@@ -37,7 +37,8 @@ uses
   UMgrQueue, UMgrLEDCard, UMgrHardHelper, UMgrRemotePrint, U02NReader,
   UMgrERelay,   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}
   UMgrRemoteVoice, UMgrVoiceNet, UMgrCodePrinter, UMgrLEDDisp, UMgrTTCEM100,
-  UMgrRFID102{$IFDEF HKVDVR}, UMgrCamera{$ENDIF};
+  UMgrRFID102{$IFDEF HKVDVR}, UMgrCamera{$ENDIF}, UMgrLEDDispCounter,
+  UJSDoubleChannel;
 
 class function THardwareWorker.ModuleInfo: TPlugModuleInfo;
 begin
@@ -65,14 +66,14 @@ begin
 
     nStr := '远距读头';
     gHardwareHelper.LoadConfig(nCfg + '900MK.xml');
-
+    
     nStr := '近距读头';
     if not Assigned(g02NReader) then
     begin
       g02NReader := T02NReader.Create;
       g02NReader.LoadConfig(nCfg + 'Readers.xml');
     end;
-    
+
     nStr := '计数器';
     gMultiJSManager.LoadFile(nCfg + 'JSQ.xml');
 
@@ -125,6 +126,18 @@ begin
       gNetVoiceHelper := TNetVoiceManager.Create;
       gNetVoiceHelper.LoadConfig(nCfg + 'NetVoice.xml');
     end;
+
+    {$IFDEF JSLED}
+    nStr := '计数器显示';
+    if not Assigned(gCounterDisplayManager) then
+    begin
+      gCounterDisplayManager := TMgrLEDDispCounterManager.Create;
+      if FileExists(nCfg + 'LEDDispCounter.xml') then
+      begin
+        gCounterDisplayManager.LoadConfig(nCfg + 'LEDDispCounter.xml');
+      end;
+    end;
+    {$ENDIF}
   except
     on E:Exception do
     begin
@@ -156,7 +169,7 @@ begin
 
   if not Assigned(gMultiJSManager) then
     gMultiJSManager := TMultiJSManager.Create;
-  //计数器
+  //计数器 
 
   gHardShareData := WhenBusinessMITSharedDataIn;
   //hard monitor share
@@ -191,9 +204,18 @@ begin
   g02NReader.StartReader;
   //near reader
 
+  {$IFDEF JSLED}
+  //计数器显示屏
+  gCounterDisplayManager.StartDisplay;
+  {$ENDIF}
+
   gMultiJSManager.SaveDataProc := WhenSaveJS;
   {$IFNDEF JSTruckNone}
   gMultiJSManager.GetTruckProc := GetJSTruck;
+  {$ENDIF}
+  
+  {$IFDEF JSDoubleChannel}
+  gMultiJSManager.ChangeThreadProc := UpdateDoubleChannel;
   {$ENDIF}
   gMultiJSManager.StartJS;
   //counter
@@ -237,6 +259,10 @@ begin
 
   gERelayManager.ControlStop;
   //erelay
+  {$IFDEF JSLED}
+  gCounterDisplayManager.StopDisplay;
+  {$ENDIF}
+  
   gMultiJSManager.StopJS;
   //counter
 

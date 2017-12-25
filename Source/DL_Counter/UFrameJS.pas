@@ -72,6 +72,27 @@ begin
   {$ELSE}
   EditTruck.ReadOnly := False;
   {$ENDIF}
+  {$IFDEF CZNF}
+  Width := 284;
+  GroupBox1.Width := 265;
+  LabelHint.Width := 261;
+  EditTruck.Width := 245;
+  EditDai.Width := 120;
+  EditTon.Width := 120;
+  EditTon.Left := EditDai.Left + EditDai.Width + 5;
+  EditID.Width := EditTruck.Width;
+  Label2.Visible := False;
+  EditPrinter.Visible := False;
+  EditStock.Visible := False;
+  EditCode.Width := EditTruck.Width;
+  EditCode.Left := EditTruck.Left;
+  BtnStart.Width := 85;
+  BtnStart.Left := EditTruck.Left;
+  BtnPause.Width := 60;
+  BtnPause.Left := BtnStart.Left + BtnStart.Width + 5;
+  BtnClear.Width := 85;
+  BtnClear.Left := BtnPause.Left + BtnPause.Width + 5;
+  {$ENDIF}
 end;
 
 procedure TfFrameCounter.SaveCountResult(const nProcess: Boolean);
@@ -117,6 +138,7 @@ begin
       EditDai.Text := '';
       EditTon.Text := '';
       EditID.Clear;
+      EditCode.Text := '';
 
       EditDai.Enabled := True;
       EditTon.Enabled := True;

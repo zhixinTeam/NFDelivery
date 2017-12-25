@@ -1,7 +1,7 @@
 object fFrameCounter: TfFrameCounter
   Left = 0
   Top = 0
-  Width = 537
+  Width = 508
   Height = 414
   Font.Charset = GB2312_CHARSET
   Font.Color = clWindowText
@@ -12,9 +12,9 @@ object fFrameCounter: TfFrameCounter
   TabOrder = 0
   object GroupBox1: TGroupBox
     Tag = 1
-    Left = 10
+    Left = 7
     Top = 10
-    Width = 519
+    Width = 495
     Height = 399
     Caption = #35013#36710'1'#36947
     TabOrder = 0
@@ -26,7 +26,7 @@ object fFrameCounter: TfFrameCounter
       Caption = #21333#25454#21495':'
     end
     object Label2: TLabel
-      Left = 266
+      Left = 251
       Top = 204
       Width = 84
       Height = 24
@@ -49,14 +49,14 @@ object fFrameCounter: TfFrameCounter
       Properties.Alignment.Vert = taVCenter
       Properties.LabelStyle = cxlsRaised
       Height = 50
-      Width = 515
-      AnchorX = 260
+      Width = 491
+      AnchorX = 248
       AnchorY = 51
     end
     object EditTruck: TLabeledEdit
       Left = 10
-      Top = 100
-      Width = 495
+      Top = 99
+      Width = 471
       Height = 37
       EditLabel.Width = 84
       EditLabel.Height = 24
@@ -74,7 +74,7 @@ object fFrameCounter: TfFrameCounter
     object EditDai: TLabeledEdit
       Left = 10
       Top = 165
-      Width = 245
+      Width = 236
       Height = 37
       EditLabel.Width = 60
       EditLabel.Height = 24
@@ -88,9 +88,9 @@ object fFrameCounter: TfFrameCounter
       TabOrder = 2
     end
     object BtnStart: TButton
-      Left = 10
+      Left = 12
       Top = 340
-      Width = 120
+      Width = 133
       Height = 42
       Caption = #21551#21160
       Font.Charset = DEFAULT_CHARSET
@@ -103,9 +103,9 @@ object fFrameCounter: TfFrameCounter
       OnClick = BtnStartClick
     end
     object BtnClear: TButton
-      Left = 389
+      Left = 347
       Top = 340
-      Width = 120
+      Width = 133
       Height = 42
       Caption = #28165#38646
       Font.Charset = DEFAULT_CHARSET
@@ -118,9 +118,9 @@ object fFrameCounter: TfFrameCounter
       OnClick = BtnClearClick
     end
     object EditTon: TLabeledEdit
-      Left = 263
+      Left = 248
       Top = 165
-      Width = 245
+      Width = 236
       Height = 37
       EditLabel.Width = 60
       EditLabel.Height = 24
@@ -137,9 +137,9 @@ object fFrameCounter: TfFrameCounter
       OnDblClick = EditTonDblClick
     end
     object BtnPause: TButton
-      Left = 199
+      Left = 183
       Top = 340
-      Width = 120
+      Width = 133
       Height = 42
       Caption = #26242#20572
       Font.Charset = DEFAULT_CHARSET
@@ -152,9 +152,9 @@ object fFrameCounter: TfFrameCounter
       OnClick = BtnPauseClick
     end
     object EditCode: TLabeledEdit
-      Left = 266
-      Top = 292
-      Width = 245
+      Left = 250
+      Top = 291
+      Width = 236
       Height = 37
       EditLabel.Width = 60
       EditLabel.Height = 24
@@ -170,17 +170,17 @@ object fFrameCounter: TfFrameCounter
     end
     object EditID: TComboBox
       Left = 10
-      Top = 232
-      Width = 245
+      Top = 231
+      Width = 236
       Height = 32
       ItemHeight = 24
       TabOrder = 8
       OnSelect = EditIDSelect
     end
     object EditPrinter: TComboBox
-      Left = 266
+      Left = 250
       Top = 232
-      Width = 245
+      Width = 236
       Height = 32
       ItemHeight = 24
       TabOrder = 9
@@ -188,7 +188,7 @@ object fFrameCounter: TfFrameCounter
     object EditStock: TLabeledEdit
       Left = 10
       Top = 292
-      Width = 245
+      Width = 236
       Height = 37
       AutoSize = False
       EditLabel.Width = 108

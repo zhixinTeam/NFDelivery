@@ -1786,12 +1786,14 @@ begin
       {$IFDEF PrintHYEach}
       FPrintHY    := FieldByName('L_PrintHY').AsString = sFlag_Yes;
       {$ENDIF}
-      
+
+      {$IFNDEF CZNF}
       if FIsVIP = sFlag_TypeShip then
       begin
         FStatus    := sFlag_TruckZT;
         FNextStatus := sFlag_TruckOut;
       end;
+      {$ENDIF}
 
       if FStatus = sFlag_BillNew then
       begin

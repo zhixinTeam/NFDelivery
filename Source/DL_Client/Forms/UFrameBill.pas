@@ -95,7 +95,7 @@ implementation
 uses
   ULibFun, UMgrControl, UDataModule, UFormBase, UFormInputbox, UFormCtrl,
   USysPopedom, USysConst, USysDB, USysBusiness, UFormDateFilter,
-  UMgrRemotePrint;
+  UMgrRemotePrint, USysLoger;
 
 //------------------------------------------------------------------------------
 class function TfFrameBill.FrameID: integer;
@@ -295,6 +295,81 @@ end;
 //Desc: 修改封签号
 procedure TfFrameBill.N7Click(Sender: TObject);
 var nStr,nID,nSeal: string;
+  nOldSeal,nNewSeal:string;
+  nValue:Double;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    nStr := SQLQuery.FieldByName('L_Seal').AsString;
+    nValue := SQLQuery.FieldByName('L_Value').AsFloat;
+    nSeal := nStr;
+    nOldSeal := nSeal;
+    if not ShowInputBox('请输入新的批次号:', '修改', nSeal, 100) then Exit;
+
+    if (nSeal = '') or (nStr = nSeal) then Exit;
+    //无效或一致
+    nNewSeal := nSeal;
+    nID := SQLQuery.FieldByName('L_ID').AsString;
+
+    nStr := 'select * from %s where d_id=''%s''';
+    nStr := Format(nStr,[sTable_BatcodeDoc,nNewSeal]);
+    with fdm.QuerySQL(nStr) do
+    begin
+      if RecordCount=0 then
+      begin
+        nStr := '批次号[ %s ]不存在，请检查输入';
+        nStr := Format(nStr,[nNewSeal]);
+        ShowDlg(nStr, sHint);
+        Exit;
+      end;
+      if FieldByName('d_valid').AsString=sflag_no then
+      begin
+        nStr := '批次号[ %s ]已封存，是否继续';
+        nStr := Format(nStr,[nNewSeal]);
+        if not QueryDlg(nStr, sAsk) then Exit;
+        Exit;      
+      end;
+    end;
+
+    nStr := '确定要将交货单[ %s ]的批次号改为[ %s ]吗?';
+    nStr := Format(nStr, [nID, nSeal]);
+    if not QueryDlg(nStr, sAsk) then Exit;
+
+    FDM.ADOConn.BeginTrans;
+    try
+      nStr := 'Update %s Set L_Seal=''%s'' Where L_ID=''%s''';
+      nStr := Format(nStr, [sTable_Bill, nSeal, nID]);
+      FDM.ExecuteSQL(nStr);
+
+      nStr := '修改批次号[ %s -> %s ].';
+      nStr := Format(nStr, [SQLQuery.FieldByName('L_Seal').AsString, nSeal]);
+      FDM.WriteSysLog(sFlag_BillItem, nID, nStr, False);
+
+      //减少原批次号使用量
+      nStr := 'update %s set d_sent=d_sent-%f where d_id=''%s''';
+      nStr := Format(nStr,[sTable_BatcodeDoc,nValue,nOldSeal]);
+      FDM.ExecuteSQL(nStr);
+
+      //增加新批次号使用量
+      nStr := 'update %s set d_sent=d_sent+%f where d_id=''%s''';
+      nStr := Format(nStr,[sTable_BatcodeDoc,nValue,nNewSeal]);
+      FDM.ExecuteSQL(nStr);
+      
+      FDM.ADOConn.CommitTrans;
+
+      InitFormData(FWhere);
+      ShowMsg('批次号修改成功', sHint);
+    except
+      on E:Exception do
+      begin
+        FDM.ADOConn.RollbackTrans;
+        ShowMsg('批次号修改失败', sHint);
+        gSysLoger.AddLog('交货单['+nID+']批次号修改失败，原批次号['+nOldSeal+']，新批次号['+nNewSeal+']:'+e.Message);
+      end;
+    end;
+  end;
+end;
+{var nStr,nID,nSeal: string;
 begin
   if cxView1.DataController.GetSelectedCount > 0 then
   begin
@@ -321,7 +396,7 @@ begin
     InitFormData(FWhere);
     ShowMsg('批次号修改成功', sHint);
   end;
-end;
+end; }
 
 //Desc: 单据类型转换
 procedure TfFrameBill.VIP1Click(Sender: TObject);

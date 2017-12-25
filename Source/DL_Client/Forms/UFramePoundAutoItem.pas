@@ -568,6 +568,9 @@ begin
   Timer_ReadCard.Tag := 0;
   if FIsWeighting then Exit;
 
+  //前车未下磅，后车禁止刷卡
+  if ImageBT.Tag = cFlag_ON then Exit;
+
   try
     WriteLog('正在读取磁卡号.');
     nCard := Trim(ReadPoundCard(FLastReader, FPoundTunnel.FID));
@@ -985,6 +988,7 @@ begin
         Exit;
       end;
 
+      {$IFNDEF CZNF}
       if (FType = sFlag_San) And (FCardUse = sFlag_Sale) then
       begin
         if nVal > 0 then
@@ -994,6 +998,7 @@ begin
           //散装发超时并新单
         end;
       end;
+      {$ENDIF}
     end;
   end;
 

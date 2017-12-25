@@ -87,6 +87,8 @@ type
     //重置位置
     procedure OnSyncChange(const nTunnel: PMultiJSTunnel);
     //计数变动
+    function GetPrintCode(const nBill:string):string;
+    //获取喷码
   public
     { Public declarations }
   end;
@@ -498,6 +500,15 @@ begin
         nPanel.FPeerWeight := GetLinePeerWeight(FTrucks[nIdx].FLine);
         nPanel.EditTruck.Text := FTrucks[nIdx].FTruck;
 
+        {$IFDEF CZNF}
+        if (FTrucks[nIdx].FDai>0)
+          and (FTrucks[nIdx].FTotal<>FTrucks[nIdx].FDai) then
+        begin
+          nPanel.EditDai.Text := IntToStr(FTrucks[nIdx].FDai);
+          nPanel.EditTon.Text := Format('%.3f', [FTrucks[nIdx].FValue]);
+          nPanel.EditCode.Text := GetPrintCode(nPanel.FBill);
+        end;
+        {$ELSE}
         if FTrucks[nIdx].FTotal < 1 then
         begin
           nPanel.EditDai.Text := IntToStr(FTrucks[nIdx].FDai);
@@ -506,6 +517,7 @@ begin
         begin
           nPanel.EditDai.Text := '0';
         end;
+        {$ENDIF}
 
         if SplitStr(FTrucks[nIdx].FHKBills, nPanel.EditID.Items, 0, '.') then
           nPanel.EditID.ItemIndex := 0;
@@ -785,6 +797,39 @@ begin
     //数据库连接
   end;
   {$ENDIF}
+end;
+
+function TfFormMain.GetPrintCode(const nBill: string): string;
+var
+  nCusCode,nSeal: string;
+  nTruckNo:string;
+  nIdx:Integer;
+  nSQL: string;
+begin
+  Result := '';
+  nIdx := 0;
+
+  nSQL := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck From %s ' +
+          'Where L_ID=''%s''';
+  nSQL := Format(nSQL, [sTable_Bill, nBill]);
+  
+  with FDM.SQLQuery(nSQL, FDM.SQLTemp) do
+  if RecordCount > 0 then
+  begin
+    nSeal     := FieldByName('L_Seal').AsString;
+    nCusCode  := FieldByName('L_CusCode').AsString;
+    nTruckNo  := FieldByName('L_Truck').AsString;
+    
+    //**protocol: O4D170728-001JZ0011069;
+    //**O4D170728-001:出厂编号
+    //**JZ001：经销商代码
+    //**1069：车牌后4位
+
+    Result := '%s%s%s';
+    Result := Format(Result,[nSeal,
+                          nCusCode,
+                          Copy(nTruckNo,Length(nTruckno)-3,4)]);
+  end;
 end;
 
 end.

@@ -219,6 +219,7 @@ type
     //属性相关
     property OnChanged: TQueueChanged read FOnQueueChanged write FOnQueueChanged;
     //事件相关
+    
   end;
 
 var
