@@ -403,6 +403,9 @@ begin
         FYSValid:= Values['YSValid'];
         FMemo   := Values['Memo'];
         FSeal   := Values['Seal'];
+        FPrintHY := Values['PrintHY'] = sFlag_Yes;
+        FHYDan := Values['HYDan'];
+
         FLineGroup := Values['LineGroup'];
         FPoundStation := Values['PoundStation'];
         FPoundSName   := Values['PoundSName'];
@@ -507,6 +510,12 @@ begin
         Values['YSValid']    := FYSValid;
         Values['Memo']       := FMemo;
         Values['Seal']       := FSeal;
+
+        if FPrintHY then
+             Values['PrintHY'] := sFlag_Yes
+        else Values['PrintHY'] := sFlag_No;
+        Values['HYDan']      := FHYDan;
+
         Values['LineGroup']  := FLineGroup;
         Values['PoundStation']:= FPoundStation;
         Values['PoundSName'] := FPoundSName;

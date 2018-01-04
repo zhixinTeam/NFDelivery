@@ -610,7 +610,6 @@ function TWorkerBusinessCommander.GetCardUsed(var nData: string): Boolean;
 var nStr: string;
 begin
   Result := False;
-
   nStr := 'Select C_Used From %s Where C_Card=''%s'' ' +
           'or C_Card3=''%s'' or C_Card2=''%s''';
   nStr := Format(nStr, [sTable_Card, FIn.FData, FIn.FData, FIn.FData]);
@@ -618,7 +617,12 @@ begin
 
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
   begin
-    if RecordCount<1 then Exit;
+    if RecordCount < 1 then
+    begin
+      nStr := '´Å¿¨ºÅ[ %s ]²»´æÔÚ.';
+      nData := Format(nStr, [FIn.FData]);
+      Exit;
+    end;
 
     FOut.FData := Fields[0].AsString;
     Result := True;
