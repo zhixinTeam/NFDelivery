@@ -8,17 +8,17 @@ inherited fFormGetStock: TfFormGetStock
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 440
-    Height = 282
+    Width = 432
+    Height = 271
     inherited BtnOK: TButton
-      Left = 294
-      Top = 249
+      Left = 286
+      Top = 238
       Caption = #30830#23450
       TabOrder = 1
     end
     inherited BtnExit: TButton
-      Left = 364
-      Top = 249
+      Left = 356
+      Top = 238
       TabOrder = 2
     end
     object ListStock: TcxListView [2]

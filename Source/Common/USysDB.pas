@@ -240,6 +240,11 @@ ResourceString
   sFlag_DefaultBrand  = 'DefaultBrand';              //默认品牌
   sFlag_Brands        = 'StockBrands';               //品牌列表
   sFlag_NetPlayVoice  = 'NetPlayVoice';              //使用网络语音卡
+  sFlag_PoundCorrections  = 'PoundCorrections';      //磅单勘误
+  sFlag_ShowReportStockBill  = 'ShowReportStockBill'; //需打印单品种打印前是否预览
+  sFlag_AskPrintStockBill  = 'AskPrintStockBill';     //需打印单品种打印前是否询问
+  sFlag_ProvoideCorrections  = 'ProvideCorrections';  //供应勘误
+  sFlag_BatcodeDefaultValidDays  = 'BatcodeDefaultValidDays';  //出厂编号默认有限期天数
 
   sFlag_BusGroup      = 'BusFunction';               //业务编码组
   sFlag_BillNo        = 'Bus_Bill';                  //交货单号

@@ -1,45 +1,45 @@
 inherited fFormPoundAdjust: TfFormPoundAdjust
-  Left = 669
-  Top = 339
-  ClientHeight = 358
+  Left = 666
+  Top = 245
+  ClientHeight = 426
   ClientWidth = 513
   Position = poMainFormCenter
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
     Width = 513
-    Height = 358
+    Height = 426
     inherited BtnOK: TButton
       Left = 367
-      Top = 325
-      TabOrder = 14
+      Top = 393
+      TabOrder = 17
     end
     inherited BtnExit: TButton
       Left = 437
-      Top = 325
-      TabOrder = 15
+      Top = 393
+      TabOrder = 18
     end
     object EditCusName: TcxTextEdit [2]
       Left = 81
-      Top = 61
+      Top = 86
       ParentFont = False
       Properties.MaxLength = 80
       Properties.ReadOnly = False
-      TabOrder = 1
+      TabOrder = 2
       Width = 300
     end
     object EditTruck: TcxTextEdit [3]
       Left = 279
-      Top = 86
+      Top = 136
       ParentFont = False
       Properties.MaxLength = 15
       Properties.ReadOnly = False
-      TabOrder = 3
+      TabOrder = 5
       Width = 165
     end
     object cxLabel1: TcxLabel [4]
       Left = 23
-      Top = 111
+      Top = 186
       AutoSize = False
       Caption = #30382#37325':'
       ParentFont = False
@@ -51,19 +51,19 @@ inherited fFormPoundAdjust: TfFormPoundAdjust
       Transparent = True
       Height = 28
       Width = 517
-      AnchorY = 125
+      AnchorY = 200
     end
     object EditPValue: TcxTextEdit [5]
       Left = 81
-      Top = 144
+      Top = 219
       ParentFont = False
       Properties.MaxLength = 15
-      TabOrder = 5
+      TabOrder = 8
       Width = 135
     end
     object cxLabel2: TcxLabel [6]
       Left = 23
-      Top = 169
+      Top = 244
       AutoSize = False
       Caption = #27611#37325':'
       ParentFont = False
@@ -75,19 +75,19 @@ inherited fFormPoundAdjust: TfFormPoundAdjust
       Transparent = True
       Height = 28
       Width = 517
-      AnchorY = 183
+      AnchorY = 258
     end
     object EditMValue: TcxTextEdit [7]
       Left = 81
-      Top = 202
+      Top = 277
       ParentFont = False
       Properties.MaxLength = 15
-      TabOrder = 8
+      TabOrder = 11
       Width = 135
     end
     object cxLabel3: TcxLabel [8]
       Left = 23
-      Top = 227
+      Top = 302
       AutoSize = False
       Caption = #29366#24577':'
       ParentFont = False
@@ -99,7 +99,7 @@ inherited fFormPoundAdjust: TfFormPoundAdjust
       Transparent = True
       Height = 28
       Width = 633
-      AnchorY = 241
+      AnchorY = 316
     end
     object EditID: TcxTextEdit [9]
       Left = 81
@@ -111,16 +111,16 @@ inherited fFormPoundAdjust: TfFormPoundAdjust
     end
     object EditStock: TcxTextEdit [10]
       Left = 81
-      Top = 86
+      Top = 136
       ParentFont = False
       Properties.MaxLength = 80
       Properties.ReadOnly = False
-      TabOrder = 2
+      TabOrder = 4
       Width = 135
     end
     object EditStatus: TcxComboBox [11]
       Left = 81
-      Top = 260
+      Top = 335
       ParentFont = False
       Properties.DropDownListStyle = lsEditFixedList
       Properties.ItemHeight = 20
@@ -133,12 +133,12 @@ inherited fFormPoundAdjust: TfFormPoundAdjust
         'F=F'#12289#25918#28784#22788
         'Z=Z'#12289#26632#21488
         'X=X'#12289#29616#22330#39564#25910)
-      TabOrder = 11
+      TabOrder = 14
       Width = 135
     end
     object EditNext: TcxComboBox [12]
       Left = 279
-      Top = 260
+      Top = 335
       ParentFont = False
       Properties.DropDownListStyle = lsEditFixedList
       Properties.ItemHeight = 20
@@ -151,31 +151,53 @@ inherited fFormPoundAdjust: TfFormPoundAdjust
         'F=F'#12289#25918#28784#22788
         'Z=Z'#12289#26632#21488
         'X=X'#12289#29616#22330#39564#25910)
-      TabOrder = 12
+      TabOrder = 15
       Width = 165
     end
     object EditMDate: TcxDateEdit [13]
       Left = 279
-      Top = 202
+      Top = 277
+      ParentFont = False
+      Properties.Kind = ckDateTime
+      TabOrder = 12
+      Width = 165
+    end
+    object EditPDate: TcxDateEdit [14]
+      Left = 279
+      Top = 219
       ParentFont = False
       Properties.Kind = ckDateTime
       TabOrder = 9
       Width = 165
     end
-    object EditPDate: TcxDateEdit [14]
-      Left = 279
-      Top = 144
-      ParentFont = False
-      Properties.Kind = ckDateTime
-      TabOrder = 6
-      Width = 165
-    end
     object EditMemo: TcxTextEdit [15]
       Left = 81
-      Top = 285
+      Top = 360
       ParentFont = False
       Properties.ReadOnly = True
-      TabOrder = 13
+      TabOrder = 16
+      Width = 121
+    end
+    object EditCusID: TcxTextEdit [16]
+      Left = 81
+      Top = 61
+      ParentFont = False
+      TabOrder = 1
+      Width = 121
+    end
+    object EditStockno: TcxTextEdit [17]
+      Left = 81
+      Top = 111
+      ParentFont = False
+      TabOrder = 3
+      Width = 121
+    end
+    object EditRID: TcxTextEdit [18]
+      Left = 81
+      Top = 161
+      ParentFont = False
+      Properties.OnChange = EditRIDPropertiesChange
+      TabOrder = 6
       Width = 121
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
@@ -195,11 +217,21 @@ inherited fFormPoundAdjust: TfFormPoundAdjust
               Control = EditID
               ControlOptions.ShowBorder = False
             end
+            object dxLayout1Item6: TdxLayoutItem
+              Caption = #23458#25143#32534#21495':'
+              Control = EditCusID
+              ControlOptions.ShowBorder = False
+            end
             object dxLayout1Item9: TdxLayoutItem
               AutoAligns = [aaVertical]
               AlignHorz = ahClient
               Caption = #23458#25143#21517#31216':'
               Control = EditCusName
+              ControlOptions.ShowBorder = False
+            end
+            object dxLayout1Item11: TdxLayoutItem
+              Caption = #29289#26009#32534#21495':'
+              Control = EditStockno
               ControlOptions.ShowBorder = False
             end
           end
@@ -222,6 +254,11 @@ inherited fFormPoundAdjust: TfFormPoundAdjust
               ControlOptions.ShowBorder = False
             end
           end
+        end
+        object dxLayout1Item12: TdxLayoutItem
+          Caption = #35760#24405#32534#21495':'
+          Control = EditRID
+          ControlOptions.ShowBorder = False
         end
         object dxLayout1Item8: TdxLayoutItem
           Caption = 'cxLabel1'
@@ -315,5 +352,14 @@ inherited fFormPoundAdjust: TfFormPoundAdjust
         end
       end
     end
+  end
+  object BtnSelect: TButton
+    Left = 14
+    Top = 391
+    Width = 65
+    Height = 22
+    Caption = #36873#25321#29289#26009
+    TabOrder = 1
+    OnClick = BtnSelectClick
   end
 end

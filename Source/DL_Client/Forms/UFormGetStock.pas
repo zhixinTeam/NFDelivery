@@ -8,8 +8,9 @@ interface
 
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
-  UFormNormal, cxGraphics, cxControls, cxLookAndFeels,
-  cxLookAndFeelPainters, ComCtrls, cxContainer, cxListView,
+  Dialogs, UFormNormal, cxGraphics, cxControls, cxLookAndFeels,
+  cxLookAndFeelPainters, cxContainer, cxEdit, ComCtrls, cxCheckBox, Menus,
+  cxLabel, cxListView, cxTextEdit, cxMaskEdit, cxButtonEdit,
   dxLayoutControl, StdCtrls;
 
 type
