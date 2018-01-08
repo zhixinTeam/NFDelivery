@@ -1,9 +1,9 @@
 object fFormMain: TfFormMain
-  Left = 362
-  Top = 46
+  Left = 322
+  Top = 8
   BorderStyle = bsNone
   Caption = #29992#25143#33258#21161#26597#35810#31995#32479
-  ClientHeight = 792
+  ClientHeight = 757
   ClientWidth = 1012
   Color = clBlack
   Font.Charset = DEFAULT_CHARSET
@@ -76,7 +76,7 @@ object fFormMain: TfFormMain
     Transparent = True
     Width = 1012
     AnchorX = 506
-    AnchorY = 725
+    AnchorY = 708
   end
   object Panel1: TPanel
     Left = 0

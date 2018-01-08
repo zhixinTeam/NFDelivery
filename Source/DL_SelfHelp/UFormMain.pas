@@ -9,7 +9,7 @@ interface
 uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, cxGraphics, cxControls, cxLookAndFeels, cxLookAndFeelPainters,
-  cxContainer, cxEdit, cxLabel, ExtCtrls, CPort;
+  cxContainer, cxEdit, cxLabel, ExtCtrls, CPort, StdCtrls;
 
 type
   TfFormMain = class(TForm)
@@ -242,6 +242,7 @@ procedure TfFormMain.QueryCard(const nCard: string);
 var nVal: Double;
     nStr,nStock,nBill,nVip,nLine,nPoundQueue: string;
     nDate: TDateTime;
+    nRID: Integer;
 begin
   mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
   mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
@@ -313,7 +314,7 @@ begin
     end;
 
     //--------------------------------------------------------------------------
-    nStr := 'Select T_line,T_InTime,T_Valid From %s ZT ' +
+    nStr := 'Select R_ID,T_line,T_InTime,T_Valid From %s ZT ' +
              'Where T_HKBills Like ''%%%s%%'' ';
     nStr := Format(nStr, [sTable_ZTTrucks, nBill]);
 
@@ -330,6 +331,9 @@ begin
         LabelHint.Caption := '您已超时出队,请到服务大厅办理入队手续.';
         Exit;
       end;
+
+      nRID := FieldByName('R_ID').AsInteger;
+      //序号
 
       nDate := FieldByName('T_InTime').AsDateTime;
       //进队时间
@@ -373,7 +377,7 @@ begin
 
     with FDM.SQLQuery(nStr) do
     begin
-    if  FieldByName('D_Value').AsString = 'Y' then
+      if  FieldByName('D_Value').AsString = 'Y' then
       begin
         if nPoundQueue <> 'Y' then
         begin
@@ -385,15 +389,28 @@ begin
                   ' Where T_InQueue Is Null And ' +
                   ' T_Valid=''$Yes'' And T_StockNo=''$SN'' And P_PDate<''$IT'' And T_Vip=''$VIP''';
         end;
-      end else
-      begin
-        nStr := 'Select Count(*) From $TB Where T_InQueue Is Null And ' +
-                'T_Valid=''$Yes'' And T_StockNo=''$SN'' And T_InTime<''$IT'' And T_Vip=''$VIP''';
-      end;
 
-      nStr := MacroValue(nStr, [MI('$TB', sTable_ZTTrucks),
+        nStr := MacroValue(nStr, [MI('$TB', sTable_ZTTrucks),
             MI('$Yes', sFlag_Yes), MI('$SN', nStock),
             MI('$IT', DateTime2Str(nDate)),MI('$VIP', nVip)]);
+      end else
+      begin
+        {nStr := 'Select Count(*) From $TB Where T_InQueue Is Null And ' +
+                'T_Valid=''$Yes'' And T_StockNo=''$SN'' And T_InTime<''$IT'' And T_Vip=''$VIP''';
+
+        nStr := MacroValue(nStr, [MI('$TB', sTable_ZTTrucks),
+            MI('$Yes', sFlag_Yes), MI('$SN', nStock),
+            MI('$IT', DateTime2Str(nDate)),MI('$VIP', nVip)]);  }
+
+        nStr := 'Select Count(*) From $TB Where T_InQueue Is Null And ' +
+                'T_Valid=''$Yes'' And T_StockNo=''$SN'' And T_Vip=''$VIP'' And R_ID<''$IT''';
+
+        nStr := MacroValue(nStr, [MI('$TB', sTable_ZTTrucks),
+            MI('$Yes', sFlag_Yes), MI('$SN', nStock),
+            MI('$VIP', nVip), MI('$IT', IntToStr(nRID))]);
+      end;
+
+      
     end;
     //xxxxx
 

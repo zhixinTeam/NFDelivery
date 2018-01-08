@@ -117,7 +117,7 @@ type
     destructor Destroy; override;
     procedure SendCounterLedDispInfo(const nTruck,nTunnel:string;const nDaiNum: Integer;const nStockname:string='');
     procedure OnSyncChange(const nTunnel: PMultiJSTunnel);//计数变动
-    procedure SendFreeToLedDispInfo(const nTunnel: string);
+    procedure SendFreeToLedDispInfo(const nTunnel: string; nTruck: string = ''; nIsRun: Boolean=False);
     property CounterCards:TCounterCards read FCounterCards;
   end;
 
@@ -914,7 +914,7 @@ begin
   end;
 end;
 
-procedure TMgrLEDDispCounterManager.SendFreeToLedDispInfo(const nTunnel: string);
+procedure TMgrLEDDispCounterManager.SendFreeToLedDispInfo(const nTunnel: string; nTruck: string; nIsRun: Boolean);
 var
   nStr:string;
   nTunnelItem:PCounterTunnel;
@@ -940,8 +940,15 @@ begin
         FPaperBagTunnel.Delete(nIdx);
       end;
 
-      nStr := '%s 空闲';
-      nStr := Format(nStr,[nTunnelItem.FDesc]);
+      if nIsRun then
+      begin
+        nStr := '%s 请等待';
+        nStr := Format(nStr,[nTruck]);
+      end else
+      begin
+        nStr := '%s 空闲';
+        nStr := Format(nStr,[nTunnelItem.FDesc]);
+      end;
       Display(nTunnel, cCounterDisp_CardID_tdk, nStr,nLocked);
     except
       on E:Exception do

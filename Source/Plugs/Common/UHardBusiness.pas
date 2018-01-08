@@ -2138,8 +2138,10 @@ begin
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
+    {$IFNDEF CZNF}
     if FIsVIP = sFlag_TypeShip then Continue;
     //船运不检查
+    {$ENDIF}
     if (FStatus = sFlag_TruckFH) or (FNextStatus = sFlag_TruckFH) then Continue;
     //未装或已装
 
@@ -2551,7 +2553,7 @@ begin
       FHasDone := nTunnel.FHasDone;
       FIsRun := nTunnel.FIsRun;
       FLastTime := GetTickCount;
-      WriteHardHelperLog('在用通道：' + FTunnel + '  扳道：' + IntToStr(FBanDaoNum) + '/' + IntToStr(nTunnel.FBanDaoNum) + '  已装袋数：' + IntToStr(FHasDone));
+      WriteHardHelperLog('在用通道：' + FTunnel + '  扳道：' + IntToStr(FBanDaoNum) + '/' + IntToStr(nTunnel.FBanDaoNum) + '  已装袋数：' + IntToStr(FHasDone) +'  计数状态：'+ BoolToStr(FIsRun, True));
       if FBanDaoNum <> nTunnel.FBanDaoNum then
       begin
         FBanDaoNum := nTunnel.FBanDaoNum;
@@ -2563,20 +2565,20 @@ begin
       end;
       if FBanDaoNum = 0 then
       begin
-        if not FIsRun then gCounterDisplayManager.SendFreeToLedDispInfo(FTunnel);
         if not IsMutexJSRun then gCounterDisplayManager.OnSyncChange(nTunnel);
+        gCounterDisplayManager.SendFreeToLedDispInfo(FTunnel, FTruck, FIsRun);
       end else
         gCounterDisplayManager.OnSyncChange(nTunnel);
       Break;
-    end else
+    end; {else
     begin
-      WriteHardHelperLog('空闲通道：' + FTunnel + '  扳道：' + IntToStr(FBanDaoNum) + '/' + IntToStr(nTunnel.FBanDaoNum));
+      WriteHardHelperLog('空闲通道：' + FTunnel + '  扳道：' + IntToStr(FBanDaoNum) + '  已装袋数：' + IntToStr(FHasDone) +'  计数状态：'+ BoolToStr(FIsRun, True));
       if FBanDaoNum = 0 then
       begin
-        if not FIsRun then gCounterDisplayManager.SendFreeToLedDispInfo(FTunnel);
         if not IsMutexJSRun then gCounterDisplayManager.OnSyncChange(nTunnel);
-      end;
-    end;
+        gCounterDisplayManager.SendFreeToLedDispInfo(FTunnel, FTruck, FIsRun);
+      end; 
+    end; }
   end;
 end;
 
