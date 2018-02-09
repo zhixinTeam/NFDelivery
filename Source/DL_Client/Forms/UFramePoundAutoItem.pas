@@ -965,6 +965,15 @@ begin
 
         if not VerifyManualEventRecord(FID + sFlag_ManualC, nHint) then
         begin
+          {$IFDEF CZNF}
+          nHint := '车辆[ %s ]实际装车量误差较大,详情如下:' + #13#10 +
+                '※.开单量: %.2f吨' + #13#10 +
+                '※.装车量: %.2f吨' + #13#10 +
+                '※.误差量: %.2f公斤' + #13#10 +
+                '检测完毕后,请点确认重新过磅.';
+          nHint := Format(nHint, [FTruck, FInnerData.FValue, nNet, nVal]);
+          {$ENDIF}
+          
           AddManualEventRecord(FID + sFlag_ManualC, FTruck, nHint,
             sFlag_DepBangFang, sFlag_Solution_YN, sFlag_DepJianZhuang, True);
           WriteSysLog(nHint);

@@ -108,7 +108,8 @@ var nStr: string;
 begin
   EditDate.Text := Format('%s жа %s', [Date2Str(FStart), Date2Str(FEnd)]);
   EditPoundD.Text := Format('%s жа %s', [Date2Str(FPoundS), Date2Str(FPoundE)]);
-  Result := 'Select * From $Bill b Left Join $PoundLog p on b.L_ID=p.P_Bill ';
+  //Result := 'Select * From $Bill b Left Join $PoundLog p on b.L_ID=p.P_Bill ';
+  Result := 'Select *,L_MValue-L_PValue as L_NetValue,L_MValue-L_PValue-L_Value as L_DiffValue From $Bill b Left Join $PoundLog p on b.L_ID=p.P_Bill ';
 
   if FJBWhere = '' then
   begin

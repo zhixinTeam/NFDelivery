@@ -2565,8 +2565,10 @@ begin
       end;
       if FBanDaoNum = 0 then
       begin
-        if not IsMutexJSRun then gCounterDisplayManager.OnSyncChange(nTunnel);
-        gCounterDisplayManager.SendFreeToLedDispInfo(FTunnel, FTruck, FIsRun);
+        if not IsMutexJSRun then
+          gCounterDisplayManager.OnSyncChange(nTunnel)
+        else
+          gCounterDisplayManager.SendFreeToLedDispInfo(FTunnel, FTruck, FIsRun);
       end else
         gCounterDisplayManager.OnSyncChange(nTunnel);
       Break;
