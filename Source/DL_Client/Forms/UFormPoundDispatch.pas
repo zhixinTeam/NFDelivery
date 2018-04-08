@@ -131,7 +131,9 @@ begin
     begin
       nStr := FListA[nIdx];
       nStr := Copy(nStr, 1, Pos(':', nStr) - 1);
-      EditStation.Properties.Items.Add(nStr);
+      if EditStation.Properties.Items.IndexOf(nStr) < 0 then
+        EditStation.Properties.Items.Add(nStr);
+      //xxxxx
 
       if Pos(FNowPC, FListA[nIdx]) > 0 then
         EditStation.ItemIndex := nIdx;

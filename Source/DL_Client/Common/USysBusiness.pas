@@ -268,7 +268,7 @@ function AddManualEventRecord(nEID, nKey, nEvent:string;
     nMemo: string=''): Boolean;
 //添加待处理事项记录
 function VerifyManualEventRecord(const nEID: string; var nHint: string;
-    const nWant: string = 'Y'): Boolean;
+    const nWant: string = 'Y'; const nUpdateHint: Boolean = True): Boolean;
 //检查事件是否通过处理
 function DealManualEvent(const nEID, nResult: string; nMemo: string=''): Boolean;
 //处理待处理事项
@@ -2409,7 +2409,7 @@ end;
 //Parm: 事件ID;预期结果;错误返回
 //Desc: 判断事件是否处理
 function VerifyManualEventRecord(const nEID: string; var nHint: string;
-    const nWant: string): Boolean;
+    const nWant: string; const nUpdateHint: Boolean): Boolean;
 var nSQL, nStr: string;
 begin
   Result := False;
@@ -2424,17 +2424,20 @@ begin
     nStr := Trim(FieldByName('E_Result').AsString);
     if nStr = '' then
     begin
-      nHint := FieldByName('E_Event').AsString;
+      if nUpdateHint then
+        nHint := FieldByName('E_Event').AsString;
       Exit;
     end;
 
     if nStr <> nWant then
     begin
-      nHint := '请联系管理员，做换票处理';
+      if nUpdateHint then
+        nHint := '请联系管理员，做换票处理';
       Exit;
     end;
 
-    nHint  := FieldByName('E_ParamB').AsString;
+    if nUpdateHint then
+      nHint  := FieldByName('E_ParamB').AsString;
     Result := True;
   end;
 end;
