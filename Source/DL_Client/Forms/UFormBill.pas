@@ -45,6 +45,8 @@ type
     dxLayout1Item13: TdxLayoutItem;
     dxLayout1Item14: TdxLayoutItem;
     PrintHY: TcxCheckBox;
+    SnapTruck: TcxCheckBox;
+    dxLayout1Item15: TdxLayoutItem;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure BtnOKClick(Sender: TObject);
@@ -377,6 +379,10 @@ begin
     if PrintHY.Checked  then
          Values['PrintHY'] := sFlag_Yes
     else Values['PrintHY'] := sFlag_No;
+
+    if SnapTruck.Checked  then
+         Values['SnapTruck'] := sFlag_Yes
+    else Values['SnapTruck'] := sFlag_No;
   end;
 
   FBills := SaveBill(PackerEncodeStr(FListA.Text));

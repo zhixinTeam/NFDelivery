@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE CZNF}
+{$DEFINE GXNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -292,6 +292,8 @@
   //包装阶梯误差
   {$DEFINE DaiForceQueue}
   //包装发货强制队列
+  {$DEFINE RemoteSnap}
+  //车牌识别
 {$ENDIF}
 //广西南方
 

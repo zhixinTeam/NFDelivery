@@ -13,7 +13,8 @@ uses
   UMgrHardHelper, U02NReader, UMgrERelay, UMgrTTCEM100,
   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}UMgrRemotePrint,
   UMgrLEDDisp, UMgrRFID102, {$IFDEF HKVDVR}UMgrCamera, {$ENDIF}Graphics, DB,
-  UMgrLEDDispCounter, UJSDoubleChannel;
+  UMgrLEDDispCounter, UJSDoubleChannel,
+  UMgrremoteSnap,UMgrVoiceNet;
 
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
 procedure WhenTTCE_M100_ReadCard(const nItem: PM100ReaderItem);
@@ -51,6 +52,8 @@ procedure WhenCaptureFinished(const nPtr: Pointer);
 {$ENDIF}
 procedure SaveGrabCard(const nCard: string; nTunnel: string='');
 //检索并保存抓斗秤工作卡号
+function VerifySnapTruck(const nTruck,nBill,nPos: string;var nResult: string): Boolean;
+//车牌识别
 
 procedure UpdateDoubleChannel(const nTunnel: PMultiJSTunnel);
 //更新通道信息
@@ -63,6 +66,11 @@ uses
 const
   sPost_In   = 'in';
   sPost_Out  = 'out';
+
+  sPost_SIn   = 'Sin';
+  sPost_SOut  = 'Sout';
+  sPost_PIn   = 'Pin';
+  sPost_POut  = 'Pout';
 
 //Date: 2014-09-15
 //Parm: 命令;数据;参数;输出
@@ -354,7 +362,7 @@ begin
       nStr := FieldByName('B_ID').AsString;
       Result := CallBusinessSaleBill(cBC_SaveBillFromNew, nStr, '', @nOut);
     end else Result := True;
-  end;  
+  end;
 end;
 
 //Date: 2016-06-15
@@ -479,11 +487,77 @@ begin
   gSysLoger.AddLog(THardwareHelper, '硬件守护辅助', nEvent);
 end;
 
+//Date: 2018-03-28
+//Parm: 岗位
+//Desc: 查询DICT表里岗位是否配备语音卡
+function GetHasVoice(const nPost: string): Boolean;
+var nStr: string;
+    nIdx: Integer;
+    nDBConn: PDBWorker;
+begin
+  Result := False;
+  nDBConn := nil;
+  with gParamManager.ActiveParam^ do
+  try
+    nDBConn := gDBConnManager.GetConnection(FDB.FID, nIdx);
+    if not Assigned(nDBConn) then
+    begin
+      WriteHardHelperLog('连接HM数据库失败(DBConn Is Null).');
+      Exit;
+    end;
+
+    if not nDBConn.FConn.Connected then
+      nDBConn.FConn.Connected := True;
+    //conn db
+
+    nStr := 'Select * From %s Where D_Memo=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, nPost]);
+
+    with gDBConnManager.WorkerQuery(nDBConn, nStr) do
+    if RecordCount > 0 then
+    begin
+      if FieldByName('D_ParamB').AsString = sFlag_Yes then
+        Result := True;
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nDBConn);
+  end;
+end;
+
+//Date: 2017-10-16
+//Parm: 内容;岗位;业务成功
+//Desc: 播放门岗语音
+procedure MakeGateSound(const nText,nPost: string; const nSucc: Boolean);
+var nStr: string;
+    nInt: Integer;
+begin
+  try
+    if nSucc then
+         nInt := 2
+    else nInt := 3;
+
+    gHKSnapHelper.Display(nPost, nText, nInt);
+    //小屏显示
+
+    if GetHasVoice(nPost) then
+      gNetVoiceHelper.PlayVoice(nText, nPost);
+    //播发语音
+    WriteHardHelperLog(nText);
+  except
+    on nErr: Exception do
+    begin
+      nStr := '播放[ %s ]语音失败,描述: %s';
+      nStr := Format(nStr, [nPost, nErr.Message]);
+      WriteHardHelperLog(nStr);
+    end;
+  end;
+end;
+
 //Date: 2012-4-22
 //Parm: 卡号
 //Desc: 对nCard放行进厂
 procedure MakeTruckIn(const nCard,nReader: string; const nDB: PDBWorker);
-var nStr,nTruck,nCardType: string;
+var nStr,nTruck,nCardType,nSnapStr,nPos: string;
     nIdx,nInt: Integer;
     nPLine: PLineItem;
     nRet: Boolean;
@@ -491,6 +565,11 @@ var nStr,nTruck,nCardType: string;
     nTrucks: TLadingBillItems;
 begin
   if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
+
+  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
+    nPos := sPost_SIn
+  else
+    nPos := sPost_PIn;
 
   if gTruckQueueManager.IsTruckAutoIn(nCardType=sFlag_Sale) and (GetTickCount -
      gHardwareHelper.GetCardLastDone(nCard, nReader) < 2 * 60 * 1000) then
@@ -528,6 +607,12 @@ begin
     nStr := Format(nStr, [nCard]);
 
     WriteHardHelperLog(nStr, sPost_In);
+
+    {$IFDEF RemoteSnap}
+    nStr := '读取磁卡信息失败';
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
     Exit;
   end;
 
@@ -537,6 +622,12 @@ begin
     nStr := Format(nStr, [nCard]);
 
     WriteHardHelperLog(nStr, sPost_In);
+
+    {$IFDEF RemoteSnap}
+    nStr := '请先到开票室办理业务';
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
     Exit;
   end;
 
@@ -555,8 +646,25 @@ begin
     //当前非进厂状态
 
     WriteHardHelperLog(nStr, sPost_In);
+
+    {$IFDEF RemoteSnap}
+    nStr := '车辆[ %s ]不能进厂,应该去[ %s ]';
+    nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
     Exit;
   end;
+
+  {$IFDEF RemoteSnap}
+  if nTrucks[0].FSnapTruck then
+  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nSnapStr) then
+  begin
+    MakeGateSound(nSnapStr, nPos, False);
+    Exit;
+  end;
+  nStr := nSnapStr + ',请进厂';
+  MakeGateSound(nStr, nPos, True);
+  {$ENDIF}
 
   if nTrucks[0].FStatus = sFlag_TruckIn then
   begin
@@ -719,7 +827,7 @@ end;
 //Desc: 对nCard放行出厂
 procedure MakeTruckOut(const nCard,nReader,nPrinter: string;
  const nOptions: string = '');
-var nStr, nCardType,nPrint,nID: string;
+var nStr, nCardType,nPrint,nID,nSnapStr,nPos: string;
     nIdx: Integer;
     nRet: Boolean;
     nReaderItem: THHReaderItem;
@@ -729,6 +837,11 @@ var nStr, nCardType,nPrint,nID: string;
     {$ENDIF}
 begin
   if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
+
+  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
+    nPos := sPost_SOut
+  else
+    nPos := sPost_POut;
 
   nRet := False;
   if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
@@ -749,6 +862,12 @@ begin
     nStr := Format(nStr, [nCard]);
 
     WriteHardHelperLog(nStr, sPost_Out);
+
+    {$IFDEF RemoteSnap}
+    nStr := '读取磁卡信息失败';
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
     Exit;
   end;
 
@@ -758,6 +877,12 @@ begin
     nStr := Format(nStr, [nCard]);
 
     WriteHardHelperLog(nStr, sPost_Out);
+
+    {$IFDEF RemoteSnap}
+    nStr := '没有需要出厂车辆';
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
     Exit;
   end;
 
@@ -781,6 +906,13 @@ begin
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
 
     WriteHardHelperLog(nStr, sPost_Out);
+
+    {$IFDEF RemoteSnap}
+    nStr := '车辆[ %s ]不能出厂,应该去[ %s ]';
+    nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
     Exit;
   end;
 
@@ -803,8 +935,27 @@ begin
     nStr := Format(nStr, [nTrucks[0].FTruck]);
 
     WriteHardHelperLog(nStr, sPost_Out);
+
+    {$IFDEF RemoteSnap}
+    nStr := '车辆[ %s ]出厂放行失败';
+    nStr := Format(nStr, [nTrucks[0].FTruck]);
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
     Exit;
   end;
+
+  {$IFDEF RemoteSnap}
+  if nTrucks[0].FSnapTruck then
+  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nSnapStr) then
+  begin
+    MakeGateSound(nSnapStr, nPos, False);
+    Exit;
+  end;
+  nStr := nSnapStr + ',请出厂';
+  MakeGateSound(nStr, nPos, True);
+  {$ENDIF}
+
 
   if (nReader <> '') and (Pos('nodoor', LowerCase(nOptions)) < 1) then
     HardOpenDoor(nReader);
@@ -889,7 +1040,7 @@ end;
 //Parm: 卡号;读头;打印机
 //Desc: 对nCard放行出
 function MakeTruckOutM100(const nCard,nReader,nPrinter: string): Boolean;
-var nStr,nCardType, nID: string;
+var nStr,nCardType, nID,nSnapStr,nPos: string;
     nIdx: Integer;
     nRet: Boolean;
     nTrucks: TLadingBillItems;
@@ -899,6 +1050,11 @@ var nStr,nCardType, nID: string;
 begin
   Result := False;
   if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
+
+  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
+    nPos := sPost_SOut
+  else
+    nPos := sPost_POut;
 
   nRet := False;
   if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
@@ -921,6 +1077,12 @@ begin
     //磁卡已无效
 
     WriteHardHelperLog(nStr, sPost_Out);
+
+    {$IFDEF RemoteSnap}
+    nStr := '读取磁卡信息失败';
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
     Exit;
   end;
 
@@ -932,6 +1094,12 @@ begin
     //磁卡已无效
 
     WriteHardHelperLog(nStr, sPost_Out);
+
+    {$IFDEF RemoteSnap}
+    nStr := '没有需要出厂车辆';
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
     Exit;
   end;
 
@@ -943,6 +1111,13 @@ begin
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
 
     WriteHardHelperLog(nStr, sPost_Out);
+
+    {$IFDEF RemoteSnap}
+    nStr := '车辆[ %s ]不能出厂,应该去[ %s ]';
+    nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
     Exit;
   end;
 
@@ -964,8 +1139,26 @@ begin
     nStr := Format(nStr, [nTrucks[0].FTruck]);
 
     WriteHardHelperLog(nStr, sPost_Out);
+
+    {$IFDEF RemoteSnap}
+    nStr := '车辆[ %s ]出厂放行失败';
+    nStr := Format(nStr, [nTrucks[0].FTruck]);
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
     Exit;
   end;
+
+  {$IFDEF RemoteSnap}
+  if nTrucks[0].FSnapTruck then
+  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nSnapStr) then
+  begin
+    MakeGateSound(nSnapStr, nPos, False);
+    Exit;
+  end;
+  nStr := nSnapStr + ',请出厂';
+  MakeGateSound(nStr, nPos, True);
+  {$ENDIF}
 
   HardOpenDoor(nReader);
   //抬杆
@@ -3095,5 +3288,28 @@ begin
     gDBConnManager.ReleaseConnection(nDBConn);
   end;
 end ;
+
+function VerifySnapTruck(const nTruck,nBill,nPos: string; var nResult: string): Boolean;
+var nList: TStrings;
+    nOut: TWorkerBusinessCommand;
+    nID: string;
+begin
+  if nBill = '' then
+    nID := nTruck + FormatDateTime('YYMMDD',Now)
+  else
+    nID := nBill;
+  nList := nil;
+  try
+    nList := TStringList.Create;
+    nList.Values['Truck'] := nTruck;
+    nList.Values['Bill'] := nID;
+    nList.Values['Pos'] := nPos;
+
+    Result := CallBusinessCommand(cBC_VerifySnapTruck, nList.Text, '', @nOut);
+    nResult := nOut.FData;
+  finally
+    nList.Free;
+  end;
+end;
 
 end.

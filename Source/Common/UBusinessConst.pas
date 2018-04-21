@@ -86,6 +86,7 @@ const
   cBC_TunnelOC                = $0076;
   cBC_PlayVoice               = $0077;
   cBC_OpenDoorByReader        = $0078;
+  cBC_VerifySnapTruck         = $0079;   //车牌比对
 
   cBC_GetSQLQueryWeixin       = $0081;   //获取微信信息查询语句
   cBC_SaveWeixinAccount       = $0082;   //保存微信账户
@@ -185,6 +186,7 @@ type
     FHYDan      : string;          //化验单号
     FLocked     : Boolean;         //锁定状态，更新预置皮重
     FPreTruckP  : Boolean;         //预置皮重；
+    FSnapTruck  : Boolean;         //进厂进行车牌识别
 
     FYSValid    : string;          //验收结果
     FKZValue    : Double;          //扣杂量
@@ -404,6 +406,7 @@ begin
         FMemo   := Values['Memo'];
         FSeal   := Values['Seal'];
         FPrintHY := Values['PrintHY'] = sFlag_Yes;
+        FSnapTruck := Values['SnapTruck'] = sFlag_Yes;
         FHYDan := Values['HYDan'];
 
         FLineGroup := Values['LineGroup'];
@@ -514,6 +517,11 @@ begin
         if FPrintHY then
              Values['PrintHY'] := sFlag_Yes
         else Values['PrintHY'] := sFlag_No;
+
+        if FSnapTruck then
+             Values['SnapTruck'] := sFlag_Yes
+        else Values['SnapTruck'] := sFlag_No;
+
         Values['HYDan']      := FHYDan;
 
         Values['LineGroup']  := FLineGroup;

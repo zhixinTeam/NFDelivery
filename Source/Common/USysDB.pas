@@ -164,6 +164,7 @@ ResourceString
   sFlag_ManualA       = 'A';                         //皮重预警(错误事件类型)
   sFlag_ManualB       = 'B';                         //皮重超出范围
   sFlag_ManualC       = 'C';                         //净重超出误差范围
+  sFlag_ManualE       = 'E';                         //车牌识别
 
   sFlag_SysParam      = 'SysParam';                  //系统参数
   sFlag_EnableBakdb   = 'Uses_BackDB';               //备用库
@@ -259,6 +260,9 @@ ResourceString
   sFlag_BillNewNO     = 'Bus_BillNew';
   sFlag_PStationNo    = 'Bus_PStation';              //火车衡称重记录
   sFlag_BillHaulBack  = 'Bus_BillHaulBack';          //回空单号
+  sFlag_TruckInNeedManu = 'TruckInNeedManu';         //车牌识别需要人工干预
+  sFlag_SnapInfoPost  = 'SnapInfoPost';              //车牌识别消息推送岗位
+
   sFlag_HYDan         = 'Bus_HYDan';                 //化验单号
   
   {*数据表*}
@@ -339,12 +343,14 @@ ResourceString
   sTable_CardGrab     = 'P_CardGrab';                //抓斗秤刷卡记录表
   sTable_Grab         = 'P_Grab';                    //抓斗秤称重记录表
   sTable_GrabBak      = 'P_GrabBak';                 //抓斗秤称重记录表
-
+  sTable_SnapTruck    = 'Sys_SnapTruck';             //车辆抓拍记录
+  
 const
   sFlag_Departments   = 'Departments';               //部门列表
   sFlag_DepDaTing     = '大厅';                      //服务大厅
   sFlag_DepJianZhuang = '监装';                      //监装
   sFlag_DepBangFang   = '磅房';                      //磅房
+  sFlag_DepMenGang    = '门岗';                      //门岗
   sFlag_Solution_YN   = 'Y=通过;N=禁止';
   sFlag_Solution_YNI  = 'Y=通过;N=禁止;I=忽略';
 
@@ -1493,6 +1499,16 @@ const
    *.$ID:信息标识
   -----------------------------------------------------------------------------}
 
+  sSQL_SnapTruck = 'Create Table $Table(R_ID $Inc, S_ID varChar(20), ' +
+       'S_Truck varChar(20), S_Date DateTime)';
+  {-----------------------------------------------------------------------------
+   微信发送日志:WeixinLog
+   *.R_ID:记录编号
+   *.S_ID: 抓拍岗位
+   *.S_Truck:抓拍车牌号
+   *.S_Date: 抓拍时间
+  -----------------------------------------------------------------------------}
+
 function CardStatusToStr(const nStatus: string): string;
 //磁卡状态
 function TruckStatusToStr(const nStatus: string): string;
@@ -1644,6 +1660,9 @@ begin
   AddSysTableItem(sTable_Grab, sSQL_Grab);
   AddSysTableItem(sTable_GrabBak, sSQL_Grab);
 
+  AddSysTableItem(sTable_SnapTruck,sSQL_SnapTruck);
+
+
   AddSysTableItem(sTable_StockParam, sSQL_NewStockParam);
   AddSysTableItem(sTable_StockParamExt, sSQL_NewStockRecord);
   AddSysTableItem(sTable_StockRecord, sSQL_NewStockRecord);
@@ -1668,5 +1687,6 @@ initialization
 finalization
   ClearSysTableList;
 end.
+
 
 

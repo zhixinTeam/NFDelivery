@@ -37,6 +37,7 @@ uses
   UMgrQueue, UMgrLEDCard, UMgrHardHelper, UMgrRemotePrint, U02NReader,
   UMgrERelay,   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}
   UMgrRemoteVoice, UMgrVoiceNet, UMgrCodePrinter, UMgrLEDDisp, UMgrTTCEM100,
+  UMgrRemoteSnap,
   UMgrRFID102{$IFDEF HKVDVR}, UMgrCamera{$ENDIF}, UMgrLEDDispCounter,
   UJSDoubleChannel;
 
@@ -138,6 +139,15 @@ begin
       end;
     end;
     {$ENDIF}
+    {$IFDEF RemoteSnap}
+    nStr := '海康威视远程抓拍';
+    if FileExists(nCfg + 'RemoteSnap.xml') then
+    begin
+      //gHKSnapHelper := THKSnapHelper.Create;
+      gHKSnapHelper.LoadConfig(nCfg + 'RemoteSnap.xml');
+    end;
+    {$ENDIF}
+
   except
     on E:Exception do
     begin
@@ -248,6 +258,12 @@ begin
     gNetVoiceHelper.StartVoice;
   end;
   //启动语音
+
+  {$IFDEF RemoteSnap}
+  gHKSnapHelper.StartSnap;
+  //remote snap
+  {$ENDIF}
+
 end;
 
 procedure THardwareWorker.AfterStopServer;
@@ -312,6 +328,11 @@ begin
     gNetVoiceHelper.StopVoice;
   end;
   //启动语音
+
+  {$IFDEF RemoteSnap}
+  gHKSnapHelper.StopSnap;
+  //remote snap
+  {$ENDIF}
 end;
 
 end.

@@ -106,6 +106,8 @@ type
     function GetPoundBaseValue(var nData: string): Boolean;
     function IsDeDuctValid:Boolean;
     //使用暗扣规则
+    function VerifySnapTruck(var nData: string): Boolean;
+    //车牌比对
 
     //-------------------由DL向Web商城发起查询----------------------------------
     function SendEventMsg(var nData:string):boolean;
@@ -366,7 +368,7 @@ begin
 
    cBC_SaveTruckInfo       : Result := SaveTruck(nData);
    cBC_GetStockBatcode     : Result := GetStockBatcode(nData);
-   
+
    cBC_GetSQLQueryOrder    : Result := GetSQLQueryOrder(nData);
    cBC_GetSQLQueryDispatch : Result := GetSQLQueryDispatch(nData);
    cBC_GetSQLQueryCustomer : Result := GetSQLQueryCustomer(nData);
@@ -383,7 +385,8 @@ begin
    cBC_GetPoundBaseValue   : Result := GetPoundBaseValue(nData);
    cBC_GetStationPoundData : Result := GetStationPoundData(nData);
    cBC_SaveStationPoundData: Result := SaveStationPoundData(nData);
-
+   cBC_VerifySnapTruck     : Result := VerifySnapTruck(nData);
+   
    cBC_WebChat_SendEventMsg     :Result := SendEventMsg(nData);                //微信平台接口：发送模板消息
     cBC_WebChat_GetCustomerInfo  :Result := GetCustomerInfo(nData);             //微信平台接口：获取商城账户注册信息
     cBC_WebChat_EditShopCustom   :Result := EditShopCustom(nData);              //微信平台接口：新增商城用户
@@ -3815,6 +3818,146 @@ begin
   except
     FDBConn.FConn.RollbackTrans;
   end;
+end;
+
+//Date: 2017-12-2
+//Parm: 车牌号(Truck); 交货单号(Bill);岗位(Pos)
+//Desc: 抓拍比对
+function TWorkerBusinessCommander.VerifySnapTruck(var nData: string): Boolean;
+var nStr: string;
+    nTruck, nBill, nPos, nSnapTruck, nEvent, nToPost: string;
+    nUpdate, nNeedManu: Boolean;
+begin
+  Result := False;
+  FListA.Text := FIn.FData;
+  nSnapTruck:= '';
+  nEvent:= '' ;
+  nToPost := sFlag_DepMenGang;
+  nNeedManu := False;
+
+  nTruck := FListA.Values['Truck'];
+  nBill  := FListA.Values['Bill'];
+  nPos   := FListA.Values['Pos'];
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_TruckInNeedManu,nPos]);
+  //xxxxx
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nNeedManu := FieldByName('D_Value').AsString = sFlag_Yes;
+    end
+    else
+    begin
+      Result := True;
+      nData := '车辆[ %s ]';
+      nData := Format(nData, [nTruck]);
+      FOut.FData := nData;
+      Exit;
+    end;
+  end;
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SnapInfoPost]);
+  //xxxxx
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nToPost := FieldByName('D_Value').AsString;
+    end;
+  end;
+
+  nData := '车辆[ %s ]车牌识别失败';
+  nData := Format(nData, [nTruck]);
+  FOut.FData := nData;
+  //default
+
+  nStr := 'Select * From %s Where S_ID=''%s''';
+  nStr := Format(nStr, [sTable_SnapTruck, nPos]);
+  //xxxxx
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount < 1 then
+    begin
+      if not nNeedManu then
+        Result := True;
+      nData := '车辆[ %s ]抓拍异常';
+      nData := Format(nData, [nTruck]);
+      FOut.FData := nData;
+      Exit;
+    end;
+    nSnapTruck := FieldByName('S_Truck').AsString;
+    if Pos(nTruck,nSnapTruck) > 0 then
+    begin
+      Result := True;
+      nData := '车辆[ %s ]车牌识别成功,抓拍车牌号:[ %s ]';
+      nData := Format(nData, [nTruck,nSnapTruck]);
+      FOut.FData := nData;
+      Exit;
+    end;
+    //车牌识别成功
+  end;
+
+  nStr := 'Select * From %s Where E_ID=''%s''';
+  nStr := Format(nStr, [sTable_ManualEvent, nBill+sFlag_ManualE]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      if FieldByName('E_Result').AsString = 'N' then
+      begin
+        nData := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ],管理员禁止进厂';
+        nData := Format(nData, [nTruck,nSnapTruck]);
+        FOut.FData := nData;
+        Exit;
+      end;
+      if FieldByName('E_Result').AsString = 'Y' then
+      begin
+        Result := True;
+        nData := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ],管理员允许';
+        nData := Format(nData, [nTruck,nSnapTruck]);
+        FOut.FData := nData;
+        Exit;
+      end;
+      nUpdate := True;
+    end
+    else
+    begin
+      nData := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ]';
+      nData := Format(nData, [nTruck,nSnapTruck]);
+      FOut.FData := nData;
+      nUpdate := False;
+      if not nNeedManu then
+      begin
+        Result := True;
+        Exit;
+      end;
+    end;
+  end;
+
+  nEvent := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ]';
+  nEvent := Format(nEvent, [nTruck,nSnapTruck]);
+
+  nStr := SF('E_ID', nBill+sFlag_ManualE);
+  nStr := MakeSQLByStr([
+          SF('E_ID', nBill+sFlag_ManualE),
+          SF('E_Key', nTruck),
+          SF('E_From', sFlag_DepMenGang),
+          SF('E_Result', 'Null', sfVal),
+
+          SF('E_Event', nEvent),
+          SF('E_Solution', sFlag_Solution_YN),
+          SF('E_Departmen', nToPost),
+          SF('E_Date', sField_SQLServer_Now, sfVal)
+          ], sTable_ManualEvent, nStr, (not nUpdate));
+  //xxxxx
+  gDBConnManager.WorkerExec(FDBConn, nStr);
 end;
 
 initialization

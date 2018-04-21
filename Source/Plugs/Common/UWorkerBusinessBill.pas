@@ -877,7 +877,7 @@ begin
       if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
           FOrderItems[nIdx].FStockID, PackerEncodeStr(FListC.Text), @nOut) then
       raise Exception.Create(nOut.FData);
-      
+
       if nOut.FData <> '' then
       begin
         FListA.Values['Seal'] := nOut.FData;
@@ -928,6 +928,10 @@ begin
               {$IFDEF PrintHYEach}
               SF('L_PrintHY',     FListA.Values['PrintHY']),
               {$ENDIF} //随车打印化验单
+
+              {$IFDEF RemoteSnap}
+              SF('L_SnapTruck',   FListA.Values['SnapTruck']),
+              {$ENDIF}
 
               SF('L_Truck', FListA.Values['Truck']),
               SF('L_Status', sFlag_BillNew),
@@ -1180,6 +1184,12 @@ begin
   begin
     FListC.Clear;
     FListC.Values['Card'] := 'dt';
+    FListC.Values['Text'] := #9 + FListA.Values['Truck'] + #9;
+    FListC.Values['Content'] := FListA.Values['PoundStation'];
+    THardwareCommander.CallMe(cBC_PlayVoice, PackerEncodeStr(FListC.Text), '', @nOut);
+
+    FListC.Clear;
+    FListC.Values['Card'] := 'dt1';
     FListC.Values['Text'] := #9 + FListA.Values['Truck'] + #9;
     FListC.Values['Content'] := FListA.Values['PoundStation'];
     THardwareCommander.CallMe(cBC_PlayVoice, PackerEncodeStr(FListC.Text), '', @nOut);
@@ -1785,6 +1795,10 @@ begin
       FHYDan      := FieldByName('L_Seal').AsString;
       {$IFDEF PrintHYEach}
       FPrintHY    := FieldByName('L_PrintHY').AsString = sFlag_Yes;
+      {$ENDIF}
+
+      {$IFDEF RemoteSnap}
+      FSnapTruck  := FieldByName('L_SnapTruck').AsString = sFlag_Yes;
       {$ENDIF}
 
       {$IFNDEF CZNF}
