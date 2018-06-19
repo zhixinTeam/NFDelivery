@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE GXNF}
+{$DEFINE JDNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -62,6 +62,10 @@
   //状态栏显示
   {$DEFINE BatchVerifyValue}
   //批次控制发货量
+  {$DEFINE PrePTruckYs}
+  //采购预制皮重车辆验收
+  {$DEFINE MultiReplay}
+  //计数器应答模式
 {$ENDIF}
 //建德南方
 

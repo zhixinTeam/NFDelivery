@@ -67,6 +67,9 @@ const
   cBC_LogoffCardNew           = $0035;   //注销磁卡
   cBC_SaveBillFromNew         = $0036;   //根据基础单据生成交货单
 
+  cBC_GetPostOrders           = $0044;   //获取岗位采购单
+  cBC_SavePostOrders          = $0045;   //保存岗位采购单
+
   cBC_ChangeDispatchMode      = $0053;   //切换调度模式
   cBC_GetPoundCard            = $0054;   //获取磅站卡号
   cBC_GetQueueData            = $0055;   //获取队列数据

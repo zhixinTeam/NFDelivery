@@ -110,6 +110,10 @@ begin
    cBC_LogoffCard        : Result := LogoffProvideCard(nData);
    cBC_GetPostBills      : Result := GetPostProvideItems(nData);
    cBC_SavePostBills     : Result := SavePostProvideItems(nData);
+
+   cBC_GetPostOrders     : Result := GetPostProvideItems(nData);
+   cBC_SavePostOrders    : Result := SavePostProvideItems(nData);
+   //兼容手持
    else
     begin
       Result := False;
@@ -512,7 +516,11 @@ begin
 
       FFactory    := FieldByName('P_Factory').AsString;
       FOrigin     := FieldByName('P_Origin').AsString;
-      FKZValue    := 0;
+
+      if FieldByName('P_KZValue').AsString = '' then
+        FKZValue  := 0
+      else
+        FKZValue  := FieldByName('P_KZValue').AsFloat;
 
       FIsVIP      := FieldByName('P_IsUsed').AsString;
       if FIsVIP <> sFlag_Yes then
@@ -635,6 +643,30 @@ begin
     nN := Fields[1].AsString;
     //申请单当前状态和下一状态
   end;
+
+  {$IFDEF PrePTruckYs}
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_StockIfYS]);
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+       nYS := Fields[0].AsString
+  else nYS := sFlag_No;
+
+  FListB.Clear;
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_NFStock]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    First;
+    while not Eof do
+    begin
+      FListB.Add(Fields[0].AsString);
+      Next;
+    end;
+  end;
+  {$ENDIF}
 
   FListA.Clear;
   //用于存储SQL列表
@@ -828,6 +860,12 @@ begin
       FStatus := sFlag_TruckSH;
       FNextStatus := sFlag_TruckOut;
 
+      {$IFDEF PrePTruckYs}
+      FNextStatus := sFlag_TruckXH;
+      if (FListB.IndexOf(FStockNo) >= 0) or (nYS <> sFlag_Yes) then
+        FNextStatus := sFlag_TruckOut;
+      {$ENDIF}
+
       nSQL := MakeSQLByStr([
               SF('P_ID', nOut.FData),
               SF('P_Type', sFlag_Provide),
@@ -898,6 +936,64 @@ begin
       FStatus := sFlag_TruckXH;
       FNextStatus := sFlag_TruckBFM;
 
+      {$IFDEF PrePTruckYs}
+      FNextStatus := sFlag_TruckOut;
+
+      nStr := 'Select D_CusID,D_Value,D_Type From %s ' +
+              'Where D_Stock=''%s'' And D_Valid=''%s''';
+      nStr := Format(nStr, [sTable_Deduct, FStockNo, sFlag_Yes]);
+
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+      if RecordCount > 0 then
+      begin
+        First;
+
+        while not Eof do
+        begin
+          if FieldByName('D_CusID').AsString = FCusID then
+            Break;
+          //客户+物料参数优先
+
+          Next;
+        end;
+
+        if Eof then First;
+        //使用第一条规则
+
+        if FMData.FValue > FPData.FValue then
+             nNet := FMData.FValue - FPData.FValue
+        else nNet := FPData.FValue - FMData.FValue;
+
+        nVal := 0;
+        //待扣减量
+        nStr := FieldByName('D_Type').AsString;
+
+        if nStr = sFlag_DeductFix then
+          nVal := FieldByName('D_Value').AsFloat;
+        //定值扣减
+
+        if nStr = sFlag_DeductPer then
+        begin
+          nVal := FieldByName('D_Value').AsFloat;
+          nVal := nNet * nVal;
+        end; //比例扣减
+
+        if (nVal > 0) and (nNet > nVal) then
+        begin
+          nVal := Float2Float(nVal, cPrecision, False);
+          //将暗扣量扣减为2位小数;
+
+          if FMData.FValue > FPData.FValue then
+               FMData.FValue := (FMData.FValue*1000 - nVal*1000) / 1000
+          else FPData.FValue := (FPData.FValue*1000 - nVal*1000) / 1000;
+        end;
+      end;
+
+      nVal := FMData.FValue - FPData.FValue -FKZValue;
+      nVal := Float2Float(nVal, cPrecision, False);
+      //净重
+      {$ENDIF}
+
       nStr := SF('P_Order', FExtID_1);
       //where
       nSQL := MakeSQLByStr([
@@ -914,6 +1010,9 @@ begin
               SF('D_KZValue', FKZValue, sfVal),
               SF('D_YSResult', FYSValid),
               SF('D_YLineName', FSeal),    //保存批次号
+              {$IFDEF PrePTruckYs}
+              SF('D_Value', nVal, sfVal),
+              {$ENDIF}
               SF('D_Memo', FMemo)
               ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);
       FListA.Add(nSQL);
@@ -1153,7 +1252,16 @@ begin
     raise;
   end;
 
-  if FIn.FExtParam = sFlag_TruckSH then
+  if (FIn.FExtParam = sFlag_TruckSH)
+  and (nPound[0].FNextStatus = sFlag_TruckOut) then
+  begin
+    if Assigned(gHardShareData) then
+      gHardShareData('TruckSH:' + nPound[0].FCard);
+    //单次过磅自动出厂
+  end;
+
+  if (FIn.FExtParam = sFlag_TruckXH)
+  and (nPound[0].FNextStatus = sFlag_TruckOut) then
   begin
     if Assigned(gHardShareData) then
       gHardShareData('TruckSH:' + nPound[0].FCard);
