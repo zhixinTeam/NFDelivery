@@ -937,6 +937,31 @@ begin
       FNextStatus := sFlag_TruckBFM;
 
       {$IFDEF PrePTruckYs}
+      if FExtID_1 = '' then
+      begin
+        nStr := 'Select top 1 D_ID From %s ' +
+                'Where D_OID=''%s'' order by R_ID Desc';
+        nStr := Format(nStr, [sTable_ProvDtl, FZhiKa]);
+
+        with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+        if RecordCount > 0 then
+        begin
+          FExtID_1 := Fields[0].AsString;
+        end;
+      end;
+      if FMData.FValue <= 0 then
+      begin
+        nStr := 'Select top 1 D_MValue From %s ' +
+                'Where D_OID=''%s'' order by R_ID Desc';
+        nStr := Format(nStr, [sTable_ProvDtl, FZhiKa]);
+
+        with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+        if RecordCount > 0 then
+        begin
+          FMData.FValue := Fields[0].AsFloat;
+        end;
+      end;
+
       FNextStatus := sFlag_TruckOut;
 
       nStr := 'Select D_CusID,D_Value,D_Type From %s ' +
@@ -1002,6 +1027,8 @@ begin
       //验收扣杂
       FListA.Add(nSQL);
 
+      WriteLog('原材料磅单扣杂SQL:' + nSQL);
+
       nSQL := MakeSQLByStr([
               SF('D_Status', FStatus),
               SF('D_NextStatus', FNextStatus),
@@ -1016,6 +1043,8 @@ begin
               SF('D_Memo', FMemo)
               ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);
       FListA.Add(nSQL);
+
+      WriteLog('原材料采购明细扣杂SQL:' + nSQL);
 
       nSQL := MakeSQLByStr([
               SF('P_Status', FStatus),

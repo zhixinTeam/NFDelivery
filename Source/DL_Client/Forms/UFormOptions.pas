@@ -10,7 +10,8 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, UFormNormal, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, cxTextEdit, StdCtrls, cxPC,
-  dxLayoutControl, Menus, cxCheckBox, cxLabel, cxButtons, cxMCListBox;
+  dxLayoutControl, Menus, cxCheckBox, cxLabel, cxButtons, cxMCListBox,
+  cxMaskEdit, cxDropDownEdit;
 
 type
   TfFormOptions = class(TfFormNormal)
@@ -41,6 +42,8 @@ type
     EditPercent: TcxCheckBox;
     BtnAdd4: TcxButton;
     BtnDel4: TcxButton;
+    Label2: TLabel;
+    cxbYs: TcxComboBox;
     procedure wPageChange(Sender: TObject);
     procedure BtnOKClick(Sender: TObject);
     procedure EditShadowPropertiesChange(Sender: TObject);
@@ -97,6 +100,7 @@ type
   TNoFangHuiStock = record
     FLoaded: Boolean;
     FSaved: Boolean;
+    FYs: Boolean;
     FItems: array of TStockItem;
   end;
 
@@ -123,7 +127,7 @@ var
   //无需放灰品种
   gPoundDaiWCParam: TPoundDaiWCParam;
   //袋装误差配置
-  
+
 class function TfFormOptions.FormID: integer;
 begin
   Result := cFI_FormOptions;
@@ -239,6 +243,13 @@ begin
     FSaved := True;
     SetLength(FItems, 0);
 
+    nStr := 'Select D_Value From %s Where D_Name=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_StockIfYS]);
+    with FDM.QueryTemp(nStr) do
+    if RecordCount > 0 then
+         FYs := Fields[0].AsString = sFlag_Yes
+    else FYs := False;
+
     nStr := 'Select D_Value,D_Memo From %s Where D_Name=''%s''';
     nStr := Format(nStr, [sTable_SysDict, sFlag_NFStock]);
 
@@ -272,6 +283,7 @@ procedure TfFormOptions.SaveNFStock;
 var nStr: string;
     nIdx: Integer;
 begin
+
   with gNFStock do
   begin
     nStr := 'Delete From %s Where D_Name=''%s''';
@@ -298,6 +310,10 @@ var nIdx: Integer;
 begin
   with gNFStock do
   begin
+    if FYs then
+      cxbYs.ItemIndex := 0
+    else
+      cxbYs.ItemIndex := 1;
     ListStockNF.Clear;
     for nIdx:=Low(FItems) to High(FItems) do
      with FItems[nIdx] do
@@ -528,7 +544,17 @@ end;
 
 //Desc: 保存数据
 procedure TfFormOptions.BtnOKClick(Sender: TObject);
+var nStr,nValue: string;
 begin
+  if cxbYs.ItemIndex = 0 then
+    nValue := sFlag_Yes
+  else
+    nValue := sFlag_No;
+
+  nStr := 'Update %s Set D_Value=''%s'' Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, nValue, sFlag_StockIfYS]);
+  FDM.ExecuteSQL(nStr);
+
   with gSysParam do
     if FLoaded and (not FSaved) then SaveBaseParam;
   //xxxxx

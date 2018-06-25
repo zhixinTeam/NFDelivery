@@ -2,7 +2,7 @@ inherited fFormOptions: TfFormOptions
   Left = 348
   Top = 164
   Width = 526
-  Height = 410
+  Height = 400
   BorderStyle = bsSizeable
   Caption = #31995#32479#36873#39033
   Position = poMainFormCenter
@@ -11,16 +11,16 @@ inherited fFormOptions: TfFormOptions
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 518
-    Height = 383
+    Width = 510
+    Height = 362
     inherited BtnOK: TButton
-      Left = 372
-      Top = 350
+      Left = 364
+      Top = 329
       TabOrder = 1
     end
     inherited BtnExit: TButton
-      Left = 442
-      Top = 350
+      Left = 434
+      Top = 329
       TabOrder = 2
     end
     object wPage: TcxPageControl [2]
@@ -28,7 +28,7 @@ inherited fFormOptions: TfFormOptions
       Top = 36
       Width = 289
       Height = 193
-      ActivePage = Sheet2
+      ActivePage = Sheet1
       ParentColor = False
       ShowFrame = True
       Style = 9
@@ -69,18 +69,25 @@ inherited fFormOptions: TfFormOptions
         Caption = #26080#38656#21457#36135#21697#31181
         ImageIndex = 3
         object Label8: TLabel
-          Left = 12
+          Left = 7
           Top = 210
           Width = 54
           Height = 12
           Caption = #21697#31181#32534#21495':'
         end
         object Label9: TLabel
-          Left = 12
+          Left = 7
           Top = 235
           Width = 54
           Height = 12
           Caption = #21697#31181#21517#31216':'
+        end
+        object Label2: TLabel
+          Left = 313
+          Top = 214
+          Width = 54
+          Height = 12
+          Caption = #26159#21542#39564#25910':'
         end
         object ListStockNF: TcxMCListBox
           Left = 0
@@ -103,7 +110,7 @@ inherited fFormOptions: TfFormOptions
           TabOrder = 0
         end
         object EditStockId2: TcxTextEdit
-          Left = 70
+          Left = 65
           Top = 208
           ParentFont = False
           Properties.MaxLength = 50
@@ -111,7 +118,7 @@ inherited fFormOptions: TfFormOptions
           Width = 180
         end
         object BtnDel2: TcxButton
-          Left = 250
+          Left = 245
           Top = 206
           Width = 55
           Height = 22
@@ -120,7 +127,7 @@ inherited fFormOptions: TfFormOptions
           OnClick = BtnDel2Click
         end
         object BtnAdd2: TcxButton
-          Left = 250
+          Left = 245
           Top = 230
           Width = 55
           Height = 22
@@ -129,12 +136,24 @@ inherited fFormOptions: TfFormOptions
           OnClick = BtnAdd2Click
         end
         object EditStockName2: TcxTextEdit
-          Left = 70
+          Left = 65
           Top = 232
           ParentFont = False
           Properties.MaxLength = 50
           TabOrder = 4
           Width = 180
+        end
+        object cxbYs: TcxComboBox
+          Left = 375
+          Top = 209
+          ParentFont = False
+          Properties.DropDownListStyle = lsFixedList
+          Properties.Items.Strings = (
+            #26159
+            #21542)
+          TabOrder = 5
+          Text = #26159
+          Width = 56
         end
       end
       object Sheet2: TcxTabSheet

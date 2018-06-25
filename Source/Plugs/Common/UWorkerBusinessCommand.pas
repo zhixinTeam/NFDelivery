@@ -778,6 +778,8 @@ begin
   FListA.Clear;
   FListA.Text:= PackerDecodeStr(FIn.FExtParam);
 
+  WriteLog('批次获取(提货量):' + FListA.Values['Value']);
+
   if nUBatchAuto = sFlag_Yes then
   begin
     if FListA.Values['Type'] ='' then

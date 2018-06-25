@@ -61,7 +61,7 @@ type
 
   TWorkerBusinessBills = class(TMITDBWorker)
   private
-    FListA,FListB,FListC: TStrings;
+    FListA,FListB,FListC,FListD: TStrings;
     //list
     FIn: TWorkerBusinessCommand;
     FOut: TWorkerBusinessCommand;
@@ -147,6 +147,7 @@ begin
   FListA := TStringList.Create;
   FListB := TStringList.Create;
   FListC := TStringList.Create;
+  FListD := TStringList.Create;
   inherited;
 end;
 
@@ -155,6 +156,7 @@ begin
   FreeAndNil(FListA);
   FreeAndNil(FListB);
   FreeAndNil(FListC);
+  FreeAndNil(FListD);
   inherited;
 end;
 
@@ -2718,8 +2720,11 @@ begin
   end;
 
   {$IFDEF BatchVerifyValue}
+  FListD.Clear;
+  FListD.Values['Value'] := FloatToStr(nVal);
+
   if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
-      nBill.FStockNo, FloatToStr(nVal), @nOut) then
+      nBill.FStockNo, PackerEncodeStr(FListD.Text), @nOut) then
   begin
     nData := '获取读NC订单语句失败，错误信息为[ %s ]';
     nData := Format(nData, [nOut.FData]);
