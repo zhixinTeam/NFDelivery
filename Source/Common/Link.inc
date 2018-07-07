@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE JDNF}
+{$DEFINE HSNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -409,4 +409,32 @@
   //计数显示屏
   {$DEFINE JSDoubleChannel}
   //计数双通道
+{$ENDIF}
+
+//黄山
+{$IFDEF HSNF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+  {$DEFINE MITTruckProber}
+  //中间件控制车检
+  {$DEFINE TruckProberEx}
+  //车检光栅状态判断扩展(此开关启用时建议同时启用MITTruckProber开关)
+  {$DEFINE MultiReplay}
+  //计数器应答模式
+  {$DEFINE CardProvide}
+  //采用复磅模式
+  {$DEFINE ORDERVALUE}
+  //显示订单量
+  {$DEFINE DaiStepWuCha}
+  //包装阶梯误差
+  {$DEFINE DaiForceQueue}
+  //包装发货强制队列
+  {$DEFINE AllowMultiM}
+  //散装允许多次过重车
 {$ENDIF}

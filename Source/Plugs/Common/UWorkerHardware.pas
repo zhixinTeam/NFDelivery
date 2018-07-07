@@ -753,7 +753,11 @@ begin
     Exit;
   end;
 
+  {$IFNDEF TruckProberEx}
   if gProberManager.IsTunnelOK(FIn.FData) then
+  {$ELSE}
+  if gProberManager.IsTunnelOKEx(FIn.FData) then
+  {$ENDIF}
        FOut.FData := sFlag_Yes
   else FOut.FData := sFlag_No;
 

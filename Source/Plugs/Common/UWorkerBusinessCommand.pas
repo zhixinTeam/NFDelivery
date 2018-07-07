@@ -127,6 +127,7 @@ type
     function GetOrderList(var nData:string):Boolean;
     //获取销售订单列表
     function GetPurchaseList(var nData:string):Boolean;
+    function GetPurchaseListNC(var nData:string):Boolean;
     //获取采购订单列表
     function VerifyPrintCode(var nData: string): Boolean;
     //验证喷码信息
@@ -401,6 +402,8 @@ begin
     cBC_WebChat_WaitingForloading:Result := GetWaitingForloading(nData);        //微信平台接口：获取排队信息
 
     cBC_WebChat_DLSaveShopInfo   :Result := DLSaveShopInfo(nData);              //微信平台
+    cBC_GetPurchaseList          :Result := GetPurchaseListNC(nData);                   //获取采购订单列表
+
    else
     begin
       Result := False;
@@ -3354,6 +3357,96 @@ begin
           Values['Maxnumber'] := FieldBYName('NPLANNUM').AsString;
 
           Values['SaleArea']  := FieldByName('vdef10').AsString;
+        end;
+
+        FListC.Add(FListB.Values['PK']);
+        FListA.Add(PackerEncodeStr(FListB.Text));
+      finally
+        Next;
+      end;
+    end;
+
+    if not CallMe(cBC_GetOrderGYValue, PackerEncodeStr(FListC.Text),
+       sFlag_Yes, @nOut) then
+    begin
+      nData := '获取订单[ %s ]已收量失败.';
+      nData := Format(nData, [FListC.Text]);
+      Exit;
+    end;
+
+    FListC.Clear;
+    FListC.Text := PackerDecodeStr(nOut.FData);
+    //订单已发货量
+
+    for nIdx := FListA.Count - 1 downto 0 do
+    begin
+      FListB.Text := PackerDecodeStr(FListA[nIdx]);
+      nSQL := FListC.Values[FListB.Values['PK']];
+      if not IsNumber(nSQL, True) then Continue;
+
+      nVal := Float2Float(StrToFloat(FListB.Values['Maxnumber']) -
+              StrToFloat(nSQL), cPrecision, False);
+      FListB.Values['Maxnumber'] := FloatToStr(nVal);
+      if FloatRelation(nVal, 0, rtLE) then
+            FListA.Delete(nIdx)
+      else  FListA[nIdx] := PackerEncodeStr(FListB.Text);
+    end;
+
+    FOut.FData := PackerEncodeStr(FListA.Text);
+    Result := True;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+end;
+
+function TWorkerBusinessCommander.GetPurchaseListNC(var nData:string):Boolean;
+var nSQL: string;
+    nVal: Double;
+    nIdx: Integer;
+    nWorker: PDBWorker;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
+
+  FListA.Clear;
+  FListA.Values['NoDate'] := sFlag_Yes;
+  if not CallMe(cBC_GetSQLQueryOrder, '201', PackerEncodeStr(FListA.Text), @nOut) then
+  begin
+    nData := 'GetOrderList获取NC采购订单语句失败';
+    Exit;
+  end;
+
+  nWorker := nil;
+  try
+    with gDBConnManager.SQLQuery(nOut.FData, nWorker, sFlag_DB_NC) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nData := Format('未查询到客户编号[ %s ]对应的采购订单信息.', [FIn.FData]);
+        Exit;
+      end;
+
+      First;
+      FListA.Clear;
+      FListC.Clear;
+      //剩余量信息
+
+      while not Eof do
+      try
+        with FListB do
+        begin
+          Values['ProvID']   := FieldByName('custcode').AsString;
+          Values['ProvName'] := FieldByName('custname').AsString;
+          Values['PK']       := FieldByName('pk_meambill').AsString;
+
+          Values['ZhiKa']    := FieldByName('VBILLCODE').AsString;
+          Values['ZKDate']   := FieldByName('TMakeTime').AsString;
+
+          Values['StockNo']  := FieldByName('invcode').AsString;
+          Values['StockName']:= FieldByName('invname').AsString;
+          Values['Maxnumber']:= FieldBYName('NPLANNUM').AsString;
+
+          Values['SaleArea'] := FieldByName('vdef10').AsString;
         end;
 
         FListC.Add(FListB.Values['PK']);

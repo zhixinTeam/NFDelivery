@@ -2338,6 +2338,12 @@ begin
     if (FStatus = sFlag_TruckFH) or (FNextStatus = sFlag_TruckFH) then Continue;
     //未装或已装
 
+    {$IFDEF AllowMultiM}
+    if FStatus = sFlag_TRuckBFM then
+      FStatus := sFlag_TruckFH;
+    //过重后允许返回
+    {$ENDIF}
+
     nStr := '车辆[ %s ]下一状态为:[ %s ],无法放灰.';
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
 

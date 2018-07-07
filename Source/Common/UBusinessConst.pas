@@ -125,6 +125,8 @@ const
   cBC_WebChat_WaitingForloading= $0129;   //微信平台接口：获取工厂待装车辆信息
   cBC_WebChat_DLSaveShopInfo   = $0130;   //微信平台接口：发起同步
 
+  cBC_GetPurchaseList          = $0131;   //获取NC采购订单列表
+
 type
   PWorkerQueryFieldData = ^TWorkerQueryFieldData;
   TWorkerQueryFieldData = record

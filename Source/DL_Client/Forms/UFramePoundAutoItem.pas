@@ -449,6 +449,11 @@ begin
     if (FStatus <> sFlag_TruckBFP) and (FNextStatus = sFlag_TruckZT) then
       FNextStatus := sFlag_TruckBFP;
     //状态校正
+    {$IFDEF AllowMultiM}
+    if (FStatus = sFlag_TruckBFM) then
+      FNextStatus := sFlag_TruckBFM;
+    //允许多次过重
+    {$ENDIF}
 
     FSelected := (FNextStatus = sFlag_TruckBFP) or
                  (FNextStatus = sFlag_TruckBFM);
@@ -1301,12 +1306,16 @@ begin
   {$IFDEF MITTruckProber}
     if (not CheckGS.Checked) and (not IsTunnelOK(FPoundTunnel.FID)) then
   {$ELSE}
+    {$IFNDEF TruckProberEx}
     if (not CheckGS.Checked) and (not gProberManager.IsTunnelOK(FPoundTunnel.FID)) then
+    {$ELSE}
+    if (not CheckGS.Checked) and (not gProberManager.IsTunnelOKEx(FPoundTunnel.FID)) then
+    {$ENDIF}
   {$ENDIF}
   begin
     nStr := '车辆未停到位,请移动车辆.';
     PlayVoice(nStr);
-
+    WriteSysLog(nStr);
     InitSamples;
     LEDDisplay(nStr);
     Exit;
