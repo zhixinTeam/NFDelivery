@@ -4,6 +4,7 @@
 *******************************************************************************}
 unit UFormBatcodeJ;
 
+{$I Link.inc}
 interface
 
 uses
@@ -64,6 +65,8 @@ type
     cxLabel5: TcxLabel;
     dxLayout1Item21: TdxLayoutItem;
     dxLayout1Group12: TdxLayoutGroup;
+    EditLineGroup: TcxComboBox;
+    dxLayout1Item22: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditStockPropertiesEditValueChanged(Sender: TObject);
@@ -85,7 +88,8 @@ implementation
 
 {$R *.dfm}
 uses
-  ULibFun, UMgrControl, UDataModule, UAdjustForm, UFormCtrl, USysDB, USysConst;
+  ULibFun, UMgrControl, UDataModule, UAdjustForm, UFormCtrl, USysDB, USysConst,
+  USysBusiness;
 
 class function TfFormBatcode.CreateForm(const nPopedom: string;
   const nParam: Pointer): TWinControl;
@@ -95,7 +99,7 @@ begin
   if Assigned(nParam) then
        nP := nParam
   else Exit;
-  
+
   with TfFormBatcode.Create(Application) do
   try
     if nP.FCommand = cCmd_AddData then
@@ -110,7 +114,7 @@ begin
       FRecordID := nP.FParamA;
     end;
 
-    LoadFormData(FRecordID); 
+    LoadFormData(FRecordID);
     nP.FCommand := cCmd_ModalResult;
     nP.FParamA := ShowModal;
   finally
@@ -145,6 +149,18 @@ begin
   FDM.FillStringsData(EditType.Properties.Items, nStr, 1, '.');
   AdjustCXComboBoxItem(EditType, False);
 
+  {$IFDEF AutoGetLineGroup}
+  dxLayout1Item22.Visible := True;
+  nStr := 'D_Value=Select D_Value,D_Memo From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_ZTLineGroup]);
+
+  FDM.FillStringsData(EditLineGroup.Properties.Items, nStr, 1, '.');
+  AdjustCXComboBoxItem(EditLineGroup, False);
+  {$ELSE}
+  dxLayout1Item22.Visible := False;
+  EditLineGroup.Text := '';
+  {$ENDIF}
+
   if nID <> '' then
   begin
     nStr := 'Select * From %s Where R_ID=%s';
@@ -172,6 +188,10 @@ begin
       EditLow.Text := FieldByName('B_Low').AsString;
       EditHigh.Text := FieldByName('B_High').AsString;
       EditWeek.Text := FieldByName('B_Interval').AsString;
+      {$IFDEF AutoGetLineGroup}
+      nStr := FieldByName('B_LineGroup').AsString;
+      SetCtrlData(EditLineGroup, nStr);
+      {$ENDIF}
       Check2.Checked := FieldByName('B_AutoNew').AsString = sFlag_Yes;
     end;
   end;
@@ -200,9 +220,15 @@ begin
     nHint := 'ÇëÑ¡ÔñÎïÁÏ';
     if not Result then Exit;
 
+    {$IFDEF AutoGetLineGroup}
+    nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s'' And B_LineGroup = ''%s''';
+    nStr := Format(nStr, [sTable_Batcode, GetCtrlData(EditStock),
+            GetCtrlData(EditType), GetCtrlData(EditLineGroup)]);
+    {$ELSE}
     nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s''';
     nStr := Format(nStr, [sTable_Batcode, GetCtrlData(EditStock),
             GetCtrlData(EditType)]);
+    {$ENDIF}
 
     with FDM.QueryTemp(nStr) do
     if RecordCount > 0 then
@@ -288,7 +314,9 @@ begin
           SF('B_Value', EditValue.Text, sfVal),
           SF('B_Interval', EditWeek.Text, sfVal),
           SF('B_LastDate', sField_SQLServer_Now, sfVal),
-
+          {$IFDEF AutoGetLineGroup}
+          SF('B_LineGroup', GetCtrlData(EditLineGroup)),
+          {$ENDIF}
           SF('B_Batcode', EditBatcode.Text),
           SF('B_Type', GetCtrlData(EditType))
           ], sTable_Batcode, nStr, FRecordID = '');

@@ -62,6 +62,7 @@ type
     FNormal     : Integer;     //正常总装
     FBuCha      : Integer;     //补差总装
     FStarted    : Boolean;     //是否启动
+    FTruckEx    : string;      //格式化车牌
   end;
 
   TQueueParam = record
@@ -138,6 +139,7 @@ type
     //车辆判定
     procedure TruckOutofQueue(const nTruck: string);
     //车辆出队
+    function GetStockType(nBill: string):string;
   public
     constructor Create(AOwner: TTruckQueueManager);
     destructor Destroy; override;
@@ -219,7 +221,7 @@ type
     //属性相关
     property OnChanged: TQueueChanged read FOnQueueChanged write FOnQueueChanged;
     //事件相关
-    
+
   end;
 
 var
@@ -846,7 +848,7 @@ begin
         end;
       //装车线支持该品种
     end else
-    begin 
+    begin
       for nIdx:=Low(FMatchItems) to High(FMatchItems) do
        with FMatchItems[nIdx] do
         if FLineNo = nLineNo then
@@ -1169,6 +1171,7 @@ end;
 procedure TTruckQueueDBReader.LoadTruckPool;
 var nStr: string;
     nIdx: Integer;
+    nTruckEx: string;
 begin
   if (FParam.FPoundQueue) and (FParam.FDelayQueue) then
   begin                                      //增加厂内依据过皮时间排队 20131114
@@ -1222,7 +1225,7 @@ begin
         {$ELSE}
         FLineGroup  := '';
         {$ENDIF}
-        
+
         FBill       := FieldByName('T_Bill').AsString;
         FHKBills    := FieldByName('T_HKBills').AsString;
         FIsVIP      := FieldByName('T_VIP').AsString;
@@ -1248,6 +1251,10 @@ begin
 
         FQueueCard  := '';
         FQueueNext  := '';
+
+        nTruckEx := GetStockType(FieldByName('T_Bill').AsString);
+
+        FTruckEx := nTruckEx + FieldByName('T_Truck').AsString;
       end;
 
       Inc(nIdx);
@@ -1786,6 +1793,59 @@ begin
       nList[nIdx] := nTruck;
     end;
   end;
+end;
+
+function TTruckQueueDBReader.GetStockType(nBill: string):string;
+var nStr, nStockMap: string;
+    nWorker: PDBWorker;
+begin
+  {$IFDEF StockTypeByPackStyle}
+  Result := '普通';
+  nStr := 'Select L_PackStyle From %s Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, nBill]);
+
+  nWorker := nil;
+  try
+    with gDBConnManager.SQLQuery(nStr, nWorker) do
+    if RecordCount > 0 then
+    begin
+      nStr := Trim(Fields[0].AsString);
+      if nStr = 'Z' then Result := '纸袋';
+      if nStr = 'R' then Result := '早强';
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+
+  Exit;
+  {$ENDIF}
+
+  Result := 'C';
+  nStr := 'Select L_PackStyle, L_StockBrand, L_StockNO From %s ' +
+          'Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, nBill]);
+
+  nWorker := nil;
+  try
+    with gDBConnManager.SQLQuery(nStr, nWorker) do
+    if RecordCount > 0 then
+    begin
+      Result := UpperCase(GetPinYinOfStr(Fields[0].AsString + Fields[1].AsString));
+      nStockMap := Fields[2].AsString + Fields[0].AsString + Fields[1].AsString;
+
+      nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_StockBrandShow, nStockMap]);
+      with gDBConnManager.WorkerQuery(nWorker, nStr) do
+      if RecordCount > 0 then
+      begin
+        Result := Fields[0].AsString;
+      end;
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+
+  Result := Copy(Result, 1, 2);
 end;
 
 initialization

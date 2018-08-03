@@ -161,6 +161,10 @@ begin
             SF('P_PoundName', FListA.Values['PoundName']),
             {$ENDIF}
 
+            {$IFDEF RemoteSnap}
+            SF('P_SnapTruck',   FListA.Values['SnapTruck']),
+            {$ENDIF}
+
             SF('P_Truck', nTruck),
             SF('P_Status', sFlag_TruckNone),
             SF('P_Man', FIn.FBase.FFrom.FUser),
@@ -348,6 +352,10 @@ begin
       FMuiltiType := sFlag_No;
       //默认为首次过磅
 
+      {$IFDEF RemoteSnap}
+      FSnapTruck  := FieldByName('P_SnapTruck').AsString = sFlag_Yes;
+      {$ENDIF}
+
       FStatus     := FieldByName('P_Status').AsString;
       FNextStatus := FieldByName('P_NextStatus').AsString;
       if (FStatus = sFlag_TruckNone) or (FNextStatus = sFlag_TruckIn) then      //原材料不进厂也可刷卡过磅
@@ -375,7 +383,7 @@ begin
       begin
         FMuiltiType := sFlag_Yes;
         //触发复磅业务
-        
+
         with FPData do
         begin
           FValue    := FieldByName('P_BFPValue2').AsFloat;

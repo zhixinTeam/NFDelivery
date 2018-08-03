@@ -27,7 +27,7 @@ inherited fFrameReqSale: TfFrameReqSale
       Top = 93
       Hint = 'T.custname'
       ParentFont = False
-      TabOrder = 4
+      TabOrder = 5
       Width = 115
     end
     object EditName: TcxButtonEdit [1]
@@ -49,7 +49,7 @@ inherited fFrameReqSale: TfFrameReqSale
       Top = 93
       Hint = 'T.invname'
       ParentFont = False
-      TabOrder = 5
+      TabOrder = 6
       Width = 115
     end
     object cxTextEdit3: TcxTextEdit [3]
@@ -57,11 +57,11 @@ inherited fFrameReqSale: TfFrameReqSale
       Top = 93
       Hint = 'T.NPLANNUM'
       ParentFont = False
-      TabOrder = 6
+      TabOrder = 7
       Width = 115
     end
     object EditDate: TcxButtonEdit [4]
-      Left = 437
+      Left = 615
       Top = 36
       ParentFont = False
       Properties.Buttons = <
@@ -70,7 +70,7 @@ inherited fFrameReqSale: TfFrameReqSale
           Kind = bkEllipsis
         end>
       Properties.OnButtonClick = EditDatePropertiesButtonClick
-      TabOrder = 2
+      TabOrder = 3
       Width = 175
     end
     object EditID: TcxButtonEdit [5]
@@ -92,8 +92,21 @@ inherited fFrameReqSale: TfFrameReqSale
       Top = 93
       Hint = 'T.VBILLCODE'
       ParentFont = False
-      TabOrder = 3
+      TabOrder = 4
       Width = 115
+    end
+    object EditTruck: TcxButtonEdit [7]
+      Left = 431
+      Top = 36
+      Properties.Buttons = <
+        item
+          Default = True
+          Kind = bkEllipsis
+        end>
+      Properties.OnButtonClick = EditNamePropertiesButtonClick
+      TabOrder = 2
+      OnKeyPress = OnCtrlKeyPress
+      Width = 121
     end
     inherited dxGroup1: TdxLayoutGroup
       inherited GroupSearch1: TdxLayoutGroup
@@ -105,6 +118,11 @@ inherited fFrameReqSale: TfFrameReqSale
         object dxLayout1Item2: TdxLayoutItem
           Caption = #23458#25143#21517#31216':'
           Control = EditName
+          ControlOptions.ShowBorder = False
+        end
+        object dxLayout1Item6: TdxLayoutItem
+          Caption = #36710#29260#21495#30721
+          Control = EditTruck
           ControlOptions.ShowBorder = False
         end
         object dxLayout1Item5: TdxLayoutItem

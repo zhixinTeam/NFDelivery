@@ -4,6 +4,7 @@
 *******************************************************************************}
 unit UFormChangeTunnel;
 
+{$I Link.inc}
 interface
 
 uses
@@ -35,6 +36,8 @@ type
     FParam: PFormCommandParam;
     FZTTunnelID: string;
     //’ªµ¿±‡∫≈
+    FOldStockNo: string;
+    //ŒÔ¡œ±‡∫≈
 
     procedure InitFormData;
   public
@@ -87,6 +90,7 @@ begin
   try
     FParam := nParam;
     FZTTunnelID := FParam.FParamA;
+    FOldStockNo := FParam.FParamB;
     InitFormData;
 
     FParam.FCommand := cCmd_ModalResult;
@@ -139,9 +143,13 @@ begin
 
   nSelect := -1;
   ListZTLines.Clear;
-  
+
   for nIdx:=Low(gZTLines) to High(gZTLines) do
   begin
+    {$IFDEF FilterTunnel}
+    if gZTLines[nIdx].FStock <> FOldStockNo then
+      Continue;
+    {$ENDIF}
     with ListZTLines.Items.Add, gZTLines[nIdx] do
     begin
       if FID = FZTTunnelID then nSelect:=Index;

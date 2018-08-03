@@ -4,6 +4,7 @@
 *******************************************************************************}
 unit UFrameReqSale;
 
+{$I Link.inc}
 interface
 
 uses
@@ -32,6 +33,8 @@ type
     EditID: TcxButtonEdit;
     dxLayout1Item8: TdxLayoutItem;
     cxTextEdit4: TcxTextEdit;
+    EditTruck: TcxButtonEdit;
+    dxLayout1Item6: TdxLayoutItem;
     procedure EditNamePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditDatePropertiesButtonClick(Sender: TObject;
@@ -112,6 +115,15 @@ begin
     FListA.Text := 'Filter=' + EncodeBase64(FWhere);
     InitFormData('');
   end else
+  if Sender = EditTruck then
+  begin
+    EditTruck.Text := Trim(EditTruck.Text);
+    if EditTruck.Text = '' then Exit;
+
+    FWhere := Format('cvehicle Like ''%%%s%%''', [EditTruck.Text]);
+    FListA.Text := 'Filter=' + EncodeBase64(FWhere);
+    InitFormData('');
+  end else
 
   if Sender = EditID then
   begin
@@ -134,6 +146,14 @@ begin
     Exit;
   end;
 
+  {$IFDEF JudgeOrder}
+  if not IsOrderCanLade(SQLQuery.FieldByName('PK_MEAMBILL').AsString) then
+  begin
+    ShowMsg('订单正在使用,无法开单', sHint);
+    Exit;
+  end;
+  {$ENDIF}
+
   with nOrder,SQLQuery do
   begin
     FOrders := FieldByName('PK_MEAMBILL').AsString;
@@ -147,6 +167,7 @@ begin
     FValue:= FieldByName('NPLANNUM').AsFloat;
     FStockArea := FieldByName('areaclname').AsString;
     FStockBrand:= FieldByName('vdef5').AsString;
+    FBm:= FieldByName('bm').AsString;
 
     FListA.Text := nOrder.FOrders;
     if not GetOrderFHValue(FListA) then

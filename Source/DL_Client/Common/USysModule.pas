@@ -45,6 +45,8 @@ uses
   //船运离岸单
   UFormpoundAdjust,
   //磅单勘误
+  UFrameQuerySaleDetailView, UFramePoundQueryView,
+  //发货明细EX
   UFramePoundMtAuto,UFramePoundMtAutoItem,UFramePoundMtQuery,
   //码头抓斗秤
   UFrameBillHaulBack, UFormBillHaulBack, UFormGetPoundHis

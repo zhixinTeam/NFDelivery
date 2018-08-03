@@ -178,6 +178,13 @@ begin
   dxLayout1Item14.Visible := False;
   PrintHY.Checked := False;
   {$ENDIF}
+
+  {$IFDEF RemoteSnap}
+  dxLayout1Item15.Visible := True;
+  {$ELSE}
+  dxLayout1Item15.Visible := False;
+  SnapTruck.Checked := False;
+  {$ENDIF}
   
   AdjustCtrlData(Self);
 end;
@@ -375,6 +382,8 @@ begin
 
     Values['PoundStation'] := GetCtrlData(EditPoundStation);
     Values['PoundName']    := EditPoundStation.Text;
+
+    Values['bm'] := FOrder.FBm;
 
     if PrintHY.Checked  then
          Values['PrintHY'] := sFlag_Yes

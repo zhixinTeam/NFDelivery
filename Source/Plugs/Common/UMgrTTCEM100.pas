@@ -75,6 +75,8 @@ type
     FKeepPeer: Boolean;        //保持模式
     FKeepLast: Int64;          //上次活动
     FClient : TIdTCPClient;    //通信链路
+    FPost   : string;
+    FDept   : string;//所属门岗
   end;
 
   TM100ReaderThreadType = (ttAll, ttActive);

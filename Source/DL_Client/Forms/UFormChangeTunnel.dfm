@@ -10,17 +10,17 @@ inherited fFormChangeTunnel: TfFormChangeTunnel
   PixelsPerInch = 96
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
-    Width = 478
-    Height = 539
+    Width = 470
+    Height = 528
     inherited BtnOK: TButton
-      Left = 332
-      Top = 506
+      Left = 324
+      Top = 495
       Caption = #30830#23450
       TabOrder = 4
     end
     inherited BtnExit: TButton
-      Left = 402
-      Top = 506
+      Left = 394
+      Top = 495
       TabOrder = 5
     end
     object ListInfo: TcxMCListBox [2]
@@ -46,7 +46,7 @@ inherited fFormChangeTunnel: TfFormChangeTunnel
     end
     object ListZTLines: TcxListView [3]
       Left = 23
-      Top = 258
+      Top = 324
       Width = 350
       Height = 115
       Columns = <

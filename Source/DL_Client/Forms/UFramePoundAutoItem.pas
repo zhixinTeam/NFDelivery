@@ -67,6 +67,7 @@ type
     Timer_SaveFail: TTimer;
     ckCloseAll: TCheckBox;
     CheckGS: TCheckBox;
+    Button1: TButton;
     procedure Timer1Timer(Sender: TObject);
     procedure Timer2Timer(Sender: TObject);
     procedure Timer_ReadCardTimer(Sender: TObject);
@@ -74,6 +75,7 @@ type
     procedure Timer_SaveFailTimer(Sender: TObject);
     procedure ckCloseAllClick(Sender: TObject);
     procedure EditBillKeyPress(Sender: TObject; var Key: Char);
+    procedure Button1Click(Sender: TObject);
   private
     { Private declarations }
     FIsWeighting, FIsSaving: Boolean;
@@ -167,6 +169,8 @@ begin
 
   FEmptyPoundInit := 0;
   FLastCardDone   := GetTickCount;
+  if gSysParam.FIsAdmin then
+    Button1.Visible := True;
 end;
 
 procedure TfFrameAutoPoundItem.OnDestroyFrame;
@@ -422,7 +426,25 @@ begin
     WriteLog(nVoice);
     SetUIData(True);
     Exit;
-  end;  
+  end;
+
+  {$IFDEF RemoteSnap}
+  if not VerifySnapTruck(FLastReader, nBills[0], nHint) then
+  begin
+    nVoice := '%s车牌识别失败,请移动车辆或联系管理员';
+    nVoice := Format(nVoice, [nBills[0].FTruck]);
+    PlayVoice(nHint);
+    LEDDisplay('车牌识别失败,请移动车辆');
+    WriteSysLog(nHint);
+    SetUIData(True);
+    Exit;
+  end
+  else
+  begin
+    if nHint <> '' then
+      WriteSysLog(nHint);
+  end;
+  {$ENDIF}
 
   nLast := -1;
   if GetTruckLastTime(nBills[0].FTruck, nLast) and (nLast > 0) and 
@@ -1443,8 +1465,17 @@ begin
 end;
 
 procedure TfFrameAutoPoundItem.LEDDisplay(const nStrtext: string);
+var nIdx: Integer;
 begin
   WriteSysLog(Format('LEDDisplay:%s.%s', [FPoundTunnel.FID, nStrtext]));
+  for nIdx := 1 to 3 do
+  begin
+    {$IFDEF MITTruckProber}
+    ProberShowTxt(FPoundTunnel.FID, nStrtext);
+    {$ELSE}
+    gProberManager.ShowTxt(FPoundTunnel.FID, nStrtext);
+    {$ENDIF}
+  end;
   if Assigned(FPoundTunnel.FOptions) And
      (UpperCase(FPoundTunnel.FOptions.Values['LEDEnable'])='Y') then
     gDisplayManager.Display(FPoundTunnel.FID, nStrtext);
@@ -1498,6 +1529,11 @@ begin
     EditBill.Text := Trim(EditBill.Text);
     LoadBillItems(EditBill.Text);
   end;
+end;
+
+procedure TfFrameAutoPoundItem.Button1Click(Sender: TObject);
+begin
+  LEDDisplay('12345');
 end;
 
 end.

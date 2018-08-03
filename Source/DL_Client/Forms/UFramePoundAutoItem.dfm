@@ -595,6 +595,16 @@ inherited fFrameAutoPoundItem: TfFrameAutoPoundItem
     TabOrder = 25
     OnClick = ckCloseAllClick
   end
+  object Button1: TButton
+    Left = 152
+    Top = 8
+    Width = 147
+    Height = 25
+    Caption = #20018#21475#23567#23631#21457#36865'12345'
+    TabOrder = 26
+    Visible = False
+    OnClick = Button1Click
+  end
   object Timer1: TTimer
     OnTimer = Timer1Timer
     Left = 420

@@ -299,6 +299,7 @@ begin
   nStr := 'Select * From %s Where D_ID=''%s''';
   nStr := Format(nStr, [sTable_ProvDtl, nOrder]);
 
+  WriteLog('采购单号SQL:'+nStr);
   nDS := FDM.SQLQuery(nStr, FDM.SQLQuery1);
   if not Assigned(nDS) then Exit;
 
@@ -397,6 +398,7 @@ begin
   nStr := Format(nStr, [nMoney, sTable_Bill, sTable_PoundLog, nBill]);
   {$ENDIF}
 
+  WriteLog('交货单号SQL:'+nStr);
   nDS := FDM.SQLQuery(nStr, FDM.SQLQuery1);
   if not Assigned(nDS) then Exit;
 

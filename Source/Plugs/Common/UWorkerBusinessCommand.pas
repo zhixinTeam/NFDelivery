@@ -10,9 +10,45 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, ZnMD5, ULibFun, UFormCtrl, USysLoger,
-  USysDB, UMITConst, UBase64, UWorkerClientWebChat, UMgrQueue;
+  USysDB, UMITConst, UBase64, UWorkerClientWebChat, UMgrQueue
+  {$IFDEF HardMon}, UMgrHardHelper, UWorkerHardware{$ENDIF};
 
 type
+
+  TLineItem = record
+      FID: string;//通道号
+      FGroupID: string;//所属分组
+      FTruckCount: Integer;//通道车辆数量
+    end;
+
+  TLineItems = array of TLineItem;
+  //装车线列表
+
+  PZTLineItem = ^TZTLineItem;
+  TZTLineItem = record
+    FID       : string;      //编号
+    FName     : string;      //名称
+    FStock    : string;      //品名
+    FWeight   : Integer;     //袋重
+    FValid    : Boolean;     //是否有效
+    FPrinterOK: Boolean;     //喷码机
+  end;
+
+  PZTTruckItem = ^TZTTruckItem;
+  TZTTruckItem = record
+    FTruck    : string;      //车牌号
+    FLine     : string;      //通道
+    FBill     : string;      //提货单
+    FValue    : Double;      //提货量
+    FDai      : Integer;     //袋数
+    FTotal    : Integer;     //总数
+    FInFact   : Boolean;     //是否进厂
+    FIsRun    : Boolean;     //是否运行
+  end;
+
+  TZTLineItems = array of TZTLineItem;
+  TZTTruckItems = array of TZTTruckItem;
+
   TBusWorkerQueryField = class(TBusinessWorkerBase)
   private
     FIn: TWorkerQueryFieldData;
@@ -52,6 +88,8 @@ type
   private
     FListA,FListB,FListC: TStrings;
     //list
+    FLineItems: TLineItems;
+    //订单列表
     FIn: TWorkerBusinessCommand;
     FOut: TWorkerBusinessCommand;
   protected
@@ -72,7 +110,7 @@ type
     //保存车辆到Truck表
     function Login(var nData: string):Boolean;
     function LogOut(var nData: string): Boolean;
-    //登录注销，用于移动终端 
+    //登录注销，用于移动终端
     function GetStockBatcode(var nData: string): Boolean;
     //批次编号管理
 
@@ -108,6 +146,8 @@ type
     //使用暗扣规则
     function VerifySnapTruck(var nData: string): Boolean;
     //车牌比对
+    function AutoGetLineGroup(var nData: string): Boolean;
+    //获取装车线分组
 
     //-------------------由DL向Web商城发起查询----------------------------------
     function SendEventMsg(var nData:string):boolean;
@@ -125,6 +165,8 @@ type
 
     //-------------------由Web商城向DL发起查询----------------------------------
     function GetOrderList(var nData:string):Boolean;
+    //获取销售订单列表
+    function GetOrderListNC(var nData:string):Boolean;
     //获取销售订单列表
     function GetPurchaseList(var nData:string):Boolean;
     function GetPurchaseListNC(var nData:string):Boolean;
@@ -387,7 +429,8 @@ begin
    cBC_GetStationPoundData : Result := GetStationPoundData(nData);
    cBC_SaveStationPoundData: Result := SaveStationPoundData(nData);
    cBC_VerifySnapTruck     : Result := VerifySnapTruck(nData);
-   
+   cBC_AutoGetLineGroup    : Result := AutoGetLineGroup(nData);
+
    cBC_WebChat_SendEventMsg     :Result := SendEventMsg(nData);                //微信平台接口：发送模板消息
     cBC_WebChat_GetCustomerInfo  :Result := GetCustomerInfo(nData);             //微信平台接口：获取商城账户注册信息
     cBC_WebChat_EditShopCustom   :Result := EditShopCustom(nData);              //微信平台接口：新增商城用户
@@ -402,8 +445,8 @@ begin
     cBC_WebChat_WaitingForloading:Result := GetWaitingForloading(nData);        //微信平台接口：获取排队信息
 
     cBC_WebChat_DLSaveShopInfo   :Result := DLSaveShopInfo(nData);              //微信平台
-    cBC_GetPurchaseList          :Result := GetPurchaseListNC(nData);                   //获取采购订单列表
-
+    cBC_GetPurchaseList          :Result := GetPurchaseListNC(nData);           //获取采购订单列表
+    cBC_GetOrderList             :Result := GetOrderListNC(nData);              //获取销售订单列表
    else
     begin
       Result := False;
@@ -697,7 +740,7 @@ end;
 //Parm: 物料编号[FIn.FData]
 //Desc: 获取指定物料号的编号
 function TWorkerBusinessCommander.GetStockBatcode(var nData: string): Boolean;
-var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType: string;
+var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType, nLineGroup: string;
     nBatchNew, nSelect: string;
     nVal, nPer: Double;
     nInt, nInc: Integer;
@@ -794,9 +837,19 @@ begin
       nType := sFlag_TypeCommon;
     //default
 
+    {$IFDEF AutoGetLineGroup}
+    if FListA.Values['LineGroup'] = '' then
+          nLineGroup := sFlag_TypeZT
+    else  nLineGroup := FListA.Values['LineGroup'];
+    nStr := 'Select *,%s as ServerNow From %s Where B_Stock=''%s'' ' +
+            'And B_Type=''%s'' And B_LineGroup = ''%s''';
+    nStr := Format(nStr, [sField_SQLServer_Now,sTable_Batcode,FIn.FData,nType,
+                          nLineGroup]);
+    {$ELSE}
     nStr := 'Select *,%s as ServerNow From %s Where B_Stock=''%s'' ' +
             'And B_Type=''%s''';
     nStr := Format(nStr, [sField_SQLServer_Now,sTable_Batcode,FIn.FData,nType]);
+    {$ENDIF}
 
     with gDBConnManager.WorkerQuery(FDBConn, nStr) do
     begin
@@ -1092,7 +1145,8 @@ begin
      'pk_meambill_b as pk_meambill,VBILLCODE,VBILLTYPE,COPERATOR,user_name,' +  //订单表头
      'TMAKETIME,NPLANNUM,cvehicle,vbatchcode,unitname,areaclname,t1.vdef10,' +  //订单表体(t1.vdef10:矿点)
      't1.vdef5,t1.pk_cumandoc,custcode,cmnecode,custname,t_cd.def30,'+          //客商信息(t1.vdef5:品牌)
-     't1.vdef2,t_def.docname,' +                                                //客商2(t1.vdef2:区域流向PK;docname:区域流向名)
+     't1.vdef2,t_def.docname,t1.vdef9 as bm,' +                                 //客商2(t1.vdef2:区域流向PK;docname:区域流向名)
+     't1.vdef17 as ispd,t1.vdef18 as wxzhuid,t2.vdef15 as wxziid,' +
      'invcode,invname,invtype ' +                                               //物料
      'from meam_bill t1 ' +
      '  left join sm_user t_su on t_su.cuserid=t1.coperator ' +
@@ -1210,6 +1264,27 @@ begin
   begin
     FOut.FData := FOut.FData + Format(' And invcode=''%s''', [nStr]);
     //按物料编号
+  end;
+
+  nStr := FListA.Values['SDTID'];
+  if nStr <> '' then
+  begin
+    FOut.FData := FOut.FData + Format(' And t1.vdef8=''%s''', [nStr]);
+    //按身份证号
+  end;
+
+  nStr := FListA.Values['Password'];
+  if nStr <> '' then
+  begin
+    FOut.FData := FOut.FData + Format(' And t1.vdef19=''%s''', [nStr]);
+    //按取卡密码
+  end;
+
+  nStr := FListA.Values['AICMID'];
+  if nStr <> '' then
+  begin
+    FOut.FData := FOut.FData + Format(' And t1.vdef9=''%s''', [nStr]);
+    //按自助办卡密码
   end;
 
   nStr := FListA.Values['Filter'];
@@ -3265,6 +3340,8 @@ begin
           Values['Maxnumber'] := FieldBYName('NPLANNUM').AsString;
 
           Values['SaleArea']  := FieldByName('areaclname').AsString;
+
+          Values['BM']  := FieldByName('bm').AsString;
         end;
 
         FListC.Add(FListB.Values['PK']);
@@ -3410,6 +3487,7 @@ begin
 
   FListA.Clear;
   FListA.Values['NoDate'] := sFlag_Yes;
+  FListA.Values['AICMID'] := FIn.FData;
   if not CallMe(cBC_GetSQLQueryOrder, '201', PackerEncodeStr(FListA.Text), @nOut) then
   begin
     nData := 'GetOrderList获取NC采购订单语句失败';
@@ -3460,6 +3538,108 @@ begin
        sFlag_Yes, @nOut) then
     begin
       nData := '获取订单[ %s ]已收量失败.';
+      nData := Format(nData, [FListC.Text]);
+      Exit;
+    end;
+
+    FListC.Clear;
+    FListC.Text := PackerDecodeStr(nOut.FData);
+    //订单已发货量
+
+    for nIdx := FListA.Count - 1 downto 0 do
+    begin
+      FListB.Text := PackerDecodeStr(FListA[nIdx]);
+      nSQL := FListC.Values[FListB.Values['PK']];
+      if not IsNumber(nSQL, True) then Continue;
+
+      nVal := Float2Float(StrToFloat(FListB.Values['Maxnumber']) -
+              StrToFloat(nSQL), cPrecision, False);
+      FListB.Values['Maxnumber'] := FloatToStr(nVal);
+      if FloatRelation(nVal, 0, rtLE) then
+            FListA.Delete(nIdx)
+      else  FListA[nIdx] := PackerEncodeStr(FListB.Text);
+    end;
+
+    FOut.FData := PackerEncodeStr(FListA.Text);
+    Result := True;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+end;
+
+//Date: 2018/7/11
+//Parm: 身份证ID,取卡密码
+//Desc: 获取可用订单列表
+function TWorkerBusinessCommander.GetOrderListNC(var nData:string):Boolean;
+var nSQL: string;
+    nVal: Double;
+    nIdx: Integer;
+    nWorker: PDBWorker;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
+  if (Trim(FIn.FData) = '') and (Trim(FIn.FExtParam) = '') then Exit;
+
+  FListA.Clear;
+  FListA.Values['NoDate'] := sFlag_Yes;
+  FListA.Values['SDTID'] := FIn.FData;
+  FListA.Values['Password'] := FIn.FExtParam;
+  if not CallMe(cBC_GetSQLQueryOrder, '101', PackerEncodeStr(FListA.Text), @nOut) then
+  begin
+    nData := 'GetOrderList获取NC销售订单语句失败';
+    Exit;
+  end;
+
+  nWorker := nil;
+  try
+    with gDBConnManager.SQLQuery(nOut.FData, nWorker, sFlag_DB_NC) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nData := Format('未查询到客户编号[ %s ]对应的订单信息1.', [FIn.FData]);
+        Exit;
+      end;
+
+      First;
+      FListA.Clear;
+      FListC.Clear;
+      //剩余量信息
+
+      while not Eof do
+      try
+        with FListB do
+        begin
+          Values['CusID'] := FieldByName('custcode').AsString;
+          Values['CusName'] := FieldByName('custname').AsString;
+          Values['PK']    := FieldByName('pk_meambill').AsString;
+
+          Values['ZhiKa'] := FieldByName('VBILLCODE').AsString;
+          Values['ZKDate']:= FieldByName('TMakeTime').AsString;
+
+          Values['StockNo']   := FieldByName('invcode').AsString;
+          Values['StockName'] := FieldByName('invname').AsString;
+          Values['Maxnumber'] := FieldBYName('NPLANNUM').AsString;
+          Values['Truck']  := FieldByName('cvehicle').AsString;
+          Values['SaleArea']  := FieldByName('areaclname').AsString;
+          Values['Brand']  := FieldByName('vdef5').AsString;
+          Values['BM']  := FieldByName('bm').AsString;
+
+          Values['ispd']  := FieldByName('ispd').AsString;
+          Values['wxzhuid']  := FieldByName('wxzhuid').AsString;
+          Values['wxziid']  := FieldByName('wxziid').AsString;
+        end;
+
+        FListC.Add(FListB.Values['PK']);
+        FListA.Add(PackerEncodeStr(FListB.Text));
+      finally
+        Next;
+      end;
+    end;
+
+    if not CallMe(cBC_GetOrderFHValue, PackerEncodeStr(FListC.Text),
+       sFlag_Yes, @nOut) then
+    begin
+      nData := '获取订单[ %s ]已发量失败.';
       nData := Format(nData, [FListC.Text]);
       Exit;
     end;
@@ -3920,19 +4100,19 @@ end;
 //Desc: 抓拍比对
 function TWorkerBusinessCommander.VerifySnapTruck(var nData: string): Boolean;
 var nStr: string;
-    nTruck, nBill, nPos, nSnapTruck, nEvent, nToPost: string;
+    nTruck, nBill, nPos, nSnapTruck, nEvent, nDept, nPicName: string;
     nUpdate, nNeedManu: Boolean;
 begin
   Result := False;
   FListA.Text := FIn.FData;
   nSnapTruck:= '';
   nEvent:= '' ;
-  nToPost := sFlag_DepMenGang;
   nNeedManu := False;
 
   nTruck := FListA.Values['Truck'];
   nBill  := FListA.Values['Bill'];
   nPos   := FListA.Values['Pos'];
+  nDept  := FListA.Values['Dept'];
 
   nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s''';
   nStr := Format(nStr, [sTable_SysDict, sFlag_TruckInNeedManu,nPos]);
@@ -3943,35 +4123,57 @@ begin
     if RecordCount > 0 then
     begin
       nNeedManu := FieldByName('D_Value').AsString = sFlag_Yes;
-    end
-    else
-    begin
-      Result := True;
-      nData := '车辆[ %s ]';
-      nData := Format(nData, [nTruck]);
-      FOut.FData := nData;
-      Exit;
     end;
   end;
-
-  nStr := 'Select D_Value From %s Where D_Name=''%s''';
-  nStr := Format(nStr, [sTable_SysDict, sFlag_SnapInfoPost]);
+  WriteLog('车牌识别:'+'岗位:'+nPos+'事件接收部门:'+nDept);
+  {$IFDEF SaveAllSnap}
+  nStr := 'Select * From %s Where S_ID=''%s''';
+  nStr := Format(nStr, [sTable_SnapTruck, nPos]);
   //xxxxx
 
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
   begin
     if RecordCount > 0 then
-    begin
-      nToPost := FieldByName('D_Value').AsString;
-    end;
+      nSnapTruck := FieldByName('S_Truck').AsString;
   end;
+
+  nStr := 'Select * From %s Where E_ID=''%s''';
+  nStr := Format(nStr, [sTable_ManualEvent, nBill+sFlag_ManualE]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount > 0 then
+      nUpdate := True
+    else
+      nUpdate := False;
+  end;
+
+  nEvent := '车辆[ %s ]车牌识别成功,抓拍车牌号:[ %s ]';
+  nEvent := Format(nEvent, [nTruck,nSnapTruck]);
+
+  nStr := SF('E_ID', nBill+sFlag_ManualE);
+  nStr := MakeSQLByStr([
+          SF('E_ID', nBill+sFlag_ManualE),
+          SF('E_Key', nTruck),
+          SF('E_From', nDept),
+          SF('E_Result', 'I'),
+          SF('E_ManDeal', 'Auto'),
+          SF('E_DateDeal', sField_SQLServer_Now, sfVal),
+          SF('E_Event', nEvent),
+          SF('E_Solution', sFlag_Solution_YN),
+          SF('E_Departmen', nDept),
+          SF('E_Date', sField_SQLServer_Now, sfVal)
+          ], sTable_ManualEvent, nStr, (not nUpdate));
+  //xxxxx
+  gDBConnManager.WorkerExec(FDBConn, nStr);
+  {$ENDIF}
 
   nData := '车辆[ %s ]车牌识别失败';
   nData := Format(nData, [nTruck]);
   FOut.FData := nData;
   //default
 
-  nStr := 'Select * From %s Where S_ID=''%s''';
+  nStr := 'Select * From %s Where S_ID=''%s'' order by R_ID desc ';
   nStr := Format(nStr, [sTable_SnapTruck, nPos]);
   //xxxxx
 
@@ -3986,16 +4188,29 @@ begin
       FOut.FData := nData;
       Exit;
     end;
-    nSnapTruck := FieldByName('S_Truck').AsString;
-    if Pos(nTruck,nSnapTruck) > 0 then
+
+    nPicName := '';
+
+    First;
+
+    while not Eof do
     begin
-      Result := True;
-      nData := '车辆[ %s ]车牌识别成功,抓拍车牌号:[ %s ]';
-      nData := Format(nData, [nTruck,nSnapTruck]);
-      FOut.FData := nData;
-      Exit;
+      nSnapTruck := FieldByName('S_Truck').AsString;
+      if nPicName = '' then//默认取最新一次抓拍
+        nPicName := FieldByName('S_PicName').AsString;
+      if Pos(nTruck,nSnapTruck) > 0 then
+      begin
+        Result := True;
+        nPicName := FieldByName('S_PicName').AsString;
+        //取得匹配成功的图片路径
+        nData := '车辆[ %s ]车牌识别成功,抓拍车牌号:[ %s ]';
+        nData := Format(nData, [nTruck,nSnapTruck]);
+        FOut.FData := nData;
+        Exit;
+      end;
+      //车牌识别成功
+      Next;
     end;
-    //车牌识别成功
   end;
 
   nStr := 'Select * From %s Where E_ID=''%s''';
@@ -4042,17 +4257,170 @@ begin
   nStr := SF('E_ID', nBill+sFlag_ManualE);
   nStr := MakeSQLByStr([
           SF('E_ID', nBill+sFlag_ManualE),
-          SF('E_Key', nTruck),
-          SF('E_From', sFlag_DepMenGang),
+          SF('E_Key', nPicName),
+          SF('E_From', nPos),
           SF('E_Result', 'Null', sfVal),
 
           SF('E_Event', nEvent),
           SF('E_Solution', sFlag_Solution_YN),
-          SF('E_Departmen', nToPost),
+          SF('E_Departmen', nDept),
           SF('E_Date', sField_SQLServer_Now, sfVal)
           ], sTable_ManualEvent, nStr, (not nUpdate));
   //xxxxx
   gDBConnManager.WorkerExec(FDBConn, nStr);
+end;
+
+//Date: 2018-07-31
+//Desc: 获取装车线分组
+function TWorkerBusinessCommander.AutoGetLineGroup(var nData: string): Boolean;
+var nStr: string;
+    nIdx, nI: Integer;
+    nSLine,nSTruck: string;
+    nOut: TWorkerBusinessCommand;
+    nLines: TZTLineItems;
+    nTrucks: TZTTruckItems;
+begin
+  Result := False;
+  FListC.Clear;
+  WriteLog('开始自动匹配分组...');
+  SetLength(FLineItems, 0);
+  nStr := 'Select Z_ID, Z_Group From %s Where Z_StockNo=''%s'' '+
+          'and Z_Valid=''%s'' order by R_ID ';
+  nStr := Format(nStr, [sTable_ZTLines, FIn.FData, sFlag_Yes]);
+  WriteLog('查询符合条件通道sql:'+nStr);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount < 1 then
+    begin
+      FOut.FData := '';
+      Result := True;
+      Exit;
+    end;
+
+    SetLength(FLineItems,RecordCount);
+
+    nIdx := 0;
+    First;
+
+    while not Eof do
+    begin
+      with FLineItems[nIdx] do
+      begin
+        FID := Fields[0].AsString;
+        FGroupID := Fields[1].AsString;
+        FTruckCount := 0;
+      end;
+
+      Inc(nIdx);
+      Next;
+    end;
+
+    FOut.FData := Fields[0].AsString;
+    Result := True;
+  end;
+  {$IFDEF HardMon}
+  if not THardwareCommander.CallMe(cBC_GetQueueData, sFlag_No, '', @nOut) then
+  begin
+    begin
+      WriteLog('读取队列信息失败');
+      FOut.FData := '';
+      Result := True;
+      Exit;
+    end;
+  end;
+
+  FListA.Clear;
+  FListB.Clear;
+
+  FListA.Text := PackerDecodeStr(nOut.FData);
+  nSLine := FListA.Values['Lines'];
+  nSTruck := FListA.Values['Trucks'];
+
+  FListA.Text := PackerDecodeStr(nSLine);
+  SetLength(nLines, FListA.Count);
+
+  for nIdx:=0 to FListA.Count - 1 do
+  with nLines[nIdx],FListB do
+  begin
+    FListB.Text := PackerDecodeStr(FListA[nIdx]);
+    FID       := Values['ID'];
+    FName     := Values['Name'];
+    FStock    := Values['Stock'];
+    FValid    := Values['Valid'] <> sFlag_No;
+    FPrinterOK:= Values['Printer'] <> sFlag_No;
+
+    if IsNumber(Values['Weight'], False) then
+         FWeight := StrToInt(Values['Weight'])
+    else FWeight := 1;
+  end;
+
+  FListA.Text := PackerDecodeStr(nSTruck);
+  SetLength(nTrucks, FListA.Count);
+
+  for nIdx:=0 to FListA.Count - 1 do
+  with nTrucks[nIdx],FListB do
+  begin
+    FListB.Text := PackerDecodeStr(FListA[nIdx]);
+    FTruck    := Values['Truck'];
+    FLine     := Values['Line'];
+    FBill     := Values['Bill'];
+
+    if IsNumber(Values['Value'], True) then
+         FValue := StrToFloat(Values['Value'])
+    else FValue := 0;
+
+    FInFact   := Values['InFact'] = sFlag_Yes;
+    FIsRun    := Values['IsRun'] = sFlag_Yes;
+
+    if IsNumber(Values['Dai'], False) then
+         FDai := StrToInt(Values['Dai'])
+    else FDai := 0;
+
+    if IsNumber(Values['Total'], False) then
+         FTotal := StrToInt(Values['Total'])
+    else FTotal := 0;
+  end;
+
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  begin
+    for nI:=Low(FLineItems) to High(FLineItems) do
+      if nTrucks[nIdx].FLine = FLineItems[nI].FID then
+      begin
+        Inc(FLineItems[nI].FTruckCount);
+      end;
+  end;
+
+  for nIdx := Low(FLineItems) to High(FLineItems) do
+  begin
+    WriteLog('通道'+FLineItems[nIdx].FID +
+             '车辆数量为:'+IntToStr(FLineItems[nIdx].FTruckCount) +
+             '所属分组:'+FLineItems[nIdx].FGroupID);
+  end;
+
+  nI := 0;
+  for nIdx := Low(FLineItems) to High(FLineItems) do
+  begin
+    try
+      if nIdx = Low(FLineItems) then
+      begin
+       nI:= FLineItems[nIdx].FTruckCount;
+       FOut.FData := FLineItems[nIdx].FGroupID;
+      end
+      else
+      begin
+        if FLineItems[nIdx].FTruckCount < nI then
+          FOut.FData := FLineItems[nIdx].FGroupID;
+      end;
+    except
+    end;
+  end;
+  Result := True;
+  //查询负载最小生产线
+  {$ELSE}
+  FOut.FData := '';
+  Result := True;
+  {$ENDIF}
 end;
 
 initialization

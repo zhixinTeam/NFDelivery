@@ -47,11 +47,14 @@ type
     dxLayout1Item16: TdxLayoutItem;
     EditPoundStation: TcxComboBox;
     dxLayout1Item17: TdxLayoutItem;
+    SnapTruck: TcxCheckBox;
+    dxLayout1Item18: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
     procedure ComPort1RxChar(Sender: TObject; Count: Integer);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditCardKeyPress(Sender: TObject; var Key: Char);
     procedure EditTruckKeyPress(Sender: TObject; var Key: Char);
+    procedure FormCreate(Sender: TObject);
   private
     { Private declarations }
     FBuffer: string;
@@ -365,6 +368,10 @@ begin
     
     Values['PoundStation'] := GetCtrlData(EditPoundStation);
     Values['PoundName']    := EditPoundStation.Text;
+
+    if SnapTruck.Checked  then
+         Values['SnapTruck'] := sFlag_Yes
+    else Values['SnapTruck'] := sFlag_No;
   end;
 
   nID := SaveCardProvie(PackerEncodeStr(FListA.Text));
@@ -390,6 +397,16 @@ begin
     EditTruck.Text := nP.FParamB;
     EditTruck.SelectAll;
   end;
+end;
+
+procedure TfFormCardProvide.FormCreate(Sender: TObject);
+begin
+  {$IFDEF RemoteSnap}
+  dxLayout1Item18.Visible := True;
+  {$ELSE}
+  dxLayout1Item18.Visible := False;
+  SnapTruck.Checked := False;
+  {$ENDIF}
 end;
 
 initialization

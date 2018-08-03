@@ -38,6 +38,16 @@ type
     class function PackerName: string; override;
   end;
 
+  TMITBusinessWebChatNC = class(TMITPackerBase)
+  protected
+    procedure DoPackIn(const nData: Pointer); override;
+    procedure DoUnPackIn(const nData: Pointer); override;
+    procedure DoPackOut(const nData: Pointer); override;
+    procedure DoUnPackOut(const nData: Pointer); override;
+  public
+    class function PackerName: string; override;
+  end;
+
 implementation
 
 //Date: 2012-3-7
@@ -223,7 +233,66 @@ begin
   end;
 end;
 
+//------------------------------------------------------------------------------
+class function TMITBusinessWebChatNC.PackerName: string;
+begin
+  Result := sBus_BusinessWebchatNC;
+end;
+
+procedure TMITBusinessWebChatNC.DoPackIn(const nData: Pointer);
+begin
+  inherited;
+
+  with FStrBuilder,PWorkerWebChatData(nData)^ do
+  begin
+    Values['Command'] := IntToStr(FCommand);
+    Values['Data']    := PackerEncode(FData);
+    Values['ExtParam']  := PackerEncode(FExtParam);
+    Values['RemoteUL']  := PackerEncode(FRemoteUL);
+  end;
+end;
+
+procedure TMITBusinessWebChatNC.DoUnPackIn(const nData: Pointer);
+begin
+  inherited;
+
+  with FStrBuilder,PWorkerWebChatData(nData)^ do
+  begin
+    PackerDecode(Values['Command'], FCommand);
+    PackerDecode(Values['Data'], FData);
+    PackerDecode(Values['ExtParam'], FExtParam);
+    PackerDecode(Values['RemoteUL'], FRemoteUL);
+  end;
+end;
+
+procedure TMITBusinessWebChatNC.DoPackOut(const nData: Pointer);
+begin
+  inherited;
+
+  with FStrBuilder,PWorkerWebChatData(nData)^ do
+  begin
+    Values['Command'] := IntToStr(FCommand);
+    Values['Data']    := PackerEncode(FData);
+    Values['ExtParam']  := PackerEncode(FExtParam);
+    Values['RemoteUL']  := PackerEncode(FRemoteUL);
+  end;
+end;
+
+procedure TMITBusinessWebChatNC.DoUnPackOut(const nData: Pointer);
+begin
+  inherited;
+
+  with FStrBuilder,PWorkerWebChatData(nData)^ do
+  begin
+    PackerDecode(Values['Command'], FCommand);
+    PackerDecode(Values['Data'], FData);
+    PackerDecode(Values['ExtParam'], FExtParam);
+    PackerDecode(Values['RemoteUL'], FRemoteUL);
+  end;
+end;
+
 initialization
   gBusinessPackerManager.RegistePacker(TMITQueryField, sPlug_ModuleBus);
   gBusinessPackerManager.RegistePacker(TMITBusinessCommand, sPlug_ModuleBus);
+  gBusinessPackerManager.RegistePacker(TMITBusinessWebChatNC, sPlug_ModuleBus);
 end.

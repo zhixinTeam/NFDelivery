@@ -48,8 +48,9 @@ const
   cFI_FrameZTDispatch   = $0037;                     //栈台调度
   cFI_FramePoundManual  = $0038;                     //手动称重
   cFI_FramePoundAuto    = $0039;                     //自动称重
-  cFI_FramePoundMtAuto  = $0040;                   //码头抓斗秤
-  cFI_FramePoundMtQuery = $0041;                   //码头抓斗秤查询
+  cFI_FramePoundMtAuto  = $0040;                     //码头抓斗秤
+  cFI_FramePoundMtQuery = $0041;                     //码头抓斗秤查询
+  cFI_FramePoundQueryView = $0042;                   //磅房查询
 
   cFI_FrameTruckQuery   = $0050;                     //车辆查询
   cFI_FrameCusAccountQuery = $0051;                  //客户账户
@@ -95,6 +96,7 @@ const
   cFI_FrameCardProPQuery= $0153;                     //磅房查询
   cFI_FrameCardTmpPQuery= $0154;                     //磅房查询
   cFI_FrameBillHaulback = $0155;                     //回空查询
+  cFI_FrameSaleDetailQueryView = $0160;              //发货明细Ex
 
   cFI_FormMemo          = $1000;                     //备注窗口
   cFI_FormBackup        = $1001;                     //数据备份
@@ -360,6 +362,7 @@ begin
   AddMenuModuleItem('MAIN_E05', cFI_FramePoundAuto);
   AddMenuModuleItem('MAIN_E06', cFI_FramePoundMtAuto);
   AddMenuModuleItem('MAIN_E07', cFI_FramePoundMtQuery);
+  AddMenuModuleItem('MAIN_E08', cFI_FramePoundQueryView);
 
   AddMenuModuleItem('MAIN_F01', cFI_FormLadDai, mtForm);
   AddMenuModuleItem('MAIN_F03', cFI_FrameZhanTaiQuery);
@@ -393,6 +396,7 @@ begin
   AddMenuModuleItem('MAIN_L12', cFI_FrameProvDetail);
   AddMenuModuleItem('MAIN_L13', cFI_FrameCardProPQuery);
   AddMenuModuleItem('MAIN_L14', cFI_FrameCardTmpPQuery);
+  AddMenuModuleItem('MAIN_L15', cFI_FrameSaleDetailQueryView);
 
   AddMenuModuleItem('MAIN_M01', cFI_FrameProvider);
   AddMenuModuleItem('MAIN_M02', cFI_FrameMaterails);

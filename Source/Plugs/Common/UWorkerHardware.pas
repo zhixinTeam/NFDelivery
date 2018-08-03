@@ -51,6 +51,8 @@ type
     //切换调度模式
     function PoundCardNo(var nData: string): Boolean;
     //读取磅站卡号
+    function PoundReaderInfo(var nData: string): Boolean;
+    //读取磅站读卡器岗位、部门
     function LoadQueue(var nData: string): Boolean;
     //读取车辆队列
     function ExecuteSQL(var nData: string): Boolean;
@@ -70,6 +72,7 @@ type
     //计数器业务
     function TruckProbe_IsTunnelOK(var nData: string): Boolean;
     function TruckProbe_TunnelOC(var nData: string): Boolean;
+    function TruckProbe_ShowTxt(var nData: string): Boolean;
     //车辆检测控制器业务
     function OpenDoorByReader(var nData: string): Boolean;
     //通过读卡器打开道闸
@@ -238,6 +241,7 @@ begin
   case FIn.FCommand of
    cBC_ChangeDispatchMode   : Result := ChangeDispatchMode(nData);
    cBC_GetPoundCard         : Result := PoundCardNo(nData);
+   cBC_GetPoundReaderInfo   : Result := PoundReaderInfo(nData);
    cBC_GetQueueData         : Result := LoadQueue(nData);
    cBC_SaveCountData        : Result := SaveDaiNum(nData);
    cBC_RemoteExecSQL        : Result := ExecuteSQL(nData);
@@ -255,6 +259,7 @@ begin
    cBC_TunnelOC             : Result := TruckProbe_TunnelOC(nData);
    cBC_OpenDoorByReader     : Result := OpenDoorByReader(nData);
    cBC_PlayVoice            : Result := PlayNetVoice(nData);
+   cBC_ShowTxt              : Result := TruckProbe_ShowTxt(nData);
    else
     begin
       Result := False;
@@ -458,7 +463,7 @@ end;
 //Parm: 交货单[FIn.FData];通道号[FIn.FExtParam]
 //Desc: 在指定通道上喷码
 function THardwareCommander.PrintCode(var nData: string): Boolean;
-var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck: string;
+var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck,nBm: string;
     nPrefixLen, nIDLen: Integer;
 begin
   Result := True;
@@ -492,8 +497,13 @@ begin
     if (nPrefixLen<0) or (nIDLen<0) then Exit;
     //无提货单配置
 
+    {$IFDEF BMPrintCode}
+    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck,L_Bm From %s ' +
+            'Where L_ID=''%s''';
+    {$ELSE}
     nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck From %s ' +
             'Where L_ID=''%s''';
+    {$ENDIF}
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
 
     with gDBConnManager.WorkerQuery(FDBConn, nStr) do
@@ -512,6 +522,9 @@ begin
       nSeal     := FieldByName('L_Seal').AsString;
       nCusCode  := FieldByName('L_CusCode').AsString;
       nTruck    := FieldByName('L_Truck').AsString;
+      {$IFDEF BMPrintCode}
+      nBm       := FieldByName('L_Bm').AsString;
+      {$ENDIF}
       //xxxxx
 
       {$IFDEF PrintChinese}
@@ -536,7 +549,7 @@ begin
 
       if nCode = '' then
         nCode := Copy(nBill, nPrefixLen + 1, nIDLen - nPrefixLen);
-      //如果为空,则喷流水号  
+      //如果为空,则喷流水号
 
       nCode := nCode + FillString(nCusCode, 2, ' ');
       nCode := nCode + FillString(nSeal, 6, '0');
@@ -558,6 +571,26 @@ begin
       //崇左、金鲤喷码规则：水泥批次号+客户代码(bd_cumandoc.def30)+车号后四位
       nCode := nSeal + FillString(nCusCode, 2, ' ');
       nCode := nCode + Copy(nTruck, Length(nTruck) - 3, 4);
+      {$ENDIF}
+
+      {$IFDEF HSNF}
+      //黄山喷码规则：中文编码(vdef9)+日期+水泥批次号
+      if Length(nBm) = 4 then
+      begin
+        nCode := '@6@R' + Copy(nBm,1,2) + '@R' + Copy(nBm,3,2);
+        nCode := nCode + FormatDateTime('YYYY',Now)
+                 + Copy(nBill, nPrefixLen + 3, 4) + nSeal;
+      end
+      else
+      begin
+        with FOut.FBase do
+        begin
+          FResult := False;
+          FErrCode := 'E.00';
+          FErrDesc := Format('交货单[ %s ]编码[ %s ]不符合规则.', [FIn.FData, nBm]);
+          Exit;
+        end;
+      end;
       {$ENDIF}
     end;
   end;
@@ -870,6 +903,32 @@ begin
     gBusinessPackerManager.RelasePacker(nPacker);
     gBusinessWorkerManager.RelaseWorker(nWorker);
   end;
+end;
+
+//Date: 2018-02-27
+//Parm: 通道号[FIn.FData] 发送内容[FIn.FExt]
+//Desc: 向指定通道的显示屏发送内容
+function THardwareCommander.TruckProbe_ShowTxt(var nData: string): Boolean;
+begin
+  Result := True;
+  if not Assigned(gProberManager) then Exit;
+
+  gProberManager.ShowTxt(FIn.FData,FIn.FExtParam);
+
+  nData := Format('ShowTxt -> %s:%s', [FIn.FData, FIn.FExtParam]);
+  WriteLog(nData);
+end;
+
+//Date: 2018-08-03
+//Parm: 读卡器ID[FIn.FData];
+//Desc: 获取指定磅站读卡器上的岗位、部门
+function THardwareCommander.PoundReaderInfo(var nData: string): Boolean;
+var nStr, nPoundID: string;
+    nIdx: Integer;
+begin
+  Result := True;
+
+  FOut.FData := gHardwareHelper.GetReaderInfo(FIn.FData, FOut.FExtParam);
 end;
 
 

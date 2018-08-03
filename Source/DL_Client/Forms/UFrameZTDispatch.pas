@@ -4,6 +4,7 @@
 *******************************************************************************}
 unit UFrameZTDispatch;
 
+{$I Link.inc}
 interface
 
 uses
@@ -276,7 +277,12 @@ begin
   nInt := Integer(nNode.Data);
   with FTrucks[nInt] do
   begin
+    {$IFDEF LEDShowTruckEx}
+    nNode.Text := FTruckEx;
+    {$ELSE}
     nNode.Text := FTruck;
+    {$ENDIF}
+
     nNode.Shape := shRoundRect;
 
     if FInFact then

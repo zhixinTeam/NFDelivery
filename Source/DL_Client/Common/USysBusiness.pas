@@ -45,6 +45,7 @@ type
     FTotal    : Integer;     //总数
     FInFact   : Boolean;     //是否进厂
     FIsRun    : Boolean;     //是否运行
+    FTruckEx  : string;      //格式化车牌号
   end;
 
   TZTLineItems = array of TZTLineItem;
@@ -65,6 +66,7 @@ type
     FBatchCode: string;   //批次号
     FOrders: string;      //订单号(可多张)
     FValue: Double;       //可用量
+    FBm: string;          //喷码发送的中文编码
   end;
 
 //------------------------------------------------------------------------------
@@ -210,7 +212,7 @@ function PrintShipLeaveCGReport(nID: string; const nAsk: Boolean): Boolean;
 function SetTruckRFIDCard(nTruck: string; var nRFIDCard: string;
   var nIsUse: string; nOldCard: string=''): Boolean;
 //指定道装车
-function SelectTruckTunnel(var nNewTunnel: string): Boolean;
+function SelectTruckTunnel(var nNewTunnel, nStockNo: string): Boolean;
 
 function SaveWeiXinAccount(const nItem:TWeiXinAccount; var nWXID:string): Boolean;
 function DelWeiXinAccount(const nWXID:string): Boolean;
@@ -237,6 +239,8 @@ function IsTunnelOK(const nTunnel: string): Boolean;
 //查询通道光栅是否正常
 procedure TunnelOC(const nTunnel: string; const nOpen: Boolean);
 //控制通道红绿灯开合
+procedure ProberShowTxt(const nTunnel, nText: string);
+//车检发送小屏
 function PlayNetVoice(const nText,nCard,nContent: string): Boolean;
 //经中间件播发语音
 function OpenDoorByReader(const nReader: string; nType: string = 'Y'): Boolean;
@@ -282,7 +286,19 @@ function GetStockTruckSort(nID: string=''): string;
 function PrintHuaYanReport(const nHID: string; const nAsk: Boolean): Boolean;
 function PrintHeGeReport(const nHID: string; const nAsk: Boolean): Boolean;
 //化验单,合格证
+function IsOrderCanLade(nOrderID: string): Boolean;
+//查询此订单是否可以开卡
+function InitSaleViewData: Boolean;
+function MakeSaleViewData(nID: string; nMValue: Double): Boolean;
+function GetStockType(nBill: string):string;
 
+function IsStationAutoP(const nTruck: string; var nPValue: Double;
+                        nMsg: string): Boolean;
+//火车衡自动获取最近5条历史皮重
+function VeriFySnapTruck(const nReader: string; nBill: TLadingBillItem;
+                         var nMsg: string): Boolean;
+function ReadPoundReaderInfo(const nReader: string; var nDept: string): string;
+//读取nReader岗位、部门
 implementation
 
 //Desc: 记录日志
@@ -987,13 +1003,14 @@ begin
       Values['BatchCode'] := FBatchCode;
       Values['Orders']    := PackerEncodeStr(FOrders);
       Values['Value']     := FloatToStr(FValue);
+      Values['bm']        := FBm;
     end;
 
     Result := EncodeBase64(nList.Text);
     //编码
   finally
     nList.Free;
-  end;   
+  end;
 end;
 
 //Date: 2014-12-23
@@ -1024,6 +1041,7 @@ begin
       FBatchCode := Values['BatchCode'];
       FOrders := PackerDecodeStr(Values['Orders']);
       FValue := StrToFloat(Values['Value']);
+      FBm := Values['bm'];
     end;
   finally
     nList.Free;
@@ -1202,6 +1220,8 @@ begin
       FTruck    := Values['Truck'];
       FLine     := Values['Line'];
       FBill     := Values['Bill'];
+
+      FTruckEx  := GetStockType(Values['Bill']) + Values['Truck'];
 
       if IsNumber(Values['Value'], True) then
            FValue := StrToFloat(Values['Value'])
@@ -2113,10 +2133,11 @@ end;
 //Date: 2015/1/18
 //Parm: 装车通道
 //Desc: 选择的新通道
-function SelectTruckTunnel(var nNewTunnel: string): Boolean;
+function SelectTruckTunnel(var nNewTunnel, nStockNo: string): Boolean;
 var nP: TFormCommandParam;
 begin
   nP.FParamA := nNewTunnel;
+  nP.FParamB := nStockNo;
   CreateBaseFormItem(cFI_FormChangeTunnel, '', @nP);
 
   nNewTunnel := nP.FParamB;
@@ -2247,6 +2268,15 @@ begin
   else nStr := sFlag_No;
 
   CallBusinessHardware(cBC_TunnelOC, nTunnel, nStr, @nOut);
+end;
+
+procedure ProberShowTxt(const nTunnel, nText: string);
+var nOut: TWorkerBusinessCommand;
+begin
+  {$IFNDEF HardMon}
+  Exit;
+  {$ENDIF}
+  CallBusinessHardware(cBC_ShowTxt, nTunnel, nText, @nOut);
 end;
 
 //Date: 2016-01-06
@@ -2702,10 +2732,405 @@ begin
   if gSysParam.FPrinterHYDan = '' then
        FDR.Report1.PrintOptions.Printer := 'My_Default_HYPrinter'
   else FDR.Report1.PrintOptions.Printer := gSysParam.FPrinterHYDan;
-  
+
   FDR.Dataset1.DataSet := FDM.SqlTemp;
   FDR.ShowReport;
   Result := FDR.PrintSuccess;
+end;
+
+//Date: 2018-07-10
+//Parm: 销售订单号
+//Desc: 查询此订单是否可以开卡
+function IsOrderCanLade(nOrderID: string): Boolean;
+var nStr: string;
+begin
+  Result := True;
+  nStr := 'Select L_ID From %s Where L_ZhiKa in (''%s'')';
+  nStr := nStr + ' And (L_OutFact is null or L_Status <> ''%s'') ';
+  nStr := Format(nStr, [sTable_Bill, nOrderID, sFlag_TruckOut]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount >0 then
+    begin
+      WriteLog('销售订单验证Sql:'+ nStr);
+      Result := False;
+    end;
+  end;
+end;
+
+//Desc: 生成销售特定字段数据(特定使用)
+function MakeSaleViewData(nID: string; nMValue: Double): Boolean;
+var nStr: string;
+    nList : TStrings;
+    nIdx: Integer;
+begin
+  Result := False;
+  nList := TStringList.Create;
+  try
+    nStr := 'Update %s Set L_MValueview = %.2f Where L_ID=''%s''';
+    nStr := Format(nStr, [sTable_Bill, nMValue, nID]);
+    nList.Add(nStr);
+
+    nStr := 'Update %s Set L_Valueview = L_MValueView - L_PValue Where L_ID=''%s''';
+    nStr := Format(nStr, [sTable_Bill, nID]);
+    nList.Add(nStr);
+
+    nStr := 'Update a set a.P_MValueView = b.L_MValueView,'+
+            ' a.P_ValueView = b.L_ValueView from %s a, %s b'+
+            ' where  a.P_Bill = b.L_ID and b.L_ID=''%s''';
+    nStr := Format(nStr, [sTable_PoundLog, sTable_Bill, nID]);
+    nList.Add(nStr);
+
+    FDM.ADOConn.BeginTrans;
+    try
+      for nIdx:=0 to nList.Count - 1 do
+      begin
+        FDM.ExecuteSQL(nList[nIdx]);
+      end;
+      FDM.ADOConn.CommitTrans;
+    except
+      On E: Exception do
+      begin
+        Result := False;
+        FDM.ADOConn.RollbackTrans;
+        WriteLog(E.Message);
+      end;
+    end;
+    Result := True;
+  finally
+    nList.Free;
+  end;
+end;
+
+//Desc: 销售特定字段初始化(特定使用)
+function InitSaleViewData: Boolean;
+var nID: string;
+    nStr: string;
+    nList : TStrings;
+    nIdx: Integer;
+begin
+  nList := TStringList.Create;
+  try
+    nStr := 'Select top 1000 L_ID , L_MValue From %s ' +
+            'Where L_MValueView is null';
+    nStr := Format(nStr, [sTable_Bill]);
+
+    with FDM.QueryTemp(nStr) do
+    if RecordCount > 0 then
+    begin
+      First;
+
+      while not Eof do
+      begin
+        nID := Fields[0].AsString;
+
+        if Fields[1].AsString = '' then
+        begin
+          Next;
+          Continue;
+        end;
+
+        nStr := 'Update %s Set L_MValueview = L_MValue Where L_ID=''%s''';
+        nStr := Format(nStr, [sTable_Bill, nID]);
+        nList.Add(nStr);
+
+        nStr := 'Update %s Set L_Valueview = L_Value Where L_ID=''%s''';
+        nStr := Format(nStr, [sTable_Bill, nID]);
+        nList.Add(nStr);
+
+        nStr := 'Update a set a.P_MValueView = b.L_MValueView,'+
+                ' a.P_ValueView = b.L_ValueView from %s a, %s b'+
+                ' where  a.P_Bill = b.L_ID and b.L_ID=''%s''';
+        nStr := Format(nStr, [sTable_PoundLog, sTable_Bill, nID]);
+        nList.Add(nStr);
+
+        Next;
+      end;
+    end;
+
+    FDM.ADOConn.BeginTrans;
+    try
+      for nIdx:=0 to nList.Count - 1 do
+      begin
+        FDM.ExecuteSQL(nList[nIdx]);
+      end;
+      FDM.ADOConn.CommitTrans;
+    except
+      On E: Exception do
+      begin
+        Result := False;
+        FDM.ADOConn.RollbackTrans;
+        WriteLog(E.Message);
+      end;
+    end;
+  finally
+    nList.Free;
+  end;
+end;
+
+function GetStockType(nBill: string):string;
+var nStr, nStockMap: string;
+begin
+  {$IFDEF StockTypeByPackStyle}
+  Result := '普通';
+  nStr := 'Select L_PackStyle From %s Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, nBill]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+  begin
+    nStr := Trim(Fields[0].AsString);
+    if nStr = 'Z' then Result := '纸袋';
+    if nStr = 'R' then Result := '早强';
+  end;
+
+  Exit;
+  {$ENDIF}
+
+  Result := 'C';
+  nStr := 'Select L_PackStyle, L_StockBrand, L_StockNO From %s ' +
+          'Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, nBill]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+  begin
+    Result := UpperCase(GetPinYinOfStr(Fields[0].AsString + Fields[1].AsString));
+    nStockMap := Fields[2].AsString + Fields[0].AsString + Fields[1].AsString;
+
+    nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_StockBrandShow, nStockMap]);
+    with FDM.QueryTemp(nStr) do
+    if RecordCount > 0 then
+    begin
+      Result := Fields[0].AsString;
+    end;
+  end;
+
+  Result := Copy(Result, 1, 2);
+end;
+
+//Date: 2018/07/31
+//Parm: 车牌号
+//Desc: 火车衡自动获取最近5条历史皮重
+function IsStationAutoP(const nTruck: string; var nPValue: Double;
+                        nMsg: string): Boolean;
+var nSQL: string;
+    nCount: Integer;
+begin
+  Result := False;
+  nPValue := 0;
+  nMsg := '';
+  if nTruck = '' then Exit;
+
+  nSQL := 'Select D_Value From %s Where D_Name=''%s''';
+  nSQL := Format(nSQL, [sTable_SysDict, sFlag_StationAutoP]);
+
+  with FDM.QueryTemp(nSQL) do
+  begin
+    if RecordCount > 0 then
+    begin
+      Result := Fields[0].AsString = sFlag_Yes;
+    end;
+  end;
+
+  if Result then
+  begin
+    nSQL := 'Select top 5 P_PValue From %s ' +
+        'Where P_Truck=''%s'' And P_PValue Is Not Null order by P_PDate desc';
+    nSQL := Format(nSQL, [sTable_PoundStation, nTruck]);
+
+    with FDM.QueryTemp(nSQL) do
+    begin
+      if RecordCount > 0 then
+      begin
+        First;
+
+        nCount := 0;
+        while not Eof do
+        begin
+          nPValue := nPValue + Fields[0].AsFloat;
+          nMsg := nMsg + Fields[0].AsString + ',';
+          Inc(nCount);
+          Next;
+        end;
+        nPValue := nPValue / nCount;
+        nPValue := Float2PInt(nPValue, cPrecision, False) / cPrecision;
+        nMsg := '共查询到' + IntToStr(nCount) + '个历史皮重:'
+                + nMsg + '平均值:' + FloatToStr(nPValue);
+        WriteLog('火车衡:'+ nTruck + nMsg);
+      end;
+    end;
+  end;
+end;
+
+function VerifySnapTruck(const nReader: string; nBill: TLadingBillItem;
+                         var nMsg: string): Boolean;
+var nStr, nPos, nDept: string;
+    nNeedManu, nUpdate: Boolean;
+    nSnapTruck, nTruck, nEvent, nPicName: string;
+begin
+  Result := False;
+  nPos := '';
+  nNeedManu := False;
+  nSnapTruck := '';
+  nDept := '';
+  nTruck := nBill.Ftruck;
+
+  if not nBill.FSnapTruck then
+  begin
+    Result := True;
+    nMsg := '读卡器[ %s ]车辆[ %s ]无需进行抓拍识别.';
+    nMsg := Format(nMsg, [nReader, nTruck]);
+    Exit;
+  end;
+
+  nPos := ReadPoundReaderInfo(nReader,nDept);
+
+  if nPos = '' then
+  begin
+    Result := True;
+    nMsg := '读卡器[ %s ]绑定岗位为空,无法进行抓拍识别.';
+    nMsg := Format(nMsg, [nReader]);
+    Exit;
+  end;
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_TruckInNeedManu,nPos]);
+  //xxxxx
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nNeedManu := FieldByName('D_Value').AsString = sFlag_Yes;
+
+      if nNeedManu then
+      begin
+        nMsg := '读卡器[ %s ]绑定岗位[ %s ]干预规则:人工干预已启用.';
+        nMsg := Format(nMsg, [nReader, nPos]);
+      end
+      else
+      begin
+        nMsg := '读卡器[ %s ]绑定岗位[ %s ]干预规则:人工干预已关闭.';
+        nMsg := Format(nMsg, [nReader, nPos]);
+      end;
+    end
+    else
+    begin
+      Result := True;
+      nMsg := '读卡器[ %s ]绑定岗位[ %s ]未配置干预规则,无法进行抓拍识别.';
+      nMsg := Format(nMsg, [nReader, nPos]);
+      Exit;
+    end;
+  end;
+
+  nStr := 'Select * From %s Where S_ID=''%s'' order by R_ID desc ';
+  nStr := Format(nStr, [sTable_SnapTruck, nPos]);
+  //xxxxx
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount < 1 then
+    begin
+      if not nNeedManu then
+        Result := True;
+      Exit;
+    end;
+
+    nPicName := '';
+
+    First;
+
+    while not Eof do
+    begin
+      nSnapTruck := FieldByName('S_Truck').AsString;
+      if nPicName = '' then//默认取最新一次抓拍
+        nPicName := FieldByName('S_PicName').AsString;
+      if Pos(nTruck,nSnapTruck) > 0 then
+      begin
+        Result := True;
+        nPicName := FieldByName('S_PicName').AsString;
+        //取得匹配成功的图片路径
+        nMsg := '车辆[ %s ]车牌识别成功,抓拍车牌号:[ %s ]';
+        nMsg := Format(nMsg, [nTruck,nSnapTruck]);
+        Exit;
+      end;
+      //车牌识别成功
+      Next;
+    end;
+  end;
+
+  nStr := 'Select * From %s Where E_ID=''%s''';
+  nStr := Format(nStr, [sTable_ManualEvent, nBill.FID+sFlag_ManualE]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      if FieldByName('E_Result').AsString = 'N' then
+      begin
+        nMsg := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ],管理员禁止';
+        nMsg := Format(nMsg, [nTruck,nSnapTruck]);
+        Exit;
+      end;
+      if FieldByName('E_Result').AsString = 'Y' then
+      begin
+        Result := True;
+        nMsg := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ],管理员允许';
+        nMsg := Format(nMsg, [nTruck,nSnapTruck]);
+        Exit;
+      end;
+      nUpdate := True;
+    end
+    else
+    begin
+      nMsg := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ]';
+      nMsg := Format(nMsg, [nTruck,nSnapTruck]);
+      nUpdate := False;
+      if not nNeedManu then
+      begin
+        Result := True;
+        Exit;
+      end;
+    end;
+  end;
+
+  nEvent := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ]';
+  nEvent := Format(nEvent, [nTruck,nSnapTruck]);
+
+  nStr := SF('E_ID', nBill.FID+sFlag_ManualE);
+  nStr := MakeSQLByStr([
+          SF('E_ID', nBill.FID+sFlag_ManualE),
+          SF('E_Key', nPicName),
+          SF('E_From', nPos),
+          SF('E_Result', 'Null', sfVal),
+
+          SF('E_Event', nEvent),
+          SF('E_Solution', sFlag_Solution_YN),
+          SF('E_Departmen', nDept),
+          SF('E_Date', sField_SQLServer_Now, sfVal)
+          ], sTable_ManualEvent, nStr, (not nUpdate));
+  //xxxxx
+  FDM.ExecuteSQL(nStr);
+end;
+
+//Date: 2018-08-03
+//Parm: 读卡器ID
+//Desc: 读取nReader岗位、部门
+function ReadPoundReaderInfo(const nReader: string; var nDept: string): string;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := '';
+  nDept:= '';
+  //卡号
+
+  if CallBusinessHardware(cBC_GetPoundCard, nReader, '', @nOut)  then
+  begin
+    Result := Trim(nOut.FData);
+    nDept:= Trim(nOut.FExtParam);
+  end;
 end;
 
 end.

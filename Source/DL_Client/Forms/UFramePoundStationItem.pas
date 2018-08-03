@@ -92,6 +92,8 @@ type
     //折叠参数
     FCardReader: Integer;
     //xxxxx
+    FDefaultStock: string;
+    //默认物料
     procedure InitUIData;
     procedure SetUIData(const nReset: Boolean; const nOnlyData: Boolean = False);
     //界面数据
@@ -140,6 +142,7 @@ begin
 end;
 
 procedure TfFramePoundStationItem.OnCreateFrame;
+var nIni: TIniFile;
 begin
   inherited;
   FPanelHeight := Height;
@@ -150,17 +153,31 @@ begin
 
   FPoundTunnel := nil;
   InitUIData;
+
+  nIni := TIniFile.Create(gPath + 'StationConfig.ini');
+  try
+    FDefaultStock := nIni.ReadString('DefaultStock', 'DefaultStock', '');
+  finally
+    nIni.Free;
+  end;
 end;
 
 procedure TfFramePoundStationItem.OnDestroyFrame;
+var nIni: TIniFile;
 begin
+  nIni := TIniFile.Create(gPath + 'StationConfig.ini');
+  try
+    nIni.WriteString('DefaultStock', 'DefaultStock', FDefaultStock);
+  finally
+    nIni.Free;
+  end;
   gPoundTunnelManager.ClosePort(FPoundTunnel.FID);
   //关闭表头端口
 
   AdjustStringsItem(EditKID.Properties.Items, True);
   AdjustStringsItem(EditMID.Properties.Items, True);
   AdjustStringsItem(EditPID.Properties.Items, True);
-  
+
   FListA.Free;
   FListB.Free;
   inherited;
@@ -252,11 +269,14 @@ begin
 
   with FUIData do
   begin
-    nTruck := FTruck; 
+    nTruck := FTruck;
     Delete(nTruck, 1, Length(EditPrefix.Text));
     EditTruck.Text := nTruck;
 
-    EditMID.Text := FStockName;
+    if FStockName <> '' then
+      EditMID.Text := FStockName
+    else
+      EditMID.Text := FDefaultStock;
     EditPID.Text := FCusName;
     if FOrigin <> '' then
       EditKID.Text := FOrigin;
@@ -323,6 +343,8 @@ end;
 //Desc: 读取nTruck的称重信息
 procedure TfFramePoundStationItem.LoadTruckPoundItem(const nTruck: string);
 var nData: TLadingBillItems;
+    nPValue: Double;
+    nHint: string;
 begin
   if nTruck = '' then
   begin
@@ -336,6 +358,18 @@ begin
     SetUIData(True);
     Exit;
   end;
+
+  if nData[0].FPData.FValue <= 0 then
+  begin
+    if IsStationAutoP(nData[0].FTruck, nPValue, nHint)  then
+    begin
+      if nPValue > 0 then
+      begin
+        nData[0].FPData.FValue := nPValue;
+      end;
+    end;
+  end;
+
 
   FInnerData := nData[0];
   FUIData := FInnerData;
@@ -398,7 +432,6 @@ begin
   try
     CheckSound.Checked := nIni.ReadString(Name, 'PlaySound', 'Y') = 'Y';
     CheckZD.Checked := nIni.ReadString(Name, 'AutoCollapse', 'N') = 'Y';
-
     if nCollapse and CheckZD.Checked then
       CollapsePanel(True);
     //折叠面板
@@ -570,7 +603,7 @@ begin
     if not EditMID.Focused then Exit;
     //非操作人员调整
     EditMID.Text := Trim(EditMID.Text);
-
+    FDefaultStock := EditMID.Text;
     if EditMID.ItemIndex < 0 then
     begin
       FUIData.FStockNo := '';
@@ -627,6 +660,18 @@ begin
       ShowMsg('皮重应小于毛重', sHint);
       Exit;
     end;
+  end;
+
+  if FUIData.FStockNo = '' then
+  begin
+    FUIData.FStockNo := GetCtrlData(EditMID);
+    FUIData.FStockName := EditMID.Text;
+  end;
+
+  if FUIData.FMData.FOperator = '' then
+  begin
+    FUIData.FMData.FOperator := gSysParam.FUserID;
+    FUIData.FMData.FDate := Now;
   end;
 
   SetLength(FBillItems, 1);

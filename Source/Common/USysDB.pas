@@ -179,6 +179,10 @@ ResourceString
   sFlag_ForceAddWater = 'ForceAddWater';             //强制加水品种
   sFlag_ShadowWeight  = 'ShadowWeight';              //影子重量
 
+  sFlag_AICMPurStock  = 'AICMPurStock';              //自助机允许办卡物料
+
+  sFlag_StationAutoP  = 'StationAutoP';              //火车衡自动获取皮重
+
   sFlag_PrinterBill   = 'PrinterBill';               //小票打印机
   sFlag_PrinterHYDan  = 'PrinterHYDan';              //化验单打印机
   
@@ -263,6 +267,10 @@ ResourceString
   sFlag_TruckInNeedManu = 'TruckInNeedManu';         //车牌识别需要人工干预
   sFlag_SnapInfoPost  = 'SnapInfoPost';              //车牌识别消息推送岗位
 
+  sFlag_WXFactory     = 'WXFactoryID';               //微信标识
+  sFlag_WXServiceMIT  = 'WXServiceMIT';              //微信工厂服务
+  sFlag_WXSrvRemote   = 'WXServiceRemote';           //微信远程服务
+
   sFlag_HYDan         = 'Bus_HYDan';                 //化验单号
   
   {*数据表*}
@@ -344,7 +352,8 @@ ResourceString
   sTable_Grab         = 'P_Grab';                    //抓斗秤称重记录表
   sTable_GrabBak      = 'P_GrabBak';                 //抓斗秤称重记录表
   sTable_SnapTruck    = 'Sys_SnapTruck';             //车辆抓拍记录
-  
+  sTable_WebOrderMatch   = 'S_WebOrderMatch';        //商城订单映射
+
 const
   sFlag_Departments   = 'Departments';               //部门列表
   sFlag_DepDaTing     = '大厅';                      //服务大厅
@@ -594,8 +603,10 @@ const
        'L_PoundStation varChar(32), L_PoundName varChar(32), ' +
        'L_Lading Char(1), L_IsVIP varChar(1), ' +
        'L_Seal varChar(100), L_HYDan varChar(15),' +
-       'L_HYFirst DateTime, L_PrintHY Char(1),' +
-       'L_Man varChar(32), L_Date DateTime,' +
+       'L_HYFirst DateTime, L_PrintHY Char(1), L_SnapTruck Char(1),' +
+       'L_MValueView $Float, L_ValueView $Float,' +
+       'L_Man varChar(32), L_Date DateTime, L_Bm varChar(64),' +
+       'L_WxZhuId varChar(32), L_WxZiId varChar(32), ' +
        'L_DelMan varChar(32), L_DelDate DateTime, L_Memo VarChar(500))';
   {-----------------------------------------------------------------------------
    交货单表: Bill
@@ -609,7 +620,7 @@ const
    *.L_SaleID,L_SaleMan:业务员
    *.L_Type: 类型(袋,散)
    *.L_StockNo: 物料编号
-   *.L_StockName: 物料描述 
+   *.L_StockName: 物料描述
    *.L_Value: 提货量
    *.L_Price: 提货单价
    *.L_PackStyle: 包装类型(纸袋等)
@@ -637,6 +648,10 @@ const
    *.L_DelMan: 交货单删除人员
    *.L_DelDate: 交货单删除时间
    *.L_Memo: 动作备注
+   *.L_Bm: 中文编码
+   *.L_SnapTruck: 车牌识别
+   *.L_WxZhuId,L_WxZiId: 网上自助办卡
+   *.L_MValueView,L_ValueView: 毛重(修改后),净重(修改后)
   -----------------------------------------------------------------------------}
 
   sSQL_NewBillHaulback = 'Create Table $Table(R_ID $Inc, H_ID varChar(20),' +
@@ -786,6 +801,7 @@ const
        'P_PStation varChar(10), P_MStation varChar(10),' +
        'P_PStation2 varChar(10), P_MStation2 varChar(10),' +
        'P_YMan varChar(32), P_YTime DateTime, ' +
+       'P_MValueView $Float, P_ValueView $Float,' +
        'P_YSResult Char(1), P_YLineName varChar(50), P_KZComment varChar(128),' +
        'P_WTMan varChar(32), P_WTTime DateTime, P_WTLine varChar(50),' +
        'P_Direction varChar(10), P_PModel varChar(10), P_Status Char(1),' +
@@ -823,6 +839,7 @@ const
    *.P_Valid: 是否有效
    *.P_PrintNum: 打印次数
    *.P_DelMan,P_DelDate: 删除记录
+   *.P_MValueView,P_ValueView: 毛重(修改后),净重(修改后)
   -----------------------------------------------------------------------------}
 
   sSQL_NewPicture = 'Create Table $Table(R_ID $Inc, P_ID varChar(15),' +
@@ -1060,7 +1077,7 @@ const
        'P_BFMTime2 DateTime, P_BFMMan2 varChar(32), P_BFMValue2 $Float Default 0,' +
        'P_KeepCard varChar(1), P_OneDoor Char(1), P_MuiltiPound Char(1), ' +
        'P_PoundStation varChar(32), P_PoundName varChar(32), ' +
-       'P_Man varChar(32), P_Date DateTime, P_UsePre Char(1),' +
+       'P_Man varChar(32), P_Date DateTime, P_UsePre Char(1), P_SnapTruck Char(1),' +
        'P_DelMan varChar(32), P_DelDate DateTime, P_Memo varChar(128))';
   {-----------------------------------------------------------------------------
    供应磁卡:CardProvide
@@ -1084,6 +1101,7 @@ const
    *.P_MuiltiPound: 系统复磅
    *.P_UsePre: 预置皮重
    *.P_Man,P_Date:制卡人
+   *.P_SnapTruck: 车牌识别
    *.P_DelMan,P_DelDate: 删除人
   -----------------------------------------------------------------------------}
 
@@ -1500,13 +1518,33 @@ const
   -----------------------------------------------------------------------------}
 
   sSQL_SnapTruck = 'Create Table $Table(R_ID $Inc, S_ID varChar(20), ' +
-       'S_Truck varChar(20), S_Date DateTime)';
+       'S_Truck varChar(20), S_Date DateTime, S_PicName varChar(80))';
   {-----------------------------------------------------------------------------
-   微信发送日志:WeixinLog
+   车牌识别:
    *.R_ID:记录编号
    *.S_ID: 抓拍岗位
    *.S_Truck:抓拍车牌号
    *.S_Date: 抓拍时间
+   *.S_PicName: 抓拍图片路径
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewWebOrderMatch = 'Create Table $Table(R_ID $Inc,'
+      +'WOM_WebOrderID varchar(32) null,'
+      +'WOM_LID varchar(20) null,'
+      +'WOM_StatusType Integer,'
+      +'WOM_MsgType Integer,'
+      +'WOM_BillType char(1),'
+      +'WOM_SyncNum Integer default 0,'
+      +'WOM_deleted char(1) default ''N'')';
+  {-----------------------------------------------------------------------------
+   商城订单与提货单对照表: WebOrderMatch
+   *.R_ID: 记录编号
+   *.WOM_WebOrderID: 商城订单
+   *.WOM_LID: 提货单
+   *.WOM_StatusType: 订单状态 0.开卡  1.完成
+   *.WOM_MsgType: 消息类型 开单  出厂  报表 删单
+   *.WOM_SyncNum: 发送次数
+   *.WOM_BillType: 业务类型  采购 销售
   -----------------------------------------------------------------------------}
 
 function CardStatusToStr(const nStatus: string): string;
@@ -1630,7 +1668,7 @@ begin
   AddSysTableItem(sTable_PoundBak, sSQL_NewPoundLog);
   AddSysTableItem(sTable_Picture, sSQL_NewPicture);
   AddSysTableItem(sTable_PoundDaiWC, sSQL_NewPoundDaiWC);
-  
+
   AddSysTableItem(sTable_PoundStation, sSQL_NewPoundLog);
   AddSysTableItem(sTable_PoundStatBak, sSQL_NewPoundLog);
   AddSysTableItem(sTable_PoundStatIMP, sSQL_NewPoundLog);
@@ -1661,7 +1699,7 @@ begin
   AddSysTableItem(sTable_GrabBak, sSQL_Grab);
 
   AddSysTableItem(sTable_SnapTruck,sSQL_SnapTruck);
-
+  AddSysTableItem(sTable_WebOrderMatch,sSQL_NewWebOrderMatch);
 
   AddSysTableItem(sTable_StockParam, sSQL_NewStockParam);
   AddSysTableItem(sTable_StockParamExt, sSQL_NewStockRecord);

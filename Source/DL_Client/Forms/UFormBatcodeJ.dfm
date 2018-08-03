@@ -1,7 +1,7 @@
 inherited fFormBatcode: TfFormBatcode
   Left = 438
   Top = 194
-  ClientHeight = 410
+  ClientHeight = 438
   ClientWidth = 482
   Position = poMainFormCenter
   OnClose = FormClose
@@ -9,16 +9,16 @@ inherited fFormBatcode: TfFormBatcode
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
     Width = 482
-    Height = 410
+    Height = 438
     inherited BtnOK: TButton
       Left = 336
-      Top = 377
-      TabOrder = 19
+      Top = 405
+      TabOrder = 20
     end
     inherited BtnExit: TButton
       Left = 406
-      Top = 377
-      TabOrder = 20
+      Top = 405
+      TabOrder = 21
     end
     object EditName: TcxTextEdit [2]
       Left = 81
@@ -73,78 +73,78 @@ inherited fFormBatcode: TfFormBatcode
     end
     object Check1: TcxCheckBox [8]
       Left = 23
-      Top = 161
+      Top = 186
       Caption = #20351#29992#26085#26399#32534#30721
       ParentFont = False
-      TabOrder = 7
+      TabOrder = 8
       Transparent = True
       Width = 121
     end
     object EditLow: TcxTextEdit [9]
       Left = 81
-      Top = 244
+      Top = 272
       ParentFont = False
-      TabOrder = 10
+      TabOrder = 11
       Text = '80'
       Width = 135
     end
     object EditHigh: TcxTextEdit [10]
       Left = 81
-      Top = 269
+      Top = 297
       ParentFont = False
-      TabOrder = 12
+      TabOrder = 13
       Text = '100'
       Width = 135
     end
     object Check2: TcxCheckBox [11]
       Left = 23
-      Top = 344
+      Top = 372
       Caption = #26032#24180#26102#33258#21160#37325#32622','#32534#21495#22522#25968#20174'1'#24320#22987#35745#25968'.'
       ParentFont = False
-      TabOrder = 18
+      TabOrder = 19
       Transparent = True
       Width = 121
     end
     object cxLabel1: TcxLabel [12]
       Left = 221
-      Top = 244
+      Top = 272
       Caption = #27880':'#35813#20540#20026#30334#20998#27604'(%),'#36229#36807#35813#20540#25552#37266'.'
       ParentFont = False
       Transparent = True
     end
     object cxLabel2: TcxLabel [13]
       Left = 221
-      Top = 269
+      Top = 297
       Caption = #27880':'#35813#20540#20026#30334#20998#27604'(%),'#36229#36807#35813#20540#26356#25442#32534#21495'.'
       ParentFont = False
       Transparent = True
     end
     object EditValue: TcxTextEdit [14]
       Left = 81
-      Top = 219
+      Top = 247
       ParentFont = False
-      TabOrder = 8
+      TabOrder = 9
       Text = '0'
       Width = 135
     end
     object cxLabel3: TcxLabel [15]
       Left = 221
-      Top = 219
+      Top = 247
       Caption = #27880':'#27599#22810#23569#21544#26816#27979#19968#27425'.'
       ParentFont = False
       Transparent = True
     end
     object EditWeek: TcxTextEdit [16]
       Left = 81
-      Top = 294
+      Top = 322
       ParentFont = False
-      TabOrder = 14
+      TabOrder = 15
       Text = '20'
       Width = 135
     end
     object cxLabel4: TcxLabel [17]
       Left = 221
-      Top = 294
+      Top = 322
       Caption = #27880':'#20174#31532#19968#36710#21551#29992#24320#22987#19981#36229#36807#22810#23569#22825'.'
       ParentFont = False
       Transparent = True
@@ -158,17 +158,23 @@ inherited fFormBatcode: TfFormBatcode
     end
     object EditBatcode: TcxTextEdit [19]
       Left = 81
-      Top = 319
+      Top = 347
       ParentFont = False
-      TabOrder = 15
+      TabOrder = 16
       Width = 121
     end
     object cxLabel5: TcxLabel [20]
       Left = 221
-      Top = 315
+      Top = 343
       Caption = #27880':'#24403#21069#27491#22312#20351#29992#30340#25209#27425#21495','#22914#38656#35843#25972#35831#26356#26032
       ParentFont = False
       Transparent = True
+    end
+    object EditLineGroup: TcxComboBox [21]
+      Left = 81
+      Top = 161
+      TabOrder = 7
+      Width = 121
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup
@@ -228,6 +234,11 @@ inherited fFormBatcode: TfFormBatcode
           object dxLayout1Item3: TdxLayoutItem
             Caption = #25552#36135#31867#22411':'
             Control = EditType
+            ControlOptions.ShowBorder = False
+          end
+          object dxLayout1Item22: TdxLayoutItem
+            Caption = #32534#21495#20998#32452':'
+            Control = EditLineGroup
             ControlOptions.ShowBorder = False
           end
           object dxLayout1Item10: TdxLayoutItem

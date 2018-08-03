@@ -52,7 +52,7 @@ procedure WhenCaptureFinished(const nPtr: Pointer);
 {$ENDIF}
 procedure SaveGrabCard(const nCard: string; nTunnel: string='');
 //检索并保存抓斗秤工作卡号
-function VerifySnapTruck(const nTruck,nBill,nPos: string;var nResult: string): Boolean;
+function VerifySnapTruck(const nTruck,nBill,nPos,nDept: string;var nResult: string): Boolean;
 //车牌识别
 
 procedure UpdateDoubleChannel(const nTunnel: PMultiJSTunnel);
@@ -556,7 +556,7 @@ end;
 //Date: 2012-4-22
 //Parm: 卡号
 //Desc: 对nCard放行进厂
-procedure MakeTruckIn(const nCard,nReader: string; const nDB: PDBWorker);
+procedure MakeTruckIn(const nCard,nReader,nPost,nDept: string; const nDB: PDBWorker);
 var nStr,nTruck,nCardType,nSnapStr,nPos: string;
     nIdx,nInt: Integer;
     nPLine: PLineItem;
@@ -566,10 +566,10 @@ var nStr,nTruck,nCardType,nSnapStr,nPos: string;
 begin
   if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
 
-  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
+  if nPost = '' then
     nPos := sPost_SIn
   else
-    nPos := sPost_PIn;
+    nPos := nPost;
 
   if gTruckQueueManager.IsTruckAutoIn(nCardType=sFlag_Sale) and (GetTickCount -
      gHardwareHelper.GetCardLastDone(nCard, nReader) < 2 * 60 * 1000) then
@@ -657,7 +657,7 @@ begin
 
   {$IFDEF RemoteSnap}
   if nTrucks[0].FSnapTruck then
-  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nSnapStr) then
+  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nDept,nSnapStr) then
   begin
     MakeGateSound(nSnapStr, nPos, False);
     Exit;
@@ -825,7 +825,7 @@ end;
 //Date: 2012-4-22
 //Parm: 卡号;读头;打印机;附加参数
 //Desc: 对nCard放行出厂
-procedure MakeTruckOut(const nCard,nReader,nPrinter: string;
+procedure MakeTruckOut(const nCard,nReader,nPrinter,nPost,nDept: string;
  const nOptions: string = '');
 var nStr, nCardType,nPrint,nID,nSnapStr,nPos: string;
     nIdx: Integer;
@@ -838,10 +838,10 @@ var nStr, nCardType,nPrint,nID,nSnapStr,nPos: string;
 begin
   if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
 
-  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
-    nPos := sPost_SOut
+  if nPost = '' then
+    nPos := sPost_SIn
   else
-    nPos := sPost_POut;
+    nPos := nPost;
 
   nRet := False;
   if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
@@ -947,7 +947,7 @@ begin
 
   {$IFDEF RemoteSnap}
   if nTrucks[0].FSnapTruck then
-  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nSnapStr) then
+  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nDept,nSnapStr) then
   begin
     MakeGateSound(nSnapStr, nPos, False);
     Exit;
@@ -1039,7 +1039,8 @@ end;
 //Date: 2016-5-4
 //Parm: 卡号;读头;打印机
 //Desc: 对nCard放行出
-function MakeTruckOutM100(const nCard,nReader,nPrinter: string): Boolean;
+function MakeTruckOutM100(const nCard,nReader,nPrinter,
+                          nPost,nDept: string): Boolean;
 var nStr,nCardType, nID,nSnapStr,nPos: string;
     nIdx: Integer;
     nRet: Boolean;
@@ -1051,10 +1052,10 @@ begin
   Result := False;
   if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
 
-  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
-    nPos := sPost_SOut
+  if nPost = '' then
+    nPos := sPost_SIn
   else
-    nPos := sPost_POut;
+    nPos := nPost;
 
   nRet := False;
   if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
@@ -1151,7 +1152,7 @@ begin
 
   {$IFDEF RemoteSnap}
   if nTrucks[0].FSnapTruck then
-  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nSnapStr) then
+  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nDept,nSnapStr) then
   begin
     MakeGateSound(nSnapStr, nPos, False);
     Exit;
@@ -1190,7 +1191,8 @@ begin
     else nStr := nID + #9 + nPrinter + nStr;
 
     gRemotePrinter.PrintBill(nStr);
-    if nTrucks[0].FCardKeep = sFlag_Yes then Exit;
+  if (nTrucks[0].FCardKeep = sFlag_Yes) or
+     (nTrucks[0].FCardKeep = sFlag_ProvCardG) then Exit;
     //长期卡,不吞卡
 
     Result := True;
@@ -1228,7 +1230,8 @@ begin
     gRemotePrinter.PrintBill(nStr);
   end; //打印报表
 
-  if nTrucks[0].FCardKeep = sFlag_Yes then Exit;
+  if (nTrucks[0].FCardKeep = sFlag_Yes) or
+     (nTrucks[0].FCardKeep = sFlag_ProvCardG) then Exit;
   //长期卡,不吞卡
 
   Result := True;
@@ -1336,12 +1339,13 @@ begin
     try
       if nReader.FType = rtIn then
       begin
-        MakeTruckIn(nStr, nReader.FID, nDBConn);
+        MakeTruckIn(nStr, nReader.FID, nReader.FPost, nReader.FDept, nDBConn);
       end else
 
       if nReader.FType = rtOut then
       begin
-        MakeTruckOut(nStr, nReader.FID, nReader.FPrinter, nReader.FPound);
+        MakeTruckOut(nStr, nReader.FID, nReader.FPrinter,
+                     nReader.FPost, nReader.FDept, nReader.FPound);
       end else
 
       if nReader.FType = rtGate then
@@ -1382,6 +1386,7 @@ function IsTruckInQueue(const nTruck,nTunnel: string; const nQueued: Boolean;
  const nStockType: string = ''): Boolean;
 var i,nIdx,nInt: Integer;
     nLineItem: PLineItem;
+    nEarlyTruck: PTruckItem;
 begin
   with gTruckQueueManager do
   try
@@ -1446,6 +1451,30 @@ begin
     //不检查队列,或头车
 
     //--------------------------------------------------------------------------
+    if nQueued then
+    begin
+      WriteNearReaderLog('开始检查队列..');
+      if nIdx >= 1 then
+      begin
+        nEarlyTruck := nPLine.FTrucks[nIdx - 1];
+        if nEarlyTruck.FInLade then
+        begin
+          nHint := '车辆[ %s ]队列位置为[ %d ],允许装车.';
+          nHint := Format(nHint, [nPTruck.FTruck, nIdx + 1]);
+
+          Exit;
+        end
+        else
+        begin
+          nHint := '车辆[ %s ]队列位置为[ %d ],需要在[ %s ]排队等候.';
+          nHint := Format(nHint, [nPTruck.FTruck, nIdx + 1, nPLine.FName]);
+
+          Result := False;
+          Exit;
+        end;
+      end;
+    end;
+
     nInt := -1;
     //init
 
@@ -1455,7 +1484,6 @@ begin
       nInt := i;
       Break;
     end;
-
     if nInt < 0 then Exit;
     //没有在装车车辆,无需排队
 
@@ -2426,7 +2454,9 @@ begin
     end;
 
     if nHost.FFun = rfOut then
-         MakeTruckOut(nCard, nReader, nHost.FPrinter)
+         MakeTruckOut(nCard, nReader, nHost.FPrinter,
+                      nHost.FOptions.Values['Post'],
+                      nHost.FOptions.Values['Dept'])
     else
     {$IFDEF JSDoubleChannel}
     MakeTruckLadingDaiDouble(nCard, nHost.FTunnel, nMutexTunnel);
@@ -2535,7 +2565,14 @@ begin
     if not nItem.FVirtual then Exit;
     case nItem.FVType of
     rtOutM100 :
-      nRetain := MakeTruckOutM100(nItem.FCard, nItem.FVReader, nItem.FVPrinter);
+    begin
+      nRetain := MakeTruckOutM100(nItem.FCard, nItem.FVReader, nItem.FVPrinter,
+                                  nItem.FPost, nItem.FDept);
+      if nRetain then
+        WriteHardHelperLog('吞卡机执行动作:吞卡')
+      else
+        WriteHardHelperLog('吞卡机执行动作:吞卡后吐卡');
+    end
     else
       gHardwareHelper.SetReaderCard(nItem.FVReader, nItem.FCard, False);
     end;
@@ -3295,11 +3332,13 @@ begin
   end;
 end ;
 
-function VerifySnapTruck(const nTruck,nBill,nPos: string; var nResult: string): Boolean;
+function VerifySnapTruck(const nTruck,nBill,nPos,nDept: string;var nResult: string): Boolean;
 var nList: TStrings;
     nOut: TWorkerBusinessCommand;
-    nID: string;
+    nID,nDefDept: string;
 begin
+  nDefDept := '门岗';
+
   if nBill = '' then
     nID := nTruck + FormatDateTime('YYMMDD',Now)
   else
@@ -3310,6 +3349,10 @@ begin
     nList.Values['Truck'] := nTruck;
     nList.Values['Bill'] := nID;
     nList.Values['Pos'] := nPos;
+    if nDept = '' then
+      nList.Values['Dept'] := nDefDept
+    else
+      nList.Values['Dept'] := nDept;
 
     Result := CallBusinessCommand(cBC_VerifySnapTruck, nList.Text, '', @nOut);
     nResult := nOut.FData;

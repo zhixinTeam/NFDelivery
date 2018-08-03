@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE HSNF}
+{$DEFINE QZNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -110,6 +110,10 @@
   //格式化计数器车牌(包装类型)
   {$DEFINE StockTypeByPackStyle}
   //预刷卡品种类型(包装类型)
+  {$DEFINE SaleAICMFromNC}
+  //销售自助办卡
+  {.$DEFINE PurAICMFromNC}
+  //采购自助办卡
 {$ENDIF}
 //江山南方
 
@@ -437,4 +441,74 @@
   //包装发货强制队列
   {$DEFINE AllowMultiM}
   //散装允许多次过重车
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE JSTruck}
+  //格式化计数器车牌
+  {$DEFINE BMPrintCode}
+  //采用NC编码组合喷码
+  {$DEFINE JudgeOrder}
+  //验证订单是否出厂
+  {.$DEFINE SaleAICMFromNC}
+  //销售自助办卡
+  {$DEFINE PurAICMFromNC}
+  //采购自助办卡
+  {$DEFINE LEDShowTruckEx}
+  //大屏显示格式化车牌
+  {$DEFINE OneTruckMulCard}
+  //一车多卡
+  {$DEFINE FilterTunnel}
+  //过滤无关通道
+{$ENDIF}
+
+//衢州
+{$IFDEF QZNF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+  {$DEFINE MITTruckProber}
+  //中间件控制车检
+  {$DEFINE TruckProberEx}
+  //车检光栅状态判断扩展(此开关启用时建议同时启用MITTruckProber开关)
+  {$DEFINE MultiReplay}
+  //计数器应答模式
+  {$DEFINE CardProvide}
+  //采用复磅模式
+  {$DEFINE ORDERVALUE}
+  //显示订单量
+  {$DEFINE DaiStepWuCha}
+  //包装阶梯误差
+  {.$DEFINE DaiForceQueue}
+  //包装发货强制队列
+  {$DEFINE AllowMultiM}
+  //散装允许多次过重车
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE JSTruck}
+  //格式化计数器车牌
+  {$DEFINE BMPrintCode}
+  //采用NC编码组合喷码
+  {$DEFINE JudgeOrder}
+  //验证订单是否出厂
+  {.$DEFINE SaleAICMFromNC}
+  //销售自助办卡
+  {$DEFINE PurAICMFromNC}
+  //采购自助办卡
+  {$DEFINE LEDShowTruckEx}
+  //大屏显示格式化车牌
+  {.$DEFINE OneTruckMulCard}
+  //一车多卡
+  {$DEFINE FilterTunnel}
+  //过滤无关通道
+  {$DEFINE AutoGetLineGroup}
+  //自动获取装车线分组
+  {$DEFINE PrepareShowTruck}
+  //预刷卡显示车牌
+  {.$DEFINE PrepareShowOnLading}
+  //刷卡装车时控制预刷卡(不使用预刷卡读卡器)
 {$ENDIF}

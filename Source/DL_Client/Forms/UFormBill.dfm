@@ -12,7 +12,7 @@ inherited fFormBill: TfFormBill
     Width = 423
     Height = 454
     inherited BtnOK: TButton
-      Left = 276
+      Left = 277
       Top = 421
       Caption = #24320#21333
       TabOrder = 13
@@ -23,8 +23,8 @@ inherited fFormBill: TfFormBill
       TabOrder = 14
     end
     object ListInfo: TcxMCListBox [2]
-      Left = 24
-      Top = 29
+      Left = 23
+      Top = 36
       Width = 373
       Height = 165
       HeaderSections = <
@@ -42,8 +42,8 @@ inherited fFormBill: TfFormBill
       TabOrder = 0
     end
     object EditTruck: TcxTextEdit [3]
-      Left = 84
-      Top = 308
+      Left = 81
+      Top = 306
       ParentFont = False
       Properties.MaxLength = 15
       TabOrder = 5
@@ -51,8 +51,8 @@ inherited fFormBill: TfFormBill
       Width = 115
     end
     object EditLading: TcxComboBox [4]
-      Left = 84
-      Top = 200
+      Left = 81
+      Top = 206
       ParentFont = False
       Properties.DropDownListStyle = lsEditFixedList
       Properties.ItemHeight = 18
@@ -65,7 +65,7 @@ inherited fFormBill: TfFormBill
       Width = 125
     end
     object EditFQ: TcxTextEdit [5]
-      Left = 266
+      Left = 260
       Top = 281
       ParentFont = False
       Properties.MaxLength = 100
@@ -73,8 +73,8 @@ inherited fFormBill: TfFormBill
       Width = 120
     end
     object EditType: TcxComboBox [6]
-      Left = 84
-      Top = 227
+      Left = 81
+      Top = 231
       ParentFont = False
       Properties.DropDownListStyle = lsEditFixedList
       Properties.ItemHeight = 18
@@ -88,15 +88,15 @@ inherited fFormBill: TfFormBill
       Width = 120
     end
     object EditValue: TcxTextEdit [7]
-      Left = 266
-      Top = 308
+      Left = 260
+      Top = 306
       ParentFont = False
       TabOrder = 8
       OnKeyPress = EditLadingKeyPress
       Width = 121
     end
     object EditPack: TcxComboBox [8]
-      Left = 84
+      Left = 81
       Top = 281
       ParentFont = False
       Properties.DropDownListStyle = lsEditFixedList
@@ -111,29 +111,29 @@ inherited fFormBill: TfFormBill
       Width = 110
     end
     object EditBrand: TcxTextEdit [9]
-      Left = 266
-      Top = 254
+      Left = 260
+      Top = 256
       ParentFont = False
       TabOrder = 6
       Width = 121
     end
     object EditLineGroup: TcxComboBox [10]
-      Left = 84
-      Top = 254
+      Left = 81
+      Top = 256
       ParentFont = False
       TabOrder = 3
       Width = 116
     end
     object EditMemo: TcxTextEdit [11]
-      Left = 84
-      Top = 362
+      Left = 81
+      Top = 356
       ParentFont = False
       TabOrder = 10
       Width = 121
     end
     object EditPoundStation: TcxComboBox [12]
-      Left = 84
-      Top = 335
+      Left = 81
+      Top = 331
       ParentFont = False
       TabOrder = 9
       Width = 121
@@ -148,9 +148,10 @@ inherited fFormBill: TfFormBill
       Width = 95
     end
     object SnapTruck: TcxCheckBox [14]
-      Left = 112
+      Left = 111
       Top = 421
       Caption = #36827#21378#36827#34892#36710#29260#35782#21035
+      ParentFont = False
       State = cbsChecked
       TabOrder = 12
       Width = 121

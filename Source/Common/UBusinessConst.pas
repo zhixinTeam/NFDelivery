@@ -70,6 +70,7 @@ const
   cBC_GetPostOrders           = $0044;   //获取岗位采购单
   cBC_SavePostOrders          = $0045;   //保存岗位采购单
 
+  cBC_GetPoundReaderInfo      = $0052;   //获取磅站读卡器岗位、部门
   cBC_ChangeDispatchMode      = $0053;   //切换调度模式
   cBC_GetPoundCard            = $0054;   //获取磅站卡号
   cBC_GetQueueData            = $0055;   //获取队列数据
@@ -90,6 +91,7 @@ const
   cBC_PlayVoice               = $0077;
   cBC_OpenDoorByReader        = $0078;
   cBC_VerifySnapTruck         = $0079;   //车牌比对
+  cBC_ShowTxt                 = $0080;   //车检:发送小屏
 
   cBC_GetSQLQueryWeixin       = $0081;   //获取微信信息查询语句
   cBC_SaveWeixinAccount       = $0082;   //保存微信账户
@@ -126,6 +128,34 @@ const
   cBC_WebChat_DLSaveShopInfo   = $0130;   //微信平台接口：发起同步
 
   cBC_GetPurchaseList          = $0131;   //获取NC采购订单列表
+  cBC_GetOrderList             = $0132;   //获取NC销售订单列表
+
+  cBC_AutoGetLineGroup         = $0133;   //自动获取分组
+
+  cBC_WX_VerifPrintCode       = $0501;   //微信：验证喷码信息
+  cBC_WX_WaitingForloading    = $0502;   //微信：工厂待装查询
+  cBC_WX_BillSurplusTonnage   = $0503;   //微信：网上订单可下单数量查询
+  cBC_WX_GetOrderInfo         = $0504;   //微信：获取订单信息
+  cBC_WX_GetOrderList         = $0505;   //微信：获取订单列表
+  cBC_WX_GetPurchaseContract  = $0506;   //微信：获取采购合同列表
+
+  cBC_WX_getCustomerInfo      = $0507;   //微信：获取客户注册信息
+  cBC_WX_get_Bindfunc         = $0508;   //微信：客户与微信账号绑定
+  cBC_WX_send_event_msg       = $0509;   //微信：发送消息
+  cBC_WX_edit_shopclients     = $0510;   //微信：新增商城用户
+  cBC_WX_edit_shopgoods       = $0511;   //微信：添加商品
+  cBC_WX_get_shoporders       = $0512;   //微信：获取订单信息
+  cBC_WX_complete_shoporders  = $0513;   //微信：修改订单状态
+  cBC_WX_get_shoporderbyNO    = $0514;   //微信：根据订单号获取订单信息
+  cBC_WX_get_shopPurchasebyNO = $0515;   //微信：根据订单号获取订单信息
+  cBC_WX_ModifyWebOrderStatus = $0516;   //微信：修改网上订单状态
+  cBC_WX_CreatLadingOrder     = $0517;   //微信：创建交货单
+  cBC_WX_GetCusMoney          = $0518;   //微信：获取客户资金
+  cBC_WX_GetInOutFactoryTotal = $0519;   //微信：获取进出厂统计
+  cBC_WX_GetAuditTruck        = $0520;   //微信：获取审核车辆
+  cBC_WX_UpLoadAuditTruck     = $0521;   //微信：审核车辆结果上传
+  cBC_WX_DownLoadPic          = $0522;   //微信：下载图片
+  cBC_WX_get_shoporderbyTruck = $0523;   //微信：根据车牌号获取订单信息
 
 type
   PWorkerQueryFieldData = ^TWorkerQueryFieldData;
@@ -245,6 +275,15 @@ type
     FPreTruck  :string;            //车牌号
   end;
 
+  PWorkerWebChatData = ^TWorkerWebChatData;
+  TWorkerWebChatData = record
+    FBase     : TBWDataBase;
+    FCommand  : Integer;           //类型
+    FData     : string;            //数据
+    FExtParam : string;            //参数
+    FRemoteUL : string;            //工厂服务器UL
+  end;
+
 procedure AnalyseBillItems(const nData: string; var nItems: TLadingBillItems);
 //解析由业务对象返回的交货单数据
 function CombineBillItmes(const nItems: TLadingBillItems): string;
@@ -286,6 +325,7 @@ resourcestring
   sBus_BusinessShipTmp        = 'Bus_BusinessShipTmp';  //船运临时指令
   sBus_BusinessWebchat        = 'Bus_BusinessWebchat';  //Web平台服务
   sBus_BusinessHaulback       = 'Bus_BusinessHaulback'; //回空业务指令
+  sBus_BusinessWebchatNC      = 'Bus_BusinessWebchatNC';//NC微信信息推送业务指令
 
   {*client function name*}
   sCLI_ServiceStatus          = 'CLI_ServiceStatus';    //服务状态
@@ -300,6 +340,7 @@ resourcestring
   sCLI_BusinessShipTmp        = 'CLI_BusinessShipTmp';  //船运临时业务
   sCLI_BusinessWebchat        = 'CLI_BusinessWebchat';  //Web平台服务
   sCLI_BusinessHaulback       = 'CLI_BusinessHaulback'; //回空业务指令
+  sCLI_BusinessWebchatNC      = 'CLI_BusinessWebchatNC';//NC微信信息推送业务指令
 
 implementation
 
