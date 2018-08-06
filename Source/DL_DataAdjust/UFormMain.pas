@@ -276,6 +276,13 @@ begin
             Date2Str(EditEnd.Date + 1), EditMax.Text]);
     WriteLog(nStr);
 
+    nStr := 'Update %s Set BK_Value=L_Value,BK_MValue=L_MValue ' +
+            'Where L_Date>=''%s'' And L_Date<''%s'' And ' +
+            'L_Value>=%s And L_MValue Is Not Null And BK_Value Is Null';
+    nStr := Format(nStr, [sTable_Bill, Date2Str(EditStart.Date),
+            Date2Str(EditEnd.Date + 1), EditMax.Text]);
+    FList.Add(nStr); //备份原始数据
+
     nStr := 'Select L_ID,L_Type,L_Value,BK_Value From %s ' +
             'Where L_Date>=''%s'' And L_Date<''%s'' And ' +
             'L_Value>=%s And L_MValue Is Not Null';
@@ -289,14 +296,6 @@ begin
       First;
       while not Eof do
       begin
-        if FieldByName('BK_Value').AsFloat = 0 then
-        begin
-          nStr := 'Update %s Set BK_Value=L_Value,BK_MValue=L_MValue ' +
-                  'Where L_ID=''%s''';
-          nStr := Format(nStr, [sTable_Bill, FieldByName('L_ID').AsString]);
-          FList.Add(nStr);
-        end;
-
         if FieldByName('L_Type').AsString = sFlag_Dai then
         begin
           nVal := RandomDai(nMaxDai) * 50 / 1000;
@@ -330,6 +329,13 @@ begin
             Date2Str(EditEnd.Date + 1), EditMax.Text]);
     WriteLog(nStr);
 
+    nStr := 'Update %s Set BK_Value=P_LimValue,BK_MValue=P_MValue ' +
+            'Where P_PDate>=''%s'' And P_PDate<''%s'' And ' +
+            '(P_MValue-P_PValue)>=%s And BK_MValue Is Null';
+    nStr := Format(nStr, [sTable_PoundLog, Date2Str(EditStart.Date),
+            Date2Str(EditEnd.Date + 1), EditMax.Text]);
+    FList.Add(nStr); //备份原始数据
+
     nStr := 'Select P_ID,P_MType,BK_Value From %s ' +
             'Where P_PDate>=''%s'' And P_PDate<''%s'' And ' +
             '(P_MValue-P_PValue)>=%s';
@@ -343,14 +349,6 @@ begin
       First;
       while not Eof do
       begin
-        if FieldByName('BK_Value').AsFloat = 0 then
-        begin
-          nStr := 'Update %s Set BK_Value=P_LimValue,BK_MValue=P_MValue ' +
-                  'Where P_ID=''%s''';
-          nStr := Format(nStr, [sTable_PoundLog, FieldByName('P_ID').AsString]);
-          FList.Add(nStr);
-        end;
-
         if FieldByName('P_MType').AsString = sFlag_Dai then
         begin
           nVal := RandomDai(nMaxDai) * 50 / 1000;
