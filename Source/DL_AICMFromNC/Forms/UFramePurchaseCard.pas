@@ -79,8 +79,8 @@ begin
   FListC := TStringList.Create;
   FListC.Clear;
 
-  nStr := 'Select D_Value From %s Where D_Name=''%s''';
-  nStr := Format(nStr, [sTable_SysDict, sFlag_AICMPurStock]);
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_ParamB=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_AICMPurStock, gSysParam.FLocalIP]);
 
   with FDM.SQLQuery(nStr) do
   if RecordCount > 0 then

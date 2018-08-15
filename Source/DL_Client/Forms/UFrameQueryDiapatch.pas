@@ -67,7 +67,7 @@ implementation
 {$R *.dfm}
 uses
   ULibFun, UMgrControl, USysConst, USysDB, UDataModule, USysPopedom,
-  UFormInputbox, USysBusiness, UBusinessPacker;
+  UFormInputbox, USysBusiness, UBusinessPacker, USysLoger;
 
 class function TfFrameQueryDispatch.FrameID: integer;
 begin
@@ -81,6 +81,11 @@ begin
   N2.Enabled := BtnEdit.Enabled;
   N3.Enabled := BtnEdit.Enabled;
   N7.Enabled := BtnEdit.Enabled;
+end;
+
+procedure WriteLog(const nEvent: string);
+begin
+  gSysLoger.AddLog(nEvent);
 end;
 
 function TfFrameQueryDispatch.InitFormDataSQL(const nWhere: string): string;
@@ -215,28 +220,53 @@ begin
   //null or same
 
   {$IFDEF AutoGetLineGroup}
-  nStr := 'Select Z_StockNo,Z_Stock,Z_Group From %s Where Z_ID=''%s''';
-  nStr := Format(nStr, [sTable_ZTLines, nLine]);
+  nList := Tstringlist.Create;
+  try
+    nList.Clear;
+    nStr := 'Select M_ID From %s Where M_LineNo=''%s'' and M_Status=''%s''';
+    nStr := Format(nStr, [sTable_StockMatch, nLine, sFlag_Yes]);
 
-  with FDM.QueryTemp(nStr) do
-  begin
-    if RecordCount < 1 then
+    with FDM.QueryTemp(nStr) do
     begin
-      ShowMsg('无效的通道编号', sHint);
-      Exit;
+      if RecordCount > 0 then
+      begin
+        First;
+
+        while not Eof do
+        begin
+          nList.Add(Fields[0].AsString);
+          Next;
+        end;
+      end;
     end;
 
-    nTmp := SQLQuery.FieldByName('T_StockNo').AsString;
-    if Fields[0].AsString <> nTmp then
-    begin
-      nStr := '通道[ %s ]的水泥品种与待装品种不一致,无法换道';
-      nStr := Format(nStr, [nLine]);
+    nStr := 'Select Z_StockNo,Z_Stock,Z_Group From %s Where Z_ID=''%s''';
+    nStr := Format(nStr, [sTable_ZTLines, nLine]);
 
-      ShowMsg(nStr, sHint);
-      Exit;
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount < 1 then
+      begin
+        ShowMsg('无效的通道编号', sHint);
+        Exit;
+      end;
+
+      nTmp := SQLQuery.FieldByName('T_StockNo').AsString;
+      if (Fields[0].AsString <> nTmp) and
+         (nList.IndexOf(nTmp) < 0)  then
+      begin
+        nStr := '通道[ %s ]的水泥品种与待装品种不一致,无法换道';
+        nStr := Format(nStr, [nLine]);
+
+        ShowMsg(nStr, sHint);
+        Exit;
+      end;
+      nNewGroup := Fields[2].AsString;
     end;
-    nNewGroup := Fields[2].AsString;
+  finally
+    nList.Free;
   end;
+
   nBill := SQLQuery.FieldByName('T_Bill').AsString;
 
   nStr := 'Select * From %s Where L_ID=''%s''';
@@ -300,40 +330,59 @@ begin
   {$ENDIF}
 
   {$IFDEF AutoGetLineGroup}
-  if nNewBatCode <> '' then
+  if nOldGroup = nNewGroup then
   begin
+    nStr := 'Update %s Set T_Line=''%s'' Where R_ID=%s';
+    nStr := Format(nStr, [sTable_ZTTrucks, nLine,
+            SQLQuery.FieldByName('R_ID').AsString]);
+    FDM.ExecuteSQL(nStr);
+  end
+  else
+  begin
+    if nNewBatCode = '' then
+    begin
+      ShowMsg('获取批次号失败,无法换道',sHint);
+      Exit;
+    end;
+
     FDM.ADOConn.BeginTrans;
     try
-      nStr := 'Update %s Set T_Line=''%s'' Where R_ID=%s';
-      nStr := Format(nStr, [sTable_ZTTrucks, nLine,
+      nStr := 'Update %s Set T_Line=''%s'', T_LineGroup=''%s'' Where R_ID=%s';
+      nStr := Format(nStr, [sTable_ZTTrucks, nLine, nNewGroup,
               SQLQuery.FieldByName('R_ID').AsString]);
+      WriteLog(nStr);
       FDM.ExecuteSQL(nStr);
 
-      nStr := 'Update %s Set L_LineGroup=''%s'' Where L_ID=''%s''';
-      nStr := Format(nStr, [sTable_Bill, nNewGroup,
+      nStr := 'Update %s Set L_LineGroup=''%s'',L_Seal = ''%s'' Where L_ID=''%s''';
+      nStr := Format(nStr, [sTable_Bill, nNewGroup, nNewBatCode,
               nBill]);
+      WriteLog(nStr);
       FDM.ExecuteSQL(nStr);
 
       nStr := 'Update %s Set B_HasUse=B_HasUse-(%s) ' +
               'Where B_Stock=''%s'' and B_Type=''%s'' and B_LineGroup = ''%s'' ';
       nStr := Format(nStr, [sTable_Batcode, FloatToStr(nValue),
               nStockNo, nType, nOldGroup]);
+      WriteLog(nStr);
       FDM.ExecuteSQL(nStr); //更新旧批次号使用量
 
       nStr := 'Update %s Set D_Sent=D_Sent-(%s) Where D_ID=''%s''';
       nStr := Format(nStr, [sTable_BatcodeDoc, FloatToStr(nValue),
               nOldBatCode]);
+      WriteLog(nStr);
       FDM.ExecuteSQL(nStr); //更新旧批次号使用量
 
       nStr := 'Update %s Set B_HasUse=B_HasUse+(%s) ' +
               'Where B_Stock=''%s'' and B_Type=''%s'' and B_LineGroup = ''%s'' ';
       nStr := Format(nStr, [sTable_Batcode, FloatToStr(nValue),
               nStockNo, nType, nNewGroup]);
+      WriteLog(nStr);
       FDM.ExecuteSQL(nStr); //更新新批次号使用量
 
       nStr := 'Update %s Set D_Sent=D_Sent+(%s) Where D_ID=''%s''';
       nStr := Format(nStr, [sTable_BatcodeDoc, FloatToStr(nValue),
               nNewBatCode]);
+      WriteLog(nStr);
       FDM.ExecuteSQL(nStr); //更新新批次号使用量
 
       FDM.ADOConn.CommitTrans;

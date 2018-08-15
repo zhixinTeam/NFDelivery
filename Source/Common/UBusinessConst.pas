@@ -70,6 +70,7 @@ const
   cBC_GetPostOrders           = $0044;   //获取岗位采购单
   cBC_SavePostOrders          = $0045;   //保存岗位采购单
 
+  cBC_RemoteSnapDisPlay       = $0051;   //抓拍小屏显示
   cBC_GetPoundReaderInfo      = $0052;   //获取磅站读卡器岗位、部门
   cBC_ChangeDispatchMode      = $0053;   //切换调度模式
   cBC_GetPoundCard            = $0054;   //获取磅站卡号

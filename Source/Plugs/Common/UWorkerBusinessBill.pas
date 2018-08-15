@@ -1127,12 +1127,17 @@ begin
       if FOrderItems[nIdx].FKDValue <= 0 then Continue;
       //无开单量
 
+      {$IFNDEF ManuPack}
       FListA.Values['Pack'] := FOrderItems[nIdx].FPackStyle;
       //包装类型
+      {$ENDIF}
 
       {$IFDEF AutoGetLineGroup}
+      FListC.Clear;
+      FListC.Values['Type']  := FListA.Values['IsVIP'];
+      FListC.Values['Brand'] := nBrand;
       if not TWorkerBusinessCommander.CallMe(cBC_AutoGetLineGroup,
-          FOrderItems[nIdx].FStockID, '', @nOut) then
+          FOrderItems[nIdx].FStockID, PackerEncodeStr(FListC.Text), @nOut) then
       raise Exception.Create(nOut.FData);
 
       if nOut.FData <> '' then
@@ -1356,6 +1361,10 @@ begin
             SF('T_VIP'     , FListA.Values['IsVIP']),
             {$IFDEF LineGroup}
             SF('T_LineGroup', FListA.Values['LineGroup']),
+              {$ELSE}
+              {$IFDEF AutoGetLineGroup}
+              SF('T_LineGroup', FListA.Values['LineGroup']),
+              {$ENDIF}
             {$ENDIF}
             SF('T_HKBills' , nOut.FData + '.')
             ], sTable_ZTTrucks, '', True);

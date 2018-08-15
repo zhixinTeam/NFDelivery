@@ -400,7 +400,7 @@ end;
 //Desc: 读取nCard对应的交货单
 procedure TfFrameAutoPoundItem.LoadBillItems(const nCard: string;
  nUpdateUI: Boolean);
-var nStr,nHint,nVoice: string;
+var nStr,nHint,nVoice,nPos: string;
     nIdx,nInt,nLast: Integer;
     nBills: TLadingBillItems;
 begin
@@ -429,12 +429,12 @@ begin
   end;
 
   {$IFDEF RemoteSnap}
-  if not VerifySnapTruck(FLastReader, nBills[0], nHint) then
+  if not VerifySnapTruck(FLastReader, nBills[0], nHint, nPos) then
   begin
     nVoice := '%s车牌识别失败,请移动车辆或联系管理员';
     nVoice := Format(nVoice, [nBills[0].FTruck]);
     PlayVoice(nHint);
-    LEDDisplay('车牌识别失败,请移动车辆');
+    RemoteSnapDisPlay(nPos, nHint,sFlag_No);
     WriteSysLog(nHint);
     SetUIData(True);
     Exit;
@@ -442,7 +442,10 @@ begin
   else
   begin
     if nHint <> '' then
+    begin
+      RemoteSnapDisPlay(nPos, nHint,sFlag_Yes);
       WriteSysLog(nHint);
+    end;
   end;
   {$ENDIF}
 
@@ -1357,7 +1360,7 @@ begin
   begin
     nStr := GetTruckNO(FUIData.FTruck) + '重量  ' + GetValue(nValue);
     LEDDisplay(nStr);
-
+    
     TimerDelay.Enabled := True;
   end else Timer_SaveFail.Enabled := True;
 

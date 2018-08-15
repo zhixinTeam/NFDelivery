@@ -1091,6 +1091,10 @@ begin
         FName       := FieldByName('Z_Name').AsString;
         {$IFDEF LineGroup}
         FLineGroup  := FieldByName('Z_Group').AsString;
+        {$ELSE}
+          {$IFDEF AutoGetLineGroup}
+          FLineGroup  := FieldByName('Z_Group').AsString;
+          {$ENDIF}
         {$ENDIF}
 
         FStockNo    := FieldByName('Z_StockNo').AsString;
@@ -1220,10 +1224,14 @@ begin
         FStockGroup := GetStockMatchGroup(FStockNo);
 
         FLine       := FieldByName('T_Line').AsString;
+
+        FLineGroup  := '';
         {$IFDEF LineGroup}
         FLineGroup  := FieldByName('T_LineGroup').AsString;
         {$ELSE}
-        FLineGroup  := '';
+          {$IFDEF AutoGetLineGroup}
+          FLineGroup  := FieldByName('T_LineGroup').AsString;
+          {$ENDIF}
         {$ENDIF}
 
         FBill       := FieldByName('T_Bill').AsString;
@@ -1325,7 +1333,7 @@ end;
 //Parm: 调用次数
 //Desc: 将TruckPool中车辆按业务逻辑进队
 function TTruckQueueDBReader.MakeTruckInLine(const nTimes: Integer): Boolean;
-var i,nIdx: Integer;
+var i,nIdx: Integer; nStr: string;
 begin
   Result := False;
 
@@ -1427,8 +1435,9 @@ begin
 
       if (FTruckPool[i].FLineGroup <> '') and (FTruckPool[i].FLineGroup <> 'Z') then
       begin
-        if (FLineGroup <> '') and (FLineGroup <> 'Z') and
-           (FLineGroup <> FTruckPool[i].FLineGroup) then Continue;
+        nStr := FLineGroup;
+        if (nStr <> '') and (nStr <> 'Z') and
+           (nStr <> FTruckPool[i].FLineGroup) then Continue;
       end;
       //7.车辆指定通道类型不匹配
 

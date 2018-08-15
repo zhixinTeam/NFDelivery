@@ -46,7 +46,7 @@ implementation
 uses
   UFrame, UMgrKeyBoardTunnels, USysLoger, UClientWorker, UMemDataPool, UFormConn,
   UMgrChannel, UChannelChooser, UMITPacker, ULibFun, UDataModule, UMgrLEDDisp,
-  UMgrTTCEK720, UMgrVoiceNet, USysBusiness;
+  UMgrTTCEK720, UMgrVoiceNet, UMgrBXFontCard, USysBusiness;
 
 {$R *.dfm}
 
@@ -179,6 +179,9 @@ begin
   if Assigned(gDisplayManager) then
     gDisplayManager.StopDisplay;
 
+  if Assigned(gBXFontCardManager) then
+    gBXFontCardManager.StopService;
+
   if Assigned(gK720ReaderManager) then
     gK720ReaderManager.StopReader;
 
@@ -205,6 +208,14 @@ begin
   begin
     gDisplayManager.LoadConfig(AppPath + cDisp_Config);
     gDisplayManager.StartDisplay;
+  end;
+
+  if FileExists(AppPath + 'BXFontLED.xml') then
+  begin
+    if not Assigned(gBXFontCardManager) then
+      gBXFontCardManager := TBXFontCardManager.Create;
+    gBXFontCardManager.LoadConfig(AppPath + 'BXFontLED.xml');
+    gBXFontCardManager.StartService;
   end;
 
   if FileExists(AppPath + cTTCE_K720_Config) then

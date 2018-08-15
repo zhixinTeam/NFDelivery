@@ -209,6 +209,8 @@ ResourceString
   sFlag_DuctTimeItem  = 'DuctTimeItem';              //暗扣时间段项
   sFlag_TiHuoTypeItem = 'TiHuoTypeItem';             //提货类型
   sFlag_ZTLineGroup   = 'ZTLineGroup';               //栈台分组
+  sFlag_BatBrandGroup = 'BatBrandGroup';             //批次品牌分组
+  sFlag_BatStockGroup = 'BatStockGroup';             //批次物料分组
   sFlag_StockBrandShow= 'StockBrandShow';            //预刷卡品种显示
   sFlag_PoundStation  = 'PoundStation';              //地磅可用磅站,用于指定过磅
 

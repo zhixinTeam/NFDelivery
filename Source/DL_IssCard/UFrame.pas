@@ -7,7 +7,7 @@ uses
   Dialogs, ComCtrls, ToolWin, StdCtrls, IdBaseComponent, IdComponent,
   IdTCPConnection, IdTCPClient,PLCController, ULEDFont, cxGraphics,
   cxControls, cxLookAndFeels, cxLookAndFeelPainters, cxContainer, cxEdit,
-  cxTextEdit, cxLabel, cxMaskEdit, cxDropDownEdit,
+  cxTextEdit, cxLabel, cxMaskEdit, cxDropDownEdit, UMgrBXFontCard,
   ExtCtrls, IdTCPServer, IdContext, IdGlobal, UBusinessConst, ULibFun,
   Menus, cxButtons, UMgrSendCardNo, USysLoger, cxCurrencyEdit, dxSkinsCore,
   dxSkinsDefaultPainters, cxSpinEdit, DateUtils,UMgrKeyboardTunnels, USysBusiness;
@@ -35,6 +35,7 @@ type
     FSnapPost: string;//抓拍岗位
     FLastTruck, FTruck: string;//该通道实时获取的最新车牌号
     FIdx  : Integer;
+    FSaveMsg: string;//保存时产生的信息
     procedure OnKeyBoardDataEvent(const nKey: string);
     procedure OnKeyBoardData(const nKey: string);
     //读取磅重
@@ -147,6 +148,7 @@ begin
       PlayVoice(FKeyBoardTunnel.FID, '开始办卡,请稍后');
 
       InitTimer.Tag := 20;
+      FSaveMsg := '';
       InitTimer.Enabled := True;
       if not IfCanSaveOrder(nStr,FTruck,nHint) then
       begin
@@ -265,14 +267,19 @@ begin
 
   if gPurOrderItems[FIdx].FMsg <> '' then
   begin
-    InitTimer.Enabled := False;
-    LEDDisplay(FKeyBoardTunnel.FID, gPurOrderItems[FIdx].FMsg);
-    InitTimer.Enabled := True;
+    if FSaveMsg <> gPurOrderItems[FIdx].FMsg then
+    begin
+      FSaveMsg := gPurOrderItems[FIdx].FMsg;
+      InitTimer.Enabled := False;
+      LEDDisplay(FKeyBoardTunnel.FID, gPurOrderItems[FIdx].FMsg);
+      InitTimer.Enabled := True;
+    end;
   end;
 
   if (InitTimer.Tag <= 0) then
   begin
     InitTimer.Enabled := False;
+    FSaveMsg := '';
     LEDDisplay(FKeyBoardTunnel.FID, '请输入办卡密码...');//
   end;
   //结束
@@ -299,7 +306,7 @@ begin
           if FLastTruck <> FTruck then
           begin
             FLastTruck := FTruck;
-            LEDDisplay(FKeyBoardTunnel.FID,'当前车牌号:' + FTruck);
+            LEDDisplay(FKeyBoardTunnel.FID,'','当前车牌号:' + FTruck);
           end;
         end;
       end;

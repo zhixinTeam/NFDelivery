@@ -740,7 +740,7 @@ end;
 //Parm: 物料编号[FIn.FData]
 //Desc: 获取指定物料号的编号
 function TWorkerBusinessCommander.GetStockBatcode(var nData: string): Boolean;
-var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType, nLineGroup: string;
+var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType, nLineGroup, nBatStockNo: string;
     nBatchNew, nSelect: string;
     nVal, nPer: Double;
     nInt, nInc: Integer;
@@ -750,8 +750,15 @@ var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType, nLineGroup: string;
     function NewBatCode(const nBtype:string = 'C'): string;
     var nSQL, nTmp: string;
     begin
+      {$IFDEF AutoGetLineGroup}
+      nSQL := 'Select * From %s Where B_Stock=''%s'' And B_Type=''%s'' ' +
+              'And B_LineGroup = ''%s'' And B_Valid=''%s'' And B_BrandGroup=''%s''';
+      nSQL := Format(nSQL, [sTable_Batcode, nBatStockNo, nBtype, nLineGroup,
+                            sFlag_Yes, FListA.Values['Brand']]);
+      {$ELSE}
       nSQL := 'Select * From %s Where B_Stock=''%s'' And B_Type=''%s''';
       nSQL := Format(nSQL, [sTable_Batcode, FIn.FData, nBtype]);
+      {$ENDIF}
 
       with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
       begin
@@ -765,7 +772,12 @@ var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType, nLineGroup: string;
         else Result := nP + nTmp;
       end;
 
+      {$IFDEF AutoGetLineGroup}
+      nTmp := Format('B_Stock=''%s'' And B_Type=''%s'' And B_LineGroup=''%s'' And B_Valid=''%s'' And B_BrandGroup=''%s''',
+                     [nBatStockNo, nBtype, nLineGroup, sFlag_Yes, FListA.Values['Brand']]);
+      {$ELSE}
       nTmp := Format('B_Stock=''%s'' And B_Type=''%s''', [FIn.FData, nBtype]);
+      {$ENDIF}
       nSQL := MakeSQLByStr([SF('B_Batcode', Result),
                 SF('B_FirstDate', sField_SQLServer_Now, sfVal),
                 SF('B_HasUse', 0, sfVal),
@@ -838,13 +850,38 @@ begin
     //default
 
     {$IFDEF AutoGetLineGroup}
+    nStr := 'Select D_ParamB From %s Where D_Name=''%s'' and D_Value=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_BatBrandGroup, FListA.Values['Brand']]);
+
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    begin
+      if RecordCount > 0 then
+      begin
+        FListA.Values['Brand'] := Fields[0].AsString;
+      end;
+    end;
+
+    nBatStockNo := FIn.FData;
+    nStr := 'Select D_ParamB From %s Where D_Name=''%s'' and D_Value=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_BatStockGroup, nBatStockNo]);
+    WriteLog('查询符合条件批次号物料分组sql:'+nStr);
+
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    begin
+      if RecordCount > 0 then
+      begin
+        nBatStockNo := Fields[0].AsString;
+        WriteLog('批次物料号分组匹配:'+ FIn.FData + '-->' + nBatStockNo);
+      end;
+    end;
+
     if FListA.Values['LineGroup'] = '' then
           nLineGroup := sFlag_TypeZT
     else  nLineGroup := FListA.Values['LineGroup'];
     nStr := 'Select *,%s as ServerNow From %s Where B_Stock=''%s'' ' +
-            'And B_Type=''%s'' And B_LineGroup = ''%s''';
-    nStr := Format(nStr, [sField_SQLServer_Now,sTable_Batcode,FIn.FData,nType,
-                          nLineGroup]);
+            'And B_Type=''%s'' And B_LineGroup = ''%s'' And B_Valid=''%s'' And B_BrandGroup=''%s''';
+    nStr := Format(nStr, [sField_SQLServer_Now,sTable_Batcode,nBatStockNo,nType,
+                          nLineGroup, sFlag_Yes, FListA.Values['Brand']]);
     {$ELSE}
     nStr := 'Select *,%s as ServerNow From %s Where B_Stock=''%s'' ' +
             'And B_Type=''%s''';
@@ -855,7 +892,7 @@ begin
     begin
       if RecordCount < 1 then
       begin
-        nData := '物料[ %s.%s ]未配置批次号规则.';
+        nData := '物料[ %s.%s ]未配置批次号规则或规则未启用.';
         nData := Format(nData, [FIn.FData, nType]);
         Exit;
       end;
@@ -984,7 +1021,7 @@ begin
     First;
     nVal := 0;
     nInc := 1;
-    
+
     nBatchNew := '';
     nSelect := sFlag_No;
 
@@ -3488,6 +3525,7 @@ begin
   FListA.Clear;
   FListA.Values['NoDate'] := sFlag_Yes;
   FListA.Values['AICMID'] := FIn.FData;
+  FListA.Values['order']  := 'invcode';
   if not CallMe(cBC_GetSQLQueryOrder, '201', PackerEncodeStr(FListA.Text), @nOut) then
   begin
     nData := 'GetOrderList获取NC采购订单语句失败';
@@ -4273,28 +4311,94 @@ end;
 //Date: 2018-07-31
 //Desc: 获取装车线分组
 function TWorkerBusinessCommander.AutoGetLineGroup(var nData: string): Boolean;
-var nStr: string;
+var nStr, nStrAdj: string;
     nIdx, nI: Integer;
-    nSLine,nSTruck: string;
+    nSLine,nSTruck, nType, nBatBrand, nBatStockNo: string;
     nOut: TWorkerBusinessCommand;
     nLines: TZTLineItems;
     nTrucks: TZTTruckItems;
 begin
   Result := False;
   FListC.Clear;
+  FListA.Clear;
+  FListA.Text:= PackerDecodeStr(FIn.FExtParam);
   WriteLog('开始自动匹配分组...');
+
+  nBatBrand := FListA.Values['Brand'];
+  nStr := 'Select D_ParamB From %s Where D_Name=''%s'' and D_Value=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_BatBrandGroup, nBatBrand]);
+  WriteLog('查询符合条件批次号品牌分组sql:'+nStr);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nBatBrand := Fields[0].AsString;
+    end;
+  end;
+
+  nBatStockNo := FIn.FData;
+  nStr := 'Select D_ParamB From %s Where D_Name=''%s'' and D_Value=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_BatStockGroup, nBatStockNo]);
+  WriteLog('查询符合条件批次号物料分组sql:'+nStr);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nBatStockNo := Fields[0].AsString;
+      WriteLog('批次物料号分组匹配:'+ FIn.FData + '-->' + nBatStockNo);
+    end;
+  end;
+
+  if FListA.Values['Type'] ='' then
+        nType := sFlag_TypeCommon
+  else  nType := FIn.FExtParam;
+
+  if (nType <> '') and (nType <> sFlag_TypeCommon) and
+     (nType <> sFlag_TypeShip) and (nType <> sFlag_TypeStation) then
+    nType := sFlag_TypeCommon;
+  //default
+
+  nStr := 'Select B_LineGroup From %s Where B_Stock=''%s'' and B_Type=''%s'' '+
+          'and B_Valid=''%s'' and B_BrandGroup=''%s'' order by R_ID ';
+  nStr := Format(nStr, [sTable_Batcode, nBatStockNo, nType, sFlag_Yes, nBatBrand]);
+  WriteLog('查询符合条件批次号生产线分组sql:'+nStr);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nData := '物料[ %s.%s ]没有符合条件的生产线分组.';
+      nData := Format(nData, [nBatStockNo, nType]);
+
+      WriteLog('物料'+ nBatStockNo +'没有符合条件的生产线分组.');
+      Exit;
+    end;
+
+    First;
+
+    while not Eof do
+    begin
+      FListC.Add(Fields[0].AsString);
+      Next;
+    end;
+  end;
+  nStrAdj := AdjustListStrFormat2(FListC, '''', True, ',', False);
+
   SetLength(FLineItems, 0);
   nStr := 'Select Z_ID, Z_Group From %s Where Z_StockNo=''%s'' '+
-          'and Z_Valid=''%s'' order by R_ID ';
-  nStr := Format(nStr, [sTable_ZTLines, FIn.FData, sFlag_Yes]);
+          'and Z_Valid=''%s'' and Z_Group In (%s) order by R_ID ';
+  nStr := Format(nStr, [sTable_ZTLines, nBatStockNo, sFlag_Yes, nStrAdj]);
   WriteLog('查询符合条件通道sql:'+nStr);
 
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
   begin
     if RecordCount < 1 then
     begin
-      FOut.FData := '';
-      Result := True;
+      nData := '物料[ %s ]没有符合条件的通道.';
+      nData := Format(nData, [nBatStockNo]);
+      WriteLog('物料'+ nBatStockNo +'没有符合条件的通道.');
       Exit;
     end;
 
@@ -4315,17 +4419,13 @@ begin
       Inc(nIdx);
       Next;
     end;
-
-    FOut.FData := Fields[0].AsString;
-    Result := True;
   end;
   {$IFDEF HardMon}
   if not THardwareCommander.CallMe(cBC_GetQueueData, sFlag_No, '', @nOut) then
   begin
     begin
       WriteLog('读取队列信息失败');
-      FOut.FData := '';
-      Result := True;
+      nData := '读取队列信息失败.';
       Exit;
     end;
   end;
@@ -4421,6 +4521,7 @@ begin
   FOut.FData := '';
   Result := True;
   {$ENDIF}
+  WriteLog('结束自动匹配分组...');
 end;
 
 initialization

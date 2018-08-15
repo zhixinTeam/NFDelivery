@@ -288,7 +288,7 @@ function PrintHeGeReport(const nHID: string; const nAsk: Boolean): Boolean;
 //化验单,合格证
 function IsOrderCanLade(nOrderID: string): Boolean;
 //查询此订单是否可以开卡
-function InitSaleViewData: Boolean;
+function InitViewData: Boolean;
 function MakeSaleViewData(nID: string; nMValue: Double): Boolean;
 function GetStockType(nBill: string):string;
 
@@ -296,9 +296,10 @@ function IsStationAutoP(const nTruck: string; var nPValue: Double;
                         nMsg: string): Boolean;
 //火车衡自动获取最近5条历史皮重
 function VeriFySnapTruck(const nReader: string; nBill: TLadingBillItem;
-                         var nMsg: string): Boolean;
+                         var nMsg, nPos: string): Boolean;
 function ReadPoundReaderInfo(const nReader: string; var nDept: string): string;
 //读取nReader岗位、部门
+procedure RemoteSnapDisPlay(const nPost, nText, nSucc: string);
 implementation
 
 //Desc: 记录日志
@@ -662,7 +663,11 @@ var nOut: TWorkerBusinessCommand;
 begin
   if CallBusinessCommand(cBC_GetStockBatcode, nStock, nExt, @nOut, False) then
        Result := nOut.FData
-  else Result := '';
+  else
+  begin
+    Result := '';
+    WriteLog('获取批次号失败:' + nOut.FData);
+  end;
 end;
 
 //Desc: 获取系统有效期
@@ -2803,8 +2808,8 @@ begin
   end;
 end;
 
-//Desc: 销售特定字段初始化(特定使用)
-function InitSaleViewData: Boolean;
+//Desc: 特定字段初始化(特定使用)
+function InitViewData: Boolean;
 var nID: string;
     nStr: string;
     nList : TStrings;
@@ -2812,7 +2817,7 @@ var nID: string;
 begin
   nList := TStringList.Create;
   try
-    nStr := 'Select top 1000 L_ID , L_MValue From %s ' +
+    nStr := 'Select top 10000 L_ID , L_MValue From %s ' +
             'Where L_MValueView is null';
     nStr := Format(nStr, [sTable_Bill]);
 
@@ -2848,6 +2853,12 @@ begin
         Next;
       end;
     end;
+
+    nStr := 'Update %s set P_MValueView = P_MValue,'+
+            ' P_ValueView = P_MValue - P_PValue where P_MValueView is Null'+
+            ' and P_MValue is not null and P_PValue is not null ';
+    nStr := Format(nStr, [sTable_PoundLog]);
+    nList.Add(nStr);
 
     FDM.ADOConn.BeginTrans;
     try
@@ -2966,8 +2977,8 @@ begin
 end;
 
 function VerifySnapTruck(const nReader: string; nBill: TLadingBillItem;
-                         var nMsg: string): Boolean;
-var nStr, nPos, nDept: string;
+                         var nMsg, nPos: string): Boolean;
+var nStr, nDept: string;
     nNeedManu, nUpdate: Boolean;
     nSnapTruck, nTruck, nEvent, nPicName: string;
 begin
@@ -3130,6 +3141,21 @@ begin
   begin
     Result := Trim(nOut.FData);
     nDept:= Trim(nOut.FExtParam);
+  end;
+end;
+
+procedure RemoteSnapDisPlay(const nPost, nText, nSucc: string);
+var nOut: TWorkerBusinessCommand;
+    nList: TStrings;
+begin
+  nList := TStringList.Create;
+  try
+    nList.Values['text'] := nText;
+    nList.Values['succ'] := nSucc;
+
+    CallBusinessHardware(cBC_RemoteSnapDisPlay, nPost, PackerEncodeStr(nList.Text), @nOut);
+  finally
+    nList.Free;
   end;
 end;
 

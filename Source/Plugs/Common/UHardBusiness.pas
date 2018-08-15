@@ -14,7 +14,7 @@ uses
   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}UMgrRemotePrint,
   UMgrLEDDisp, UMgrRFID102, {$IFDEF HKVDVR}UMgrCamera, {$ENDIF}Graphics, DB,
   UMgrLEDDispCounter, UJSDoubleChannel,
-  UMgrremoteSnap,UMgrVoiceNet;
+  UMgrremoteSnap,UMgrVoiceNet, DateUtils;
 
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
 procedure WhenTTCE_M100_ReadCard(const nItem: PM100ReaderItem);
@@ -33,13 +33,13 @@ procedure WhenSaveJS(const nTunnel: PMultiJSTunnel);
 
 procedure WhenQueueTruckChanged(const nManager: TTruckQueueManager);
 //队列车辆变更
-function PrepareShowInfo(const nCard: string; nTunnel: string='';
+function PrepareShowInfo(const nCard: string; nTunnel: string=''; nTunnelEx: string='';
  nLevel: Integer = 0):string;
 //计数器显示预装信息
 function GetCardUsed(const nCard: string; var nCardType: string): Boolean;
 //获取卡号类型
 
-procedure MakeTruckShowPreInfo(const nCard: string; nTunnel: string='');
+procedure MakeTruckShowPreInfo(const nCard: string; nTunnel: string='';nTunnelEx: string='');
 //显示预刷卡信息
 procedure MakeTruckAddWater(const nCard: string; nTunnel: string='');
 //散装车加水
@@ -71,6 +71,8 @@ const
   sPost_SOut  = 'Sout';
   sPost_PIn   = 'Pin';
   sPost_POut  = 'Pout';
+  sPost_SW    = 'StartWaiting';
+  sPost_EW    = 'EndWaiting';
 
 //Date: 2014-09-15
 //Parm: 命令;数据;参数;输出
@@ -1285,13 +1287,65 @@ begin
   end;
 end;
 
+//Date: 2018-08-06
+//Parm: 卡号;读头
+//Desc: 记录车辆刷卡时间或结束等待并抬杆
+procedure MakeTruckCross(const nCard,nReader,nPost, nMemo: string; const nDB: PDBWorker;
+                                const nStart: TDateTime; const nKeep: Integer);
+var nStr: string;
+    nIdx: Integer;
+begin
+  nStr := '磁卡[ %s ]开始等待时间[ %s ],当前时间[ %s ],当前刷卡状态[ %s ].';
+  nStr := Format(nStr, [nCard, FormatDateTime('YYYY-MM-DD HH:MM:SS', nStart),
+                               FormatDateTime('YYYY-MM-DD HH:MM:SS', Now),nMemo]);
+
+  WriteHardHelperLog(nStr);
+  if MinutesBetween(Now, nStart) < nKeep then
+  begin
+    nStr := '磁卡[ %s ]刷卡间隔过短,请等待.';
+    nStr := Format(nStr, [nCard]);
+
+    WriteHardHelperLog(nStr);
+    Exit;
+  end;
+
+  if nPost = sPost_SW then
+  begin
+    nStr := 'Update %s Set C_Date=%s, C_Memo=''%s'' Where C_Card=''%s''';
+    nStr := Format(nStr, [sTable_Card, sField_SQLServer_Now, sPost_SW, nCard]);
+
+    gDBConnManager.WorkerExec(nDB, nStr);
+  end
+  else
+  if nPost = sPost_EW then
+  begin
+    if nMemo = sPost_SW then//已在等待区刷卡
+    begin
+      nStr := 'Update %s Set C_Memo=''%s'' Where C_Card=''%s''';
+      nStr := Format(nStr, [sTable_Card, sPost_EW, nCard]);
+
+      gDBConnManager.WorkerExec(nDB, nStr);
+      HardOpenDoor(nReader);
+      //抬杆
+    end
+    else
+    begin
+      nStr := '磁卡[ %s ]未在[ %s ]刷卡,无法出厂.';
+      nStr := Format(nStr, [nCard, sPost_SW]);
+
+      WriteHardHelperLog(nStr);
+    end;
+  end
+end;
+
 //Date: 2012-4-22
 //Parm: 读头数据
 //Desc: 对nReader读到的卡号做具体动作
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
-var nStr, nGroup: string;
+var nStr, nGroup, nMemo: string;
     nErrNum: Integer;
     nDBConn: PDBWorker;
+    nStart: TDateTime;
 begin
   nDBConn := nil;
   {$IFDEF DEBUG}
@@ -1311,7 +1365,7 @@ begin
       nDBConn.FConn.Connected := True;
     //conn db
 
-    nStr := 'Select C_Card,C_Group From $TB Where C_Card=''$CD'' or ' +
+    nStr := 'Select C_Card,C_Group,C_Date,C_Memo From $TB Where C_Card=''$CD'' or ' +
             'C_Card2=''$CD'' or C_Card3=''$CD''';
     nStr := MacroValue(nStr, [MI('$TB', sTable_Card), MI('$CD', nReader.FCard)]);
 
@@ -1320,6 +1374,8 @@ begin
     begin
       nStr := Fields[0].AsString;
       nGroup := UpperCase(Fields[1].AsString);
+      nStart := Fields[2].AsDateTime;
+      nMemo := Fields[3].AsString;
     end else
     begin
       nStr := Format('磁卡号[ %s ]匹配失败.', [nReader.FCard]);
@@ -1350,9 +1406,17 @@ begin
 
       if nReader.FType = rtGate then
       begin
-        if nReader.FID <> '' then
-          HardOpenDoor(nReader.FID);
-        //抬杆
+        if (nReader.FPost = sPost_SW) or (nReader.FPost = sPost_EW) then
+        begin
+          MakeTruckCross(nStr, nReader.FID, nReader.FPost, nMemo, nDBConn,
+                         nStart, nReader.FKeep);
+        end
+        else
+        begin
+          if nReader.FID <> '' then
+            HardOpenDoor(nReader.FID);
+          //抬杆
+        end;
       end else
 
       if nReader.FType = rtQueueGate then
@@ -2471,7 +2535,8 @@ begin
     begin
       if nHost.FOptions.Values['DaiShowPre'] = sFlag_Yes then
       begin
-        MakeTruckShowPreInfo(nCard, nHost.FTunnel);
+        MakeTruckShowPreInfo(nCard, nHost.FTunnel,
+        nHost.FOptions.Values['TunnelEx']);
         Exit;
       end else
 
@@ -2898,7 +2963,7 @@ end;
 //Date: 2017-08-13
 //Parm: 磁卡号;通道号;调用深度
 //Desc: 在nTunnel通道上显示nCard的预刷卡信息
-function PrepareShowInfo(const nCard:string; nTunnel: string='';
+function PrepareShowInfo(const nCard:string; nTunnel: string='';nTunnelEx: string='';
  nLevel: Integer = 0):string;
 var nStr,nNewCard: string;
     nDai: Double;
@@ -2908,6 +2973,7 @@ var nStr,nNewCard: string;
     nPLine: PLineItem;
     nPTruck: PTruckItem;
     nTrucks: TLadingBillItems;
+    nTunnelReal: string;
 begin
   if not GetLadingBills(nCard, sFlag_TruckZT, nTrucks) then
   begin
@@ -2927,6 +2993,19 @@ begin
     WriteNearReaderLog(Result);
     Result := '磁卡无效2.';
     Exit;
+  end;
+
+  if (nTunnel <> '') and (nTunnelEx <> '') then//预刷卡读卡器同时支持2个通道
+  begin
+    nTunnelReal := gTruckQueueManager.GetTruckTunnel(nTrucks[0].FTruck);
+    //重新定位车辆所在车道
+    WriteHardHelperLog('预刷卡通道为双通道:'+nTunnel+';'+nTunnelEx+
+                       ';当前车辆所属通道:'+nTunnelReal);
+    if (nTunnelReal = nTunnel) or (nTunnelReal = nTunnelEx) then
+    begin
+      nTunnel := nTunnelReal;
+    end;
+    //判断是否属于通道范围,过滤范围外通道
   end;
 
   if nTunnel = '' then
@@ -3070,10 +3149,10 @@ end;
 //Date: 2017/6/21
 //Parm: 磁卡号;通道编号
 //Desc: 显示预刷卡车辆信息
-procedure MakeTruckShowPreInfo(const nCard: string; nTunnel: string='');
+procedure MakeTruckShowPreInfo(const nCard: string; nTunnel: string='';nTunnelEx: string='');
 var nMsgStr: string;
 begin
-  nMsgStr := PrepareShowInfo(nCard, nTunnel);
+  nMsgStr := PrepareShowInfo(nCard, nTunnel,nTunnelEx);
   gDisplayManager.Display(nTunnel, nMsgStr);
 end;
 

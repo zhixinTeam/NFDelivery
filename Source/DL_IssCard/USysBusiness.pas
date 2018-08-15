@@ -10,7 +10,7 @@ uses
   Windows, DB, Classes, Controls, SysUtils, UBusinessPacker, UBusinessWorker,
   UBusinessConst, ULibFun, UAdjustForm, UFormCtrl, UDataModule, //UDataReport,
   UFormBase, cxMCListBox, UMgrPoundTunnels,  UBase64, USysConst,//UMgrCamera,
-  USysDB, USysLoger, UMgrTTCEK720, UMgrLEDDisp, UMgrVoiceNet;
+  USysDB, USysLoger, UMgrTTCEK720, UMgrLEDDisp, UMgrBXFontCard, UMgrVoiceNet;
 
 type
   TLadingStockItem = record
@@ -175,7 +175,9 @@ function GetTruckLastTime(const nTruck: string): Integer;
 function GetFQValueByStockNo(const nStock: string): Double;
 //获取封签号已发量
 procedure WhenTTCE_K720_ReadCard(const nItem: PK720ReaderItem);
-procedure LEDDisplay(const nTunnel, nContent: string);
+procedure LEDDisplay(const nTunnel: string; nContent: string = '';
+                     nTitle: string = '');
+
 procedure PlayVoice(const nTunnel, nStrtext: string);
 function CheckCardOK(const nCard:string; var nMsg:string):Boolean;
 //检查磁卡是否被占用
@@ -1209,10 +1211,16 @@ begin
             @nOut, False);
 end;
 
-procedure LEDDisplay(const nTunnel, nContent: string);
+procedure LEDDisplay(const nTunnel: string; nContent: string = '';
+                     nTitle: string = '');
 begin
-  gSysLoger.AddLog(Format('LEDDisplay:%s.%s', [nTunnel, nContent]));
-  gDisplayManager.Display(nTunnel, nContent);
+  gSysLoger.AddLog(Format('LEDDisplay:%s.Content:%s.Title:%s',
+                          [nTunnel, nContent, nTitle]));
+  if Trim(nTitle) = '' then
+    nTitle := cBXDataNull;
+  if Trim(nContent) = '' then
+    nContent := cBXDataNull;
+  gBXFontCardManager.Display(nTitle, nContent, nTunnel);
 end;
 
 procedure PlayVoice(const nTunnel, nStrtext: string);
@@ -1306,34 +1314,32 @@ var
   nSQL, nStr: string;
   nOnlyIss, nRet: Boolean;
   nlist : TStrings;
+  nID: string;
 begin
   Result := False;
   nOnlyIss := False;
   nRet := False;
-  nSQL := 'select P_Card from %s where P_Truck =''%s'' and P_Order = ''%s''';
-  nSQL := nSQL + ' and P_CusID = ''%s'' and P_MID = ''%s'' and P_Card is null';
+
+  nSQL := 'select R_ID from %s where P_Truck =''%s'' and P_OutTime is null';
+  nSQL := nSQL + ' and (P_Card is null or P_Card='''') and P_Status = ''%s''';
   nSQL := Format(nSQL, [sTable_CardProvide, nPurchaseItem.FTrackNo,
-                                            nPurchaseItem.FOrder_Id,
-                                            nPurchaseItem.FProvID,
-                                            nPurchaseItem.FGoodsID]);
+                                            sFlag_TruckNone]);
   with FDM.QueryTemp(nSQL) do
   begin
     if RecordCount>0 then
     begin
-      nMsg := '车辆%s已办理有效采购单据,开始更新磁卡号并发卡';
-      nMsg := Format(nMsg, [nPurchaseItem.FTrackNo]);
+      nID := Fields[0].AsString;
+      nMsg := '车辆%s已办理有效采购单据%s,开始更新磁卡号并发卡';
+      nMsg := Format(nMsg, [nPurchaseItem.FTrackNo, nID]);
       WriteLog(nMsg);
       nOnlyIss := True;
     end;
   end;
   if nOnlyIss then
   begin
-    nSQL := 'Update %s Set P_Card = ''%s'' where P_Truck =''%s'' and P_Order = ''%s''';
-    nSQL := nSQL + ' and P_CusID = ''%s'' and P_MID = ''%s'' and P_Card is null';
-    nSQL := Format(nSQL, [sTable_CardProvide, nCard, nPurchaseItem.FTrackNo,
-                                              nPurchaseItem.FOrder_Id,
-                                              nPurchaseItem.FProvID,
-                                              nPurchaseItem.FGoodsID]);
+    nSQL := 'Update %s Set P_Card = ''%s'' where P_Truck =''%s''';
+    nSQL := nSQL + ' and R_ID = ''%s''';
+    nSQL := Format(nSQL, [sTable_CardProvide, nCard, nPurchaseItem.FTrackNo, nID]);
     try
      FDM.ExecuteSQL(nSQL);
      nRet := True;

@@ -105,7 +105,8 @@ inherited fFormBill: TfFormBill
         'C=C'#12289#26222#36890
         'Z=Z'#12289#32440#34955
         'T=T'#12289#28034#33180#34955
-        'R=R'#12289#26089#24378#22411)
+        'R=R'#12289#26089#24378#22411
+        'F=F'#12289#22797#21512#34955)
       TabOrder = 4
       OnKeyPress = EditLadingKeyPress
       Width = 110

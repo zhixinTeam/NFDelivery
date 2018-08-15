@@ -98,7 +98,7 @@ begin
   FJBWhere := '';
   FShadowWeight := -1;
   InitDateRange(Name, FStart, FEnd);
-  InitSaleViewData;
+  InitViewData;
   if gSysParam.FIsAdmin then
     N5.Visible := True;
 end;
@@ -128,9 +128,6 @@ begin
   begin
     Result := Result + ' Where (' + FJBWhere + ')';
   end;
-
-  if not gPopedomManager.HasPopedom('MAIN_L06', sPopedom_ViewDai) then
-    Result := Result + ' And ( L_Type=''' + sFlag_San + ''')';
 
   Result := MacroValue(Result, [MI('$Bill', sTable_Bill),
             MI('$PoundLog', sTable_PoundLog),

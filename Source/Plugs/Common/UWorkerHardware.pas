@@ -78,6 +78,8 @@ type
     //通过读卡器打开道闸
     function PlayNetVoice(var nData: string): Boolean;
     //网络语音播放
+    function RemoteSnap_DisPlay(var nData: string): Boolean;
+    //抓拍小屏显示
   public
     constructor Create; override;
     destructor destroy; override;
@@ -95,7 +97,7 @@ implementation
 uses
   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}
   UMgrHardHelper, UMgrCodePrinter, UMgrQueue, UTaskMonitor,
-  UMgrTruckProbe, UMgrLEDDispCounter;
+  UMgrTruckProbe, UMgrLEDDispCounter, UMgrRemoteSnap;
 
 //Date: 2012-3-13
 //Parm: 如参数护具
@@ -260,6 +262,7 @@ begin
    cBC_OpenDoorByReader     : Result := OpenDoorByReader(nData);
    cBC_PlayVoice            : Result := PlayNetVoice(nData);
    cBC_ShowTxt              : Result := TruckProbe_ShowTxt(nData);
+   cBC_RemoteSnapDisPlay    : Result := RemoteSnap_DisPlay(nData);
    else
     begin
       Result := False;
@@ -931,6 +934,30 @@ begin
   FOut.FData := gHardwareHelper.GetReaderInfo(FIn.FData, FOut.FExtParam);
 end;
 
+
+//Date: 2018-08-14
+//Parm: 岗位[FIn.FData] 发送内容[FIn.FExt]
+//Desc: 向指定通道的显示屏发送内容
+function THardwareCommander.RemoteSnap_DisPlay(var nData: string): Boolean;
+var nInt: Integer;
+begin
+  Result := True;
+  if not Assigned(gHKSnapHelper) then Exit;
+
+  FListA.Clear;
+  FListA.Text := PackerDecodeStr(FIn.FExtParam);
+
+  if FListA.Values['succ'] = sFlag_No then
+         nInt := 3
+  else nInt := 2;
+
+  gHKSnapHelper.Display(FIn.FData,FListA.Values['text'], nInt);
+
+  nData := Format('RemoteSnapDisPlay -> %s:%s:%s', [FIn.FData,
+                                                    FListA.Values['text'],
+                                                    FListA.Values['succ']]);
+  WriteLog(nData);
+end;
 
 initialization
   gBusinessWorkerManager.RegisteWorker(THardwareCommander, sPlug_ModuleHD);

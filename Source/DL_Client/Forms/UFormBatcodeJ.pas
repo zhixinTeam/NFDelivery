@@ -67,6 +67,10 @@ type
     dxLayout1Group12: TdxLayoutGroup;
     EditLineGroup: TcxComboBox;
     dxLayout1Item22: TdxLayoutItem;
+    ChkValid: TcxCheckBox;
+    dxLayout1Item23: TdxLayoutItem;
+    EditBrand: TcxComboBox;
+    dxLayout1Item24: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditStockPropertiesEditValueChanged(Sender: TObject);
@@ -156,9 +160,32 @@ begin
 
   FDM.FillStringsData(EditLineGroup.Properties.Items, nStr, 1, '.');
   AdjustCXComboBoxItem(EditLineGroup, False);
+
+  dxLayout1Item24.Visible := True;
+  nStr := 'Select distinct D_ParamB From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_BatBrandGroup]);
+
+  EditBrand.Properties.Items.Clear;
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount < 1 then Exit;
+
+    First;
+
+    while not Eof do
+    begin
+        EditBrand.Properties.Items.Add(Fields[0].AsString);
+      Next;
+    end;
+  end;
   {$ELSE}
   dxLayout1Item22.Visible := False;
   EditLineGroup.Text := '';
+
+  dxLayout1Item24.Visible := False;
+  EditBrand.Text := '';
+  dxLayout1Item23.Visible := False;
   {$ENDIF}
 
   if nID <> '' then
@@ -191,6 +218,10 @@ begin
       {$IFDEF AutoGetLineGroup}
       nStr := FieldByName('B_LineGroup').AsString;
       SetCtrlData(EditLineGroup, nStr);
+
+      nStr := FieldByName('B_BrandGroup').AsString;
+      SetCtrlData(EditBrand, nStr);
+      ChkValid.Checked := FieldByName('B_Valid').AsString = sFlag_Yes;
       {$ENDIF}
       Check2.Checked := FieldByName('B_AutoNew').AsString = sFlag_Yes;
     end;
@@ -221,9 +252,10 @@ begin
     if not Result then Exit;
 
     {$IFDEF AutoGetLineGroup}
-    nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s'' And B_LineGroup = ''%s''';
+    nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s'' ' +
+            'And B_LineGroup = ''%s'' And B_BrandGroup=''%s''';
     nStr := Format(nStr, [sTable_Batcode, GetCtrlData(EditStock),
-            GetCtrlData(EditType), GetCtrlData(EditLineGroup)]);
+            GetCtrlData(EditType), GetCtrlData(EditLineGroup), GetCtrlData(EditBrand)]);
     {$ELSE}
     nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s''';
     nStr := Format(nStr, [sTable_Batcode, GetCtrlData(EditStock),
@@ -283,7 +315,7 @@ end;
 
 //Desc: 保存
 procedure TfFormBatcode.BtnOKClick(Sender: TObject);
-var nStr,nU,nN: string;
+var nStr,nU,nN, nV: string;
 begin
   if not IsDataValid then Exit;
   //验证不通过
@@ -295,6 +327,14 @@ begin
   if Check2.Checked then
        nN := sFlag_Yes
   else nN := sFlag_No;
+
+  {$IFDEF AutoGetLineGroup}
+  if ChkValid.Checked then
+       nV := sFlag_Yes
+  else nV := sFlag_No;
+  {$ELSE}
+  nV := sFlag_Yes;
+  {$ENDIF}
 
   if FRecordID = '' then
        nStr := ''
@@ -316,6 +356,8 @@ begin
           SF('B_LastDate', sField_SQLServer_Now, sfVal),
           {$IFDEF AutoGetLineGroup}
           SF('B_LineGroup', GetCtrlData(EditLineGroup)),
+          SF('B_BrandGroup', GetCtrlData(EditBrand)),
+          SF('B_Valid', nV),
           {$ENDIF}
           SF('B_Batcode', EditBatcode.Text),
           SF('B_Type', GetCtrlData(EditType))
