@@ -360,9 +360,8 @@ begin
       FDM.ExecuteSQL(nStr);
 
       nStr := 'Update %s Set B_HasUse=B_HasUse-(%s) ' +
-              'Where B_Stock=''%s'' and B_Type=''%s'' and B_LineGroup = ''%s'' ';
-      nStr := Format(nStr, [sTable_Batcode, FloatToStr(nValue),
-              nStockNo, nType, nOldGroup]);
+              'Where B_Batcode=''%s''';
+      nStr := Format(nStr, [sTable_Batcode, FloatToStr(nValue), nOldBatCode]);
       WriteLog(nStr);
       FDM.ExecuteSQL(nStr); //更新旧批次号使用量
 
@@ -373,9 +372,8 @@ begin
       FDM.ExecuteSQL(nStr); //更新旧批次号使用量
 
       nStr := 'Update %s Set B_HasUse=B_HasUse+(%s) ' +
-              'Where B_Stock=''%s'' and B_Type=''%s'' and B_LineGroup = ''%s'' ';
-      nStr := Format(nStr, [sTable_Batcode, FloatToStr(nValue),
-              nStockNo, nType, nNewGroup]);
+              'Where B_Batcode=''%s'' ';
+      nStr := Format(nStr, [sTable_Batcode, FloatToStr(nValue), nNewBatCode]);
       WriteLog(nStr);
       FDM.ExecuteSQL(nStr); //更新新批次号使用量
 

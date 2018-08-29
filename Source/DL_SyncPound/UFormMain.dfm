@@ -1,7 +1,7 @@
 object fFormMain: TfFormMain
   Left = 329
   Top = 201
-  Width = 557
+  Width = 678
   Height = 394
   BorderIcons = [biSystemMenu, biMinimize]
   Caption = #21160#24577#34913#31995#32479#21516#27493#24037#20855
@@ -19,10 +19,24 @@ object fFormMain: TfFormMain
   object GroupBox1: TGroupBox
     Left = 0
     Top = 0
-    Width = 541
+    Width = 662
     Height = 70
     Align = alTop
     TabOrder = 0
+    object Label1: TLabel
+      Left = 401
+      Top = 44
+      Width = 60
+      Height = 12
+      Caption = #37325#26032#21516#27493#31532
+    end
+    object Label2: TLabel
+      Left = 546
+      Top = 44
+      Width = 36
+      Height = 12
+      Caption = #26465#35760#24405
+    end
     object CheckSrv: TCheckBox
       Left = 13
       Top = 45
@@ -61,7 +75,7 @@ object fFormMain: TfFormMain
       OnClick = CheckLogedClick
     end
     object BtnConn: TButton
-      Left = 360
+      Left = 317
       Top = 37
       Width = 75
       Height = 25
@@ -70,7 +84,7 @@ object fFormMain: TfFormMain
       OnClick = BtnConnClick
     end
     object Button1: TButton
-      Left = 360
+      Left = 317
       Top = 8
       Width = 75
       Height = 25
@@ -78,11 +92,27 @@ object fFormMain: TfFormMain
       TabOrder = 5
       OnClick = Button1Click
     end
+    object ReSyncValue: TEdit
+      Left = 465
+      Top = 40
+      Width = 78
+      Height = 20
+      TabOrder = 6
+    end
+    object ReSync: TButton
+      Left = 584
+      Top = 38
+      Width = 75
+      Height = 25
+      Caption = #37325#26032#21516#27493
+      TabOrder = 7
+      OnClick = ReSyncClick
+    end
   end
   object MemoLog: TMemo
     Left = 0
     Top = 70
-    Width = 541
+    Width = 662
     Height = 267
     Align = alClient
     ScrollBars = ssBoth
@@ -91,7 +121,7 @@ object fFormMain: TfFormMain
   object StatusBar1: TStatusBar
     Left = 0
     Top = 337
-    Width = 541
+    Width = 662
     Height = 19
     Panels = <>
   end

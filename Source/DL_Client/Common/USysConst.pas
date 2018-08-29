@@ -162,6 +162,8 @@ const
 
   cFI_FormStationStandard= $1133;                    //火车厢档案
   cFI_FormPoundVerify   = $1134;                     //
+  cFI_FormStationKw     = $1135;                     //火车厢勘误
+  cFI_FormStationSet    = $1136;                     //火车厢设置
 
   cFI_FormCardInfo      = $1150;                     //磁卡信息
   cFI_FormCardProvide   = $1151;                     //供应制卡
@@ -347,6 +349,7 @@ begin
   AddMenuModuleItem('MAIN_C02', cFI_FrameStationPQuery);
   AddMenuModuleItem('MAIN_C03', cFI_FrameStationPQueryImport);
   AddMenuModuleItem('MAIN_C05', cFI_FrameStationStandard);
+  AddMenuModuleItem('MAIN_C06', cFI_FormStationSet, mtForm);
 
   AddMenuModuleItem('MAIN_D01', cFI_FrameBillHaulback);
   AddMenuModuleItem('MAIN_D02', cFI_FrameMakeCard);

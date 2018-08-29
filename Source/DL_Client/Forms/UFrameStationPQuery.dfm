@@ -220,5 +220,13 @@ inherited fFrameStationPQuery: TfFrameStationPQuery
       Caption = #31216#37325#26102#25235#25293
       OnClick = N4Click
     end
+    object N5: TMenuItem
+      Caption = '-'
+    end
+    object N7: TMenuItem
+      Tag = 30
+      Caption = #25968#25454#34917#24405
+      OnClick = N6Click
+    end
   end
 end

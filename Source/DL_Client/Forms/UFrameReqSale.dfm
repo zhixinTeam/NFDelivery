@@ -98,6 +98,7 @@ inherited fFrameReqSale: TfFrameReqSale
     object EditTruck: TcxButtonEdit [7]
       Left = 431
       Top = 36
+      ParentFont = False
       Properties.Buttons = <
         item
           Default = True

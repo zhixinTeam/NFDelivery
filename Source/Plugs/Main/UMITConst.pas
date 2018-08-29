@@ -41,6 +41,16 @@ const
   cCmd_EditData       = $1005;                       //修改数据
   cCmd_ViewData       = $1006;                       //查看数据
 
+  cSendWeChatMsgType_AddBill     = 1; //开提货单
+  cSendWeChatMsgType_OutFactory  = 2; //车辆出厂
+  cSendWeChatMsgType_Report      = 3; //报表
+  cSendWeChatMsgType_DelBill     = 4; //删提货单
+
+  c_WeChatStatusCreateCard       = 1; //订单已办卡
+  c_WeChatStatusFinished         = 3; //订单已完成
+  c_WeChatStatusIn               = 2;  //订单已进厂
+  c_WeChatStatusDeleted          = 100;
+
 type
   TSysParam = record
     FProgID     : string;                            //程序标识

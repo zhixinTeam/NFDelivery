@@ -88,6 +88,7 @@ inherited fFormPoundVerify: TfFormPoundVerify
     object EditBill: TcxTextEdit [10]
       Left = 81
       Top = 136
+      ParentFont = False
       TabOrder = 4
       Width = 121
     end

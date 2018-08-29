@@ -743,7 +743,7 @@ function TWorkerBusinessCommander.GetStockBatcode(var nData: string): Boolean;
 var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType, nLineGroup, nBatStockNo: string;
     nBatchNew, nSelect: string;
     nVal, nPer: Double;
-    nInt, nInc: Integer;
+    nInt, nInc, nRID: Integer;
     nNew: Boolean;
 
     //生成新批次号
@@ -897,6 +897,8 @@ begin
         Exit;
       end;
 
+      nRID := FieldByName('R_ID').AsInteger;
+
       if FieldByName('B_UseDate').AsString = sFlag_Yes then  //使用日期编码
       begin
         nP := FieldByName('B_Prefix').AsString;
@@ -932,8 +934,13 @@ begin
 
         if nStr <> nP then
         begin
+          {$IFDEF AutoGetLineGroup}
+          nStr := 'Update %s Set B_Base=1 Where R_ID=%d';
+          nStr := Format(nStr, [sTable_Batcode, nRID]);
+          {$ELSE}
           nStr := 'Update %s Set B_Base=1 Where B_Stock=''%s'' And B_Type=''%s''';
           nStr := Format(nStr, [sTable_Batcode, FIn.FData, nType]);
+          {$ENDIF}
 
           gDBConnManager.WorkerExec(FDBConn, nStr);
           FOut.FData := NewBatCode(nType);
@@ -949,9 +956,14 @@ begin
         if (Str2Date(nP) > Str2Date('2000-01-01')) and
            (Str2Date(nStr) - Str2Date(nP) > FieldByName('B_Interval').AsInteger) then
         begin
+          {$IFDEF AutoGetLineGroup}
+          nStr := 'Update %s Set B_Base=B_Base+%d Where R_ID=%d';
+          nStr := Format(nStr, [sTable_Batcode, nInc, nRID]);
+          {$ELSE}
           nStr := 'Update %s Set B_Base=B_Base+%d Where B_Stock=''%s''' +
                   'And B_Type=''%s''';
           nStr := Format(nStr, [sTable_Batcode, nInc, FIn.FData, nType]);
+          {$ENDIF}
 
           gDBConnManager.WorkerExec(FDBConn, nStr);
           FOut.FData := NewBatCode(nType);
@@ -968,9 +980,14 @@ begin
 
         if nVal >= nPer then //超发
         begin
+          {$IFDEF AutoGetLineGroup}
+          nStr := 'Update %s Set B_Base=B_Base+%d Where R_ID=%d';
+          nStr := Format(nStr, [sTable_Batcode, nInc, nRID]);
+          {$ELSE}
           nStr := 'Update %s Set B_Base=B_Base+%d Where B_Stock=''%s'' ' +
                   'And B_Type=''%s''';
           nStr := Format(nStr, [sTable_Batcode, nInc, FIn.FData, nType]);
+          {$ENDIF}
 
           gDBConnManager.WorkerExec(FDBConn, nStr);
           FOut.FData := NewBatCode(nType);
@@ -4313,10 +4330,11 @@ end;
 function TWorkerBusinessCommander.AutoGetLineGroup(var nData: string): Boolean;
 var nStr, nStrAdj: string;
     nIdx, nI: Integer;
-    nSLine,nSTruck, nType, nBatBrand, nBatStockNo: string;
+    nSLine,nSTruck, nType, nBatBrand, nBatStockNo, nStockMatch: string;
     nOut: TWorkerBusinessCommand;
     nLines: TZTLineItems;
     nTrucks: TZTTruckItems;
+    nHideStock: Boolean;
 begin
   Result := False;
   FListC.Clear;
@@ -4337,6 +4355,7 @@ begin
     end;
   end;
 
+  nHideStock := False;
   nBatStockNo := FIn.FData;
   nStr := 'Select D_ParamB From %s Where D_Name=''%s'' and D_Value=''%s''';
   nStr := Format(nStr, [sTable_SysDict, sFlag_BatStockGroup, nBatStockNo]);
@@ -4347,6 +4366,8 @@ begin
     if RecordCount > 0 then
     begin
       nBatStockNo := Fields[0].AsString;
+      if FIn.FData <> nBatStockNo then
+        nHideStock := True;//存在品种分组  需要进一步过滤装车线
       WriteLog('批次物料号分组匹配:'+ FIn.FData + '-->' + nBatStockNo);
     end;
   end;
@@ -4375,7 +4396,7 @@ begin
       WriteLog('物料'+ nBatStockNo +'没有符合条件的生产线分组.');
       Exit;
     end;
-
+    FListC.Clear;
     First;
 
     while not Eof do
@@ -4386,10 +4407,49 @@ begin
   end;
   nStrAdj := AdjustListStrFormat2(FListC, '''', True, ',', False);
 
+  if nHideStock then
+  begin
+    nStr := 'Select M_LineNo From %s Where M_ID=''%s'' '+
+            'and M_Status=''%s'' order by R_ID ';
+    nStr := Format(nStr, [sTable_StockMatch, FIn.FData, sFlag_Yes]);
+    WriteLog('查询符合条件品种分组装车线sql:'+nStr);
+
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nData := '物料[ %s.%s ]没有符合条件的品种分组.';
+        nData := Format(nData, [FIn.FData]);
+
+        WriteLog('物料'+ FIn.FData +'没有符合条件的品种分组.');
+        Exit;
+      end;
+      FListC.Clear;
+
+      First;
+
+      while not Eof do
+      begin
+        FListC.Add(Fields[0].AsString);
+        Next;
+      end;
+    end;
+    nStockMatch := AdjustListStrFormat2(FListC, '''', True, ',', False);
+  end;
+
   SetLength(FLineItems, 0);
-  nStr := 'Select Z_ID, Z_Group From %s Where Z_StockNo=''%s'' '+
-          'and Z_Valid=''%s'' and Z_Group In (%s) order by R_ID ';
-  nStr := Format(nStr, [sTable_ZTLines, nBatStockNo, sFlag_Yes, nStrAdj]);
+  if nHideStock then
+  begin
+    nStr := 'Select Z_ID, Z_Group From %s Where Z_StockNo=''%s'' '+
+            'and Z_Valid=''%s'' and Z_Group In (%s) and Z_ID In (%s) order by R_ID ';
+    nStr := Format(nStr, [sTable_ZTLines, nBatStockNo, sFlag_Yes, nStrAdj, nStockMatch]);
+  end
+  else
+  begin
+    nStr := 'Select Z_ID, Z_Group From %s Where Z_StockNo=''%s'' '+
+            'and Z_Valid=''%s'' and Z_Group In (%s) order by R_ID ';
+    nStr := Format(nStr, [sTable_ZTLines, nBatStockNo, sFlag_Yes, nStrAdj]);
+  end;
   WriteLog('查询符合条件通道sql:'+nStr);
 
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
@@ -4506,19 +4566,25 @@ begin
       begin
        nI:= FLineItems[nIdx].FTruckCount;
        FOut.FData := FLineItems[nIdx].FGroupID;
+       FOut.FExtParam := FLineItems[nIdx].FID;
       end
       else
       begin
         if FLineItems[nIdx].FTruckCount < nI then
+        begin
           FOut.FData := FLineItems[nIdx].FGroupID;
+          FOut.FExtParam := FLineItems[nIdx].FID;
+        end;
       end;
     except
     end;
   end;
+  WriteLog('指定装车道:' + FOut.FExtParam + '分组:' + FOut.FData);
   Result := True;
   //查询负载最小生产线
   {$ELSE}
   FOut.FData := '';
+  FOut.FExtParam := '';
   Result := True;
   {$ENDIF}
   WriteLog('结束自动匹配分组...');

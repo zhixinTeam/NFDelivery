@@ -424,7 +424,7 @@ begin
   nIDs := '';
   nP := 0;
   nM := 0;
-  
+
   {$IFDEF CombinePrintBill}
   with nDS do
   begin
@@ -478,7 +478,7 @@ begin
 
   nParam.FName := 'L_MValue';
   nParam.FValue := nM;
-  FDR.AddParamItem(nParam); 
+  FDR.AddParamItem(nParam);
 
   FDR.Dataset1.DataSet := FDM.SQLQuery1;
   FDR.PrintReport;

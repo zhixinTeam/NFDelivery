@@ -1334,6 +1334,7 @@ end;
 //Desc: 将TruckPool中车辆按业务逻辑进队
 function TTruckQueueDBReader.MakeTruckInLine(const nTimes: Integer): Boolean;
 var i,nIdx: Integer; nStr: string;
+    B : Boolean;
 begin
   Result := False;
 
@@ -1419,6 +1420,13 @@ begin
          (Pos(FStockNo, FTruckPool[i].FQueueStock) < 1) then Continue;
       //3.高优先级品种,强制匹配品种
 
+//      if IsStockMatch(FTruckPool[i].FStockNo, FOwner.Lines[nIdx]) then
+//      WriteLog('品种分组匹配:'+FTruckPool[i].FTruck+','+FTruckPool[i].FStockNo+
+//               ',当前装车线:'+FLineID+','+FStockNo+'所属品种分组'+FStockGroup+'结果:匹配成功')
+//      else
+//      WriteLog('品种分组匹配:'+FTruckPool[i].FTruck+','+FTruckPool[i].FStockNo+
+//               ',当前装车线:'+FLineID+','+FStockNo+'所属品种分组'+FStockGroup+'结果:匹配失败');
+
       if not IsStockMatch(FTruckPool[i].FStockNo, FOwner.Lines[nIdx]) then Continue;
       //3.交货单与通道品种不匹配
 
@@ -1433,6 +1441,9 @@ begin
       if BillInLine(FTruckPool[i].FBill, FTrucks, True) >= 0 then Continue;
       //6.交货单已经在队列中
 
+//      WriteLog('生产线分组匹配:'+FTruckPool[i].FTruck+','+FTruckPool[i].FLineGroup+
+//               ',当前装车线:'+FLineID+',生产线分组'+FLineGroup);
+
       if (FTruckPool[i].FLineGroup <> '') and (FTruckPool[i].FLineGroup <> 'Z') then
       begin
         nStr := FLineGroup;
@@ -1440,7 +1451,8 @@ begin
            (nStr <> FTruckPool[i].FLineGroup) then Continue;
       end;
       //7.车辆指定通道类型不匹配
-
+      WriteLog('车辆进队成功:'+FTruckPool[i].FTruck+','+FTruckPool[i].FStockNo+
+               ',当前装车线:'+FLineID);
       MakePoolTruckIn(i, FOwner.Lines[nIdx]);
       //车辆进队列
 
@@ -1472,12 +1484,12 @@ begin
   if nTruck.FIsReal then
     nLine.FRealCount := nLine.FRealCount + 1;
   //实位车辆计数
-  
+
   if (nTruck.FDai <= 0) and (nLine.FPeerWeight > 0) then
   begin
     nTruck.FDai := Trunc(nTruck.FValue * 1000 / nLine.FPeerWeight);
     //dai number
-  end;   
+  end;
 
   if (nLine.FPeerWeight > 0) and
      (nTruck.FInFact or (nTruck.FIsVIP = sFlag_TypeShip)) then
@@ -1730,7 +1742,7 @@ begin
         nLine.FRealCount := nLine.FRealCount + 1;
       //重新计算队列中的实位车辆
     end;
-  end;   
+  end;
 end;
 
 //Date: 2012-4-25
@@ -1772,7 +1784,7 @@ begin
          (nLine.FLineGroup <> FLineGroup) then Continue;
     end;
     //6.分组不同
-
+    WriteLog('当前最小负载装车线:'+ FLineID + '数量:' + IntToStr(FRealCount));
     Result := False;
     Break;
   end;

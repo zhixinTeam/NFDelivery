@@ -33,6 +33,7 @@ type
     { Private declarations }
     FListA, FListB, FListC: TStrings;
     //列表信息
+    FID: string;
     procedure LoadOrderInfo(nID: string);
     //加载订单信息
     procedure SyncCard(const nCard: TIdCardInfoStr;const nReader: TSDTReaderItem);
@@ -87,6 +88,7 @@ begin
   FListA := TStringList.Create;
   FListB := TStringList.Create;
   FListC := TStringList.Create;
+  FID := '';
 end;
 
 procedure TfFrameInputCertificate.OnDestroyFrame;
@@ -104,7 +106,7 @@ begin
   EditID.SetFocus;
 
   gSDTReaderManager.OnSDTEvent := SyncCard;
-end;  
+end;
 
 procedure TfFrameInputCertificate.BtnNumClick(Sender: TObject);
 var nStr: string;
@@ -119,7 +121,7 @@ begin
           Copy(nStr, nIdx + nLen + 1, Length(EditID.Text) - (nIdx + nLen));
   EditID.Text := nStr;
   EditID.SelStart := nIdx+1;
-  
+
   gTimeCounter := 30;
 end;
 
@@ -130,6 +132,16 @@ begin
   nIdx := EditID.SelStart;
   EditID.Text := Trim(EditID.Text);
   EditID.SelStart := nIdx;
+  if Length(EditID.Text) = 18 then
+  begin
+    if EditID.Text = FID then
+    begin
+      FID := '';
+      BtnEnterClick(nil);
+    end
+    else
+     EditID.Text := '';
+  end;
 end;
 
 procedure TfFrameInputCertificate.BtnDelClick(Sender: TObject);
@@ -145,13 +157,13 @@ begin
   begin
     nIdx := nIdx - 1;
     nLen := 1;
-  end;  
+  end;
 
-  nStr := Copy(nStr, 1, nIdx) + 
+  nStr := Copy(nStr, 1, nIdx) +
           Copy(nStr, nIdx + nLen + 1, Length(EditID.Text) - (nIdx + nLen));
   EditID.Text := nStr;
   EditID.SelStart := nIdx;
-  
+
   gTimeCounter := 30;
 end;
 
@@ -189,7 +201,7 @@ begin
   nStr := '读取到身份证信息: [ %s ]=>[ %s.%s ]';
   nStr := Format(nStr, [nReader.FID, nCard.FName, nCard.FIdSN]);
   WriteLog(nStr);
-  
+  FID := nCard.FIdSN;
   EditID.Text := nCard.FIdSN;
   //BtnEnterClick(nil);
 end;

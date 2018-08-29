@@ -41,6 +41,8 @@ type
     N4: TMenuItem;
     EditPID: TcxButtonEdit;
     dxLayout1Item9: TdxLayoutItem;
+    N5: TMenuItem;
+    N7: TMenuItem;
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
@@ -52,6 +54,7 @@ type
     procedure BtnDelClick(Sender: TObject);
     procedure N4Click(Sender: TObject);
     procedure BtnEditClick(Sender: TObject);
+    procedure N6Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -100,6 +103,11 @@ end;
 
 function TfFrameStationPQuery.InitFormDataSQL(const nWhere: string): string;
 begin
+  if gSysParam.FIsAdmin then
+    N7.Enabled := True
+  else
+    N7.Enabled := False;
+    
   EditDate.Text := Format('%s ÷¡ %s', [Date2Str(FStart), Date2Str(FEnd)]);
 
   Result := 'Select pl.*,(P_MValue-P_PValue-P_KZValue) As P_NetWeight,' +
@@ -352,6 +360,29 @@ begin
   if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
   begin
     InitFormData('');
+  end;
+end;
+
+procedure TfFrameStationPQuery.N6Click(Sender: TObject);
+var nStr, nPID: string;
+    nP: TFormCommandParam;
+begin
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('«Î—°‘Òº«¬º', sHint);
+    Exit;
+  end;
+
+  nPID := SQLQuery.FieldByName('P_ID').AsString;
+
+  nP.FCommand := cCmd_EditData;
+  nP.FParamA := nPID;
+
+  CreateBaseFormItem(cFI_FormStationKw, '', @nP);
+
+  if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
+  begin
+    InitFormData(FWhere);
   end;
 end;
 

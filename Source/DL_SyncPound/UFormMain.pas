@@ -23,6 +23,10 @@ type
     BtnConn: TButton;
     Timer1: TTimer;
     Button1: TButton;
+    Label1: TLabel;
+    ReSyncValue: TEdit;
+    Label2: TLabel;
+    ReSync: TButton;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure CheckLogedClick(Sender: TObject);
@@ -30,6 +34,7 @@ type
     procedure CheckSrvClick(Sender: TObject);
     procedure Timer1Timer(Sender: TObject);
     procedure Button1Click(Sender: TObject);
+    procedure ReSyncClick(Sender: TObject);
   private
     { Private declarations }
     FTrayIcon: TTrayIcon;
@@ -80,6 +85,7 @@ var
   gExeFile: string;            //监控线程
   gSyncer: TSyncThread = nil;  //同步线程
   gSyncTable: string;          //同步表名
+  gReSyncIndex: Integer;       //手工同步记录
 
 resourcestring
   sHint               = '提示';
@@ -128,7 +134,7 @@ var nIni: TIniFile;
 begin
   gPath := ExtractFilePath(Application.ExeName);
   InitGlobalVariant(gPath, gPath+sConfig, gPath+sConfig, gPath+sDB);
-  
+
   gSysLoger := TSysLoger.Create(gPath + 'Logs\', sAutoStartKey);
   gSysLoger.LogEvent := ShowLog;
 
@@ -141,12 +147,12 @@ begin
   try
     nIni := TIniFile.Create(gPath + sConfig);
     FRecordIndex := nIni.ReadInteger('Config', 'RecordStart', 0);
-
+    gReSyncIndex:= 0;
     EditTable.Text := nIni.ReadString('Config', 'SyncTable', 'num');
     Timer1.Enabled := nIni.ReadBool('Config', 'Enabled', False);
     gExeFile := nIni.ReadString('Config', 'FileName', 'notepad');
 
-    LoadFormConfig(Self, nIni); 
+    LoadFormConfig(Self, nIni);
     nReg := TRegistry.Create;
     nReg.RootKey := HKEY_CURRENT_USER;
 
@@ -333,8 +339,18 @@ var nStr: string;
     nIdx,nInt,nRecord: Integer;
 begin
   if IsClientRun(gExeFile) then Exit;
-  nStr := 'Select * From %s Where FIndex > %d';
-  nStr := Format(nStr, [gSyncTable, FStartIndex]);
+
+  if gReSyncIndex > 0 then
+  begin
+    nStr := 'Select * From %s Where FIndex = %d';
+    nStr := Format(nStr, [gSyncTable, gReSyncIndex]);
+    gReSyncIndex := 0;
+  end
+  else
+  begin
+    nStr := 'Select top 2000 * From %s Where FIndex > %d';
+    nStr := Format(nStr, [gSyncTable, FStartIndex]);
+  end;
 
   nDS := FDM.QueryData(nStr, nil, True);
   if not (Assigned(nDS) and (nDS.RecordCount > 0)) then Exit;
@@ -458,6 +474,26 @@ begin
       FDM.ADOLocal.RollbackTrans;
     raise;
   end;
+end;
+
+procedure TfFormMain.ReSyncClick(Sender: TObject);
+var nStr: string;
+begin
+  if not IsNumber(ReSyncValue.Text, False) then
+  begin
+    WriteLog('请输入合法数字..');
+    Exit;
+  end;
+
+  if StrToInt(ReSyncValue.Text) <= 0 then
+  begin
+    WriteLog('请输入合法数字..');
+    Exit;
+  end;
+
+  gReSyncIndex := StrToInt(ReSyncValue.Text);
+  WriteLog('准备重新同步记录:'+ ReSyncValue.Text);
+  ReSyncValue.Text := '';
 end;
 
 end.

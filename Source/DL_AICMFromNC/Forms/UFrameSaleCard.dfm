@@ -12,7 +12,7 @@ inherited fFrameSaleCard: TfFrameSaleCard
     Color = 15592941
     TabOrder = 0
     object btnSave: TSpeedButton
-      Left = 757
+      Left = 517
       Top = 21
       Width = 236
       Height = 57

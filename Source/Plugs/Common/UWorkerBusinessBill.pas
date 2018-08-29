@@ -54,6 +54,7 @@ type
     FSaleName: string;      //业务名
     FMaxValue: Double;      //最大可用
     FKDValue: Double;       //开单量
+    FOrderNo: string;       //订单编号
   end;
 
   TOrderItems = array of TOrderItem;
@@ -482,6 +483,7 @@ begin
         Exit;
       end;
 
+      if FListA.Values['Post'] = '' then //补单不验证
       if FieldByName('T_NoVerify').AsString <> sFlag_Yes then
       begin
         nIdx := Trunc((FieldByName('T_Now').AsDateTime -
@@ -704,6 +706,14 @@ begin
         end;
       end;
 
+      {$IFDEF SaleAICMFromNC}
+      if FListA.Values['wxzhuid'] = '' then
+      begin
+        FListA.Values['wxzhuid'] := FieldByName('wxzhuid').AsString;
+        FListA.Values['wxziid'] := FieldByName('wxziid').AsString;
+      end;
+      {$ENDIF}
+
       if not LoadStockInfo(nData) then Exit;
       //载入物料
 
@@ -716,7 +726,7 @@ begin
         with FOrderItems[nInt] do
         begin
           FOrder := FieldByName('pk_meambill').AsString;
-
+          FOrderNo := FieldByName('VBILLCODE').AsString;
           if FListA.Values['CusID']='' then
                FCusID := FieldByName('custcode').AsString
           else FCusID := FListA.Values['CusID'];
@@ -860,6 +870,7 @@ begin
         Exit;
       end;
 
+      if FListA.Values['Post'] = '' then //补单不验证
       if FieldByName('T_NoVerify').AsString <> sFlag_Yes then
       begin
         nIdx := Trunc((FieldByName('T_Now').AsDateTime -
@@ -950,6 +961,14 @@ begin
         Exit;
       end;
 
+      {$IFDEF SaleAICMFromNC}
+      if FListA.Values['wxzhuid'] = '' then
+      begin
+        FListA.Values['wxzhuid'] := FieldByName('wxzhuid').AsString;
+        FListA.Values['wxziid'] := FieldByName('wxziid').AsString;
+      end;
+      {$ENDIF}
+
       if not LoadStockInfo(nData) then Exit;
       //载入物料
 
@@ -962,7 +981,7 @@ begin
         with FOrderItems[nInt] do
         begin
           FOrder := FieldByName('pk_meambill').AsString;
-
+          FOrderNo := FieldByName('VBILLCODE').AsString;
           if FListA.Values['CusID']='' then
                FCusID := FieldByName('custcode').AsString
           else FCusID := FListA.Values['CusID'];
@@ -1132,6 +1151,8 @@ begin
       //包装类型
       {$ENDIF}
 
+      FListA.Values['PointLineID'] := '';
+
       {$IFDEF AutoGetLineGroup}
       FListC.Clear;
       FListC.Values['Type']  := FListA.Values['IsVIP'];
@@ -1143,6 +1164,10 @@ begin
       if nOut.FData <> '' then
       begin
         FListA.Values['LineGroup'] := nOut.FData;
+      end;
+      if nOut.FExtParam <> '' then
+      begin
+        FListA.Values['PointLineID'] := nOut.FExtParam;
       end;
       {$ENDIF}
 
@@ -1224,6 +1249,10 @@ begin
               SF('L_WxZhuId',   FListA.Values['wxzhuid']),
               SF('L_WxZiId',   FListA.Values['wxziid']),
               {$ENDIF}
+
+              {$IFDEF SaveOrderNo}
+              SF('L_OrderNo',     FOrderItems[nIdx].FOrderNo),
+              {$ENDIF} //随车打印化验单
 
               SF('L_Truck', FListA.Values['Truck']),
               SF('L_Status', sFlag_BillNew),
@@ -1349,25 +1378,52 @@ begin
           gDBConnManager.WorkerExec(FDBConn, nSQL);
         end else
         begin
-          nSQL := MakeSQLByStr([
-            SF('T_Truck'   , FListA.Values['Truck']),
-            SF('T_StockNo' , FOrderItems[nIdx].FStockID),
-            SF('T_Stock'   , FOrderItems[nIdx].FStockName),
-            SF('T_Type'    , FOrderItems[nIdx].FStockType),
-            SF('T_InTime'  , sField_SQLServer_Now, sfVal),
-            SF('T_Bill'    , nOut.FData),
-            SF('T_Valid'   , sFlag_Yes),
-            SF('T_Value'   , FOrderItems[nIdx].FKDValue, sfVal),
-            SF('T_VIP'     , FListA.Values['IsVIP']),
-            {$IFDEF LineGroup}
-            SF('T_LineGroup', FListA.Values['LineGroup']),
-              {$ELSE}
-              {$IFDEF AutoGetLineGroup}
+          if FListA.Values['PointLineID'] <> '' then
+          begin
+            nSQL := MakeSQLByStr([
+              SF('T_Truck'   , FListA.Values['Truck']),
+              SF('T_StockNo' , FOrderItems[nIdx].FStockID),
+              SF('T_Stock'   , FOrderItems[nIdx].FStockName),
+              SF('T_Type'    , FOrderItems[nIdx].FStockType),
+              SF('T_InTime'  , sField_SQLServer_Now, sfVal),
+              SF('T_Bill'    , nOut.FData),
+              SF('T_Valid'   , sFlag_Yes),
+              SF('T_Value'   , FOrderItems[nIdx].FKDValue, sfVal),
+              SF('T_VIP'     , FListA.Values['IsVIP']),
+              {$IFDEF LineGroup}
               SF('T_LineGroup', FListA.Values['LineGroup']),
+                {$ELSE}
+                {$IFDEF AutoGetLineGroup}
+                SF('T_LineGroup', FListA.Values['LineGroup']),
+                SF('T_Line', FListA.Values['PointLineID']),
+                SF('T_InQueue'  , sField_SQLServer_Now, sfVal),
+                {$ENDIF}
               {$ENDIF}
-            {$ENDIF}
-            SF('T_HKBills' , nOut.FData + '.')
-            ], sTable_ZTTrucks, '', True);
+              SF('T_HKBills' , nOut.FData + '.')
+              ], sTable_ZTTrucks, '', True);
+          end
+          else
+          begin
+            nSQL := MakeSQLByStr([
+              SF('T_Truck'   , FListA.Values['Truck']),
+              SF('T_StockNo' , FOrderItems[nIdx].FStockID),
+              SF('T_Stock'   , FOrderItems[nIdx].FStockName),
+              SF('T_Type'    , FOrderItems[nIdx].FStockType),
+              SF('T_InTime'  , sField_SQLServer_Now, sfVal),
+              SF('T_Bill'    , nOut.FData),
+              SF('T_Valid'   , sFlag_Yes),
+              SF('T_Value'   , FOrderItems[nIdx].FKDValue, sfVal),
+              SF('T_VIP'     , FListA.Values['IsVIP']),
+              {$IFDEF LineGroup}
+              SF('T_LineGroup', FListA.Values['LineGroup']),
+                {$ELSE}
+                {$IFDEF AutoGetLineGroup}
+                SF('T_LineGroup', FListA.Values['LineGroup']),
+                {$ENDIF}
+              {$ENDIF}
+              SF('T_HKBills' , nOut.FData + '.')
+              ], sTable_ZTTrucks, '', True);
+          end;
           gDBConnManager.WorkerExec(FDBConn, nSQL);
 
           nStr := 'Select Max(R_ID) From ' + sTable_ZTTrucks;
@@ -1425,10 +1481,9 @@ begin
 
       {$IFDEF AutoGetLineGroup}
       nSQL := 'Update %s Set B_HasUse=B_HasUse+(%s),B_LastDate=%s ' +
-              'Where B_Stock=''%s'' and B_Type=''%s'' and B_LineGroup = ''%s'' ';
+              'Where B_Batcode=''%s'' ';
       nSQL := Format(nSQL, [sTable_Batcode, FloatToStr(FOrderItems[nIdx].FKDValue),
-              sField_SQLServer_Now, FOrderItems[nIdx].FStockID, sFlag_TypeCommon,
-              FListA.Values['LineGroup']]);
+              sField_SQLServer_Now, FListA.Values['Seal']]);
       gDBConnManager.WorkerExec(FDBConn, nSQL); //更新批次号使用量
       {$ELSE}
       nSQL := 'Update %s Set B_HasUse=B_HasUse+(%s),B_LastDate=%s ' +
@@ -1442,6 +1497,20 @@ begin
       nSQL := Format(nSQL, [sTable_BatcodeDoc, FloatToStr(FOrderItems[nIdx].FKDValue),
               FListA.Values['Seal']]);
       gDBConnManager.WorkerExec(FDBConn, nSQL); //更新批次号使用量
+
+      {$IFDEF SaleAICMFromNC}
+      if Trim(FListA.Values['wxzhuid']) <> '' then//过滤非微信下单
+      nStr := MakeSQLByStr([
+              SF('WOM_WebOrderID'   , FOrderItems[nIdx].FOrder),
+              SF('WOM_LID'          , nOut.FData),
+              SF('WOM_StatusType'   , c_WeChatStatusCreateCard),
+              SF('WOM_MsgType'      , cSendWeChatMsgType_AddBill),
+              SF('WOM_BillType'     , sFlag_Sale),
+              SF('WOM_deleted'     , sFlag_No)
+              ], sTable_WebOrderMatch, '', True);
+      gDBConnManager.WorkerExec(FDBConn, nStr);
+      //微信推送
+      {$ENDIF}
     end;
 
     nIdx := Length(FOut.FData);
@@ -1742,9 +1811,9 @@ begin
 
     {$IFDEF AutoGetLineGroup}
     nStr := 'Update %s Set B_HasUse=B_HasUse-(%.2f),B_LastDate=%s ' +
-            'Where B_Stock=''%s'' and B_Type=''%s'' and B_LineGroup=''%s''';
+            'Where B_Batcode=''%s''';
     nStr := Format(nStr, [sTable_Batcode, nVal,
-            sField_SQLServer_Now, nSN, sFlag_TypeCommon, nLineGroup]);
+            sField_SQLServer_Now, nHY]);
     gDBConnManager.WorkerExec(FDBConn, nStr); //更新批次号使用量
     {$ELSE}
     nStr := 'Update %s Set B_HasUse=B_HasUse-(%.2f),B_LastDate=%s ' +

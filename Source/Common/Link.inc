@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE QZNF}
+{$DEFINE SMNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -144,6 +144,48 @@
   //电子标签读卡器打开道闸
   {$DEFINE BatchVerifyValue}
   //批次控制发货量
+  {$DEFINE MITTruckProber}
+  //中间件控制车检
+  {.$DEFINE TruckProberEx}
+  //车检光栅状态判断扩展(此开关启用时建议同时启用MITTruckProber开关)
+  {$DEFINE MultiReplay}
+  //计数器应答模式
+  {$DEFINE CardProvide}
+  //采用复磅模式
+  {$DEFINE ORDERVALUE}
+  //显示订单量
+  {$DEFINE DaiStepWuCha}
+  //包装阶梯误差
+  {.$DEFINE DaiForceQueue}
+  //包装发货强制队列
+  {$DEFINE AllowMultiM}
+  //散装允许多次过重车
+  {$DEFINE JSTruck}
+  //格式化计数器车牌
+  {.$DEFINE JudgeOrder}
+  //验证订单是否出厂
+  {.$DEFINE SaleAICMFromNC}
+  //销售自助办卡
+  {.$DEFINE PurAICMFromNC}
+  //采购自助办卡
+  {.$DEFINE LEDShowTruckEx}
+  //大屏显示格式化车牌
+  {.$DEFINE OneTruckMulCard}
+  //一车多卡
+  {.$DEFINE FilterTunnel}
+  //过滤无关通道
+  {.$DEFINE AutoGetLineGroup}
+  //自动获取装车线分组
+  {.$DEFINE PrepareShowTruck}
+  //预刷卡显示车牌
+  {.$DEFINE PrepareShowOnLading}
+  //刷卡装车时控制预刷卡(不使用预刷卡读卡器)
+  {$DEFINE PrintChinese}
+  //汉字喷码支持
+  {$DEFINE ManuPack}
+  //人工选择包装类型
+  {$DEFINE RemoteSnap}
+  //车牌识别
 {$ENDIF}
 //三明南方
 
@@ -477,6 +519,8 @@
   //车检光栅状态判断扩展(此开关启用时建议同时启用MITTruckProber开关)
   {$DEFINE MultiReplay}
   //计数器应答模式
+  {$DEFINE FORCEOPENDOOR}
+  //强制抬杆
   {$DEFINE CardProvide}
   //采用复磅模式
   {$DEFINE ORDERVALUE}
@@ -542,7 +586,7 @@
   //散装允许多次过重车
   {$DEFINE RFIDOPENDOOR}
   //电子标签读卡器打开道闸
-  {.$DEFINE JSTruck}
+  {$DEFINE JSTruck}
   //格式化计数器车牌
   {.$DEFINE JudgeOrder}
   //验证订单是否出厂
@@ -566,4 +610,8 @@
   //汉字喷码支持
   {$DEFINE ManuPack}
   //人工选择包装类型
+  {$DEFINE CombinePrintBill}
+  //销售尾单合单后合并打印
+  {$DEFINE SaveOrderNo}
+  //保存订单编号
 {$ENDIF}

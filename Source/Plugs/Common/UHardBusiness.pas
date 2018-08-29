@@ -2341,7 +2341,7 @@ begin
     if not TruckStartJSDouble(nPTruck.FTruck, nTunnel, nMutexTunnel, FID, FStockName, nStr) then
       WriteNearReaderLog(nStr);
     Break;
-  end;  
+  end;
 
   {$ELSE}
   if not TruckStartJSDouble(nPTruck.FTruck, nTunnel, nMutexTunnel, nPTruck.FBill, nPTruck.FStockName, nStr) then
@@ -2355,6 +2355,7 @@ end;
 procedure TruckStartFH(const nTruck: PTruckItem; const nTunnel: string);
 var nStr,nTmp: string;
     nWorker: PDBWorker;
+    nValue: Double;
 begin
   nWorker := nil;
   try
@@ -2376,10 +2377,16 @@ begin
     gDBConnManager.ReleaseConnection(nWorker);
   end;
 
+  nValue := nTruck.FValue;
+  {$IFDEF QZNF}
+  if nValue = 110 then
+    nValue := 111;
+  {$ENDIF}
+
   nStr := nTruck.FTruck + StringOfChar(' ', 12 - Length(nTruck.FTruck));
-  nTmp := nTruck.FStockName + FloatToStr(nTruck.FValue);
+  nTmp := nTruck.FStockName + FloatToStr(nValue);
   nStr := nStr + nTruck.FStockName + StringOfChar(' ', 12 - Length(nTmp)) +
-          FloatToStr(nTruck.FValue);
+          FloatToStr(nValue);
   //xxxxx
 
   gERelayManager.LineOpen(nTunnel);
@@ -3153,6 +3160,7 @@ procedure MakeTruckShowPreInfo(const nCard: string; nTunnel: string='';nTunnelEx
 var nMsgStr: string;
 begin
   nMsgStr := PrepareShowInfo(nCard, nTunnel,nTunnelEx);
+  WriteHardHelperLog('预刷卡小屏发送:通道:'+nTunnel+'扩展通道:'+nTunnelEx+'信息:'+nMsgStr);
   gDisplayManager.Display(nTunnel, nMsgStr);
 end;
 

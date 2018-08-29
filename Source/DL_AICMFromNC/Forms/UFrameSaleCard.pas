@@ -136,22 +136,22 @@ begin
 
   col := lvOrders.Columns.Add;
   col.Caption := '客户名称';
-  col.Width := 400;
-  col := lvOrders.Columns.Add;
-  col.Caption := '物料名称';
   col.Width := 260;
   col := lvOrders.Columns.Add;
+  col.Caption := '物料名称';
+  col.Width := 230;
+  col := lvOrders.Columns.Add;
   col.Caption := '车牌号码';
-  col.Width := 180;
+  col.Width := 150;
   col := lvOrders.Columns.Add;
-  col.Caption := '订单数量';
-  col.Width := 110;
+  col.Caption := '数量';
+  col.Width := 70;
   col := lvOrders.Columns.Add;
-  col.Caption := '是否拼单';
-  col.Width := 110;
+  col.Caption := '拼单';
+  col.Width := 70;
   col := lvOrders.Columns.Add;
-  col.Caption := '选择订单';
-  col.Width := 110;
+  col.Caption := '选择';
+  col.Width := 70;
   col.Alignment := taCenter;
 end;
 
@@ -349,8 +349,7 @@ begin
     end;
 
     nRet := SaveBillCard(nStr, nCard);
-    //SaveShopOrderIn(FSaleOrderItems[nIdx].FOrders, nStr);
-    SaveWebOrderMatch(nStr,FSaleOrderItems[nIdx].FOrders,sFlag_Sale);
+    //SaveWebOrderMatch(nStr,FSaleOrderItems[nIdx].FOrders,sFlag_Sale);
   end;
 
   if not nRet then

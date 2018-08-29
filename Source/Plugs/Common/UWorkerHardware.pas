@@ -466,7 +466,7 @@ end;
 //Parm: 交货单[FIn.FData];通道号[FIn.FExtParam]
 //Desc: 在指定通道上喷码
 function THardwareCommander.PrintCode(var nData: string): Boolean;
-var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck,nBm: string;
+var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck,nBm,nPCCode: string;
     nPrefixLen, nIDLen: Integer;
 begin
   Result := True;
@@ -547,6 +547,7 @@ begin
                    Copy(nBill, nPrefixLen + 1, nIDLen - nPrefixLen) +
                    '@2    '; //换行
           //如果有汉字,则换行处理
+          nPCCode := '@6' + Fields[0].AsString ;
         end;
       end;
 
@@ -574,6 +575,13 @@ begin
       //崇左、金鲤喷码规则：水泥批次号+客户代码(bd_cumandoc.def30)+车号后四位
       nCode := nSeal + FillString(nCusCode, 2, ' ');
       nCode := nCode + Copy(nTruck, Length(nTruck) - 3, 4);
+      {$ENDIF}
+
+      {$IFDEF XKNF}
+      if Pos('-', nSeal) > 0 then
+        nSeal := Copy(nSeal, 1, Pos('-', nSeal) - 1);
+      nCode := nPCCode + nSeal + FormatDateTime('YYYY',Now)
+                 + Copy(nBill, nPrefixLen + 3, 4) ;
       {$ENDIF}
 
       {$IFDEF HSNF}

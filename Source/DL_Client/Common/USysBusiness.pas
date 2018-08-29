@@ -104,7 +104,7 @@ function GetOrderFHValue(const nOrders: TStrings;
 //获取订单发货量
 function GetOrderGYValue(const nOrders: TStrings): Boolean;
 //获取订单已供应量
-
+function GetCardUsed(const nCard: string): string;
 function SaveBillNew(const nBillData: string): string;
 //保存销售订单
 function DeleteBillNew(const nBill: string): Boolean;
@@ -2927,8 +2927,8 @@ end;
 //Desc: 火车衡自动获取最近5条历史皮重
 function IsStationAutoP(const nTruck: string; var nPValue: Double;
                         nMsg: string): Boolean;
-var nSQL: string;
-    nCount: Integer;
+var nSQL, nStr: string;
+    nCount, nPos: Integer;
 begin
   Result := False;
   nPValue := 0;
@@ -2968,10 +2968,22 @@ begin
         end;
         nPValue := nPValue / nCount;
         nPValue := Float2PInt(nPValue, cPrecision, False) / cPrecision;
+
+        try
+          nStr := Format('%.2f',[nPValue]);
+          nPos := StrToInt(Copy(nStr,Length(nStr),1));
+          if nPos mod 2 = 1 then
+          begin
+            nPValue := Float2PInt(StrToFloat(nStr) + 0.01, cPrecision, False) / cPrecision;
+          end;
+        except
+        end;
         nMsg := '共查询到' + IntToStr(nCount) + '个历史皮重:'
                 + nMsg + '平均值:' + FloatToStr(nPValue);
         WriteLog('火车衡:'+ nTruck + nMsg);
-      end;
+      end
+      else
+        Result := False;
     end;
   end;
 end;
@@ -3137,7 +3149,7 @@ begin
   nDept:= '';
   //卡号
 
-  if CallBusinessHardware(cBC_GetPoundCard, nReader, '', @nOut)  then
+  if CallBusinessHardware(cBC_GetPoundReaderInfo, nReader, '', @nOut)  then
   begin
     Result := Trim(nOut.FData);
     nDept:= Trim(nOut.FExtParam);

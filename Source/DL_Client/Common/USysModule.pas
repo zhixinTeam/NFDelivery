@@ -31,7 +31,7 @@ uses
   //原料制卡和临时业务
 
   UFramePoundStation, UFrameStationPQuery, UFrameStationPQueryImport,
-  UFrameStationStandard, UFormStationStandard,
+  UFrameStationStandard, UFormStationStandard, UFormStationKw, UFormStationSet,
   //火车衡业务
 
   UFrameHYStock, UFormHYStock, UFrameHYRecord, UFormHYRecord, UFrameHYData,

@@ -117,6 +117,8 @@ begin
   FListA.Text := PackerDecodeStr(FIn.FData);
   nTruck := FListA.Values['Truck'];
   //init card
+  if Trim(FListA.Values['Card']) = '' then
+    raise Exception.Create('卡号异常,请尝试重新办理或联系管理员');
 
   TWorkerBusinessCommander.CallMe(cBC_SaveTruckInfo, nTruck, '', @nOut);
   //保存车牌号

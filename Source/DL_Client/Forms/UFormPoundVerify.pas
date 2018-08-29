@@ -69,6 +69,12 @@ begin
       FRecordID := nP.FParamA;
     end;
 
+    if gSysParam.FIsAdmin then
+    begin
+      EditPValue.Properties.ReadOnly := False;
+      EditMValue.Properties.ReadOnly := False;
+    end;
+
     if nP.FParamB = sFlag_TypeStation then
          FPoundTable := sTable_PoundStation
     else FPoundTable := sTable_PoundLog;
@@ -125,10 +131,36 @@ end;
 procedure TfFormPoundVerify.BtnOKClick(Sender: TObject);
 var nStr, nEvent: string;
 begin
+  if not IsNumber(EditPValue.Text,True) then
+  begin
+    EditPValue.SetFocus;
+    nStr := '请输入有效皮重';
+    ShowMsg(nStr,sHint);
+    Exit;
+  end;
+
+  if not IsNumber(EditMValue.Text,True) then
+  begin
+    EditMValue.SetFocus;
+    nStr := '请输入有效毛重';
+    ShowMsg(nStr,sHint);
+    Exit;
+  end;
+
+  if StrToFloat(EditMValue.Text) <= StrToFloat(EditPValue.Text) then
+  begin
+    EditMValue.SetFocus;
+    nStr := '毛重不能小于皮重';
+    ShowMsg(nStr,sHint);
+    Exit;
+  end;
+
   nStr := MakeSQLByStr([SF('P_MID', GetCtrlData(EditStockNO)),
           SF('P_Bill',  EditBill.Text),
           SF('P_MName', EditStockNO.Text),
           SF('P_Order', EditLineGroup.Text),
+          SF('P_PValue', EditPValue.Text),
+          SF('P_MValue', EditMValue.Text),
           SF('P_Truck', EditTruck.Text)], FPoundTable, SF('P_ID', FRecordID), False);
   FDM.ExecuteSQL(nStr);
 

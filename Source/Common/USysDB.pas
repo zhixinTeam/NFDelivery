@@ -608,7 +608,7 @@ const
        'L_HYFirst DateTime, L_PrintHY Char(1), L_SnapTruck Char(1),' +
        'L_MValueView $Float, L_ValueView $Float,' +
        'L_Man varChar(32), L_Date DateTime, L_Bm varChar(64),' +
-       'L_WxZhuId varChar(32), L_WxZiId varChar(32), ' +
+       'L_WxZhuId varChar(32), L_WxZiId varChar(32), L_OrderNo varChar(20), ' +
        'L_DelMan varChar(32), L_DelDate DateTime, L_Memo VarChar(500))';
   {-----------------------------------------------------------------------------
    交货单表: Bill
@@ -654,6 +654,7 @@ const
    *.L_SnapTruck: 车牌识别
    *.L_WxZhuId,L_WxZiId: 网上自助办卡
    *.L_MValueView,L_ValueView: 毛重(修改后),净重(修改后)
+   *.L_OrderNo: 订单编号
   -----------------------------------------------------------------------------}
 
   sSQL_NewBillHaulback = 'Create Table $Table(R_ID $Inc, H_ID varChar(20),' +

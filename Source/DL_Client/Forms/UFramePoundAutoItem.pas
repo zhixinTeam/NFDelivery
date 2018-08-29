@@ -403,6 +403,7 @@ procedure TfFrameAutoPoundItem.LoadBillItems(const nCard: string;
 var nStr,nHint,nVoice,nPos: string;
     nIdx,nInt,nLast: Integer;
     nBills: TLadingBillItems;
+    nCardUsed: string;
 begin
   nStr := Format('读取到卡号[ %s ],开始执行业务.', [nCard]);
   WriteLog(nStr);
@@ -450,7 +451,7 @@ begin
   {$ENDIF}
 
   nLast := -1;
-  if GetTruckLastTime(nBills[0].FTruck, nLast) and (nLast > 0) and 
+  if GetTruckLastTime(nBills[0].FTruck, nLast) and (nLast > 0) and
      (nLast < FPoundTunnel.FCardInterval) then
   begin
     nStr := '车辆[ %s ]需等待 %d 秒后才能过磅';
@@ -464,9 +465,11 @@ begin
     SetUIData(True);
     Exit;
   end;
-  
+
   nHint := '';
   nInt := 0;
+
+  nCardUsed := GetCardUsed(nCard);
 
   for nIdx:=Low(nBills) to High(nBills) do
   with nBills[nIdx] do
@@ -475,9 +478,12 @@ begin
       FNextStatus := sFlag_TruckBFP;
     //状态校正
     {$IFDEF AllowMultiM}
-    if (FStatus = sFlag_TruckBFM) then
-      FNextStatus := sFlag_TruckBFM;
-    //允许多次过重
+    if (nCardUsed = sFlag_Sale) and (nBills[nIdx].FType = sFlag_San) then
+    begin
+      if (FStatus = sFlag_TruckBFM) then
+        FNextStatus := sFlag_TruckBFM;
+      //允许多次过重
+    end;
     {$ENDIF}
 
     FSelected := (FNextStatus = sFlag_TruckBFP) or
@@ -852,7 +858,7 @@ begin
     ShowDlg(nStr, sHint);
   end;
 
-  nStr := 'Select L_Lading,L_IsVIP,L_Seal From %s Where L_ID=''%s''';
+  nStr := 'Select L_Lading,L_IsVIP,L_Seal,L_StockBrand From %s Where L_ID=''%s''';
   nStr := Format(nStr, [sTable_Bill, FBillItems[0].FID]);
 
   with FDM.QueryTemp(nStr) do
@@ -879,6 +885,8 @@ begin
       Values['Card'] := FBillItems[0].FCard;
       Values['Post'] := sFlag_TruckBFM;
       Values['PValue'] := FloatToStr(FBillItems[0].FPData.FValue);
+
+      Values['Brand'] := FieldByName('L_StockBrand').AsString;
     end;
 
     nStr := SaveBill(EncodeBase64(FListA.Text));
@@ -1024,6 +1032,11 @@ begin
       begin
         if nVal > 0 then
         begin
+          nStr := '车辆 %s 净重 %.2f 吨超出 %.2f 吨,请联系管理员';
+          nStr := Format(nStr, [FTruck, nNet, nNet - FValue]);
+          PlayVoice(nStr);
+
+          WriteSysLog(nStr);
           nVal := Float2Float(nNet - FInnerData.FValue, cPrecision, True);
           if not MakeNewSanBill(nVal) then Exit;
           //散装发超时并新单
@@ -1342,7 +1355,7 @@ begin
     PlayVoice(nStr);
     WriteSysLog(nStr);
     InitSamples;
-    LEDDisplay(nStr);
+    //LEDDisplay(nStr);
     Exit;
   end;
 
@@ -1471,7 +1484,7 @@ procedure TfFrameAutoPoundItem.LEDDisplay(const nStrtext: string);
 var nIdx: Integer;
 begin
   WriteSysLog(Format('LEDDisplay:%s.%s', [FPoundTunnel.FID, nStrtext]));
-  for nIdx := 1 to 3 do
+  for nIdx := 1 to 1 do
   begin
     {$IFDEF MITTruckProber}
     ProberShowTxt(FPoundTunnel.FID, nStrtext);
