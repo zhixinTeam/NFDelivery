@@ -19,6 +19,8 @@ type
       FID: string;//通道号
       FGroupID: string;//所属分组
       FTruckCount: Integer;//通道车辆数量
+      FMaxCount: Integer;//通道最大数量
+      FValid: Boolean;//是否已满
     end;
 
   TLineItems = array of TLineItem;
@@ -741,7 +743,7 @@ end;
 //Desc: 获取指定物料号的编号
 function TWorkerBusinessCommander.GetStockBatcode(var nData: string): Boolean;
 var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType, nLineGroup, nBatStockNo: string;
-    nBatchNew, nSelect: string;
+    nBatchNew, nSelect, nUBatStockGroup: string;
     nVal, nPer: Double;
     nInt, nInc, nRID: Integer;
     nNew: Boolean;
@@ -798,14 +800,16 @@ begin
   Result := False;
 
   nStr := 'Select D_Memo, D_Value from %s Where D_Name=''%s'' and ' +
-          '(D_Memo=''%s'' or D_Memo=''%s'' or D_Memo=''%s'')';
+          '(D_Memo=''%s'' or D_Memo=''%s'' or D_Memo=''%s'' or D_Memo=''%s'')';
   nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam,
-                        sFlag_BatchAuto, sFlag_BatchBrand, sFlag_BatchValid]);
+                        sFlag_BatchAuto, sFlag_BatchBrand,
+                        sFlag_BatchValid, sFlag_BatchStockGroup]);
   //xxxxxx
 
   nUBatchAuto := sFlag_Yes;
   nUBatcode := sFlag_No;
   nUBrand := sFlag_No;
+  nUBatStockGroup := sFlag_Yes;
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
   if RecordCount > 0 then
   begin
@@ -821,6 +825,9 @@ begin
 
       if Fields[0].AsString = sFlag_BatchValid then
         nUBatcode  := Fields[1].AsString;
+
+      if Fields[0].AsString = sFlag_BatchStockGroup then
+        nUBatStockGroup  := Fields[1].AsString;
 
       Next;
     end;
@@ -862,16 +869,20 @@ begin
     end;
 
     nBatStockNo := FIn.FData;
-    nStr := 'Select D_ParamB From %s Where D_Name=''%s'' and D_Value=''%s''';
-    nStr := Format(nStr, [sTable_SysDict, sFlag_BatStockGroup, nBatStockNo]);
-    WriteLog('查询符合条件批次号物料分组sql:'+nStr);
 
-    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    if nUBatStockGroup = sFlag_Yes then
     begin
-      if RecordCount > 0 then
+      nStr := 'Select D_ParamB From %s Where D_Name=''%s'' and D_Value=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_BatStockGroup, nBatStockNo]);
+      WriteLog('查询符合条件批次号物料分组sql:'+nStr);
+
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
       begin
-        nBatStockNo := Fields[0].AsString;
-        WriteLog('批次物料号分组匹配:'+ FIn.FData + '-->' + nBatStockNo);
+        if RecordCount > 0 then
+        begin
+          nBatStockNo := Fields[0].AsString;
+          WriteLog('批次物料号分组匹配:'+ FIn.FData + '-->' + nBatStockNo);
+        end;
       end;
     end;
 
@@ -4440,13 +4451,13 @@ begin
   SetLength(FLineItems, 0);
   if nHideStock then
   begin
-    nStr := 'Select Z_ID, Z_Group From %s Where Z_StockNo=''%s'' '+
+    nStr := 'Select Z_ID, Z_Group, Z_QueueMax From %s Where Z_StockNo=''%s'' '+
             'and Z_Valid=''%s'' and Z_Group In (%s) and Z_ID In (%s) order by R_ID ';
     nStr := Format(nStr, [sTable_ZTLines, nBatStockNo, sFlag_Yes, nStrAdj, nStockMatch]);
   end
   else
   begin
-    nStr := 'Select Z_ID, Z_Group From %s Where Z_StockNo=''%s'' '+
+    nStr := 'Select Z_ID, Z_Group, Z_QueueMax From %s Where Z_StockNo=''%s'' '+
             'and Z_Valid=''%s'' and Z_Group In (%s) order by R_ID ';
     nStr := Format(nStr, [sTable_ZTLines, nBatStockNo, sFlag_Yes, nStrAdj]);
   end;
@@ -4474,6 +4485,8 @@ begin
         FID := Fields[0].AsString;
         FGroupID := Fields[1].AsString;
         FTruckCount := 0;
+        FMaxCount := Fields[2].AsInteger;
+        FValid := False;
       end;
 
       Inc(nIdx);
@@ -4551,18 +4564,36 @@ begin
       end;
   end;
 
+  nI :=0;
   for nIdx := Low(FLineItems) to High(FLineItems) do
   begin
     WriteLog('通道'+FLineItems[nIdx].FID +
              '车辆数量为:'+IntToStr(FLineItems[nIdx].FTruckCount) +
+             '通道最大负载为:'+IntToStr(FLineItems[nIdx].FMaxCount) +
              '所属分组:'+FLineItems[nIdx].FGroupID);
+    if FLineItems[nIdx].FTruckCount < FLineItems[nIdx].FMaxCount then
+    begin
+      Inc(nI);
+      FLineItems[nIdx].FValid := True;
+    end;
+  end;
+
+  if nI = 0 then
+  begin
+    nData := '物料[ %s ]符合条件的通道已满.';
+    nData := Format(nData, [nBatStockNo]);
+    WriteLog('物料'+ nBatStockNo +'符合条件的通道已满.');
+    Exit;
   end;
 
   nI := 0;
+  FOut.FData := '';
   for nIdx := Low(FLineItems) to High(FLineItems) do
   begin
+    if FLineItems[nIdx].FValid = False then
+      Continue;
     try
-      if nIdx = Low(FLineItems) then
+      if FOut.FData = '' then
       begin
        nI:= FLineItems[nIdx].FTruckCount;
        FOut.FData := FLineItems[nIdx].FGroupID;

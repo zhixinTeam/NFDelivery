@@ -7,16 +7,16 @@ uses
   Dialogs, UFrameBase, ComCtrls, ExtCtrls, Buttons, StdCtrls,
   USelfHelpConst, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, cxTextEdit, cxMaskEdit,
-  cxButtonEdit, cxDropDownEdit ;
+  cxButtonEdit, cxDropDownEdit, dxGDIPlusClasses, jpeg ;
 
 type
 
   TfFrameSaleCard = class(TfFrameBase)
     Pnl_OrderInfo: TPanel;
     lvOrders: TListView;
-    btnSave: TSpeedButton;
+    BtnSave: TSpeedButton;
     procedure lvOrdersClick(Sender: TObject);
-    procedure btnSaveClick(Sender: TObject);
+    procedure BtnSaveClick(Sender: TObject);
   private
     { Private declarations }
     FListA, FListB, FListC: TStrings;
@@ -165,7 +165,10 @@ begin
   nlistitem.SubItems.Add(nSaleOrderItem.FStockName);
   nlistitem.SubItems.Add(nSaleOrderItem.FTruck);
   nlistitem.SubItems.Add(FloatToStr(nSaleOrderItem.FValue));
-  nlistitem.SubItems.Add(nSaleOrderItem.FPd);
+  if nSaleOrderItem.FPd = sFlag_Yes then
+    nlistitem.SubItems.Add('是')
+  else
+    nlistitem.SubItems.Add('否');
   nlistitem.SubItems.Add(sUncheck);
 end;
 
@@ -192,7 +195,7 @@ begin
             Break;
           end;
         end;
-        btnSave.Enabled := nCanSave = True;
+        btnSave.Visible := nCanSave = True;
         Exit;
       end;
 
@@ -210,7 +213,7 @@ begin
       begin
         if FSaleOrderItems[nIdx].FSelect then
         begin
-          nCanPd := nCanPd and (FSaleOrderItems[nIdx].FPd <> sFlag_No);
+          nCanPd := nCanPd and (FSaleOrderItems[nIdx].FPd = sFlag_Yes);
           nTruck := nTruck + FSaleOrderItems[nIdx].FTruck + ',';
           nStockName := nStockName + FSaleOrderItems[nIdx].FStockName + ',';
           Inc(nInt);
@@ -224,7 +227,7 @@ begin
           ShowMsg('散装订单无法拼单,请重新选择', sHint);
           Exit;
         end;
-        if FSaleOrderItems[lvOrders.Selected.Index].FPd = sFlag_No then
+        if FSaleOrderItems[lvOrders.Selected.Index].FPd <> sFlag_Yes then
         begin
           ShowMsg('不允许拼单的订单无法拼单,请重新选择', sHint);
           Exit;
@@ -257,18 +260,18 @@ begin
         Break;
       end;
     end;
-    btnSave.Enabled := nCanSave = True;
+    btnSave.Visible := nCanSave = True;
   end;
 end;
 
 procedure TfFrameSaleCard.InitUIData(nSTDid, nPassword: string);
 begin
   InitListView;
-  btnSave.Enabled:= False;
+  btnSave.Visible:= False;
   LoadNcSaleList(nSTDid, nPassword);
 end;
 
-procedure TfFrameSaleCard.btnSaveClick(Sender: TObject);
+procedure TfFrameSaleCard.BtnSaveClick(Sender: TObject);
 var nMsg, nStr, nCard: string;
     nIdx, nInt: Integer;
     nRet: Boolean;

@@ -46,6 +46,7 @@ type
     FOKTime  : Int64;
     FPost    : string;//所在岗位
     FDept    : string;//所属门岗
+    FOptions : TStrings;          //附加参数
   end;
 
   THardwareHelper = class;
@@ -159,7 +160,12 @@ begin
 end;
 
 destructor THardwareHelper.Destroy;
+var nIdx: Integer;
 begin
+  for nIdx:=Low(FItems) to High(FItems) do
+    FreeAndNil(FItems[nIdx].FOptions);
+  //xxxxx
+
   StopRead;
   ClearBuffer(FBuffData);
   FBuffData.Free;
@@ -472,6 +478,13 @@ begin
         if Assigned(nTP) then
              FGroup := nTP.ValueAsString
         else FGroup := '';
+
+        nTP := NodeByName('options');
+        if Assigned(nTP) then
+        begin
+          FOptions := TStringList.Create;
+          SplitStr(nTP.ValueAsString, FOptions, 0, ';');
+        end else FOptions := nil;
 
         nTP := NodeByName('keeptime');
         if Assigned(nTP) then

@@ -92,8 +92,7 @@ type
     //折叠参数
     FCardReader: Integer;
     //xxxxx
-    FDefaultStock: string;
-    //默认物料
+    FDefStockNo, FDefStockName: string;
     procedure InitUIData;
     procedure SetUIData(const nReset: Boolean; const nOnlyData: Boolean = False);
     //界面数据
@@ -145,6 +144,13 @@ procedure TfFramePoundStationItem.OnCreateFrame;
 var nIni: TIniFile;
 begin
   inherited;
+  nIni := TIniFile.Create(gPath + 'StationConfig.Ini');
+  try
+    FDefStockNo:= nIni.ReadString('DefaultStock', 'DefaultStockNo', '');
+    FDefStockName:= nIni.ReadString('DefaultStock', 'DefaultStockName', '');
+  finally
+    nIni.Free;
+  end;
   FPanelHeight := Height;
   FTitleHeight := HintLabel.Height + 1;
 
@@ -153,21 +159,15 @@ begin
 
   FPoundTunnel := nil;
   InitUIData;
-
-  nIni := TIniFile.Create(gPath + 'StationConfig.ini');
-  try
-    FDefaultStock := nIni.ReadString('DefaultStock', 'DefaultStock', '');
-  finally
-    nIni.Free;
-  end;
 end;
 
 procedure TfFramePoundStationItem.OnDestroyFrame;
 var nIni: TIniFile;
 begin
-  nIni := TIniFile.Create(gPath + 'StationConfig.ini');
+  nIni := TIniFile.Create(gPath + 'StationConfig.Ini');
   try
-    nIni.WriteString('DefaultStock', 'DefaultStock', FDefaultStock);
+    nIni.WriteString('DefaultStock', 'DefaultStockNo', FDefStockNo);
+    nIni.WriteString('DefaultStock', 'DefaultStockName', FDefStockName);
   finally
     nIni.Free;
   end;
@@ -273,10 +273,9 @@ begin
     Delete(nTruck, 1, Length(EditPrefix.Text));
     EditTruck.Text := nTruck;
 
-    if FStockName <> '' then
-      EditMID.Text := FStockName
-    else
-      EditMID.Text := FDefaultStock;
+
+    EditMID.Text := FStockName;
+
     EditPID.Text := FCusName;
     if FOrigin <> '' then
       EditKID.Text := FOrigin;
@@ -344,7 +343,7 @@ end;
 procedure TfFramePoundStationItem.LoadTruckPoundItem(const nTruck: string);
 var nData: TLadingBillItems;
     nPValue: Double;
-    nHint: string;
+    nHint, nStockNo, nStockName: string;
 begin
   if nTruck = '' then
   begin
@@ -370,6 +369,11 @@ begin
     end;
   end;
 
+  if nData[0].FStockNo = '' then
+  begin
+    nData[0].FStockNo := FDefStockNo;
+    nData[0].FStockName := FDefStockName;
+  end;
 
   FInnerData := nData[0];
   FUIData := FInnerData;
@@ -603,7 +607,7 @@ begin
     if not EditMID.Focused then Exit;
     //非操作人员调整
     EditMID.Text := Trim(EditMID.Text);
-    FDefaultStock := EditMID.Text;
+
     if EditMID.ItemIndex < 0 then
     begin
       FUIData.FStockNo := '';
@@ -613,6 +617,8 @@ begin
       FUIData.FStockNo := GetCtrlData(EditMID);
       FUIData.FStockName := EditMID.Text;
     end;
+    FDefStockNo := FUIData.FStockNo;
+    FDefStockName := FUIData.FStockName;
   end else
 
   if Sender = EditPID then

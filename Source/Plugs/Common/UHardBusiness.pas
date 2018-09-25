@@ -54,6 +54,9 @@ procedure SaveGrabCard(const nCard: string; nTunnel: string='');
 //检索并保存抓斗秤工作卡号
 function VerifySnapTruck(const nTruck,nBill,nPos,nDept: string;var nResult: string): Boolean;
 //车牌识别
+procedure MakeTruckShowBusinessInfo(const nCard: string; nTunnel: string='';
+                                 nReader: string='');
+//车辆信息显示
 
 procedure UpdateDoubleChannel(const nTunnel: PMultiJSTunnel);
 //更新通道信息
@@ -827,7 +830,7 @@ end;
 //Date: 2012-4-22
 //Parm: 卡号;读头;打印机;附加参数
 //Desc: 对nCard放行出厂
-procedure MakeTruckOut(const nCard,nReader,nPrinter,nPost,nDept: string;
+procedure MakeTruckOut(const nCard,nReader,nPrinter,nHYPrinter,nPost,nDept: string;
  const nOptions: string = '');
 var nStr, nCardType,nPrint,nID,nSnapStr,nPos: string;
     nIdx: Integer;
@@ -984,6 +987,9 @@ begin
 
     nStr := #7 + nCardType;
     //磁卡类型
+    if nHYPrinter <> '' then
+      nStr := nStr + #6 + nHYPrinter;
+    //化验单打印机
 
     if nPrinter = '' then
     begin
@@ -1017,6 +1023,9 @@ begin
 
     nStr := nStr + #7 + nCardType;
     //磁卡类型
+    if nHYPrinter <> '' then
+      nStr := nStr + #6 + nHYPrinter;
+    //化验单打印机
 
     if nPrinter = '' then
     begin
@@ -1041,7 +1050,7 @@ end;
 //Date: 2016-5-4
 //Parm: 卡号;读头;打印机
 //Desc: 对nCard放行出
-function MakeTruckOutM100(const nCard,nReader,nPrinter,
+function MakeTruckOutM100(const nCard,nReader,nPrinter, nHYPrinter,
                           nPost,nDept: string): Boolean;
 var nStr,nCardType, nID,nSnapStr,nPos: string;
     nIdx: Integer;
@@ -1187,6 +1196,9 @@ begin
 
     nStr := #7 + nCardType;
     //磁卡类型
+    if nHYPrinter <> '' then
+      nStr := nStr + #6 + nHYPrinter;
+    //化验单打印机
 
     if nPrinter = '' then
          nStr := nID + nStr
@@ -1219,6 +1231,9 @@ begin
 
     nStr := nStr + #7 + nCardType;
     //磁卡类型
+    if nHYPrinter <> '' then
+      nStr := nStr + #6 + nHYPrinter;
+    //化验单打印机
 
     if (nCardType = sFlag_ShipPro) or (nCardType = sFlag_ShipTmp) or
        (nCardType = sFlag_HaulBack) then
@@ -1295,12 +1310,12 @@ procedure MakeTruckCross(const nCard,nReader,nPost, nMemo: string; const nDB: PD
 var nStr: string;
     nIdx: Integer;
 begin
-  nStr := '磁卡[ %s ]开始等待时间[ %s ],当前时间[ %s ],当前刷卡状态[ %s ].';
-  nStr := Format(nStr, [nCard, FormatDateTime('YYYY-MM-DD HH:MM:SS', nStart),
+  nStr := '磁卡[ %s ]刷卡处[ %s ]开始等待时间[ %s ],当前时间[ %s ],当前刷卡状态[ %s ].';
+  nStr := Format(nStr, [nCard, nPost, FormatDateTime('YYYY-MM-DD HH:MM:SS', nStart),
                                FormatDateTime('YYYY-MM-DD HH:MM:SS', Now),nMemo]);
 
   WriteHardHelperLog(nStr);
-  if MinutesBetween(Now, nStart) < nKeep then
+  if SecondsBetween(Now, nStart) < nKeep then
   begin
     nStr := '磁卡[ %s ]刷卡间隔过短,请等待.';
     nStr := Format(nStr, [nCard]);
@@ -1311,10 +1326,15 @@ begin
 
   if nPost = sPost_SW then
   begin
-    nStr := 'Update %s Set C_Date=%s, C_Memo=''%s'' Where C_Card=''%s''';
-    nStr := Format(nStr, [sTable_Card, sField_SQLServer_Now, sPost_SW, nCard]);
+    if nMemo <> sPost_SW then//防止在起始计时读卡器重复刷卡重复计时
+    begin
+      nStr := 'Update %s Set C_Date=%s, C_Memo=''%s'' Where C_Card=''%s''';
+      nStr := Format(nStr, [sTable_Card, sField_SQLServer_Now, sPost_SW, nCard]);
 
-    gDBConnManager.WorkerExec(nDB, nStr);
+      WriteHardHelperLog('开始计时...');
+
+      gDBConnManager.WorkerExec(nDB, nStr);
+    end;
   end
   else
   if nPost = sPost_EW then
@@ -1323,6 +1343,8 @@ begin
     begin
       nStr := 'Update %s Set C_Memo=''%s'' Where C_Card=''%s''';
       nStr := Format(nStr, [sTable_Card, sPost_EW, nCard]);
+
+      WriteHardHelperLog('抬杆...');
 
       gDBConnManager.WorkerExec(nDB, nStr);
       HardOpenDoor(nReader);
@@ -1342,7 +1364,7 @@ end;
 //Parm: 读头数据
 //Desc: 对nReader读到的卡号做具体动作
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
-var nStr, nGroup, nMemo: string;
+var nStr, nGroup, nMemo, nHYPrinter: string;
     nErrNum: Integer;
     nDBConn: PDBWorker;
     nStart: TDateTime;
@@ -1400,7 +1422,10 @@ begin
 
       if nReader.FType = rtOut then
       begin
-        MakeTruckOut(nStr, nReader.FID, nReader.FPrinter,
+        if Assigned(nReader.FOptions) then
+             nHYPrinter := nReader.FOptions.Values['HYPrinter']
+        else nHYPrinter := '';
+        MakeTruckOut(nStr, nReader.FID, nReader.FPrinter, nHYPrinter,
                      nReader.FPost, nReader.FDept, nReader.FPound);
       end else
 
@@ -2503,7 +2528,7 @@ end;
 //Parm: 主机;卡号
 //Desc: 对nHost.nCard新到卡号作出动作
 procedure WhenReaderCardIn(const nCard: string; const nHost: PReaderHost);
-var nReader: string;
+var nReader, nStr: string;
     nMutexTunnel: string;
 begin
   if nHost.FType = rtOnce then
@@ -2516,18 +2541,28 @@ begin
 
     if Assigned(nHost.FOptions) then
     begin
-      if nHost.FOptions.Values['IsGrab'] = 'Y' then
+      if nHost.FOptions.Values['IsGrab'] = sFlag_Yes then
       begin
         SaveGrabCard(nCard, nHost.FTunnel);
+        Exit;
+      end;
+      if nHost.FOptions.Values['ShowBusinessInfo'] = sFlag_Yes then
+      begin
+        MakeTruckShowBusinessInfo(nCard, nHost.FTunnel,nHost.FID);
         Exit;
       end;
       nMutexTunnel := nHost.FOptions.Values['mutextunnel'];
     end;
 
     if nHost.FFun = rfOut then
-         MakeTruckOut(nCard, nReader, nHost.FPrinter,
+    begin
+      if Assigned(nHost.FOptions) then
+           nStr := nHost.FOptions.Values['HYPrinter']
+      else nStr := '';
+         MakeTruckOut(nCard, nReader, nHost.FPrinter, nStr,
                       nHost.FOptions.Values['Post'],
-                      nHost.FOptions.Values['Dept'])
+                      nHost.FOptions.Values['Dept']);
+    end
     else
     {$IFDEF JSDoubleChannel}
     MakeTruckLadingDaiDouble(nCard, nHost.FTunnel, nMutexTunnel);
@@ -2639,7 +2674,7 @@ begin
     rtOutM100 :
     begin
       nRetain := MakeTruckOutM100(nItem.FCard, nItem.FVReader, nItem.FVPrinter,
-                                  nItem.FPost, nItem.FDept);
+                                  nItem.FVHYPrinter, nItem.FPost, nItem.FDept);
       if nRetain then
         WriteHardHelperLog('吞卡机执行动作:吞卡')
       else
@@ -3446,6 +3481,63 @@ begin
   finally
     nList.Free;
   end;
+end;
+
+//Date: 2018/09/07
+//Parm: 磁卡号;通道编号
+//Desc: 显示车辆业务信息
+procedure MakeTruckShowBusinessInfo(const nCard: string; nTunnel: string='';
+                                 nReader: string='');
+var nStr, nCardType, nStockName: string;
+    nTrucks: TLadingBillItems;
+    nRet: Boolean;
+    nIdx: Integer;
+begin
+  if not GetCardUsed(nCard, nCardType) then nCardType := sFlag_Sale;
+
+  nRet := False;
+  if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
+    nRet := GetLadingBills(nCard, sFlag_TruckZT, nTrucks) else
+  if nCardType = sFlag_Provide then
+    nRet := GetProvideItems(nCard, sFlag_TruckZT, nTrucks) else
+  if nCardType = sFlag_ShipPro then
+    nRet := GetShipProItems(nCard, sFlag_TruckZT, nTrucks)  else
+  if nCardType = sFlag_ShipTmp then
+    nRet := GetShipTmpItems(nCard, sFlag_TruckZT, nTrucks) else
+  if nCardType = sFlag_HaulBack then
+    nRet := GetHaulBackItems(nCard, sFlag_TruckZT, nTrucks);
+  //xxxxx
+
+  if not nRet then
+  begin
+    nStr := '[ 业务信息显示 ]读取磁卡[ %s ]交货单信息失败.';
+    nStr := Format(nStr, [nCard]);
+    WriteNearReaderLog(nStr);
+
+    Exit;
+  end;
+
+  if Length(nTrucks) < 1 then
+  begin
+    nStr := '[ 业务信息显示 ]磁卡[ %s ]没有需要显示的信息.';
+    nStr := Format(nStr, [nCard]);
+
+    WriteNearReaderLog(nStr);
+    Exit;
+  end;
+
+  if Length(nTrucks[0].FStockName) > 12 then
+    nStockName := Copy(nTrucks[0].FStockName, 1, 12);
+  nIdx := Length(nTrucks[0].FTruck);
+  nStr := nTrucks[0].FTruck + StringOfChar(' ',12 - nIdx) + nStockName;
+
+  WriteHardHelperLog('[ 业务信息显示 ]小屏发送:通道:'+nTunnel+'内容:'+ nStr);
+  gDisplayManager.Display(nTunnel, nStr);
+
+  {$IFDEF HKVDVR}
+  gCameraManager.CapturePicture(nReader, nTrucks[0].FID);
+  //抓拍
+  {$ENDIF}
 end;
 
 end.

@@ -295,11 +295,19 @@ function GetStockType(nBill: string):string;
 function IsStationAutoP(const nTruck: string; var nPValue: Double;
                         nMsg: string): Boolean;
 //火车衡自动获取最近5条历史皮重
+function GetStationTruckStock(const nTruck: string; var nStockNo,
+                        nStockName: string): Boolean;
+//火车衡自动获取最近一次过磅物料
 function VeriFySnapTruck(const nReader: string; nBill: TLadingBillItem;
                          var nMsg, nPos: string): Boolean;
 function ReadPoundReaderInfo(const nReader: string; var nDept: string): string;
 //读取nReader岗位、部门
 procedure RemoteSnapDisPlay(const nPost, nText, nSucc: string);
+
+function InfoConfirmDone(const nID, nStockNo: string): Boolean;
+//现场信息确认
+function IsTruckAutoIn: Boolean;
+//车辆自动进厂
 implementation
 
 //Desc: 记录日志
@@ -2988,6 +2996,33 @@ begin
   end;
 end;
 
+//Date: 2018/08/30
+//Parm: 车牌号
+//Desc: 火车衡自动获取最近一次过磅物料
+function GetStationTruckStock(const nTruck: string; var nStockNo,
+                        nStockName: string): Boolean;
+var nSQL, nStr: string;
+    nCount, nPos: Integer;
+begin
+  Result := False;
+  nStockNo:= '';
+  nStockName := '';
+  if nTruck = '' then Exit;
+
+  nSQL := 'Select top 1 P_MID, P_MName From %s Where P_Truck=''%s'' Order by R_ID desc';
+  nSQL := Format(nSQL, [sTable_PoundStation, nTruck]);
+
+  with FDM.QueryTemp(nSQL) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nStockNo := Fields[0].AsString;
+      nStockName := Fields[1].AsString;
+      Result := True;
+    end;
+  end;
+end;
+
 function VerifySnapTruck(const nReader: string; nBill: TLadingBillItem;
                          var nMsg, nPos: string): Boolean;
 var nStr, nDept: string;
@@ -3168,6 +3203,66 @@ begin
     CallBusinessHardware(cBC_RemoteSnapDisPlay, nPost, PackerEncodeStr(nList.Text), @nOut);
   finally
     nList.Free;
+  end;
+end;
+
+//Date: 2018/09/11
+//Parm: ID
+//Desc: 现场信息确认
+function InfoConfirmDone(const nID, nStockNo: string): Boolean;
+var nSQL: string;
+begin
+  Result := False;
+
+  if Trim(nStockNo) = '' then
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  nSQL := 'Select D_Value From %s Where D_Name=''%s'' and D_Value=''%s''';
+  nSQL := Format(nSQL, [sTable_SysDict, sFlag_NeedInfoConfirm,nStockNo]);
+  //xxxxx
+
+  with FDM.QueryTemp(nSQL) do
+  begin
+    if RecordCount <= 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+
+  nSQL := 'Select top 1 P_ID From %s Where P_ID=''%s'' Order by R_ID desc';
+  nSQL := Format(nSQL, [sTable_Picture, nID]);
+
+  with FDM.QueryTemp(nSQL) do
+  begin
+    if RecordCount > 0 then
+    begin
+      Result := True;
+    end;
+  end;
+end;
+
+//Date: 2018/09/17
+//Desc: 车辆自动进厂
+function IsTruckAutoIn: Boolean;
+var nSQL: string;
+begin
+  Result := False;
+
+  nSQL := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s''';
+  nSQL := Format(nSQL, [sTable_SysDict, sFlag_SysParam,sFlag_AutoIn]);
+  //xxxxx
+
+  with FDM.QueryTemp(nSQL) do
+  begin
+    if RecordCount > 0 then
+    begin
+      if Fields[0].AsString = sFlag_Yes then
+        Result := True;
+    end;
   end;
 end;
 

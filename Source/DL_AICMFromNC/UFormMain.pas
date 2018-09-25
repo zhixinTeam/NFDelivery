@@ -16,17 +16,21 @@ type
     PanelRight: TPanel;
     PanelWork: TPanel;
     ImageWork: TImage;
-    ImageRight: TImage;
-    BtnSCard: TSpeedButton;
-    BtnPrint: TSpeedButton;
     Panel1: TPanel;
-    Image1: TImage;
     LabelDec: TcxLabel;
     TimerDec: TTimer;
     ComReader: TComPort;
     LabelTop: TLabel;
-    BtnReturn: TSpeedButton;
-    btnPurOrderCard: TSpeedButton;
+    PanelLogo: TPanel;
+    Image2: TImage;
+    PanelPurch: TPanel;
+    btnPurOrderCard: TImage;
+    PanelSale: TPanel;
+    BtnSCard: TImage;
+    PanelPrint: TPanel;
+    BtnPrint: TImage;
+    PanelReturn: TPanel;
+    BtnReturn: TImage;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure ComReaderRxChar(Sender: TObject; Count: Integer);
@@ -34,6 +38,7 @@ type
     procedure ButtonClick(Sender: TObject);
     procedure BtnReturnClick(Sender: TObject);
     procedure LabelTopDblClick(Sender: TObject);
+    procedure InitButton;
   private
     { Private declarations }
     FBuffer: string;
@@ -95,6 +100,9 @@ begin
   {$IFDEF SaleAICMFromNC}
   btnSCard.Visible := True;
   {$ENDIF}
+
+  PanelPrint.Visible := False;
+
   gPath := ExtractFilePath(ParamStr(0));  gNeedSearchPurOrder:= False;
 
   InitSystemObject;
@@ -122,6 +130,7 @@ begin
   ActionComPort(False);
   RunSystemObject;
   //运行系统对象
+  InitButton;
 end;
 
 procedure TfFormMain.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -227,6 +236,9 @@ begin
     BtnPrint.Enabled:= True;
     BtnSCard.Enabled := True;
     BtnPurOrderCard.Enabled:= True;
+
+    PanelPurch.Visible := True;
+    PanelSale.Visible := True;
   end else
   begin
     LabelDec.Caption := IntToStr(gTimeCounter) + ' ';
@@ -264,6 +276,9 @@ begin
   BtnPrint.Enabled:= False;
   BtnPurOrderCard.Enabled:= False;
 
+  PanelPurch.Visible := False;
+  PanelSale.Visible := False;
+
   gTimeCounter := 120;
   TimerDec.Enabled := True;
   //默认30秒
@@ -292,6 +307,17 @@ begin
   {$IFNDEF DEBUG}
   ShowCursor(False);
   {$ENDIF}
+end;
+
+procedure TfFormMain.InitButton;
+var nHeight, nHeightPanel: Integer;
+begin
+  nHeightPanel := PanelPurch.Height;
+  nHeight := nHeightPanel;
+  PanelPurch.Top := nHeight;
+  PanelSale.Top := nHeight * 2 + nHeightPanel * 1;
+  PanelPrint.Top := nHeight * 3 + nHeightPanel * 2;
+  PanelReturn.Top := nHeight * 4 + nHeightPanel * 3;
 end;
 
 end.

@@ -242,6 +242,7 @@ ResourceString
   sFlag_BatchAuto     = 'Batch_Auto';                //自动生成批次号
   sFlag_BatchBrand    = 'Batch_Brand';               //批次区分品牌
   sFlag_BatchValid    = 'Batch_Valid';               //启用批次管理
+  sFlag_BatchStockGroup = 'Batch_StockGroup';        //启用批次物料分组
   sFlag_PoundBaseValue= 'PoundBaseValue';            //磅房跳动基数
   sFlag_OutOfHaulBack = 'OutOfHaulBack';             //退货(回空)时限
   sFlag_DefaultBrand  = 'DefaultBrand';              //默认品牌
@@ -268,6 +269,7 @@ ResourceString
   sFlag_BillHaulBack  = 'Bus_BillHaulBack';          //回空单号
   sFlag_TruckInNeedManu = 'TruckInNeedManu';         //车牌识别需要人工干预
   sFlag_SnapInfoPost  = 'SnapInfoPost';              //车牌识别消息推送岗位
+  sFlag_NeedInfoConfirm = 'NeedInfoConfirm';         //需要进行现场刷卡确认
 
   sFlag_WXFactory     = 'WXFactoryID';               //微信标识
   sFlag_WXServiceMIT  = 'WXServiceMIT';              //微信工厂服务

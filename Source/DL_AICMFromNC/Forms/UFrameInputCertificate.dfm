@@ -8,7 +8,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
     Height = 671
     Align = alClient
     BevelOuter = bvNone
-    Color = clBlack
+    Color = clWhite
     Font.Charset = GB2312_CHARSET
     Font.Color = clWindowText
     Font.Height = -56
@@ -29,7 +29,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = '1'
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
@@ -46,7 +46,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = '2'
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
@@ -63,7 +63,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = '3'
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
@@ -80,7 +80,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = '4'
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
@@ -97,7 +97,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = '5'
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
@@ -114,7 +114,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = '6'
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
@@ -131,7 +131,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = '7'
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
@@ -148,7 +148,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = '8'
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
@@ -165,7 +165,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = '9'
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
@@ -182,7 +182,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = #30830#35748
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
@@ -199,7 +199,7 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = '0'
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
@@ -216,21 +216,36 @@ inherited fFrameInputCertificate: TfFrameInputCertificate
       Caption = #21024#38500
       Flat = True
       Font.Charset = GB2312_CHARSET
-      Font.Color = clWhite
+      Font.Color = clDefault
       Font.Height = -96
       Font.Name = #23435#20307
       Font.Style = []
       ParentFont = False
       OnClick = BtnDelClick
     end
+    object Label1: TLabel
+      Left = 146
+      Top = 11
+      Width = 237
+      Height = 75
+      Alignment = taRightJustify
+      Anchors = []
+      Caption = #21462#21345#23494#30721':'
+      Font.Charset = GB2312_CHARSET
+      Font.Color = clWindowText
+      Font.Height = -56
+      Font.Name = #24494#36719#38597#40657
+      Font.Style = []
+      ParentFont = False
+    end
     object EditID: TEdit
-      Left = 72
+      Left = 384
       Top = 20
-      Width = 745
+      Width = 369
       Height = 64
       Anchors = []
-      BevelInner = bvNone
-      BevelOuter = bvNone
+      BevelKind = bkSoft
+      BevelOuter = bvRaised
       TabOrder = 0
       OnChange = EditIDChange
       OnKeyPress = EditIDKeyPress

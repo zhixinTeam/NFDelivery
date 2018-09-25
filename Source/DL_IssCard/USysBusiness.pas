@@ -235,9 +235,7 @@ begin
     nIn.FData := nData;
     nIn.FExtParam := nExt;
 
-    if nWarn then
-         nIn.FBase.FParam := ''
-    else nIn.FBase.FParam := sParam_NoHintOnError;
+    nIn.FBase.FParam := sParam_NoHintOnError;
 
     if gSysParam.FAutoPound and (not gSysParam.FIsManual) then
       nIn.FBase.FParam := sParam_NoHintOnError;
@@ -1304,7 +1302,7 @@ function GetNcOrderList(const nID: string): string;
 var nOut: TWorkerBusinessCommand;
 begin
   Result := '';
-  if CallBusinessCommand(cBC_GetPurchaseList, nID, '', @nOut) then
+  if CallBusinessCommand(cBC_GetPurchaseList, nID, '', @nOut, False) then
     Result := nOut.FData;
 end;
 

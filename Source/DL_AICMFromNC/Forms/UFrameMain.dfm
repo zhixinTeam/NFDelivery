@@ -38,10 +38,10 @@ inherited fFrameMain: TfFrameMain
     BevelInner = bvNone
     BevelOuter = bvNone
     Caption = #26174#31034#22522#26412#20449#24687
-    Color = clBlack
+    Color = clWhite
     Font.Charset = GB2312_CHARSET
-    Font.Color = clWhite
-    Font.Height = -64
+    Font.Color = clDefault
+    Font.Height = -40
     Font.Name = #23435#20307
     Font.Style = [fsBold]
     ParentColor = False

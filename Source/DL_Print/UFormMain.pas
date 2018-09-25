@@ -485,6 +485,139 @@ begin
   Result := FDR.PrintSuccess;
 end;
 
+//Desc: 获取nStock品种的报表文件
+function GetReportFileByStock(const nStock: string): string;
+begin
+  Result := GetPinYinOfStr(nStock);
+
+  if Pos('dj', Result) > 0 then
+    Result := gPath + 'Report\HuaYan42_DJ.fr3'
+  else if Pos('gsysl', Result) > 0 then
+    Result := gPath + 'Report\HuaYan_gsl.fr3'
+  else if Pos('kzf', Result) > 0 then
+    Result := gPath + 'Report\HuaYan_kzf.fr3'
+  else if Pos('qz', Result) > 0 then
+    Result := gPath + 'Report\HuaYan_qz.fr3'
+  else if Pos('32', Result) > 0 then
+    Result := gPath + 'Report\HuaYan32.fr3'
+  else if Pos('42', Result) > 0 then
+    Result := gPath + 'Report\HuaYan42.fr3'
+  else if Pos('52', Result) > 0 then
+    Result := gPath + 'Report\HuaYan42.fr3'
+  else Result := '';
+end;
+
+//Desc: 打印标识为nHID的化验单
+function PrintHuaYanReport(const nBill: string; var nHint: string;
+ const nPrinter: string = ''): Boolean;
+var nStr,nSR: string;
+begin
+  nHint := '';
+  Result := False;
+  
+  nSR := 'Select * From %s sr ' +
+         ' Left Join %s sp on sp.P_ID=sr.R_PID';
+  nSR := Format(nSR, [sTable_StockRecord, sTable_StockParam]);
+
+  nStr := 'Select hy.*,sr.*,C_Name From $HY hy ' +
+          ' Left Join $Cus cus on cus.C_ID=hy.H_Custom' +
+          ' Left Join ($SR) sr on sr.R_SerialNo=H_SerialNo ' +
+          'Where H_Reporter=''$ID''';
+  //xxxxx
+
+  nStr := MacroValue(nStr, [MI('$HY', sTable_StockHuaYan),
+          MI('$Cus', sTable_Customer), MI('$SR', nSR), MI('$ID', nBill)]);
+  //xxxxx
+
+  if FDM.SQLQuery(nStr, FDM.SqlTemp).RecordCount < 1 then
+  begin
+    nHint := '提货单[ %s ]没有对应的化验单';
+    nHint := Format(nHint, [nBill]);
+    Exit;
+  end;
+
+  nStr := FDM.SqlTemp.FieldByName('P_Stock').AsString;
+  nStr := GetReportFileByStock(nStr);
+
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nHint := '无法正确加载报表文件: ' + nStr;
+    Exit;
+  end;
+
+  if nPrinter = '' then
+       FDR.Report1.PrintOptions.Printer := 'My_Default_HYPrinter'
+  else FDR.Report1.PrintOptions.Printer := nPrinter;
+
+  FDR.Dataset1.DataSet := FDM.SqlTemp;
+  FDR.PrintReport;
+  Result := FDR.PrintSuccess;
+end;
+
+//Desc: 打印标识为nID的合格证
+function PrintHeGeReport(const nBill: string; var nHint: string;
+ const nPrinter: string = ''): Boolean;
+var nStr,nSR: string;
+    nField: TField;
+begin
+  nHint := '';
+  Result := False;
+
+  {$IFDEF HeGeZhengSimpleData}
+  nSR := 'Select * from %s b ' +
+          ' Left Join %s sp On sp.P_Stock=b.L_StockName ' +
+          'Where b.L_ID=''%s''';
+  nStr := Format(nSR, [sTable_Bill, sTable_StockParam, nBill]);
+  {$ELSE}
+  nSR := 'Select R_SerialNo,P_Stock,P_Name,P_QLevel From %s sr ' +
+         ' Left Join %s sp on sp.P_ID=sr.R_PID';
+  nSR := Format(nSR, [sTable_StockRecord, sTable_StockParam]);
+
+  nStr := 'Select hy.*,sr.*,C_Name From $HY hy ' +
+          ' Left Join $Cus cus on cus.C_ID=hy.H_Custom' +
+          ' Left Join ($SR) sr on sr.R_SerialNo=H_SerialNo ' +
+          'Where H_Reporter=''$ID''';
+  //xxxxx
+
+  nStr := MacroValue(nStr, [MI('$HY', sTable_StockHuaYan),
+          MI('$Cus', sTable_Customer), MI('$SR', nSR), MI('$ID', nBill)]);
+  //xxxxx
+  {$ENDIF}
+
+  if FDM.SQLQuery(nStr, FDM.SqlTemp).RecordCount < 1 then
+  begin
+    nHint := '提货单[ %s ]没有对应的合格证';
+    nHint := Format(nHint, [nBill]);
+    Exit;
+  end;
+
+  with FDM.SqlTemp do
+  begin
+    nField := FindField('L_PrintHY');
+    if Assigned(nField) and (nField.AsString <> sFlag_Yes) then
+    begin
+      nHint := '交货单[ %s ]无需打印合格证.';
+      nHint := Format(nHint, [nBill]);
+      Exit;
+    end;
+  end;
+
+  nStr := gPath + 'Report\HeGeZheng.fr3';
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nHint := '无法正确加载报表文件: ' + nStr;
+    Exit;
+  end;
+
+  if nPrinter = '' then
+       FDR.Report1.PrintOptions.Printer := 'My_Default_HYPrinter'
+  else FDR.Report1.PrintOptions.Printer := nPrinter;
+  
+  FDR.Dataset1.DataSet := FDM.SqlTemp;
+  FDR.PrintReport;
+  Result := FDR.PrintSuccess;
+end;
+
 //Desc: 打印单据
 procedure TfFormMain.PrintBill(var nBase: TRPDataBase; var nBuf: TIdBytes;
   nCtx: TIdContext);
@@ -506,7 +639,7 @@ end;
 
 procedure TfFormMain.Timer2Timer(Sender: TObject);
 var nPos: Integer;
-    nBill,nHint,nPrinter,nMoney, nType: string;
+    nBill,nHint,nPrinter,nMoney, nType, nHYPrinter: string;
 begin
     if not FIsBusy then
     begin
@@ -519,7 +652,15 @@ begin
         FSyncLock.Leave;
       end;
 
-      //bill #9 printer #8 money #7 CardType
+      //bill #9 printer #8 money #7 CardType #6 HYPrinter
+      nPos := Pos(#6, nBill);
+      if nPos > 1 then
+      begin
+        nHYPrinter := nBill;
+        nBill := Copy(nBill, 1, nPos - 1);
+        System.Delete(nHYPrinter, 1, nPos);
+      end else nHYPrinter := '';
+
       nPos := Pos(#7, nBill);
       if nPos > 1 then
       begin
@@ -557,7 +698,20 @@ begin
         if (nType = sFlag_Provide) then
              PrintOrderReport(nBill, nHint, nPrinter) else
         if (nType = sFlag_Sale) or (nType = sFlag_SaleNew) then
-             PrintBillReport(nBill, nHint, nPrinter, nMoney)
+        begin
+          PrintBillReport(nBill, nHint, nPrinter, nMoney);
+          if nHint <> '' then WriteLog(nHint);
+
+          {$IFDEF PrintHuaYanDan}
+          PrintHuaYanReport(nBill, nHint, nHYPrinter);
+          if nHint <> '' then WriteLog(nHint);
+          {$ENDIF}
+
+          {$IFDEF PrintHeGeZheng}
+          PrintHeGeReport(nBill, nHint, nHYPrinter);
+          if nHint <> '' then WriteLog(nHint);
+          {$ENDIF}
+        end
         else PrintPoundReport(nBill, nHint, nPrinter);
         WriteLog('打印结束.' + nHint);
       finally

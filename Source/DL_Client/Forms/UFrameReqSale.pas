@@ -147,6 +147,7 @@ begin
   end;
 
   {$IFDEF JudgeOrder}
+  if Trim(SQLQuery.FieldByName('cvehicle').AsString) <> '' then//车牌号为空默认为大订单
   if not IsOrderCanLade(SQLQuery.FieldByName('PK_MEAMBILL').AsString) then
   begin
     ShowMsg('订单正在使用,无法开单', sHint);

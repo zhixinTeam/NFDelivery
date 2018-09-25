@@ -24,6 +24,7 @@ type
     Btn0: TSpeedButton;
     BtnDel: TSpeedButton;
     EditID: TEdit;
+    Label1: TLabel;
     procedure BtnNumClick(Sender: TObject);
     procedure EditIDChange(Sender: TObject);
     procedure BtnDelClick(Sender: TObject);
@@ -104,7 +105,6 @@ procedure TfFrameInputCertificate.OnShowFrame;
 begin
   EditID.Text := '';
   EditID.SetFocus;
-
   gSDTReaderManager.OnSDTEvent := SyncCard;
 end;
 

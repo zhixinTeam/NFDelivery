@@ -147,22 +147,36 @@ begin
     Exit;
   end;
 
-  if StrToFloat(EditMValue.Text) <= StrToFloat(EditPValue.Text) then
-  begin
-    EditMValue.SetFocus;
-    nStr := '毛重不能小于皮重';
-    ShowMsg(nStr,sHint);
-    Exit;
-  end;
+  if StrToFloat(EditMValue.Text) > 0 then
+    if StrToFloat(EditMValue.Text) <= StrToFloat(EditPValue.Text) then
+    begin
+      EditMValue.SetFocus;
+      nStr := '毛重不能小于皮重';
+      ShowMsg(nStr,sHint);
+      Exit;
+    end;
 
-  nStr := MakeSQLByStr([SF('P_MID', GetCtrlData(EditStockNO)),
-          SF('P_Bill',  EditBill.Text),
-          SF('P_MName', EditStockNO.Text),
-          SF('P_Order', EditLineGroup.Text),
-          SF('P_PValue', EditPValue.Text),
-          SF('P_MValue', EditMValue.Text),
-          SF('P_Truck', EditTruck.Text)], FPoundTable, SF('P_ID', FRecordID), False);
-  FDM.ExecuteSQL(nStr);
+  if StrToFloat(EditMValue.Text) > 0 then
+  begin
+    nStr := MakeSQLByStr([SF('P_MID', GetCtrlData(EditStockNO)),
+            SF('P_Bill',  EditBill.Text),
+            SF('P_MName', EditStockNO.Text),
+            SF('P_Order', EditLineGroup.Text),
+            SF('P_PValue', EditPValue.Text),
+            SF('P_MValue', EditMValue.Text),
+            SF('P_Truck', EditTruck.Text)], FPoundTable, SF('P_ID', FRecordID), False);
+    FDM.ExecuteSQL(nStr);
+  end
+  else
+  begin
+    nStr := MakeSQLByStr([SF('P_MID', GetCtrlData(EditStockNO)),
+            SF('P_Bill',  EditBill.Text),
+            SF('P_MName', EditStockNO.Text),
+            SF('P_Order', EditLineGroup.Text),
+            SF('P_PValue', EditPValue.Text),
+            SF('P_Truck', EditTruck.Text)], FPoundTable, SF('P_ID', FRecordID), False);
+    FDM.ExecuteSQL(nStr);
+  end;
 
   nEvent := '磅单编号[ %s ]已勘误, 原因为:[ %s ]';
   nEvent := Format(nEvent, [FRecordID, EditMemo.Text]);

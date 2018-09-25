@@ -418,6 +418,26 @@ begin
     Exit;
   end;
 
+  if IsTruckAutoIn then
+  begin
+    for nIdx:=Low(nBills) to High(nBills) do
+    with nBills[nIdx] do
+    begin
+      if FStatus=sFlag_TruckNone then
+      begin
+        if SaveLadingBills(sFlag_TruckIn, nBills) then
+        begin
+          ShowMsg('车辆进厂成功', sHint);
+          LoadBillItems(FCardTmp);
+          Exit;
+        end else
+        begin
+          ShowMsg('车辆进厂失败', sHint);
+        end;
+      end;
+    end;
+  end;
+
   if (nBills[0].FPoundStation <> '') and
      (nBills[0].FPoundStation <> FPoundTunnel.FID) then
   begin
@@ -447,6 +467,18 @@ begin
       RemoteSnapDisPlay(nPos, nHint,sFlag_Yes);
       WriteSysLog(nHint);
     end;
+  end;
+  {$ENDIF}
+
+  {$IFDEF InfoConfirm}
+  if not InfoConfirmDone(nBills[0].FID, nBills[0].FStockNo) then
+  begin
+    nVoice := '%s未进行现场刷卡信息确认,无法过磅';
+    nVoice := Format(nVoice, [nBills[0].FTruck]);
+    PlayVoice(nHint);
+    WriteSysLog(nHint);
+    SetUIData(True);
+    Exit;
   end;
   {$ENDIF}
 
