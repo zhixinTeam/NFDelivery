@@ -142,6 +142,7 @@ type
     FPData      : TPoundStationData; //称皮
     FMData      : TPoundStationData; //称毛
     FFactory    : string;          //工厂编号
+    FOrigin     : string;          //来源,矿点
     FPModel     : string;          //称重模式
     FPType      : string;          //业务类型
     FPoundID    : string;          //称重记录
@@ -152,6 +153,7 @@ type
     FMemo       : string;          //动作备注
     FSeal       : string;          //验收点
     FCardType   : string;          //卡片类型
+    FYSValid    : string;          //验收结果
   end;
 
   TLadingBillItems = array of TLadingBillItem;
@@ -240,6 +242,7 @@ begin
         FNextStatus := Values['NextStatus'];
 
         FFactory    := Values['Factory'];
+        FOrigin     := Values['Origin'];
         FPModel     := Values['PModel'];
         FPType      := Values['PType'];
         FPoundID    := Values['PoundID'];
@@ -287,6 +290,7 @@ begin
 
         FMemo := Values['Memo'];
         FSeal := Values['Seal'];
+        FYSValid:= Values['YSValid'];
       end;
 
       Inc(nInt);
@@ -337,6 +341,7 @@ begin
         Values['NextStatus'] := FNextStatus;
 
         Values['Factory']    := FFactory;
+        Values['Origin']     := FOrigin;
         Values['PModel']     := FPModel;
         Values['PType']      := FPType;
         Values['PoundID']    := FPoundID;
@@ -365,6 +370,7 @@ begin
         Values['KZComment']  := FKZComment;
         Values['Memo']       := FMemo;
         Values['Seal']       := FSeal;
+        Values['YSValid']    := FYSValid;
       end;
 
       nListA.Add(PackerEncodeStr(nListB.Text));

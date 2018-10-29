@@ -139,6 +139,7 @@ const
 
   cFI_FormZTLine        = $1040;                     //装车线
   cFI_FormDisPound      = $1041;                     //磅站调度
+  cFI_FormTruckEmpty    = $1042;                     //空车出厂
 
   cFI_FormProvider      = $1051;                     //供应商
   cFI_FormMaterails     = $1052;                     //原材料
@@ -240,6 +241,7 @@ type
 
     FPrinterBill: string;                            //小票打印机
     FPrinterHYDan : string;                          //化验单打印机
+    FEmpTruckWc : Double;                            //空车出厂误差
   end;
   //系统参数
 
@@ -358,6 +360,7 @@ begin
   AddMenuModuleItem('MAIN_D08', cFI_FormBillNew, mtForm);
   AddMenuModuleItem('MAIN_D09', cFI_FrameBillNew);
   AddMenuModuleItem('MAIN_D10', cFI_FormCardInfo, mtForm);
+  AddMenuModuleItem('MAIN_D11', cFI_FormTruckEmpty, mtForm);
 
   AddMenuModuleItem('MAIN_E01', cFI_FramePoundManual);
   AddMenuModuleItem('MAIN_E02', cFI_FormDisPound, mtForm);

@@ -87,6 +87,10 @@ const
   cBC_SaveCountData           = $0064;   //保存计数结果
   cBC_RemoteExecSQL           = $0065;
 
+  cBC_ShowLedTxt              = $0066;   //向led屏幕发送内容
+  cBC_GetLimitValue           = $0067;   //获取车辆最大限载值
+  cBC_LineClose               = $0068;   //关闭放灰
+
   cBC_IsTunnelOK              = $0075;
   cBC_TunnelOC                = $0076;
   cBC_PlayVoice               = $0077;

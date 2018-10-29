@@ -47,6 +47,9 @@ type
     PrintHY: TcxCheckBox;
     SnapTruck: TcxCheckBox;
     dxLayout1Item15: TdxLayoutItem;
+    EditHisValueMax: TcxTextEdit;
+    dxLayout1Item16: TdxLayoutItem;
+    dxLayout1Group4: TdxLayoutGroup;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure BtnOKClick(Sender: TObject);
@@ -185,6 +188,12 @@ begin
   dxLayout1Item15.Visible := False;
   SnapTruck.Checked := False;
   {$ENDIF}
+
+  {$IFDEF FixLoad}
+  dxLayout1Item16.Visible := True;
+  {$ELSE}
+  dxLayout1Item16.Visible := False;
+  {$ENDIF}
   
   AdjustCtrlData(Self);
 end;
@@ -236,6 +245,13 @@ begin
 
     EditTruck.SelectAll;
   end;
+
+  {$IFDEF FixLoad}
+  if (Sender = EditTruck) and (Key = Char(VK_Return)) then
+  begin
+    EditHisValueMax.Text := Format('%.2f', [GetTruckHisValueMax(EditTruck.Text)]);
+  end;
+  {$ENDIF}
 end;
 
 //------------------------------------------------------------------------------
@@ -255,6 +271,9 @@ begin
   //xxxxx
 
   EditTruck.Text := FOrder.FTruck;
+  {$IFDEF FixLoad}
+  EditHisValueMax.Text := Format('%.2f', [GetTruckHisValueMax(FOrder.FTruck)]);
+  {$ENDIF}
   SetCtrlData(EditPack, GetStockPackStyle(FOrder.FStockID));
   if EditPack.ItemIndex < 0 then EditPack.ItemIndex := 0;
   //包装类型
@@ -326,6 +345,10 @@ begin
   if Sender = EditValue then
   begin
     Result := IsNumber(EditValue.Text, True) and (StrToFloat(EditValue.Text)>0);
+    {$IFDEF ValueLimit}
+    Result := IsNumber(EditValue.Text, True) and (StrToFloat(EditValue.Text)>0)
+              and (StrToFloat(EditValue.Text) <= 200);
+    {$ENDIF}
     nHint := '请填写有效的办理量';
     if not Result then Exit;
 
@@ -338,9 +361,32 @@ end;
 //Desc: 保存
 procedure TfFormBill.BtnOKClick(Sender: TObject);
 var nPrint: Boolean;
+    nStr: string;
 begin
   if not IsDataValid then Exit;
   //check valid
+
+  {$IFDEF FixLoad}
+  if Trim(EditHisValueMax.Text) = '' then
+    EditHisValueMax.Text := Format('%.2f', [GetTruckHisValueMax(EditTruck.Text)]);
+  if Pos('散', FOrder.FStockName) > 0 then
+  begin
+    if (StrToFloat(EditHisValueMax.Text)>0) then
+    begin
+      if StrToFloat(EditValue.Text)> StrToFloat(EditHisValueMax.Text) then
+      begin
+        ShowMsg('提货量超出历史最大提货量', sHint);
+        Exit;
+      end;
+    end
+    else
+    begin
+      nStr := '车辆[ %s ]未获取到历史最大提货量,当前开单量[ %s ],是否继续?';
+      nStr := Format(nStr, [EditTruck.Text, EditValue.Text]);
+      if not QueryDlg(nStr, sAsk) then Exit;
+    end;
+  end;
+  {$ENDIF}
 
   if not VerifyTruckGPS then
   begin

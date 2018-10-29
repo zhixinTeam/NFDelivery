@@ -308,6 +308,10 @@ function InfoConfirmDone(const nID, nStockNo: string): Boolean;
 //现场信息确认
 function IsTruckAutoIn: Boolean;
 //车辆自动进厂
+function GetTruckHisValueMax(const nTruck: string): Double;
+//获取车辆历史最大提货量
+function GetTruckHisMValueMax(const nTruck: string): Double;
+//获取车辆历史最大毛重
 implementation
 
 //Desc: 记录日志
@@ -3264,6 +3268,68 @@ begin
         Result := True;
     end;
   end;
+end;
+
+//Date: 2018/10/17
+//Parm: truck
+//Desc: 获取车辆历史最大提货量
+function GetTruckHisValueMax(const nTruck: string): Double;
+var nSQL: string;
+begin
+  Result := 0;
+
+  if Trim(nTruck) = '' then
+  begin
+    Exit;
+  end;
+
+  nSQL := 'Select top 1 T_HisValueMax From %s Where T_Truck=''%s'' ';
+  nSQL := Format(nSQL, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nSQL) do
+  if RecordCount > 0 then
+    Result := Fields[0].AsFloat;
+
+  if Result > 0 then
+    Exit;
+
+  nSQL := 'Select Max(L_Value) From %s Where L_Truck=''%s'' ';
+  nSQL := Format(nSQL, [sTable_Bill, nTruck]);
+
+  with FDM.QueryTemp(nSQL) do
+  if RecordCount > 0 then
+    Result := Fields[0].AsFloat;
+end;
+
+//Date: 2018/10/17
+//Parm: truck
+//Desc: 获取车辆历史最大毛重
+function GetTruckHisMValueMax(const nTruck: string): Double;
+var nSQL: string;
+begin
+  Result := 0;
+
+  if Trim(nTruck) = '' then
+  begin
+    Exit;
+  end;
+
+  nSQL := 'Select top 1 T_HisMValueMax From %s Where T_Truck=''%s'' ';
+  nSQL := Format(nSQL, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nSQL) do
+  if RecordCount > 0 then
+    Result := Fields[0].AsFloat;
+
+  if Result > 0 then
+    Exit;
+
+  nSQL := 'Select Max(L_MValue) From %s Where L_Truck=''%s'' ';
+  nSQL := Format(nSQL, [sTable_Bill, nTruck]);
+
+  with FDM.QueryTemp(nSQL) do
+  if RecordCount > 0 then
+    Result := Fields[0].AsFloat;
 end;
 
 end.

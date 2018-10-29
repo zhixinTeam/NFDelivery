@@ -80,6 +80,10 @@ type
     //网络语音播放
     function RemoteSnap_DisPlay(var nData: string): Boolean;
     //抓拍小屏显示
+    function ShowLedText(var nData: string): Boolean;
+    //定制放灰调用小屏显示
+    function LineClose(var nData: string): Boolean;
+    //定制放灰
   public
     constructor Create; override;
     destructor destroy; override;
@@ -97,7 +101,7 @@ implementation
 uses
   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}
   UMgrHardHelper, UMgrCodePrinter, UMgrQueue, UTaskMonitor,
-  UMgrTruckProbe, UMgrLEDDispCounter, UMgrRemoteSnap;
+  UMgrTruckProbe, UMgrLEDDispCounter, UMgrRemoteSnap, UMgrERelay;
 
 //Date: 2012-3-13
 //Parm: 如参数护具
@@ -263,6 +267,9 @@ begin
    cBC_PlayVoice            : Result := PlayNetVoice(nData);
    cBC_ShowTxt              : Result := TruckProbe_ShowTxt(nData);
    cBC_RemoteSnapDisPlay    : Result := RemoteSnap_DisPlay(nData);
+
+   cBC_ShowLedTxt           : Result := ShowLedText(nData);
+   cBC_LineClose            : Result := LineClose(nData);
    else
     begin
       Result := False;
@@ -466,8 +473,9 @@ end;
 //Parm: 交货单[FIn.FData];通道号[FIn.FExtParam]
 //Desc: 在指定通道上喷码
 function THardwareCommander.PrintCode(var nData: string): Boolean;
-var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck,nBm,nPCCode: string;
+var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck,nBm,nPCCode,nCusBz: string;
     nPrefixLen, nIDLen: Integer;
+    nEvent,nEID:string;
 begin
   Result := True;
   if not gCodePrinterManager.EnablePrinter then Exit;
@@ -504,10 +512,11 @@ begin
     nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck,L_Bm From %s ' +
             'Where L_ID=''%s''';
     {$ELSE}
-    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck From %s ' +
+    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck,C_Memo From %s ' +
+            ' left join %s on L_CusName = C_Name ' +
             'Where L_ID=''%s''';
     {$ENDIF}
-    nStr := Format(nStr, [sTable_Bill, FIn.FData]);
+    nStr := Format(nStr, [sTable_Bill, sTable_Customer, FIn.FData]);
 
     with gDBConnManager.WorkerQuery(FDBConn, nStr) do
     begin
@@ -525,6 +534,7 @@ begin
       nSeal     := FieldByName('L_Seal').AsString;
       nCusCode  := FieldByName('L_CusCode').AsString;
       nTruck    := FieldByName('L_Truck').AsString;
+      nCusBz    := FieldByName('C_Memo').AsString;
       {$IFDEF BMPrintCode}
       nBm       := FieldByName('L_Bm').AsString;
       {$ENDIF}
@@ -584,6 +594,12 @@ begin
                  + Copy(nBill, nPrefixLen + 3, 4) ;
       {$ENDIF}
 
+      {$IFDEF XGNF}
+      nCode := nSeal + '/' + FormatDateTime('YYYY',Now) + '/'
+                 + Copy(nBill, nPrefixLen + 3, 2) + '/'
+                 + Copy(nBill, nPrefixLen + 5, 2) + '/' + nCusBz;
+      {$ENDIF}
+
       {$IFDEF HSNF}
       //黄山喷码规则：中文编码(vdef9)+日期+水泥批次号
       if Length(nBm) = 4 then
@@ -614,7 +630,32 @@ begin
       FErrCode := 'E.00';
       FErrDesc := nStr;
     end;
+    //生成事件
+    try
+      nEID := FIn.FData + sFlag_ManualF;
+      nStr := 'Delete From %s Where E_ID=''%s''';
+      nStr := Format(nStr, [sTable_ManualEvent, nEID]);
 
+      gDBConnManager.WorkerExec(FDBConn, nStr);
+
+      nEvent := '向通道[ %s ]发送交货单[ %s ]防违流码[ %s ]失败,请检查喷码机网络.';
+      nEvent := Format(nEvent, [FIn.FExtParam, FIn.FData, nCode]);
+      nStr := MakeSQLByStr([
+          SF('E_ID', nEID),
+          SF('E_Key', ''),
+          SF('E_From', sFlag_DepJianZhuang),
+          SF('E_Event', nEvent),
+          SF('E_Solution', sFlag_Solution_OK),
+          SF('E_Departmen', sFlag_DepJianZhuang),
+          SF('E_Date', sField_SQLServer_Now, sfVal)
+          ], sTable_ManualEvent, '', True);
+      gDBConnManager.WorkerExec(FDBConn, nStr);
+    except
+      on E: Exception do
+      begin
+        WriteLog('保存事件失败:' + e.message);
+      end;
+    end;
     Exit;
   end;
 
@@ -965,6 +1006,28 @@ begin
                                                     FListA.Values['text'],
                                                     FListA.Values['succ']]);
   WriteLog(nData);
+end;
+
+function THardwareCommander.ShowLedText(var nData: string): Boolean;
+var
+  nTunnel, nStr:string;
+begin
+  nTunnel := FIn.FData;
+  nStr := fin.FExtParam;
+  gERelayManager.ShowTxt(nTunnel, nStr);
+  Result := True;
+end;
+
+function THardwareCommander.LineClose(var nData: string): Boolean;
+var
+  nTunnel:string;
+begin
+  nTunnel := FIn.FData;
+  if FIn.FExtParam = sFlag_No then
+    gERelayManager.LineOpen(nTunnel)
+  else
+    gERelayManager.LineClose(nTunnel);
+  Result := True;
 end;
 
 initialization

@@ -45,6 +45,8 @@ uses
   //船运离岸单
   UFormpoundAdjust,
   //磅单勘误
+  UFormTruckEmpty,
+  //空车出厂
   UFrameQuerySaleDetailView, UFramePoundQueryView,
   //发货明细EX
   UFramePoundMtAuto,UFramePoundMtAutoItem,UFramePoundMtQuery,
@@ -147,6 +149,7 @@ begin
     FPoundPF := 0;
     FDaiWCStop := False;
     FDaiPercent := False;
+    FEmpTruckWc := 200;
   end;
 
   nStr := 'Select D_Value,D_Memo From %s Where D_Name=''%s''';
@@ -189,6 +192,9 @@ begin
 
       if nStr = sFlag_PTruckPWuCha then
         gSysParam.FPoundTruck := Fields[0].AsFloat;
+
+      if nStr = sFlag_PEmpTWuCha then
+        gSysParam.FEmpTruckWc := Fields[0].AsFloat;
 
       Next;
     end;

@@ -2361,6 +2361,9 @@ begin
       FMData.FValue := FieldByName('L_MValue').AsFloat;
       FSeal     := FieldByName('L_Seal').AsString;
       FMemo     := FieldByName('L_Memo').AsString;
+      FYSValid      := FieldByName('L_EmptyOut').AsString;
+      if FYSValid = sFlag_Yes then
+        FPrintHY := False;
       FSelected := True;
 
       Inc(nIdx);
@@ -2635,6 +2638,7 @@ begin
               SF('L_LineGroup', FLineGroup),
               {$ENDIF}
               SF('L_LadeTime', sField_SQLServer_Now, sfVal),
+              SF('L_EmptyOut', FYSValid),
               SF('L_LadeMan', FIn.FBase.FFrom.FUser)
               ], sTable_Bill, SF('L_ID', FID), False);
       FListA.Add(nSQL);
@@ -2661,7 +2665,7 @@ begin
            nTmp := Fields[0].AsString
       else nTmp := sFlag_No;
 
-      if nTmp = sFlag_Yes then
+      if (FYSValid <> sFlag_Yes) and (nTmp = sFlag_Yes) then
         FNextStatus := sFlag_TruckWT;
       //强制加水
 
@@ -2671,6 +2675,7 @@ begin
               SF('L_LineGroup', FLineGroup),
               {$ENDIF}
               SF('L_LadeTime', sField_SQLServer_Now, sfVal),
+              SF('L_EmptyOut', FYSValid),
               SF('L_LadeMan', FIn.FBase.FFrom.FUser)
               ], sTable_Bill, SF('L_ID', FID), False);
       FListA.Add(nSQL);

@@ -190,6 +190,7 @@ inherited fFormBatcode: TfFormBatcode
     object EditBrand: TcxComboBox [23]
       Left = 81
       Top = 186
+      ParentFont = False
       Properties.DropDownListStyle = lsFixedList
       TabOrder = 8
       Width = 121

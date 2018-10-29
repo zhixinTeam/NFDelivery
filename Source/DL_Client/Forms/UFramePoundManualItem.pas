@@ -133,6 +133,8 @@ type
     //读取订单称重
     function MakeNewSanBill(nBillValue: Double): Boolean;
     //散装并新单
+    function MakeNewSanBillEx(nBillValue: Double): Boolean;
+    //散装并新单(不自动并单)
     procedure AdjustSanValue(const nBillValue: Double);
     //散装校单量
     function SavePoundSale: Boolean;
@@ -1529,6 +1531,95 @@ begin
   Result := True;
 end;
 
+//Date: 2018-10-22
+//Parm: 需并单量
+//Desc: 从当前客户可用订单中开出指定量的新单(不自动并单)
+function TfFrameManualPoundItem.MakeNewSanBillEx(nBillValue: Double): Boolean;
+var nStr: string;
+    nDec: Double;
+    nIdx,nInt: Integer;
+    nP: TFormCommandParam;
+    nOrder: TOrderItemInfo;
+begin
+  FListA.Clear;
+  Result := False;
+
+  if nBillValue <= 0 then
+  begin
+    Result := True;
+    Exit;
+  end;
+  //已开单完毕
+
+  //----------------------------------------------------------------------------
+  nStr := '本次发货量超出[ %.2f ]吨,请选择新的订单.';
+  nStr := Format(nStr, [nBillValue]);
+  ShowDlg(nStr, sHint);
+
+  while True do
+  begin
+    nP.FParamA := FBillItems[0].FCusID;
+    nP.FParamB := FBillItems[0].FStockNo;
+    nP.FParamC := sFlag_Sale;
+    CreateBaseFormItem(cFI_FormGetOrder, PopedomItem, @nP);
+
+    if (nP.FCommand <> cCmd_ModalResult) or (nP.FParamA <> mrOK) then Exit;
+    nStr := nP.FParamB;
+
+    AnalyzeOrderInfo(nStr, nOrder);
+    if nOrder.FValue >= nBillValue then Break;
+
+    nStr := '订单可用量不足,详情如下: ' + #13#10#13#10 +
+            '※.订单量: %.2f 吨'  + #13#10 +
+            '※.待开量: %.2f 吨'  + #13#10 +
+            '※.相  差: %.2f 吨'  + #13#10#13#10 +
+            '请重新选择订单.';
+    nStr := Format(nStr, [nOrder.FValue, nBillValue, nBillValue - nOrder.FValue]);
+    ShowDlg(nStr, sHint);
+  end;
+
+  nStr := 'Select L_Lading,L_IsVIP,L_Seal,L_StockBrand From %s Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, FBillItems[0].FID]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nStr := '交货单[ %s ]已丢失,请联系管理员.';
+      nStr := Format(nStr, [FBillItems[0].FID]);
+
+      ShowDlg(nStr, sHint);
+      Exit;
+    end;
+
+    with FListA do
+    begin
+      Clear;
+      Values['Orders'] := EncodeBase64(nOrder.FOrders);
+      Values['Value'] := FloatToStr(nBillValue);
+      Values['Truck'] := FBillItems[0].FTruck;
+      Values['Lading'] := FieldByName('L_Lading').AsString;
+      Values['IsVIP'] := FieldByName('L_IsVIP').AsString;
+      Values['Seal'] := FieldByName('L_Seal').AsString;
+
+      Values['Card'] := FBillItems[0].FCard;
+      Values['Post'] := sFlag_TruckBFM;
+      Values['PValue'] := FloatToStr(FBillItems[0].FPData.FValue);
+
+      Values['Brand'] := FieldByName('L_StockBrand').AsString;
+    end;
+
+    nStr := SaveBill(EncodeBase64(FListA.Text));
+    //call mit bus
+    if nStr = '' then Exit;
+
+    LoadBillItems(FCardNo, False);
+    //重新载入交货单
+  end;
+
+  Result := True;
+end;
+
 //Date: 2014-12-29
 //Parm: 需校正量
 //Desc: 从现有开单量中扣减nBillValue.
@@ -1616,8 +1707,13 @@ begin
         if nVal > 0 then
         begin
           nVal := Float2Float(nNet - FInnerData.FValue, cPrecision, True);
+          {$IFDEF SanNoAutoBD}
+          if not MakeNewSanBillEx(nVal) then Exit;
+          //散装发超时并新单(不自动并单)
+          {$ELSE}
           if not MakeNewSanBill(nVal) then Exit;
           //散装发超时并新单
+          {$ENDIF}
         end else
 
         if nVal < 0 then

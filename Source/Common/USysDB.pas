@@ -165,6 +165,7 @@ ResourceString
   sFlag_ManualB       = 'B';                         //皮重超出范围
   sFlag_ManualC       = 'C';                         //净重超出误差范围
   sFlag_ManualE       = 'E';                         //车牌识别
+  sFlag_ManualF       = 'F';                         //喷码发送
 
   sFlag_SysParam      = 'SysParam';                  //系统参数
   sFlag_EnableBakdb   = 'Uses_BackDB';               //备用库
@@ -196,7 +197,8 @@ ResourceString
   sFlag_PDaiWuChaStop = 'PoundDaiWuChaStop';         //误差时停止业务
   sFlag_PSanWuChaF    = 'PoundSanWuChaF';            //散装负误差
   sFlag_PTruckPWuCha  = 'PoundTruckPValue';          //空车皮误差
-
+  sFlag_PEmpTWuCha    = 'EmpTruckWuCha';             //空车出厂误差
+  
   sFlag_CommonItem    = 'CommonItem';                //公共信息
   sFlag_CardItem      = 'CardItem';                  //磁卡信息项
   sFlag_TruckItem     = 'TruckItem';                 //车辆信息项
@@ -270,6 +272,7 @@ ResourceString
   sFlag_TruckInNeedManu = 'TruckInNeedManu';         //车牌识别需要人工干预
   sFlag_SnapInfoPost  = 'SnapInfoPost';              //车牌识别消息推送岗位
   sFlag_NeedInfoConfirm = 'NeedInfoConfirm';         //需要进行现场刷卡确认
+  sFlag_SanPreKD      = 'SanPreKD';                  //散装定制装车扣吨
 
   sFlag_WXFactory     = 'WXFactoryID';               //微信标识
   sFlag_WXServiceMIT  = 'WXServiceMIT';              //微信工厂服务
@@ -366,7 +369,7 @@ const
   sFlag_DepMenGang    = '门岗';                      //门岗
   sFlag_Solution_YN   = 'Y=通过;N=禁止';
   sFlag_Solution_YNI  = 'Y=通过;N=禁止;I=忽略';
-
+  sFlag_Solution_OK   = 'O=知道了';
   sFlag_Solution_NP   = 'P=回空;N=禁止';
   sFlag_Solution_YNP  = 'Y=通过;P=回空;N=禁止';
 
@@ -611,6 +614,7 @@ const
        'L_MValueView $Float, L_ValueView $Float,' +
        'L_Man varChar(32), L_Date DateTime, L_Bm varChar(64),' +
        'L_WxZhuId varChar(32), L_WxZiId varChar(32), L_OrderNo varChar(20), ' +
+       'L_EmptyOut Char(1) Default ''N'', ' +
        'L_DelMan varChar(32), L_DelDate DateTime, L_Memo VarChar(500))';
   {-----------------------------------------------------------------------------
    交货单表: Bill
@@ -657,6 +661,7 @@ const
    *.L_WxZhuId,L_WxZiId: 网上自助办卡
    *.L_MValueView,L_ValueView: 毛重(修改后),净重(修改后)
    *.L_OrderNo: 订单编号
+   *.L_EmptyOut: 空车出厂
   -----------------------------------------------------------------------------}
 
   sSQL_NewBillHaulback = 'Create Table $Table(R_ID $Inc, H_ID varChar(20),' +
@@ -740,6 +745,7 @@ const
        'T_Card varChar(32), T_CardUse Char(1), T_NoVerify Char(1),' +
        'T_MatePID varChar(32), T_MateID varChar(32), T_MateName varChar(80),' +
        'T_SrcAddr varChar(150), T_DestAddr varChar(150),' +
+       'T_HisValueMax $Float Default 0, T_HisMValueMax $Float Default 0,' +
        'T_Valid Char(1), T_VIPTruck Char(1), T_HasGPS Char(1))';
   {-----------------------------------------------------------------------------
    车辆信息:Truck

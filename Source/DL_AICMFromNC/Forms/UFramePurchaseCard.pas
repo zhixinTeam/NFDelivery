@@ -174,7 +174,7 @@ begin
   col.Width := 0;
   col := lvOrders.Columns.Add;
   col.Caption := '矿点';
-  col.Width := 200;
+  col.Width := 260;
   col := lvOrders.Columns.Add;
   col.Caption := '供应商名称';
   col.Width := 350;

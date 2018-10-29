@@ -15,12 +15,12 @@ inherited fFormBill: TfFormBill
       Left = 277
       Top = 421
       Caption = #24320#21333
-      TabOrder = 13
+      TabOrder = 14
     end
     inherited BtnExit: TButton
       Left = 347
       Top = 421
-      TabOrder = 14
+      TabOrder = 15
     end
     object ListInfo: TcxMCListBox [2]
       Left = 23
@@ -129,7 +129,7 @@ inherited fFormBill: TfFormBill
       Left = 81
       Top = 356
       ParentFont = False
-      TabOrder = 10
+      TabOrder = 11
       Width = 121
     end
     object EditPoundStation: TcxComboBox [12]
@@ -144,7 +144,7 @@ inherited fFormBill: TfFormBill
       Top = 421
       Caption = #25171#21360#21270#39564#21333
       ParentFont = False
-      TabOrder = 11
+      TabOrder = 12
       Transparent = True
       Width = 95
     end
@@ -154,8 +154,16 @@ inherited fFormBill: TfFormBill
       Caption = #36827#21378#36827#34892#36710#29260#35782#21035
       ParentFont = False
       State = cbsChecked
-      TabOrder = 12
+      TabOrder = 13
       Width = 121
+    end
+    object EditHisValueMax: TcxTextEdit [15]
+      Left = 295
+      Top = 331
+      ParentFont = False
+      Properties.ReadOnly = True
+      TabOrder = 10
+      Width = 85
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup
@@ -237,10 +245,21 @@ inherited fFormBill: TfFormBill
             end
           end
         end
-        object dxLayout1Item13: TdxLayoutItem
-          Caption = #25351#23450#22320#30917':'
-          Control = EditPoundStation
-          ControlOptions.ShowBorder = False
+        object dxLayout1Group4: TdxLayoutGroup
+          ShowCaption = False
+          Hidden = True
+          LayoutDirection = ldHorizontal
+          ShowBorder = False
+          object dxLayout1Item13: TdxLayoutItem
+            Caption = #25351#23450#22320#30917':'
+            Control = EditPoundStation
+            ControlOptions.ShowBorder = False
+          end
+          object dxLayout1Item16: TdxLayoutItem
+            Caption = #21382#21490#26368#22823#25552#36135#37327
+            Control = EditHisValueMax
+            ControlOptions.ShowBorder = False
+          end
         end
         object dxLayout1Item11: TdxLayoutItem
           Caption = #22791#27880#20449#24687':'

@@ -4,6 +4,7 @@
 *******************************************************************************}
 unit UFrameTrucks;
 
+{$I Link.inc}
 interface
 
 uses
@@ -33,6 +34,9 @@ type
     VIP1: TMenuItem;
     VIP2: TMenuItem;
     N8: TMenuItem;
+    N9: TMenuItem;
+    N10: TMenuItem;
+    N11: TMenuItem;
     procedure EditNamePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnAddClick(Sender: TObject);
@@ -46,6 +50,8 @@ type
     procedure VIP1Click(Sender: TObject);
     procedure VIP2Click(Sender: TObject);
     procedure N8Click(Sender: TObject);
+    procedure N10Click(Sender: TObject);
+    procedure N11Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -60,7 +66,8 @@ implementation
 
 {$R *.dfm}
 uses
-  ULibFun, UMgrControl, USysBusiness, USysConst, USysDB, UDataModule, UFormBase;
+  ULibFun, UMgrControl, USysBusiness, USysConst, USysDB, UDataModule, UFormBase,
+  UFormInputbox;
 
 class function TfFrameTrucks.FrameID: integer;
 begin
@@ -69,6 +76,10 @@ end;
 
 function TfFrameTrucks.InitFormDataSQL(const nWhere: string): string;
 begin
+  {$IFDEF FixLoad}
+  N10.Visible := True;
+  N11.Visible := True;
+  {$ENDIF}
   Result := 'Select * From ' + sTable_Truck;
   if nWhere <> '' then
     Result := Result + ' Where (' + nWhere + ')';
@@ -278,6 +289,62 @@ begin
       ShowMsg('短倒业务磁卡保存成功', sHint);
 
     InitFormData(FWhere);
+  end;
+end;
+
+procedure TfFrameTrucks.N10Click(Sender: TObject);
+var nStr,nTruck: string;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    nStr := SQLQuery.FieldByName('T_HisValueMax').AsString;
+
+    if StrToFloatDef(nStr, 0) <= 0 then
+      nStr := Format('%.2f', [GetTruckHisValueMax(SQLQuery.FieldByName('T_Truck').AsString)]);
+
+    nTruck := nStr;
+    if not ShowInputBox('请输入新的历史最大提货量:', '修改', nTruck, 15) then Exit;
+
+    if (nTruck = '') or (nStr = nTruck) then Exit;
+    //无效或一致
+    if not IsNumber(nTruck, True) then  Exit;
+
+    nStr := 'Update %s Set T_HisValueMax=''%s'' Where R_ID=%s';
+    nStr := Format(nStr, [sTable_Truck, nTruck,
+      SQLQuery.FieldByName('R_ID').AsString]);
+    //xxxxxx
+
+    FDM.ExecuteSQL(nStr);
+    InitFormData(FWhere);
+    ShowMsg('修改历史最大提货量成功', sHint);
+  end;
+end;
+
+procedure TfFrameTrucks.N11Click(Sender: TObject);
+var nStr,nTruck: string;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    nStr := SQLQuery.FieldByName('T_HisMValueMax').AsString;
+
+    if StrToFloatDef(nStr, 0) <= 0 then
+      nStr := Format('%.2f', [GetTruckHisMValueMax(SQLQuery.FieldByName('T_Truck').AsString)]);
+
+    nTruck := nStr;
+    if not ShowInputBox('请输入新的历史最大毛重:', '修改', nTruck, 15) then Exit;
+
+    if (nTruck = '') or (nStr = nTruck) then Exit;
+    //无效或一致
+    if not IsNumber(nTruck, True) then  Exit;
+
+    nStr := 'Update %s Set T_HisMValueMax=''%s'' Where R_ID=%s';
+    nStr := Format(nStr, [sTable_Truck, nTruck,
+      SQLQuery.FieldByName('R_ID').AsString]);
+    //xxxxxx
+
+    FDM.ExecuteSQL(nStr);
+    InitFormData(FWhere);
+    ShowMsg('修改历史最大毛重成功', sHint);
   end;
 end;
 

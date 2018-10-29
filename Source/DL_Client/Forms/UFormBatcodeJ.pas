@@ -78,6 +78,8 @@ type
     { Protected declarations }
     FRecordID: string;
     //记录编号
+    FOldBase: string;
+    //旧基数
     procedure LoadFormData(const nID: string);
     function OnVerifyCtrl(Sender: TObject; var nHint: string): Boolean; override;
     //验证数据
@@ -204,6 +206,7 @@ begin
 
       EditName.Text := FieldByName('B_Name').AsString;
       EditBase.Text := FieldByName('B_Base').AsString;
+      FOldBase := FieldByName('B_Base').AsString;
       EditLen.Text := FieldByName('B_Length').AsString;
 
       EditPrefix.Text := FieldByName('B_Prefix').AsString;
@@ -316,6 +319,8 @@ end;
 //Desc: 保存
 procedure TfFormBatcode.BtnOKClick(Sender: TObject);
 var nStr,nU,nN, nV: string;
+    nP,nTmp,nBatCode: string;
+    nInt: Integer;
 begin
   if not IsDataValid then Exit;
   //验证不通过
@@ -363,6 +368,28 @@ begin
           SF('B_Type', GetCtrlData(EditType))
           ], sTable_Batcode, nStr, FRecordID = '');
   FDM.ExecuteSQL(nStr);
+
+  {$IFDEF CSNF}
+  if (FRecordID <> '') and (FOldBase <> EditBase.Text) then
+  begin
+    nP := EditPrefix.Text;
+    nTmp := EditBase.Text;
+    nInt := StrToIntDef(EditLen.Text,10);
+
+    nInt := nInt - Length(nP + nTmp);
+    if nInt > 0 then
+         nBatCode := nP + StringOfChar('0', nInt) + nTmp
+    else nBatCode := nP + nTmp;
+
+    nStr := SF('R_ID', FRecordID, sfVal);
+
+    nStr := MakeSQLByStr([
+            SF('B_HasUse', 0, sfVal),
+            SF('B_Batcode', nBatCode)
+            ], sTable_Batcode, nStr, False);
+    FDM.ExecuteSQL(nStr);
+  end;
+  {$ENDIF}
 
   ModalResult := mrOk;
   ShowMsg('批次保存成功', sHint);

@@ -39,6 +39,7 @@ type
     procedure BtnReturnClick(Sender: TObject);
     procedure LabelTopDblClick(Sender: TObject);
     procedure InitButton;
+    procedure Panel1DblClick(Sender: TObject);
   private
     { Private declarations }
     FBuffer: string;
@@ -293,6 +294,7 @@ end;
 procedure TfFormMain.LabelTopDblClick(Sender: TObject);
 var nPwd: string;
 begin
+  Exit;
   {$IFNDEF DEBUG}
   ShowCursor(True);
   {$ENDIF}
@@ -318,6 +320,26 @@ begin
   PanelSale.Top := nHeight * 2 + nHeightPanel * 1;
   PanelPrint.Top := nHeight * 3 + nHeightPanel * 2;
   PanelReturn.Top := nHeight * 4 + nHeightPanel * 3;
+end;
+
+
+procedure TfFormMain.Panel1DblClick(Sender: TObject);
+var nPwd: string;
+begin
+  {$IFNDEF DEBUG}
+  ShowCursor(True);
+  {$ENDIF}
+
+  if not ShowInputBox('请输入密码:', sHint, nPwd) then Exit;
+  if nPwd <> '5689' then Exit;
+
+
+  if QueryDlg('确定要退出系统吗?', sHint) then
+    Close;
+
+  {$IFNDEF DEBUG}
+  ShowCursor(False);
+  {$ENDIF}
 end;
 
 end.

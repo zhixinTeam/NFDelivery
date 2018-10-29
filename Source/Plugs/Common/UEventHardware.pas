@@ -39,7 +39,7 @@ uses
   UMgrRemoteVoice, UMgrVoiceNet, UMgrCodePrinter, UMgrLEDDisp, UMgrTTCEM100,
   UMgrRemoteSnap,
   UMgrRFID102{$IFDEF HKVDVR}, UMgrCamera{$ENDIF}, UMgrLEDDispCounter,
-  UJSDoubleChannel;
+  UJSDoubleChannel, UMgrSendCardNo;
 
 class function THardwareWorker.ModuleInfo: TPlugModuleInfo;
 begin
@@ -147,7 +147,10 @@ begin
       gHKSnapHelper.LoadConfig(nCfg + 'RemoteSnap.xml');
     end;
     {$ENDIF}
-
+    {$IFDEF FixLoad}
+    nStr := '¶¨ÖÃ×°³µ';
+    gSendCardNo.LoadConfig(nCfg + 'PLCController.xml');
+    {$ENDIF}
   except
     on E:Exception do
     begin
@@ -183,6 +186,9 @@ begin
 
   gHardShareData := WhenBusinessMITSharedDataIn;
   //hard monitor share
+  {$IFDEF FixLoad}
+  gSendCardNo := TReaderHelper.Create;
+  {$ENDIF}
 end;
 
 procedure THardwareWorker.BeforeStartServer;
@@ -264,6 +270,11 @@ begin
   //remote snap
   {$ENDIF}
 
+  {$IFDEF FixLoad}
+  if Assigned(gSendCardNo) then
+  gSendCardNo.StartPrinter;
+  //sendcard
+  {$ENDIF}
 end;
 
 procedure THardwareWorker.AfterStopServer;
@@ -332,6 +343,12 @@ begin
   {$IFDEF RemoteSnap}
   gHKSnapHelper.StopSnap;
   //remote snap
+  {$ENDIF}
+
+  {$IFDEF FixLoad}
+  if Assigned(gSendCardNo) then
+  gSendCardNo.StopPrinter;
+  //sendcard
   {$ENDIF}
 end;
 

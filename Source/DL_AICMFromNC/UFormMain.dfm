@@ -59,6 +59,7 @@ object fFormMain: TfFormMain
       Font.Style = []
       ParentFont = False
       TabOrder = 0
+      OnDblClick = Panel1DblClick
       object LabelDec: TcxLabel
         Left = 0
         Top = 0

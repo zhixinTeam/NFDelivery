@@ -14,7 +14,7 @@ uses
   {$IFDEF MultiReplay}UMultiJS_Reply, {$ELSE}UMultiJS, {$ENDIF}UMgrRemotePrint,
   UMgrLEDDisp, UMgrRFID102, {$IFDEF HKVDVR}UMgrCamera, {$ENDIF}Graphics, DB,
   UMgrLEDDispCounter, UJSDoubleChannel,
-  UMgrremoteSnap,UMgrVoiceNet, DateUtils;
+  UMgrremoteSnap,UMgrVoiceNet, DateUtils, UMgrSendCardNo;
 
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
 procedure WhenTTCE_M100_ReadCard(const nItem: PM100ReaderItem);
@@ -1310,9 +1310,9 @@ procedure MakeTruckCross(const nCard,nReader,nPost, nMemo: string; const nDB: PD
 var nStr: string;
     nIdx: Integer;
 begin
-  nStr := '磁卡[ %s ]刷卡处[ %s ]开始等待时间[ %s ],当前时间[ %s ],当前刷卡状态[ %s ].';
+  nStr := '磁卡[ %s ]刷卡处[ %s ]开始等待时间[ %s ],当前时间[ %s ],当前刷卡状态[ %s ],等待间隔[ %d ].';
   nStr := Format(nStr, [nCard, nPost, FormatDateTime('YYYY-MM-DD HH:MM:SS', nStart),
-                               FormatDateTime('YYYY-MM-DD HH:MM:SS', Now),nMemo]);
+                               FormatDateTime('YYYY-MM-DD HH:MM:SS', Now),nMemo,nKeep]);
 
   WriteHardHelperLog(nStr);
   if SecondsBetween(Now, nStart) < nKeep then
@@ -1365,7 +1365,7 @@ end;
 //Desc: 对nReader读到的卡号做具体动作
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
 var nStr, nGroup, nMemo, nHYPrinter: string;
-    nErrNum: Integer;
+    nErrNum, nWaitTime: Integer;
     nDBConn: PDBWorker;
     nStart: TDateTime;
 begin
@@ -1433,8 +1433,12 @@ begin
       begin
         if (nReader.FPost = sPost_SW) or (nReader.FPost = sPost_EW) then
         begin
+          if Assigned(nReader.FOptions) then
+               nWaitTime := StrToIntDef(nReader.FOptions.Values['WaitTime'], 20)
+          else nWaitTime := 20;
+
           MakeTruckCross(nStr, nReader.FID, nReader.FPost, nMemo, nDBConn,
-                         nStart, nReader.FKeep);
+                         nStart, nWaitTime);
         end
         else
         begin
@@ -1476,6 +1480,7 @@ function IsTruckInQueue(const nTruck,nTunnel: string; const nQueued: Boolean;
 var i,nIdx,nInt: Integer;
     nLineItem: PLineItem;
     nEarlyTruck: PTruckItem;
+    nStr: string;
 begin
   with gTruckQueueManager do
   try
@@ -1536,6 +1541,11 @@ begin
     //同步物料名
 
     Result := True;
+    if nQueued then
+    begin
+      nStr := Format('强制队列模式:车辆[ %s ]队列位置[ %d ].', [nTruck, nIdx + 1]);
+      WriteNearReaderLog(nStr);
+    end;
     if (not nQueued) or (nIdx < 1) then Exit;
     //不检查队列,或头车
 
@@ -1935,6 +1945,15 @@ begin
     Exit;
   end;
 
+  if nTrucks[0].FYSValid = sFlag_Yes then
+  begin
+    nStr := '车辆[ %s ]已办理空车出厂.';
+    nStr := Format(nStr, [nTrucks[0].FTruck]);
+
+    WriteNearReaderLog(nStr);
+    Exit;
+  end;
+
   if nTunnel = '' then
   begin
     nTunnel := gTruckQueueManager.GetTruckTunnel(nTrucks[0].FTruck);
@@ -2159,6 +2178,15 @@ begin
   begin
     nStr := '磁卡[ %s ]没有需要栈台提货车辆.';
     nStr := Format(nStr, [nCard]);
+
+    WriteNearReaderLog(nStr);
+    Exit;
+  end;
+
+  if nTrucks[0].FYSValid = sFlag_Yes then
+  begin
+    nStr := '车辆[ %s ]已办理空车出厂.';
+    nStr := Format(nStr, [nTrucks[0].FTruck]);
 
     WriteNearReaderLog(nStr);
     Exit;
@@ -2429,6 +2457,7 @@ var nStr: string;
     nPLine: PLineItem;
     nPTruck: PTruckItem;
     nTrucks: TLadingBillItems;
+    nBool: Boolean;
 begin
   {$IFDEF DEBUG}
   WriteNearReaderLog('MakeTruckLadingSan进入.');
@@ -2447,6 +2476,15 @@ begin
   begin
     nStr := '磁卡[ %s ]没有需要放灰车辆.';
     nStr := Format(nStr, [nCard]);
+
+    WriteNearReaderLog(nStr);
+    Exit;
+  end;
+
+  if nTrucks[0].FYSValid = sFlag_Yes then
+  begin
+    nStr := '车辆[ %s ]已办理空车出厂.';
+    nStr := Format(nStr, [nTrucks[0].FTruck]);
 
     WriteNearReaderLog(nStr);
     Exit;
@@ -2475,14 +2513,39 @@ begin
     Exit;
   end;
 
-  if not IsTruckInQueue(nTrucks[0].FTruck, nTunnel, False, nStr,
+  {$IFDEF SanForceQueue}
+  nBool := True;
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  begin
+    nBool := nTrucks[nIdx].FNextStatus = sFlag_TruckFH;
+    //未装车,检查排队顺序
+    if not nBool then Break;
+  end;
+  {$ELSE}
+  nBool := False;
+  {$ENDIF}
+
+  if not IsTruckInQueue(nTrucks[0].FTruck, nTunnel, nBool, nStr,
          nPTruck, nPLine, sFlag_San) then
   begin
     WriteNearReaderLog(nStr);
     //loged
 
+    {$IFDEF SanForceQueue}
+    if Pos('等候', nStr) > 0 then
+    begin
+      nIdx := Length(nTrucks[0].FTruck);
+      nStr := nTrucks[0].FTruck + StringOfChar(' ',12 - nIdx) + '请排队等候';
+    end
+    else
+    begin
+      nIdx := Length(nTrucks[0].FTruck);
+      nStr := nTrucks[0].FTruck + StringOfChar(' ',12 - nIdx) + '请换库装车';
+    end;
+    {$ELSE}
     nIdx := Length(nTrucks[0].FTruck);
     nStr := nTrucks[0].FTruck + StringOfChar(' ',12 - nIdx) + '请换库装车';
+    {$ENDIF}
 
     gERelayManager.ShowTxt(nTunnel, nStr);
     Exit;
@@ -2507,6 +2570,13 @@ begin
     WriteNearReaderLog(nStr);
 
     TruckStartFH(nPTruck, nTunnel);
+
+    {$IFDEF FixLoad}
+    WriteNearReaderLog('启动定置装车::'+nTunnel+'@'+nCard);
+    //发送卡号和通道号到定置装车服务器
+    gSendCardNo.SendCardNo(nTunnel+'@'+nCard);
+    {$ENDIF}
+
     Exit;
   end;
 
@@ -2522,6 +2592,11 @@ begin
 
   TruckStartFH(nPTruck, nTunnel);
   //执行放灰
+  {$IFDEF FixLoad}
+  WriteNearReaderLog('启动定置装车::'+nTunnel+'@'+nCard);
+  //发送卡号和通道号到定置装车服务器
+  gSendCardNo.SendCardNo(nTunnel+'@'+nCard);
+  {$ENDIF}
 end;
 
 //Date: 2012-4-24
@@ -2626,6 +2701,12 @@ begin
     Exit;
   end;
   //电子标签超出范围
+
+  {$IFDEF FixLoad}
+  WriteHardHelperLog('停止定置装车::'+nHost.FTunnel+'@Close');
+  //发送卡号和通道号到定置装车服务器
+  gSendCardNo.SendCardNo(nHost.FTunnel+'@Close');
+  {$ENDIF}
 
   gERelayManager.LineClose(nHost.FTunnel);
   Sleep(100);

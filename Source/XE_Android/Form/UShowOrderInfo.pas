@@ -32,6 +32,9 @@ type
     EditKZComment: TComboEdit;
     Label5: TLabel;
     EditArea: TComboEdit;
+    Label9: TLabel;
+    lblKD: TLabel;
+    BtnNo: TSpeedButton;
     procedure tmrGetOrderTimer(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char;
@@ -39,6 +42,7 @@ type
     procedure BtnCancelClick(Sender: TObject);
     procedure BtnOKClick(Sender: TObject);
     procedure FormActivate(Sender: TObject);
+    procedure BtnNoClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -62,6 +66,24 @@ begin
   Self.Hide;
 end;
 
+procedure TFrmShowOrderInfo.BtnNoClick(Sender: TObject);
+begin
+  inherited;
+  if Length(gOrders)>0 then
+  with gOrders[0] do
+  begin
+    FSeal := EditArea.Text;
+    FKZComment := EditKZComment.Text;
+    FKZValue := StrToFloatDef(EditKZValue.Text, 0);
+    FYSValid := 'N';
+    if SavePurchaseOrders('X', gOrders) then
+         ShowMessage('拒收成功')
+    else ShowMessage('拒收失败');
+
+    MainForm.Show;
+  end;
+end;
+
 procedure TFrmShowOrderInfo.BtnOKClick(Sender: TObject);
 begin
   inherited;
@@ -71,7 +93,7 @@ begin
     FSeal := EditArea.Text;
     FKZComment := EditKZComment.Text;
     FKZValue := StrToFloatDef(EditKZValue.Text, 0);
-
+    FYSValid := 'Y';
     if SavePurchaseOrders('X', gOrders) then
          ShowMessage('验收成功')
     else ShowMessage('验收失败');
@@ -88,7 +110,7 @@ begin
   lblMate.Text     := '';
   lblTruck.Text    := '';
   EditKZValue.Text := '0.00';
-
+  lblKD.Text       := '';
   tmrGetOrder.Enabled := True;
   SetLength(gOrders, 0);
 end;
@@ -125,8 +147,9 @@ begin
 
   EditArea.ItemIndex := 0;
   EditKZComment.ItemIndex := 0;
-
+  lblKD.Text       := '';
   BtnOK.Enabled := False;
+  BtnNo.Enabled := False;
   tmrGetOrder.Enabled := True;
   SetLength(gOrders, 0);
 end;
@@ -170,11 +193,13 @@ begin
     LabelMValue.Text := FloatToStr(FPData.FValue);
     EditKZComment.Text := FKZComment;
     EditArea.Text      := FSeal;
+    lblKD.Text       := FOrigin;
 
     EditKZValue.Text := FloatToStr(FKZValue);
   end;
 
   BtnOK.Enabled := True;
+  BtnNo.Enabled := True;
 end;
 
 end.
