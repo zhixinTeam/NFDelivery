@@ -207,6 +207,8 @@ function PrintShipLeaveReport(nID: string; const nAsk: Boolean): Boolean;
 //船运离岗销售通知单
 function PrintShipLeaveCGReport(nID: string; const nAsk: Boolean): Boolean;
 //船运离岗采购通知单
+function PrintShipProReport(nRID: string; const nAsk: Boolean): Boolean;
+//打印复磅采购单
 
 //保存电子标签
 function SetTruckRFIDCard(nTruck: string; var nRFIDCard: string;
@@ -312,6 +314,9 @@ function GetTruckHisValueMax(const nTruck: string): Double;
 //获取车辆历史最大提货量
 function GetTruckHisMValueMax(const nTruck: string): Double;
 //获取车辆历史最大毛重
+function GetMaxMValue(const nTruck: string): Double;
+//获取毛重限值
+
 implementation
 
 //Desc: 记录日志
@@ -1866,11 +1871,56 @@ begin
   Result := FDR.PrintSuccess;
 end;
 
+//Date: 2018-12-03
+//Parm: 采购单RID;提示;数据对象;打印机
+//Desc: 打印复磅采购单
+function PrintShipProReport(nRID: string; const nAsk: Boolean): Boolean;
+var nStr: string;
+    nParam: TReportParamItem;
+begin
+  Result := False;
+
+  if nAsk then
+  begin
+    nStr := '是否要打印采购单?';
+    if not QueryDlg(nStr, sAsk) then Exit;
+  end;
+
+  nStr := 'Select * From %s Where R_ID=''%s''';
+  nStr := Format(nStr, [sTable_CardProvide, nRID]);
+
+  if FDM.QueryTemp(nStr).RecordCount < 1 then
+  begin
+    nStr := '编号为[ %s ] 的记录已无效!!';
+    nStr := Format(nStr, [nRID]);
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nStr := gPath + sReportDir +'CardProvide.fr3';
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nStr := '无法正确加载报表文件';
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nParam.FName := 'UserName';
+  nParam.FValue := gSysParam.FUserID;
+  FDR.AddParamItem(nParam);
+
+  nParam.FName := 'Company';
+  nParam.FValue := gSysParam.FHintText;
+  FDR.AddParamItem(nParam);
+
+  FDR.Dataset1.DataSet := FDM.SqlTemp;
+  FDR.ShowReport;
+  Result := FDR.PrintSuccess;
+end;
+
 //Date: 2012-4-1
 //Parm: 采购单号;提示;数据对象;打印机
 //Desc: 打印nOrder采购单号
 function PrintOrderReport(nOrder: string; const nAsk: Boolean): Boolean;
-var nStr: string; 
+var nStr: string;
     nParam: TReportParamItem;
 begin
   Result := False;
@@ -3330,6 +3380,21 @@ begin
   with FDM.QueryTemp(nSQL) do
   if RecordCount > 0 then
     Result := Fields[0].AsFloat;
+end;
+
+//Desc: 获取毛重限值
+function GetMaxMValue(const nTruck: string): Double;
+var nStr: string;
+begin
+  Result := 0;
+
+  nStr := 'Select T_MValueMax From %s Where T_Truck=''%s''';
+  nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+    Result := Fields[0].AsFloat;
+  //xxxxx
 end;
 
 end.

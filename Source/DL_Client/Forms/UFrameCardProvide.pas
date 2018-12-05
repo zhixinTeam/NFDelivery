@@ -41,6 +41,8 @@ type
     N4: TMenuItem;
     N5: TMenuItem;
     N6: TMenuItem;
+    N7: TMenuItem;
+    N8: TMenuItem;
     procedure EditIDPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnDelClick(Sender: TObject);
@@ -52,6 +54,7 @@ type
     procedure N1Click(Sender: TObject);
     procedure N4Click(Sender: TObject);
     procedure N6Click(Sender: TObject);
+    procedure N8Click(Sender: TObject);
   protected
     FStart,FEnd: TDate;
     //时间区间
@@ -372,6 +375,16 @@ begin
   nRID := SQLQuery.FieldByName('R_ID').AsString;
 
   CreateBaseFormItem(cFI_FormSelPoundSta, '', @nP);
+end;
+
+procedure TfFrameCardProvide.N8Click(Sender: TObject);
+var nStr: string;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    nStr := SQLQuery.FieldByName('R_ID').AsString;
+    PrintShipProReport(nStr, False);
+  end;
 end;
 
 initialization

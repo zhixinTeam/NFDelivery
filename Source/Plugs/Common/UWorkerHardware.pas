@@ -511,12 +511,13 @@ begin
     {$IFDEF BMPrintCode}
     nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck,L_Bm From %s ' +
             'Where L_ID=''%s''';
+    nStr := Format(nStr, [sTable_Bill, FIn.FData]);
     {$ELSE}
     nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck,C_Memo From %s ' +
             ' left join %s on L_CusName = C_Name ' +
             'Where L_ID=''%s''';
-    {$ENDIF}
     nStr := Format(nStr, [sTable_Bill, sTable_Customer, FIn.FData]);
+    {$ENDIF}
 
     with gDBConnManager.WorkerQuery(FDBConn, nStr) do
     begin
@@ -534,9 +535,10 @@ begin
       nSeal     := FieldByName('L_Seal').AsString;
       nCusCode  := FieldByName('L_CusCode').AsString;
       nTruck    := FieldByName('L_Truck').AsString;
-      nCusBz    := FieldByName('C_Memo').AsString;
       {$IFDEF BMPrintCode}
       nBm       := FieldByName('L_Bm').AsString;
+      {$ELSE}
+      nCusBz    := FieldByName('C_Memo').AsString;
       {$ENDIF}
       //xxxxx
 
@@ -598,6 +600,17 @@ begin
       nCode := nSeal + '/' + FormatDateTime('YYYY',Now) + '/'
                  + Copy(nBill, nPrefixLen + 3, 2) + '/'
                  + Copy(nBill, nPrefixLen + 5, 2) + '/' + nCusBz;
+      {$ENDIF}
+
+      {$IFDEF JANF}
+      nCode := nSeal + FormatDateTime('YYYY',Now)
+                 + Copy(nBill, nPrefixLen + 3, 4) ;
+      {$ENDIF}
+
+      {$IFDEF LXNF}
+      nCode := nSeal + ' ' + FormatDateTime('YYYY',Now)
+                 + Copy(nBill, nPrefixLen + 3, 2)
+                 + Copy(nBill, nPrefixLen + 5, 2) + ' ' + nCusBz;
       {$ENDIF}
 
       {$IFDEF HSNF}

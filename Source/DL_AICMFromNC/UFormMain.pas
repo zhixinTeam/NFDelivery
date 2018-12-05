@@ -62,7 +62,7 @@ implementation
 
 uses
   IniFiles, ULibFun, USelfHelpConst, USysModule, UDataModule, USysLoger,
-  UFormConn, CPortTypes, USmallFunc, UFormInputbox;
+  UFormConn, CPortTypes, USmallFunc, UFormInputbox, uDataReport;
 
 type
   TReaderItem = record
@@ -95,13 +95,6 @@ end;
 
 procedure TfFormMain.FormCreate(Sender: TObject);
 begin
-  {$IFDEF PurAICMFromNC}
-  btnPurOrderCard.Visible := True;
-  {$ENDIF}
-  {$IFDEF SaleAICMFromNC}
-  btnSCard.Visible := True;
-  {$ENDIF}
-
   PanelPrint.Visible := False;
 
   gPath := ExtractFilePath(ParamStr(0));  gNeedSearchPurOrder:= False;
@@ -122,6 +115,10 @@ begin
   //标题头部占屏幕高度的4分之1
   //RightPanel.Width := Screen.DesktopWidth div 5;
   //功能区占屏幕宽度的5分之1
+  if not Assigned(FDR) then
+  begin
+    FDR := TFDR.Create(Application);
+  end;
 
   PanelTop.DoubleBuffered := True;
   PanelWork.DoubleBuffered:= True;
@@ -262,15 +259,27 @@ end;
 procedure TfFormMain.ButtonClick(Sender: TObject);
 begin
   if Sender = BtnSCard then
-    CreateBaseFrame(cFI_FrameInputCertificate, PanelWork) else
+  begin
+    {$IFDEF SaleAICMFromNC}
+    CreateBaseFrame(cFI_FrameInputCertificate, PanelWork);
+    {$ELSE}
+    ShowMsg('业务暂未开通', sHint);
+    Exit;
+    {$ENDIF}
+  end;
 
   if Sender = BtnPrint then
     CreateBaseFrame(cFI_FramePrint, PanelWork);
 
   if Sender = btnPurOrderCard then
   begin
+    {$IFDEF PurAICMFromNC}
     gNeedSearchPurOrder:= True;
     CreateBaseFrame(cFI_FramePurERPMakeCard, PanelWork);
+    {$ELSE}
+    ShowMsg('业务暂未开通', sHint);
+    Exit;
+    {$ENDIF}
   end;
 
   BtnSCard.Enabled := False;

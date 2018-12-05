@@ -10,7 +10,7 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, ZnMD5, ULibFun, UFormCtrl, USysLoger,
-  USysDB, UMITConst, UBase64, UWorkerClientWebChat, UMgrQueue
+  USysDB, UMITConst, UBase64, UWorkerClientWebChat, UMgrQueue, DateUtils
   {$IFDEF HardMon}, UMgrHardHelper, UWorkerHardware{$ENDIF};
 
 type
@@ -3637,11 +3637,12 @@ end;
 //Parm: 身份证ID,取卡密码
 //Desc: 获取可用订单列表
 function TWorkerBusinessCommander.GetOrderListNC(var nData:string):Boolean;
-var nSQL: string;
+var nSQL, nStr: string;
     nVal: Double;
     nIdx: Integer;
     nWorker: PDBWorker;
     nOut: TWorkerBusinessCommand;
+    nDate: TDateTime;
 begin
   Result := False;
   if (Trim(FIn.FData) = '') and (Trim(FIn.FExtParam) = '') then Exit;
@@ -3650,6 +3651,28 @@ begin
   FListA.Values['NoDate'] := sFlag_Yes;
   FListA.Values['SDTID'] := FIn.FData;
   FListA.Values['Password'] := FIn.FExtParam;
+
+  try
+    nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_OrderInFact, sFlag_OrderFilterH]);
+
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    begin
+      if RecordCount > 0 then
+      begin
+        nDate := StrToDateTime(FormatDateTime('YYYY-MM-DD', Now) + ' ' + Fields[0].AsString);
+
+        if Now < nDate then
+        begin
+          FListA.Values['NoDate'] := '';
+          FListA.Values['DateStart'] := FormatDateTime('YYYY-MM-DD',IncDay(Now, -10));
+          FListA.Values['DateEnd'] := FormatDateTime('YYYY-MM-DD',IncDay(Now, 1));
+        end;
+      end;
+    end;
+  except
+  end;
+
   if not CallMe(cBC_GetSQLQueryOrder, '101', PackerEncodeStr(FListA.Text), @nOut) then
   begin
     nData := 'GetOrderList获取NC销售订单语句失败';

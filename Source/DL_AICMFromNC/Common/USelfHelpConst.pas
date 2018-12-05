@@ -92,6 +92,7 @@ resourcestring
   sConfig     = 'Config.Ini';
   sForm       = 'FormInfo.Ini';
   sDB         = 'DBConn.Ini';
+  sReportDir  = 'Report\';                  //报表目录
 
   sHint      = '提示';                      //对话框标题
   sWarn      = '警告';                      //==

@@ -278,7 +278,7 @@ end;
 procedure TfFramePurchaseCard.btnSaveClick(Sender: TObject);
 var nMsg, nStr, nCard: string;
     nIdx: Integer;
-    nRet: Boolean;
+    nRet, nPrint: Boolean;
 begin
   if (FPurchaseItem.FOrder_Id='')or(Trim(edt_TruckNo.Text)='')then  //or(StrToFloatDef(Trim(edt_Value.Text), 0)=0)
   begin
@@ -320,6 +320,11 @@ begin
   if (nStr = sFlag_Sale) or (nStr = sFlag_SaleNew) then
     LogoutBillCard(nCard);
   //销售业务注销卡片,其它业务则无需注销
+
+  LoadSysDictItem(sFlag_PrintPur, FListB);
+  //需打印品种
+  nPrint := FListB.IndexOf(FPurchaseItem.FGoodsID) >= 0;
+
   begin
     with FListB do
     begin
@@ -375,6 +380,22 @@ begin
 
     WriteLog(nMsg);
     ShowMsg(nMsg,sWarn);
+
+    if nPrint then
+    begin
+      nStr := 'Select Top 1 R_ID From %s Where P_Card=''%s''';
+      nStr := Format(nStr, [sTable_CardProvide, nCard]);
+
+      with FDM.SQLQuery(nStr) do
+      begin
+        if RecordCount < 1 then
+        begin
+          nStr := '未找到单据,无法打印';
+          ShowMsg(nStr, sHint); Exit;
+        end;
+        PrintShipProReport(Fields[0].AsString, False);
+      end;
+    end;
   end
   else begin
     gMgrK720Reader.RecycleCard;

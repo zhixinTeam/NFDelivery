@@ -59,8 +59,8 @@ type
     { Private declarations }
     FBuffer: string;
     //接收缓冲
-    FListA: TStrings;
-    //卡片数据
+    FListA,FListB: TStrings;
+    //列表对象
     FOrderItem: TOrderItemInfo;
     //订单信息
     procedure InitFormData(const nOrderData: string = '');
@@ -147,6 +147,7 @@ begin
   with TfFormCardProvide.Create(Application) do
   try
     FListA := TStringList.Create;
+    FListB := TStringList.Create;
     InitFormData(nStr);
     ActionComPort(False);
 
@@ -165,6 +166,7 @@ procedure TfFormCardProvide.FormClose(Sender: TObject; var Action: TCloseAction)
 begin
   ActionComPort(True);
   FListA.Free;
+  FListB.Free;
 end;
 
 procedure TfFormCardProvide.InitFormData;
@@ -327,9 +329,14 @@ end;
 
 //Desc: 保存磁卡
 procedure TfFormCardProvide.BtnOKClick(Sender: TObject);
-var nID: string;
+var nID, nStr: string;
+    nPrint: Boolean;
 begin
   if not IsDataValid then Exit;
+
+  LoadSysDictItem(sFlag_PrintPur, FListB);
+  //需打印品种
+  nPrint := FListB.IndexOf(FOrderItem.FStockID) >= 0;
 
   with FOrderItem, FListA do
   begin
@@ -376,6 +383,22 @@ begin
 
   nID := SaveCardProvie(PackerEncodeStr(FListA.Text));
   if nID = '' then Exit;
+
+  if nPrint then
+  begin
+    nStr := 'Select Top 1 R_ID From %s Where P_Card=''%s''';
+    nStr := Format(nStr, [sTable_CardProvide, Trim(EditCard.Text)]);
+
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nStr := '未找到单据,无法打印';
+        ShowMsg(nStr, sHint); Exit;
+      end;
+      PrintShipProReport(Fields[0].AsString, True);
+    end;
+  end;
 
   ModalResult := mrOk;
   ShowMsg('采购业务办卡成功', sHint);

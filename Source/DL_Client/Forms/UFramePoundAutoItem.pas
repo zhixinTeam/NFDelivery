@@ -1119,6 +1119,34 @@ begin
         Exit;
       end;
 
+      {$IFDEF TruckMValueMaxControl}
+      nNet := GetMaxMValue(FUIData.FTruck);
+
+      if (nNet > 0) and (nNet < FUIData.FMData.FValue) then
+      with FUIData do
+      begin
+        nStr := '车辆[ %s ]毛重超出设定毛重限值,详情如下:' + #13#10 +
+                '※.物料名称: [ %s ]' + #13#10 +
+                '※.车辆毛重: %.2f吨' + #13#10 +
+                '※.毛重限值: %.2f吨' + #13#10 +
+                '允许过磅,请选是;禁止过磅,请选否.';
+        nStr := Format(nStr, [FTruck, FStockName, FMData.FValue, nNet]);
+
+        if not VerifyManualEventRecord(FID + sFlag_ManualB, nStr) then
+        begin
+          AddManualEventRecord(FID + sFlag_ManualB, FTruck, nStr,
+              sFlag_DepBangFang, sFlag_Solution_YN, sFlag_DepDaTing, True);
+          WriteSysLog(nStr);
+
+          nStr := '[n1]%s毛重超出设定限值,请下磅联系开票员处理后再次过磅';
+          nStr := Format(nStr, [FTruck]);
+          PlayVoice(nStr);
+
+          Exit;
+        end;
+      end;
+      {$ENDIF}
+
       nNet := FUIData.FMData.FValue - FUIData.FPData.FValue;
       //净重
       nVal := nNet * 1000 - FInnerData.FValue * 1000;
@@ -1553,6 +1581,9 @@ begin
   if nRet then
   begin
     nStr := GetTruckNO(FUIData.FTruck) + '重量  ' + GetValue(nValue);
+    {$IFDEF HSNF}
+    nStr := GetTruckNO(FUIData.FTruck) + ',请下磅';
+    {$ENDIF}
     LEDDisplay(nStr);
     
     TimerDelay.Enabled := True;

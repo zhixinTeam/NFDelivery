@@ -37,6 +37,8 @@ type
     dxLayout1Group4: TdxLayoutGroup;
     EditValue: TcxTextEdit;
     dxLayout1Item11: TdxLayoutItem;
+    EditMValueMax: TcxTextEdit;
+    dxLayout1Item12: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
   protected
     { Protected declarations }
@@ -113,10 +115,15 @@ begin
     EditTruck.Text := FieldByName('T_Truck').AsString;
     EditOwner.Text := FieldByName('T_Owner').AsString;
     EditPhone.Text := FieldByName('T_Phone').AsString;
-    
+
     EditValue.Enabled := gSysParam.FIsAdmin;
     EditValue.Text := FieldByName('T_PrePValue').AsString;
-    
+    {$IFDEF TruckMValueMaxControl}
+    EditMValueMax.Text := FieldByName('T_MValueMax').AsString;
+    {$ELSE}
+    dxLayout1Item12.Visible := False;
+    {$ENDIF}
+
     CheckVerify.Checked := FieldByName('T_NoVerify').AsString = sFlag_No;
     CheckValid.Checked := FieldByName('T_Valid').AsString = sFlag_Yes;
     CheckUserP.Checked := FieldByName('T_PrePUse').AsString = sFlag_Yes;
@@ -129,7 +136,7 @@ end;
 //Desc: 保存
 procedure TfFormTruck.BtnOKClick(Sender: TObject);
 var nStr,nTruck,nU,nV,nP,nVip,nGps,nEvent: string;
-    nVal: Double;
+    nVal, nMValMax: Double;
 begin
   nTruck := UpperCase(Trim(EditTruck.Text));
   if nTruck = '' then
@@ -138,6 +145,15 @@ begin
     ShowMsg('请输入车牌号码', sHint);
     Exit;
   end;
+
+  {$IFDEF TruckMValueMaxControl}
+  if not IsNumber(EditMValueMax.Text, True) then
+  begin
+    ActiveControl := EditMValueMax;
+    ShowMsg('请输入有效毛重上限', sHint);
+    Exit;
+  end;
+  {$ENDIF}
 
   if CheckValid.Checked then
        nV := sFlag_Yes
@@ -164,6 +180,7 @@ begin
   else nStr := SF('R_ID', FTruckID, sfVal);
 
   nVal := StrToFloatDef(Trim(EditValue.Text), 0);
+  nMValMax := StrToFloatDef(Trim(EditMValueMax.Text), 0);
 
   nStr := MakeSQLByStr([SF('T_Truck', nTruck),
           SF('T_Owner', EditOwner.Text),
@@ -174,6 +191,9 @@ begin
           SF('T_VIPTruck', nVip),
           SF('T_HasGPS', nGps),
           SF('T_PrePValue', nVal, sfVal),
+          {$IFDEF TruckMValueMaxControl}
+          SF('T_MValueMax', nMValMax, sfVal),
+          {$ENDIF}
           SF('T_LastTime', sField_SQLServer_Now, sfVal)
           ], sTable_Truck, nStr, FTruckID = '');
   FDM.ExecuteSQL(nStr);

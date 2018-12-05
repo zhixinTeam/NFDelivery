@@ -205,5 +205,12 @@ inherited fFrameCardProvide: TfFrameCardProvide
       Caption = #25351#23450#22320#30917
       OnClick = N6Click
     end
+    object N7: TMenuItem
+      Caption = '-'
+    end
+    object N8: TMenuItem
+      Caption = #25171#21360#37319#36141#21333
+      OnClick = N8Click
+    end
   end
 end

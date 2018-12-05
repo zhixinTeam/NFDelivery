@@ -1500,16 +1500,32 @@ begin
 
       {$IFDEF SaleAICMFromNC}
       if Trim(FListA.Values['wxzhuid']) <> '' then//过滤非微信下单
-      nStr := MakeSQLByStr([
-              SF('WOM_WebOrderID'   , FOrderItems[nIdx].FOrder),
-              SF('WOM_LID'          , nOut.FData),
-              SF('WOM_StatusType'   , c_WeChatStatusCreateCard),
-              SF('WOM_MsgType'      , cSendWeChatMsgType_AddBill),
-              SF('WOM_BillType'     , sFlag_Sale),
-              SF('WOM_deleted'     , sFlag_No)
-              ], sTable_WebOrderMatch, '', True);
-      gDBConnManager.WorkerExec(FDBConn, nStr);
+      begin
+        if FListA.Values['Post'] = sFlag_TruckBFM then //散装称重时并单
+        begin
+          nStr := MakeSQLByStr([
+                  SF('WOM_WebOrderID'   , FOrderItems[nIdx].FOrder),
+                  SF('WOM_LID'          , nBill),
+                  SF('WOM_StatusType'   , c_WeChatStatusCreateCard),
+                  SF('WOM_MsgType'      , cSendWeChatMsgType_AddBill),
+                  SF('WOM_BillType'     , sFlag_Sale),
+                  SF('WOM_deleted'     , sFlag_No)
+                  ], sTable_WebOrderMatch, '', True);
+        end
+        else
+        begin
+          nStr := MakeSQLByStr([
+                  SF('WOM_WebOrderID'   , FOrderItems[nIdx].FOrder),
+                  SF('WOM_LID'          , nOut.FData),
+                  SF('WOM_StatusType'   , c_WeChatStatusCreateCard),
+                  SF('WOM_MsgType'      , cSendWeChatMsgType_AddBill),
+                  SF('WOM_BillType'     , sFlag_Sale),
+                  SF('WOM_deleted'     , sFlag_No)
+                  ], sTable_WebOrderMatch, '', True);
+        end;
+        gDBConnManager.WorkerExec(FDBConn, nStr);
       //微信推送
+      end;
       {$ENDIF}
     end;
 

@@ -181,6 +181,7 @@ ResourceString
   sFlag_ShadowWeight  = 'ShadowWeight';              //影子重量
 
   sFlag_AICMPurStock  = 'AICMPurStock';              //自助机允许办卡物料
+  sFlag_PrintPur      = 'PrintStockPur';             //需打印品种(采购)
 
   sFlag_StationAutoP  = 'StationAutoP';              //火车衡自动获取皮重
 
@@ -215,6 +216,7 @@ ResourceString
   sFlag_BatStockGroup = 'BatStockGroup';             //批次物料分组
   sFlag_StockBrandShow= 'StockBrandShow';            //预刷卡品种显示
   sFlag_PoundStation  = 'PoundStation';              //地磅可用磅站,用于指定过磅
+  sFlag_OrderFilterH  = 'OrderFilterH';              //工厂订单过滤
 
   sFlag_InWHouse      = 'Warehouse';                 //库存可发(收)货订单
   sFlag_InWHID        = 'WarehouseID';               //仓库可发(收)货订单
@@ -746,6 +748,7 @@ const
        'T_MatePID varChar(32), T_MateID varChar(32), T_MateName varChar(80),' +
        'T_SrcAddr varChar(150), T_DestAddr varChar(150),' +
        'T_HisValueMax $Float Default 0, T_HisMValueMax $Float Default 0,' +
+       'T_MValueMax $Float Default 0,' +
        'T_Valid Char(1), T_VIPTruck Char(1), T_HasGPS Char(1))';
   {-----------------------------------------------------------------------------
    车辆信息:Truck
@@ -771,6 +774,9 @@ const
    *.T_Valid: 是否有效
    *.T_VIPTruck:是否VIP
    *.T_HasGPS:安装GPS(Y/N)
+   *.T_HisValueMax:历史最大净重
+   *.T_HisMValueMax:历史最大毛重
+   *.T_MValueMax:毛重上限
 
    //---------------------------短倒业务数据信息--------------------------------
    *.T_MatePID:上个物料编号

@@ -10,7 +10,7 @@ interface
 uses
   Windows, DB, Classes, Controls, SysUtils, UBusinessPacker, UBusinessWorker,
   UBusinessConst, ULibFun, UAdjustForm, UFormCtrl, UDataModule, USelfHelpConst,
-  USysDB, USysLoger, UBase64, UFormWait, Graphics, ShellAPI;
+  USysDB, USysLoger, UBase64, UFormWait, Graphics, ShellAPI, UDataReport;
 
 type
   TLadingStockItem = record
@@ -108,6 +108,11 @@ function IsOrderCanLade(nOrderID: string): Boolean;
 function GetStockPackStyle(const nStockID: string): string;
 function SaveWebOrderMatch(const nBillID,
   nWebOrderID,nBillType: string):Boolean;
+
+function PrintShipProReport(nRID: string; const nAsk: Boolean): Boolean;
+//打印复磅采购单
+function LoadSysDictItem(const nItem: string; const nList: TStrings): TDataSet;
+//读取系统字典项
 
 implementation
 
@@ -677,6 +682,76 @@ begin
   except
     fdm.ADOConn.RollbackTrans;
   end;
+end;
+
+//Date: 2018-12-03
+//Parm: 采购单RID;提示;数据对象;打印机
+//Desc: 打印复磅采购单
+function PrintShipProReport(nRID: string; const nAsk: Boolean): Boolean;
+var nStr: string;
+    nParam: TReportParamItem;
+begin
+  Result := False;
+
+  if nAsk then
+  begin
+    nStr := '是否要打印采购单?';
+    if not QueryDlg(nStr, sAsk) then Exit;
+  end;
+
+  nStr := 'Select * From %s Where R_ID=''%s''';
+  nStr := Format(nStr, [sTable_CardProvide, nRID]);
+
+  if FDM.SQLQuery(nStr).RecordCount < 1 then
+  begin
+    nStr := '编号为[ %s ] 的记录已无效!!';
+    nStr := Format(nStr, [nRID]);
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nStr := gPath + sReportDir +'CardProvide.fr3';
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nStr := '无法正确加载报表文件';
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nParam.FName := 'UserName';
+  nParam.FValue := 'AICM';
+  FDR.AddParamItem(nParam);
+
+  nParam.FName := 'Company';
+  nParam.FValue := '';
+  FDR.AddParamItem(nParam);
+
+  FDR.Dataset1.DataSet := FDM.SQLQuery1;
+  FDR.Report1.PrintOptions.Printer := 'My_Default_Printer';
+  FDR.PrintReport;
+  Result := FDR.PrintSuccess;
+end;
+
+//Date: 2010-4-13
+//Parm: 字典项;列表
+//Desc: 从SysDict中读取nItem项的内容,存入nList中
+function LoadSysDictItem(const nItem: string; const nList: TStrings): TDataSet;
+var nStr: string;
+begin
+  nList.Clear;
+  nStr := MacroValue(sQuery_SysDict, [MI('$Table', sTable_SysDict),
+                                      MI('$Name', nItem)]);
+  Result := FDM.SQLQuery(nStr);
+
+  if Result.RecordCount > 0 then
+  with Result do
+  begin
+    First;
+
+    while not Eof do
+    begin
+      nList.Add(FieldByName('D_Value').AsString);
+      Next;
+    end;
+  end else Result := nil;
 end;
 
 end.
