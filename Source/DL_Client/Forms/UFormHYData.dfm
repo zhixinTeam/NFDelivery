@@ -1,7 +1,7 @@
 inherited fFormHYData: TfFormHYData
   Left = 323
   Top = 208
-  ClientHeight = 263
+  ClientHeight = 224
   ClientWidth = 473
   Constraints.MinHeight = 245
   Constraints.MinWidth = 460
@@ -11,61 +11,49 @@ inherited fFormHYData: TfFormHYData
   TextHeight = 12
   inherited dxLayout1: TdxLayoutControl
     Width = 473
-    Height = 263
+    Height = 224
     inherited BtnOK: TButton
       Left = 327
-      Top = 230
+      Top = 191
       Caption = #30830#23450
-      TabOrder = 8
+      TabOrder = 7
     end
     inherited BtnExit: TButton
       Left = 397
-      Top = 230
-      TabOrder = 9
+      Top = 191
+      TabOrder = 8
     end
     object EditTruck: TcxTextEdit [2]
       Left = 81
-      Top = 156
+      Top = 131
       ParentFont = False
       Properties.MaxLength = 100
-      TabOrder = 6
+      TabOrder = 5
       OnKeyPress = EditTruckKeyPress
       Width = 147
     end
     object EditValue: TcxTextEdit [3]
       Left = 303
-      Top = 156
+      Top = 131
       ParentFont = False
       Properties.MaxLength = 100
-      TabOrder = 7
+      TabOrder = 6
       Width = 403
     end
-    object EditSMan: TcxComboBox [4]
+    object EditCustom: TcxComboBox [4]
       Left = 81
       Top = 36
-      ParentFont = False
-      Properties.DropDownListStyle = lsEditFixedList
-      Properties.IncrementalSearch = False
-      Properties.ItemHeight = 18
-      Properties.MaxLength = 35
-      Properties.OnEditValueChanged = EditSManPropertiesEditValueChanged
-      TabOrder = 0
-      Width = 121
-    end
-    object EditCustom: TcxComboBox [5]
-      Left = 81
-      Top = 61
       ParentFont = False
       Properties.DropDownRows = 20
       Properties.IncrementalSearch = False
       Properties.ItemHeight = 18
-      TabOrder = 1
+      TabOrder = 0
       OnKeyPress = EditCustomKeyPress
       Width = 121
     end
-    object EditNo: TcxButtonEdit [6]
+    object EditNo: TcxButtonEdit [5]
       Left = 303
-      Top = 131
+      Top = 106
       ParentFont = False
       Properties.Buttons = <
         item
@@ -73,29 +61,29 @@ inherited fFormHYData: TfFormHYData
           Kind = bkEllipsis
         end>
       Properties.OnButtonClick = EditNoPropertiesButtonClick
-      TabOrder = 5
+      TabOrder = 4
       OnKeyPress = OnCtrlKeyPress
       Width = 121
     end
-    object EditDate: TcxDateEdit [7]
+    object EditDate: TcxDateEdit [6]
       Left = 81
-      Top = 131
+      Top = 106
       ParentFont = False
       Properties.Kind = ckDateTime
-      TabOrder = 4
+      TabOrder = 3
       Width = 147
     end
-    object EditName: TcxTextEdit [8]
+    object EditName: TcxTextEdit [7]
       Left = 81
-      Top = 86
+      Top = 61
       ParentFont = False
       Properties.MaxLength = 80
-      TabOrder = 2
+      TabOrder = 1
       Width = 121
     end
-    object cxLabel2: TcxLabel [9]
+    object cxLabel2: TcxLabel [8]
       Left = 23
-      Top = 111
+      Top = 86
       AutoSize = False
       ParentFont = False
       Properties.Alignment.Vert = taBottomJustify
@@ -104,17 +92,10 @@ inherited fFormHYData: TfFormHYData
       Transparent = True
       Height = 15
       Width = 466
-      AnchorY = 126
+      AnchorY = 101
     end
     inherited dxLayout1Group_Root: TdxLayoutGroup
       inherited dxGroup1: TdxLayoutGroup
-        object dxLayout1Item13: TdxLayoutItem
-          AutoAligns = [aaVertical]
-          AlignHorz = ahClient
-          Caption = #19994' '#21153' '#21592':'
-          Control = EditSMan
-          ControlOptions.ShowBorder = False
-        end
         object dxLayout1Item3: TdxLayoutItem
           Caption = #23458#25143#21517#31216':'
           Control = EditCustom

@@ -1157,6 +1157,7 @@ begin
       FListC.Clear;
       FListC.Values['Type']  := FListA.Values['IsVIP'];
       FListC.Values['Brand'] := nBrand;
+      FListC.Values['LineGroup']  := FListA.Values['LineGroup'];
       if not TWorkerBusinessCommander.CallMe(cBC_AutoGetLineGroup,
           FOrderItems[nIdx].FStockID, PackerEncodeStr(FListC.Text), @nOut) then
       raise Exception.Create(nOut.FData);
@@ -1169,6 +1170,10 @@ begin
       begin
         FListA.Values['PointLineID'] := nOut.FExtParam;
       end;
+
+      {$IFDEF NoPointLine}
+      FListA.Values['PointLineID'] := '';
+      {$ENDIF}
       {$ENDIF}
 
       FListC.Clear;

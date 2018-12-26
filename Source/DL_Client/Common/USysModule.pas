@@ -35,6 +35,7 @@ uses
   //火车衡业务
 
   UFrameHYStock, UFormHYStock, UFrameHYRecord, UFormHYRecord, UFrameHYData,
+  UFormHYData, UFormGetStockNo,
   //化验单
 
   UFrameCardProvide, UFormCardProvide, UFrameCardProPQuery, UFormCardInfo,

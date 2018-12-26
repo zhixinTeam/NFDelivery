@@ -1610,11 +1610,14 @@ begin
         Exit;
       end;
       {$ENDIF}
-    {$ENDIF}
-
+      if FUIData.FOneDoor = sFlag_Yes then
+           OpenDoorByReader(FLastReader, sFlag_Yes)
+      else OpenDoorByReader(FLastReader, sFlag_No);
+    {$ELSE}
     if FUIData.FOneDoor = sFlag_Yes then
          OpenDoorByReader(FLastReader, sFlag_Yes)
     else OpenDoorByReader(FLastReader, sFlag_No);
+    {$ENDIF}
   end;
   //打开副道闸
 end;

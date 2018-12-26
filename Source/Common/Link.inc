@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE YFNF}
+{$DEFINE CSNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -184,8 +184,12 @@
   //过滤无关通道
   {$DEFINE AutoGetLineGroup}
   //自动获取装车线分组
+  {$DEFINE NoPointLine}
+  //开单不强制指定装车线(此开关为AutoGetLineGroup下子开关)
   {$DEFINE PrepareShowTruck}
   //预刷卡显示车牌
+  {$DEFINE PreShowEx}
+  //预刷卡特殊显示
   {.$DEFINE PrepareShowOnLading}
   //刷卡装车时控制预刷卡(不使用预刷卡读卡器)
   {$DEFINE PrintChinese}
@@ -202,10 +206,14 @@
   //刷卡信息确认
   {$DEFINE PrintHYEach}
   //随车开化验单
-  {.$DEFINE PrintHuaYanDan}
+  {$DEFINE PrintHuaYanDan}
   //打印化验单
   {$DEFINE PrintHeGeZheng}
   //打印合格证
+  {$DEFINE TotalHuaYanDan}
+  //化验单统一模板
+  {$DEFINE AICMVerifyGPS}
+  //自助机开单GPS校验
 {$ENDIF}
 //三明南方
 
@@ -230,6 +238,8 @@
   //随车开化验单
   {.$DEFINE HeGeZhengOnly}
   //随车开单时只打合格证
+  {$DEFINE CardProvide}
+  //采用复磅模式
 {$ENDIF}
 //南城南方
 
@@ -563,9 +573,9 @@
   //格式化计数器车牌
   {$DEFINE JudgeOrder}
   //验证订单是否出厂
-  {.$DEFINE SaleAICMFromNC}
+  {$DEFINE SaleAICMFromNC}
   //销售自助办卡
-  {$DEFINE PurAICMFromNC}
+  {.$DEFINE PurAICMFromNC}
   //采购自助办卡
   {$DEFINE LEDShowTruckEx}
   //大屏显示格式化车牌
@@ -676,9 +686,9 @@
   //格式化计数器车牌
   {$DEFINE JudgeOrder}
   //验证订单是否出厂
-  {.$DEFINE SaleAICMFromNC}
+  {$DEFINE SaleAICMFromNC}
   //销售自助办卡
-  {$DEFINE PurAICMFromNC}
+  {.$DEFINE PurAICMFromNC}
   //采购自助办卡
   {$DEFINE LEDShowTruckEx}
   //大屏显示格式化车牌
@@ -878,7 +888,7 @@
   //刷卡装车时控制预刷卡(不使用预刷卡读卡器)
   {.$DEFINE PrintChinese}
   //汉字喷码支持
-  {.$DEFINE ERROPENONEDOOR}
+  {$DEFINE ERROPENONEDOOR}
   //过磅失败倒车下磅
   {$DEFINE PoundVerfyOrder}
   //过磅校验订单(销售)
@@ -888,4 +898,78 @@
   //散装不自动并单
   {$DEFINE ValueLimit}
   //限制开单上限
+{$ENDIF}
+
+//玉山
+{$IFDEF YSNF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+  {$DEFINE MITTruckProber}
+  //中间件控制车检
+  {.$DEFINE TruckProberEx}
+  //车检光栅状态判断扩展(此开关启用时建议同时启用MITTruckProber开关)
+  {$DEFINE MultiReplay}
+  //计数器应答模式
+  {$DEFINE FORCEOPENDOOR}
+  //强制抬杆
+  {$DEFINE CardProvide}
+  //采用复磅模式
+  {$DEFINE ORDERVALUE}
+  //显示订单量
+  {$DEFINE DaiStepWuCha}
+  //包装阶梯误差
+  {.$DEFINE DaiForceQueue}
+  //包装发货强制队列
+  {$DEFINE AllowMultiM}
+  //散装允许多次过重车
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE JSTruck}
+  //格式化计数器车牌
+  {$DEFINE JudgeOrder}
+  //验证订单是否出厂
+  {.$DEFINE SaleAICMFromNC}
+  //销售自助办卡
+  {$DEFINE PurAICMFromNC}
+  //采购自助办卡
+  {$DEFINE LEDShowTruckEx}
+  //大屏显示格式化车牌
+  {.$DEFINE OneTruckMulCard}
+  //一车多卡
+  {.$DEFINE FilterTunnel}
+  //过滤无关通道
+  {$DEFINE AutoGetLineGroup}
+  //自动获取装车线分组
+  {$DEFINE ForceLineGroup}
+  //强制使用授权工厂编号作为生产线(此开关为AutoGetLineGroup下子开关)与ManuLineGroup互斥
+  {.$DEFINE ManuLineGroup}
+  //人工选择生产线(此开关为AutoGetLineGroup下子开关)与ForceLineGroup互斥
+  {$DEFINE PrepareShowTruck}
+  //预刷卡显示车牌
+  {.$DEFINE PrepareShowOnLading}
+  //刷卡装车时控制预刷卡(不使用预刷卡读卡器)
+  {$DEFINE PrintChinese}
+  //汉字喷码支持
+  {$DEFINE ERROPENONEDOOR}
+  //过磅失败倒车下磅
+  {$DEFINE PoundVerfyOrder}
+  //过磅校验订单(销售)
+  {$DEFINE SaveOrderNo}
+  //保存订单编号
+  {$DEFINE ValueLimit}
+  //限制开单上限
+  {$DEFINE PrintHYEach}
+  //随车开化验单
+  {$DEFINE PrintHuaYanDan}
+  //打印化验单
+  {$DEFINE PrintHeGeZheng}
+  //打印合格证
+  {$DEFINE PurAutoOutByStokNo}
+  //原材料根据物料号虚拟出厂
 {$ENDIF}

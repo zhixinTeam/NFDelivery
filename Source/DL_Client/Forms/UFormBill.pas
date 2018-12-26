@@ -423,7 +423,11 @@ begin
 
     Values['CusID'] := FOrder.FCusID;
     Values['CusName'] := FOrder.FCusName;
+    {$IFDEF ForceLineGroup}
+    Values['LineGroup'] := gSysParam.FFactNum;
+    {$ELSE}
     Values['LineGroup'] := GetCtrlData(EditLineGroup);
+    {$ENDIF}
     Values['Memo']     := Trim(EditMemo.Text);
 
     Values['PoundStation'] := GetCtrlData(EditPoundStation);

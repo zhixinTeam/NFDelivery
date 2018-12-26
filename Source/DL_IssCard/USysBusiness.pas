@@ -10,7 +10,7 @@ uses
   Windows, DB, Classes, Controls, SysUtils, UBusinessPacker, UBusinessWorker,
   UBusinessConst, ULibFun, UAdjustForm, UFormCtrl, UDataModule, //UDataReport,
   UFormBase, cxMCListBox, UMgrPoundTunnels,  UBase64, USysConst,//UMgrCamera,
-  USysDB, USysLoger, UMgrTTCEK720, UMgrLEDDisp, UMgrBXFontCard, UMgrVoiceNet;
+  USysDB, USysLoger, UMgrTTCEDispenser, UMgrLEDDisp, UMgrBXFontCard, UMgrVoiceNet;
 
 type
   TLadingStockItem = record
@@ -174,7 +174,7 @@ function GetTruckLastTime(const nTruck: string): Integer;
 
 function GetFQValueByStockNo(const nStock: string): Double;
 //获取封签号已发量
-procedure WhenTTCE_K720_ReadCard(const nItem: PK720ReaderItem);
+procedure DoSaveWork(const nTTCEID: string; nInt: Integer);
 procedure LEDDisplay(const nTunnel: string; nContent: string = '';
                      nTitle: string = '');
 
@@ -182,7 +182,7 @@ procedure PlayVoice(const nTunnel, nStrtext: string);
 function CheckCardOK(const nCard:string; var nMsg:string):Boolean;
 //检查磁卡是否被占用
 function GetNcOrderList(const nID: string): string;
-function AICMSaveOrder(const nPurchaseItem : stPurchaseItem; nCard: string;
+function AICMSaveOrder(const nPurchaseItem : stPurchaseItem; nCard,nTTCEID: string;
                        var nMsg:string):Boolean;
 function SaveCardProvie(const nCardData: string): string;
 //保存采购卡
@@ -236,10 +236,6 @@ begin
     nIn.FExtParam := nExt;
 
     nIn.FBase.FParam := sParam_NoHintOnError;
-
-    if gSysParam.FAutoPound and (not gSysParam.FIsManual) then
-      nIn.FBase.FParam := sParam_NoHintOnError;
-    //自动称重时不提示
 
     nWorker := gBusinessWorkerManager.LockWorker(sCLI_BusinessCommand);
     //get worker
@@ -1227,52 +1223,52 @@ begin
   gNetVoiceHelper.PlayVoice(nStrtext, nTunnel);
 end;
 
-//lih 2018-02-03
-//处理网络自动发卡
-procedure WhenTTCE_K720_ReadCard(const nItem: PK720ReaderItem);
+//读取卡号并保存单据
+procedure DoSaveWork(const nTTCEID: string; nInt: Integer);
 var
-  nStr, nCard, nECard, nETunnel: string;
+  nStr, nCard, nHint: string;
   nLast: Int64;
   nIdx: Integer;
 begin
-  nStr := '网络发卡机'  + nItem.FID + ' ::: ' + nItem.FCard;
+  for nIdx:=0 to 3 do
+  begin
+    nCard := gDispenserManager.GetCardNo(nTTCEID, nHint, False);
+    if nCard <> '' then
+      Break;
+    Sleep(200);
+  end;
+
+  if nCard = '' then
+  begin
+    nStr := '发卡机故障,请联系管理员';
+    PlayVoice(gPurOrderItems[nInt].FTunnelID, nStr);
+    gPurOrderItems[nInt].FCanSave := False;
+    Exit;
+  end;
+
+  nStr := '发卡机'  + nTTCEID + ' ::: ' + nCard;
   WriteLog(nStr);
 
-  if nCard <> nItem.FCard then
+  if not CheckCardOK(nCard, nStr) then
   begin
-    nCard := nItem.FCard;
+    WriteLog('发卡机'  + nTTCEID +' ::: ' + nStr);
+    PlayVoice(gPurOrderItems[nInt].FTunnelID, nStr);
+    gDispenserManager.RecoveryCard(nTTCEID, nHint);
+    Exit;
+  end;
 
-    if not CheckCardOK(nCard, nStr) then
-    begin
-      WriteLog(' ::: ' + nStr);
-      if gK720ReaderManager.RecoveryCardF(nItem.FTunnel) then
-        WriteLog(' ::: 磁卡' + nCard + '回收完毕');
+  with gPurOrderItems[nInt] do
+  begin
+    if not FCanSave then
       Exit;
-    end;
 
-    for nIdx := Low(gPurOrderItems) to High(gPurOrderItems) do
-    with gPurOrderItems[nIdx] do
+    AICMSaveOrder(gPurOrderItems[nInt], nCard, nTTCEID, nStr);
+    if nStr <> '' then
     begin
-      if not FCanSave then
-        Continue;
-      if FTunnelID <> nItem.FID then
-        Continue;
-      if nCard = '' then
-      begin
-        nStr := '发卡机故障,请联系管理员';
-        FMsg := nStr;
-        PlayVoice(FTunnelID, nStr);
-        FCanSave := False;
-        Exit;
-      end;
-      AICMSaveOrder(gPurOrderItems[nIdx], nCard, nStr);
-      if nStr <> '' then
-      begin
-        FMsg := nStr;
-        PlayVoice(FTunnelID, nStr);
-      end;
-      FCanSave := False;
+      FMsg := nStr;
+      PlayVoice(FTunnelID, nStr);
     end;
+    FCanSave := False;
   end;
 end;
 
@@ -1280,8 +1276,31 @@ end;
 function CheckCardOK(const nCard:string; var nMsg:string):Boolean;
 var
   nSQL: string;
+  nValid: Boolean;
 begin
   Result := False;
+  nValid := False;
+
+  nSql := 'select C_Card2,C_Card3 from %s where C_Card = ''%s'' ';
+  nSql := Format(nSql,[sTable_Card,nCard]);
+
+  with FDM.QueryTemp(nSQL) do
+  begin
+    if recordcount>0 then
+    begin
+      if (Trim(Fields[0].AsString) <> '') or (Trim(Fields[1].AsString) <> '')then
+      begin
+        nValid := True;
+      end;
+    end;
+  end;
+
+  if not nValid then
+  begin
+    nMsg := '磁卡%s卡号非法,正在回收,请稍后重试';
+    nMsg := Format(nMsg, [nCard]);
+    Exit;
+  end;
 
   nSQL := 'select P_Card from %s where P_Card =''%s'' ';
   nSQL := Format(nSQL, [sTable_CardProvide, nCard]);
@@ -1289,7 +1308,7 @@ begin
   begin
     if RecordCount>0 then
     begin
-      nMsg := '磁卡%s使用中,无法办卡,正在回收';
+      nMsg := '磁卡%s使用中,无法办卡,正在回收,请稍后重试';
       nMsg := Format(nMsg, [nCard]);
       Exit;
     end;
@@ -1306,7 +1325,7 @@ begin
     Result := nOut.FData;
 end;
 
-function AICMSaveOrder(const nPurchaseItem : stPurchaseItem; nCard: string;
+function AICMSaveOrder(const nPurchaseItem : stPurchaseItem; nCard,nTTCEID: string;
                        var nMsg:string):Boolean;
 var
   nSQL, nStr: string;
@@ -1389,7 +1408,7 @@ begin
   if nRet then
   begin
     WriteLog(nPurchaseItem.FTrackNo +':::' + nCard + '准备发卡');
-    if not gK720ReaderManager.SendCardOutF(nPurchaseItem.FTunnelID) then
+    if not gDispenserManager.SendCardOut(nTTCEID, nMsg) then
     begin
       nMsg := '车辆%s自动发卡失败';
       nMsg := Format(nMsg, [nPurchaseItem.FTrackNo]);

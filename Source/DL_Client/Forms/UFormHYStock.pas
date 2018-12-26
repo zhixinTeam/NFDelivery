@@ -11,7 +11,7 @@ uses
   UDataModule, cxGraphics, StdCtrls, cxMaskEdit, cxDropDownEdit,
   cxMCListBox, cxMemo, dxLayoutControl, cxContainer, cxEdit, cxTextEdit,
   cxControls, cxButtonEdit, cxCalendar, ExtCtrls, cxPC, cxLookAndFeels,
-  cxLookAndFeelPainters;
+  cxLookAndFeelPainters, cxGroupBox;
 
 type
   TfFormHYStock = class(TForm)
@@ -145,6 +145,23 @@ type
     cxTextEdit57: TcxTextEdit;
     Label44: TLabel;
     cxTextEdit58: TcxTextEdit;
+    cxGroupBox1: TcxGroupBox;
+    EditFMH: TcxTextEdit;
+    Label45: TLabel;
+    Label46: TLabel;
+    EditSHS: TcxTextEdit;
+    Label47: TLabel;
+    EditSZ: TcxTextEdit;
+    Label48: TLabel;
+    EditSG: TcxTextEdit;
+    Label49: TLabel;
+    EditZMJ: TcxTextEdit;
+    Label50: TLabel;
+    cxTextEdit59: TcxTextEdit;
+    Label51: TLabel;
+    cxTextEdit60: TcxTextEdit;
+    Label52: TLabel;
+    cxTextEdit61: TcxTextEdit;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditIDPropertiesButtonClick(Sender: TObject;

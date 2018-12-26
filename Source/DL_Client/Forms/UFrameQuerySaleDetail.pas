@@ -41,6 +41,8 @@ type
     N3: TMenuItem;
     EditPoundD: TcxButtonEdit;
     dxLayout1Item9: TdxLayoutItem;
+    N4: TMenuItem;
+    N5: TMenuItem;
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
@@ -50,6 +52,7 @@ type
     procedure N3Click(Sender: TObject);
     procedure cxButtonEdit1PropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
+    procedure N5Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -254,6 +257,41 @@ begin
     InitFormData('');
   finally
     FJBWhere := '';
+  end;
+end;
+
+procedure TfFrameSaleDetailQuery.N5Click(Sender: TObject);
+var nPID, nStr: string;
+    nList: TStrings;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    if SQLQuery.FieldByName('L_OutFact').AsString = '' then
+    begin
+      nStr := Format('提货单[ %s ]未出厂,无法上传', [nPID]);
+      ShowMsg(nStr, sHint);
+      Exit;
+    end;
+
+    nPID := SQLQuery.FieldByName('L_ID').AsString;
+
+    nStr := Format('确认上传提货单[ %s ]吗?', [nPID]);
+    if not QueryDlg(nStr, sHint) then Exit;
+
+    nList := TStringList.Create;
+
+    try
+      nList.Add(nPID);
+      if not SyncSaleDetail(nList.Text) then
+      begin
+        ShowMsg('提货单上传失败',sHint);
+        Exit;
+      end;
+    finally
+      nList.Free;
+    end;
+
+    ShowMsg('上传成功',sHint);
   end;
 end;
 

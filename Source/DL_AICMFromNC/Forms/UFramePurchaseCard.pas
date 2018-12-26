@@ -55,7 +55,7 @@ implementation
 {$R *.dfm}
 
 uses
-    ULibFun, USysLoger, UDataModule, UMgrControl, USysBusiness, UMgrK720Reader,
+    ULibFun, USysLoger, UDataModule, UMgrControl, USysBusiness, UMgrTTCEDispenser,
     USysDB, UBase64;
 
 //------------------------------------------------------------------------------
@@ -276,7 +276,7 @@ begin
 end;
 
 procedure TfFramePurchaseCard.btnSaveClick(Sender: TObject);
-var nMsg, nStr, nCard: string;
+var nMsg, nStr, nCard, nHint: string;
     nIdx: Integer;
     nRet, nPrint: Boolean;
 begin
@@ -291,6 +291,15 @@ begin
     ShowMsg('请选择车牌号或输入完整车牌号', sHint);
     Exit;
   end;
+
+
+  if not IsPurTruckReady(edt_TruckNo.Text, nHint) then
+  begin
+    nStr := '车辆[%s]存在未完成的采购单据[%s],无法办卡';
+    nStr := Format(nStr,[edt_TruckNo.Text, nHint]);
+    ShowMsg(nStr, sHint);
+    Exit;
+  end;
   //***************************************************
 //  if ShopOrderHasUsed(FListA.Values['WebShopID']) then
 //  begin
@@ -301,8 +310,12 @@ begin
 //  end;
 
   for nIdx:=0 to 3 do
-  if gMgrK720Reader.ReadCard(nCard) then Break
-  else Sleep(500);
+  begin
+    nCard := gDispenserManager.GetCardNo(gSysParam.FTTCEK720ID, nHint, False);
+    if nCard <> '' then
+      Break;
+    Sleep(500);
+  end;
   //连续三次读卡,成功则退出。
 
   if nCard = '' then
@@ -312,7 +325,6 @@ begin
     Exit;
   end;
 
-  nCard := gMgrK720Reader.ParseCardNO(nCard);
   WriteLog('读取到卡片: ' + nCard);
   //解析卡片
 
@@ -349,6 +361,11 @@ begin
       Values['TruckBack'] := sFlag_No;
       Values['TruckPre']  := sFlag_No;
       Values['Muilti']    := sFlag_No;
+      {$IFDEF RemoteSnap}
+      Values['SnapTruck'] := sFlag_Yes;
+      {$ELSE}
+      Values['SnapTruck'] := sFlag_No;
+      {$ENDIF}
     end;
 
     nStr := SaveCardProvie(EncodeBase64(FListB.Text));
@@ -364,13 +381,7 @@ begin
     Exit;
   end;
 
-  for nIdx := 0 to 3 do
-  begin
-    nRet := gMgrK720Reader.SendReaderCmd('FC0');
-    if nRet then Break;
-
-    Sleep(500);
-  end;
+  nRet := gDispenserManager.SendCardOut(gSysParam.FTTCEK720ID, nHint);
   //发卡
 
   if nRet then
@@ -398,7 +409,7 @@ begin
     end;
   end
   else begin
-    gMgrK720Reader.RecycleCard;
+    gDispenserManager.RecoveryCard(gSysParam.FTTCEK720ID, nHint);
 
     nMsg := '订单[ %s ],卡号[ %s ]关联订单失败,请到开票窗口重新关联.';
     nMsg := Format(nMsg, [FListA.Values['WebID'], nCard]);

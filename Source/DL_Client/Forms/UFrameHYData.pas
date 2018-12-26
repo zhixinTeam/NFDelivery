@@ -92,7 +92,8 @@ begin
   Result := 'Select hy.*,P_Name,P_QLevel,L_CusPY,L_CusName,L_Type,L_StockNo,' +
             'L_StockName From $HY hy ' +
             ' Left Join $Bill b On b.L_ID=hy.H_Bill ' +
-            ' Left Join $SP sp On sp.P_Stock=b.L_StockNo ' +
+            ' Left Join $SR sr on sr.R_SerialNo=H_SerialNo ' +
+            ' Left Join $SP sp on sp.P_ID=sr.R_PID ' +
             'Where ';
   //xxxxx
   

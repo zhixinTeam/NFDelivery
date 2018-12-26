@@ -11,7 +11,7 @@ uses
   Windows, DB, Classes, Controls, SysUtils, UBusinessPacker, UBusinessWorker,
   UBusinessConst, ULibFun, UAdjustForm, UFormCtrl, UDataModule, UDataReport,
   UFormBase, cxMCListBox, UMgrPoundTunnels, HKVNetSDK, USysConst, USysDB,
-  USysLoger, UBase64, UFormWait, Graphics, ShellAPI;
+  USysLoger, UBase64, UFormWait, Graphics, ShellAPI, DateUtils;
 
 type
   TLadingStockItem = record
@@ -33,6 +33,7 @@ type
     FWeight   : Integer;     //袋重
     FValid    : Boolean;     //是否有效
     FPrinterOK: Boolean;     //喷码机
+    FLineGroup: string;      //通道分组
   end;
 
   PZTTruckItem = ^TZTTruckItem;
@@ -214,7 +215,7 @@ function PrintShipProReport(nRID: string; const nAsk: Boolean): Boolean;
 function SetTruckRFIDCard(nTruck: string; var nRFIDCard: string;
   var nIsUse: string; nOldCard: string=''): Boolean;
 //指定道装车
-function SelectTruckTunnel(var nNewTunnel, nStockNo: string): Boolean;
+function SelectTruckTunnel(var nNewTunnel, nStockNo: string; const nLineGroup: string): Boolean;
 
 function SaveWeiXinAccount(const nItem:TWeiXinAccount; var nWXID:string): Boolean;
 function DelWeiXinAccount(const nWXID:string): Boolean;
@@ -316,7 +317,14 @@ function GetTruckHisMValueMax(const nTruck: string): Double;
 //获取车辆历史最大毛重
 function GetMaxMValue(const nTruck: string): Double;
 //获取毛重限值
+function SyncSaleDetail(const nStr: string): Boolean;
+//同步提货单
+function SyncPoundDetail(const nStr: string): Boolean;
+//同步磅单
 
+function GetHYMaxValue: Double;
+function GetHYValueByStockNo(const nNo: string): Double;
+//获取化验单已开量
 implementation
 
 //Desc: 记录日志
@@ -1230,6 +1238,8 @@ begin
       if IsNumber(Values['Weight'], False) then
            FWeight := StrToInt(Values['Weight'])
       else FWeight := 1;
+
+      FLineGroup:= Values['LineGroup'];
     end;
 
     nListA.Text := PackerDecodeStr(nSTruck);
@@ -1774,7 +1784,7 @@ begin
           'Where S_Bill=''%s''';
   nStr := Format(nStr, [sTable_PoundShip, gSysParam.FUserID,
           sField_SQLServer_Now, nID]);
-  FDM.ExecuteSQL(nStr); 
+  FDM.ExecuteSQL(nStr);
 
   nStr := 'Select * From %s b ' +
           '  Left Join %s s on s.S_Bill=b.L_ID ' +
@@ -2200,11 +2210,12 @@ end;
 //Date: 2015/1/18
 //Parm: 装车通道
 //Desc: 选择的新通道
-function SelectTruckTunnel(var nNewTunnel, nStockNo: string): Boolean;
+function SelectTruckTunnel(var nNewTunnel, nStockNo: string; const nLineGroup: string): Boolean;
 var nP: TFormCommandParam;
 begin
   nP.FParamA := nNewTunnel;
   nP.FParamB := nStockNo;
+  nP.FParamC := nLineGroup;
   CreateBaseFormItem(cFI_FormChangeTunnel, '', @nP);
 
   nNewTunnel := nP.FParamB;
@@ -2714,7 +2725,8 @@ end;
 
 //Desc: 打印标识为nHID的化验单
 function PrintHuaYanReport(const nHID: string; const nAsk: Boolean): Boolean;
-var nStr: string;
+var nStr,nSeal,nDate3D,nDate28D,n28Ya1,nBD,nLID: string;
+    nDate: TDateTime;
 begin
   if nAsk then
   begin
@@ -2723,14 +2735,60 @@ begin
     if not QueryDlg(nStr, sAsk) then Exit;
   end else Result := False;
 
-  nStr := 'Select hy.*,b.*,sp.*,sr.* From $HY hy ' +
+  nSeal := '';
+  nBD := '';
+  nLID := '';
+  nStr := 'Select hy.H_SerialNo,sr.R_28Ya1,b.L_HyPrintCount,b.L_ID From %s hy ' +
+          ' Left Join %s b On b.L_ID=hy.H_Bill ' +
+          ' Left Join %s sr on sr.R_SerialNo=hy.H_SerialNo ' +
+          ' Where hy.H_ID = ''%s''';
+  nStr := Format(nStr, [sTable_StockHuaYan, sTable_Bill, sTable_StockRecord, nHID]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nSeal := Fields[0].AsString;
+      n28Ya1 := Fields[1].AsString;
+      nLID := Fields[3].AsString;
+      if Fields[2].AsInteger >= 1 then
+        nBD := '补';
+    end;
+  end;
+
+  nDate3D := FormatDateTime('YYYY-MM-DD HH:MM:SS', Now);
+  nDate28D := nDate3D;
+  if nSeal <> '' then
+  begin
+    nStr := 'Select top 1 L_Date From %s Where L_Seal = ''%s'' order by L_Date';
+    nStr := Format(nStr, [sTable_Bill, nSeal]);
+
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount > 0 then
+      begin
+        nDate3D := Fields[0].AsString;
+
+        try
+          nDate := StrToDateTime(nDate3D);
+          if n28Ya1 <> '' then
+            nDate := IncDay(nDate,29);
+          nDate28D := FormatDateTime('YYYY-MM-DD HH:MM:SS', nDate);
+        except
+        end;
+      end;
+    end;
+  end;
+
+  nStr := 'Select hy.*,b.*,sp.*,sr.*,''$DD'' as R_Date3D,''$BD'' as L_HyBd,''$TD'' as R_Date28D From $HY hy ' +
           ' Left Join $Bill b On b.L_ID=hy.H_Bill ' +
           ' Left Join $SR sr on sr.R_SerialNo=H_SerialNo ' +
-          ' Left Join $SP sp on sp.P_ID=sr.R_PID ' +        
+          ' Left Join $SP sp on sp.P_ID=sr.R_PID ' +
           'Where H_ID in ($ID)';
   //xxxxx
 
-  nStr := MacroValue(nStr, [MI('$HY', sTable_StockHuaYan),
+  nStr := MacroValue(nStr, [MI('$DD', nDate3D), MI('$BD', nBD), MI('$TD', nDate28D),
+          MI('$HY', sTable_StockHuaYan),
           MI('$Bill', sTable_Bill), MI('$SP', sTable_StockParam),
           MI('$SR', sTable_StockRecord), MI('$ID', nHID)]);
   //xxxxx
@@ -2758,11 +2816,19 @@ begin
   FDR.Dataset1.DataSet := FDM.SqlTemp;
   FDR.ShowReport;
   Result := FDR.PrintSuccess;
+
+  if Result then
+  begin
+    nStr := 'Update %s Set L_HyPrintCount=L_HyPrintCount + 1 ' +
+            'Where L_ID=''%s''';
+    nStr := Format(nStr, [sTable_Bill, nLID]);
+    FDM.ExecuteSQL(nStr);
+  end;
 end;
 
 //Desc: 打印标识为nID的合格证
 function PrintHeGeReport(const nHID: string; const nAsk: Boolean): Boolean;
-var nStr: string;
+var nStr,nSeal,nDate3D: string;
 begin
   if nAsk then
   begin
@@ -2771,13 +2837,41 @@ begin
     if not QueryDlg(nStr, sAsk) then Exit;
   end else Result := False;
 
-  nStr := 'Select * From $HY hy ' +
+  nSeal := '';
+  nStr := 'Select hy.H_SerialNo,sr.R_28Ya1 From %s hy ' +
+          ' Left Join %s sr on sr.R_SerialNo=hy.H_SerialNo ' +
+          ' Where hy.H_ID = ''%s''';
+  nStr := Format(nStr, [sTable_StockHuaYan, sTable_StockRecord, nHID]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nSeal := Fields[0].AsString;
+    end;
+  end;
+  nDate3D := FormatDateTime('YYYY-MM-DD HH:MM:SS', Now);
+  if nSeal <> '' then
+  begin
+    nStr := 'Select top 1 L_Date From %s Where L_Seal = ''%s'' order by L_Date';
+    nStr := Format(nStr, [sTable_Bill, nSeal]);
+
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount > 0 then
+      begin
+        nDate3D := Fields[0].AsString;
+      end;
+    end;
+  end;
+
+  nStr := 'Select *,''$DD'' as R_Date3D From $HY hy ' +
           '  Left Join $Bill b On b.L_ID=hy.H_Bill ' +
-          '  Left Join $SP sp On sp.P_Stock=b.L_StockNo ' +
+          '  Left Join $SP sp On sp.P_Stock=b.L_StockName ' +
           'Where H_ID in ($ID)';
   //xxxxx
 
-  nStr := MacroValue(nStr, [MI('$HY', sTable_StockHuaYan),
+  nStr := MacroValue(nStr, [MI('$DD', nDate3D),MI('$HY', sTable_StockHuaYan),
           MI('$SP', sTable_StockParam), MI('$SR', sTable_StockRecord),
           MI('$Bill', sTable_Bill), MI('$ID', nHID)]);
   //xxxxx
@@ -3127,6 +3221,8 @@ begin
       begin
         nMsg := '读卡器[ %s ]绑定岗位[ %s ]干预规则:人工干预已关闭.';
         nMsg := Format(nMsg, [nReader, nPos]);
+        Result := True;
+        Exit;
       end;
     end
     else
@@ -3395,6 +3491,63 @@ begin
   if RecordCount > 0 then
     Result := Fields[0].AsFloat;
   //xxxxx
+end;
+
+//Date: 2018-12-14
+//Parm: ID
+//Desc: 同步提货单
+function SyncSaleDetail(const nStr: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  if CallBusinessCommand(cBC_SyncME25, nStr, '', @nOut) then
+       Result := True
+  else
+  begin
+    Result := False;
+  end;
+end;
+
+//Date: 2018-12-14
+//Parm: ID
+//Desc: 同步磅单
+function SyncPoundDetail(const nStr: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  if CallBusinessCommand(cBC_SyncME03, nStr, '', @nOut) then
+       Result := True
+  else
+  begin
+    Result := False;
+  end;
+end;
+
+//------------------------------------------------------------------------------
+//Desc: 每批次最大量
+function GetHYMaxValue: Double;
+var nStr: string;
+begin
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_HYValue]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+       Result := Fields[0].AsFloat
+  else Result := 0;
+end;
+
+//Desc: 获取nNo水泥编号的已开量
+function GetHYValueByStockNo(const nNo: string): Double;
+var nStr: string;
+begin
+  nStr := 'Select R_SerialNo,Sum(H_Value) From %s ' +
+          ' Left Join %s on H_SerialNo= R_SerialNo ' +
+          'Where R_SerialNo=''%s'' Group By R_SerialNo';
+  nStr := Format(nStr, [sTable_StockRecord, sTable_StockHuaYan, nNo]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+       Result := Fields[1].AsFloat
+  else Result := -1;
 end;
 
 end.

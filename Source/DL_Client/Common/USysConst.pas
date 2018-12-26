@@ -141,6 +141,7 @@ const
   cFI_FormDisPound      = $1041;                     //磅站调度
   cFI_FormTruckEmpty    = $1042;                     //空车出厂
 
+  cFI_FormGetStockNo    = $1050;                     //选择编号
   cFI_FormProvider      = $1051;                     //供应商
   cFI_FormMaterails     = $1052;                     //原材料
 

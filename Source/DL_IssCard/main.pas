@@ -46,7 +46,7 @@ implementation
 uses
   UFrame, UMgrKeyBoardTunnels, USysLoger, UClientWorker, UMemDataPool, UFormConn,
   UMgrChannel, UChannelChooser, UMITPacker, ULibFun, UDataModule, UMgrLEDDisp,
-  UMgrTTCEK720, UMgrVoiceNet, UMgrBXFontCard, USysBusiness;
+  UMgrTTCEDispenser, UMgrVoiceNet, UMgrBXFontCard, USysBusiness;
 
 {$R *.dfm}
 
@@ -182,8 +182,9 @@ begin
   if Assigned(gBXFontCardManager) then
     gBXFontCardManager.StopService;
 
-  if Assigned(gK720ReaderManager) then
-    gK720ReaderManager.StopReader;
+  if Assigned(gDispenserManager) then
+    gDispenserManager.StopDispensers;
+    //¹Ø±Õ¶Á¿¨Æ÷
 
   if Assigned(gNetVoiceHelper) then
     gNetVoiceHelper.StopVoice;
@@ -218,13 +219,13 @@ begin
     gBXFontCardManager.StartService;
   end;
 
-  if FileExists(AppPath + cTTCE_K720_Config) then
+  if FileExists(AppPath + 'TTCE_K720.xml') then
   begin
-    if not Assigned(gK720ReaderManager) then
-      gK720ReaderManager := TK720ReaderManager.Create;
-    gK720ReaderManager.LoadConfig(AppPath + cTTCE_K720_Config);
-    gK720ReaderManager.OnCardProc := WhenTTCE_K720_ReadCard;
-    gK720ReaderManager.StartReader;
+    if not Assigned(gDispenserManager) then
+      gDispenserManager := TDispenserManager.Create;
+    gDispenserManager.LoadConfig(AppPath + 'TTCE_K720.xml');
+    gDispenserManager.StartDispensers;
+    //Æô¶¯¶Á¿¨Æ÷
   end;
 
   if FileExists(AppPath + 'NetVoice.xml') then

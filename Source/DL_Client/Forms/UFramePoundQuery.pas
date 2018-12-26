@@ -49,6 +49,8 @@ type
     N10: TMenuItem;
     N11: TMenuItem;
     N12: TMenuItem;
+    N13: TMenuItem;
+    N14: TMenuItem;
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
@@ -65,6 +67,7 @@ type
     procedure N9Click(Sender: TObject);
     procedure N11Click(Sender: TObject);
     procedure N12Click(Sender: TObject);
+    procedure N14Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -489,6 +492,33 @@ begin
   nP.FCommand := cCmd_EditData;
   nP.FParamA := SQLQuery.FieldByName('P_ID').AsString;
   CreateBaseFormItem(cFI_FormShipPoundCG, PopedomItem, @nP);
+end;
+
+procedure TfFramePoundQuery.N14Click(Sender: TObject);
+var nPID, nStr: string;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    if SQLQuery.FieldByName('P_Type').AsString = sFlag_Sale then
+    begin
+      nStr := Format('销售磅单请在发货明细进行上传', [nPID]);
+      ShowMsg(nStr, sHint);
+      Exit;
+    end;
+
+    nPID := SQLQuery.FieldByName('P_ID').AsString;
+
+    nStr := Format('确认上传磅单[ %s ]吗?', [nPID]);
+    if not QueryDlg(nStr, sHint) then Exit;
+
+    if not SyncPoundDetail(nPID) then
+    begin
+      ShowMsg('磅单上传失败',sHint);
+      Exit;
+    end;
+
+    ShowMsg('上传成功',sHint);
+  end;
 end;
 
 initialization

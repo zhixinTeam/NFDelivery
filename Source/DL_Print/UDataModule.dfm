@@ -21,4 +21,10 @@ object FDM: TFDM
     Left = 82
     Top = 74
   end
+  object ExecCommand: TADOQuery
+    Connection = ADOConn
+    Parameters = <>
+    Left = 144
+    Top = 16
+  end
 end

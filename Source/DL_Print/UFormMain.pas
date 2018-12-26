@@ -11,7 +11,7 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   IdContext, IdBaseComponent, IdComponent, IdCustomTCPServer, IdTCPServer,
   IdGlobal, UMgrRemotePrint, SyncObjs, UTrayIcon, StdCtrls, ExtCtrls,
-  ComCtrls;
+  ComCtrls, DateUtils;
 
 type
   TfFormMain = class(TForm)
@@ -510,24 +510,62 @@ end;
 //Desc: 打印标识为nHID的化验单
 function PrintHuaYanReport(const nBill: string; var nHint: string;
  const nPrinter: string = ''): Boolean;
-var nStr,nSR: string;
+var nStr,nSR, nSeal,nDate3D,nDate28D,n28Ya1: string;
+    nDate: TDateTime;
 begin
   nHint := '';
   Result := False;
+
+  nStr := 'Select sb.L_Seal,sr.R_28Ya1 From %s sb ' +
+          ' Left Join %s sr on sr.R_SerialNo=sb.L_Seal ' +
+          ' Where sb.L_ID = ''%s''';
+  nStr := Format(nStr, [sTable_Bill, sTable_StockRecord, nBill]);
+
+  with FDM.SQLQuery(nStr, FDM.SqlTemp) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nSeal := Fields[0].AsString;
+      n28Ya1 := Fields[1].AsString;
+    end;
+  end;
+
+  nDate3D := FormatDateTime('YYYY-MM-DD HH:MM:SS', Now);
+  nDate28D := nDate3D;
+  nStr := 'Select top 1 L_Date From %s Where L_Seal = ''%s'' order by L_Date';
+  nStr := Format(nStr, [sTable_Bill, nSeal]);
+
+  with FDM.SQLQuery(nStr, FDM.SqlTemp) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nDate3D := Fields[0].AsString;
+      try
+        nDate := StrToDateTime(nDate3D);
+        if n28Ya1 <> '' then
+          nDate := IncDay(nDate,29);
+        nDate28D := FormatDateTime('YYYY-MM-DD HH:MM:SS', nDate);
+      except
+      end;
+    end;
+  end;
   
   nSR := 'Select * From %s sr ' +
          ' Left Join %s sp on sp.P_ID=sr.R_PID';
   nSR := Format(nSR, [sTable_StockRecord, sTable_StockParam]);
 
-  nStr := 'Select hy.*,sr.*,C_Name From $HY hy ' +
+  nStr := 'Select hy.*,sr.*,b.*,C_Name,''$DD'' as R_Date3D,''$TD'' as R_Date28D From $HY hy ' +
+          ' Left Join $Bill b On b.L_ID=hy.H_Bill ' +
           ' Left Join $Cus cus on cus.C_ID=hy.H_Custom' +
           ' Left Join ($SR) sr on sr.R_SerialNo=H_SerialNo ' +
-          'Where H_Reporter=''$ID''';
+          'Where H_Bill=''$ID''';
   //xxxxx
 
-  nStr := MacroValue(nStr, [MI('$HY', sTable_StockHuaYan),
+  nStr := MacroValue(nStr, [MI('$DD', nDate3D), MI('$TD', nDate28D),
+          MI('$HY', sTable_StockHuaYan), MI('$Bill', sTable_Bill),
           MI('$Cus', sTable_Customer), MI('$SR', nSR), MI('$ID', nBill)]);
   //xxxxx
+  WriteLog('化验单查询:'+nStr);
 
   if FDM.SQLQuery(nStr, FDM.SqlTemp).RecordCount < 1 then
   begin
@@ -552,6 +590,13 @@ begin
   FDR.Dataset1.DataSet := FDM.SqlTemp;
   FDR.PrintReport;
   Result := FDR.PrintSuccess;
+  if Result then
+  begin
+    nStr := 'Update %s Set L_HyPrintCount=L_HyPrintCount + 1 ' +
+            'Where L_ID=''%s''';
+    nStr := Format(nStr, [sTable_Bill, nBill]);
+    FDM.ExecuteSQL(nStr);
+  end;
 end;
 
 //Desc: 打印标识为nID的合格证

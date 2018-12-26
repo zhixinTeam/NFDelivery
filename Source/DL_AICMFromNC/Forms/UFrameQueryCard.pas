@@ -1,5 +1,6 @@
 unit UFrameQueryCard;
 
+{$I Link.Inc}
 interface
 
 uses
@@ -21,6 +22,7 @@ type
     FLastCard: string;
     FLastQuery: Int64;
     //上次查询
+    FListA: TStrings;
   public
     { Public declarations }
     procedure OnCreateFrame; override;
@@ -64,17 +66,19 @@ procedure TfFrameQueryCard.OnCreateFrame;
 begin
   FLastCard := '';
   FLastQuery:= 0;
+  FListA := TStringList.Create;
 end;
 
 procedure TfFrameQueryCard.OnDestroyFrame;
 begin
-
+  FListA.Free;
 end;
 
 procedure TfFrameQueryCard.QueryCard(const nCard: string);
 var nVal: Double;
-    nStr,nStock,nBill,nVip,nLine,nPoundQueue,nTruck: string;
+    nStr,nStock,nBill,nVip,nLine,nPoundQueue,nTruck, nStockFz, nStockList: string;
     nDate: TDateTime;
+    nQueueMax: Integer;
 begin
   mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
   mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
@@ -168,6 +172,237 @@ begin
       //通道号
     end;
 
+    {$IFDEF AutoGetLineGroup}
+      {$IFDEF NoPointLine}
+      if nLine <> '' then
+      begin
+        nStr := 'Select Z_Valid,Z_Name From %s Where Z_ID=''%s'' ';
+        nStr := Format(nStr, [sTable_ZTLines, nLine]);
+
+        with FDM.SQLQuery(nStr) do
+        begin
+          if FieldByName('Z_Valid').AsString = 'N' then
+          begin
+          LabelHint.Caption := '您所在的通道已关闭，请联系调度人员.';
+          Exit;
+          end else
+          begin
+          LabelHint.Caption := '系统内您的车辆已入厂,请到' + FieldByName('Z_Name').AsString + '提货.';
+          Exit;
+          end;
+        end;
+      end;
+
+      nStockFz := nStock;
+
+      nStr := 'Select D_ParamB From %s Where D_Name=''%s'' and D_Value=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_BatStockGroup, nStock]);
+
+      with FDM.SQLQuery(nStr) do
+      begin
+        if RecordCount > 0 then
+        begin
+          nStockFz := Fields[0].AsString;
+        end;
+      end;
+
+      nStockList := '';
+
+      nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_ParamB=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_BatStockGroup, nStockFz]);
+
+      with FDM.SQLQuery(nStr) do
+      begin
+        if RecordCount > 0 then
+        begin
+          FListA.Clear;
+
+          First;
+
+          while not Eof do
+          begin
+            FListA.Add(Fields[0].AsString);
+            Next;
+          end;
+          nStockList := AdjustListStrFormat2(FListA, '''', True, ',', False);
+        end;
+      end;
+
+      if nStockList <> '' then
+      begin
+        nStr := 'Select Count(*) From %s ' +
+                'Where Z_StockNo In (%s) And Z_Valid=''%s'' And Z_VipLine=''%s''';
+        nStr := Format(nStr, [sTable_ZTLines, nStockList, sFlag_Yes,nVip]);
+
+        with FDM.SQLQuery(nStr) do
+        begin
+          LabelNum.Caption := '开放道数: ' + Fields[0].AsString + '个';
+        end;
+      end;
+
+      nStr := 'Select D_Value From $DT Where D_Memo = ''$PQ''';
+      nStr := MacroValue(nStr, [MI('$DT', sTable_SysDict),
+              MI('$PQ', sFlag_PoundQueue)]);
+
+      with FDM.SQLQuery(nStr) do
+      begin
+        if FieldByName('D_Value').AsString = 'Y' then
+        nPoundQueue := 'Y';
+      end;
+
+      nStr := 'Select D_Value From $DT Where D_Memo = ''$DQ''';
+      nStr := MacroValue(nStr, [MI('$DT', sTable_SysDict),
+              MI('$DQ', sFlag_DelayQueue)]);
+
+      with FDM.SQLQuery(nStr) do
+      begin
+        if nStockList = '' then
+        begin
+          if  FieldByName('D_Value').AsString = 'Y' then
+          begin
+            if nPoundQueue <> 'Y' then
+            begin
+              nStr := 'Select Count(*) From $TB Where T_InFact Is Null And ' +
+                      'T_Valid=''$Yes'' And T_StockNo=''$SN'' And T_InFact<''$IT'' And T_Vip=''$VIP''';
+            end else
+            begin
+              nStr := ' Select Count(*) From $TB left join S_PoundLog on S_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
+                      ' Where T_InFact Is Null And ' +
+                      ' T_Valid=''$Yes'' And T_StockNo=''$SN'' And P_PDate<''$IT'' And T_Vip=''$VIP''';
+            end;
+          end else
+          begin
+            nStr := 'Select Count(*) From $TB Where T_InFact Is Null And ' +
+                    'T_Valid=''$Yes'' And T_StockNo=''$SN'' And T_InTime<''$IT'' And T_Vip=''$VIP''';
+          end;
+
+          nStr := MacroValue(nStr, [MI('$TB', sTable_ZTTrucks),
+                MI('$Yes', sFlag_Yes), MI('$SN', nStock),
+                MI('$IT', DateTime2Str(nDate)),MI('$VIP', nVip)]);
+        end
+        else
+        begin
+          if  FieldByName('D_Value').AsString = 'Y' then
+          begin
+            if nPoundQueue <> 'Y' then
+            begin
+              nStr := 'Select Count(*) From $TB Where T_InFact Is Null And ' +
+                      'T_Valid=''$Yes'' And T_StockNo In ($SN) And T_InFact<''$IT'' And T_Vip=''$VIP''';
+            end else
+            begin
+              nStr := ' Select Count(*) From $TB left join S_PoundLog on S_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
+                      ' Where T_InFact Is Null And ' +
+                      ' T_Valid=''$Yes'' And T_StockNo In ($SN) And P_PDate<''$IT'' And T_Vip=''$VIP''';
+            end;
+          end else
+          begin
+            nStr := 'Select Count(*) From $TB Where T_InFact Is Null And ' +
+                    'T_Valid=''$Yes'' And T_StockNo In ($SN) And T_InTime<''$IT'' And T_Vip=''$VIP''';
+          end;
+
+          nStr := MacroValue(nStr, [MI('$TB', sTable_ZTTrucks),
+                MI('$Yes', sFlag_Yes), MI('$SN', nStockList),
+                MI('$IT', DateTime2Str(nDate)),MI('$VIP', nVip)]);
+        end;
+      end;
+      //xxxxx
+
+      with FDM.SQLQuery(nStr) do
+      begin
+        if Fields[0].AsInteger < 1 then
+        begin
+          nStr := '您已排到队首,请关注大屏调度准备进厂.';
+          LabelHint.Caption := nStr;
+        end else
+        begin
+          nStr := '您前面还有【 %d 】辆车等待进厂';
+          LabelHint.Caption := Format(nStr, [Fields[0].AsInteger]);
+        end;
+      end;
+
+      FLastQuery := GetTickCount;
+      FLastCard := nCard;
+      //已成功卡号
+      {$ELSE}
+      if nLine = '' then
+      begin
+        LabelHint.Caption := '您的车辆未入队，请联系调度人员.';
+        Exit;
+      end;
+
+      nStr := 'Select Z_Valid,Z_Name,Z_QueueMax From %s Where Z_ID=''%s'' ';
+      nStr := Format(nStr, [sTable_ZTLines, nLine]);
+
+      with FDM.SQLQuery(nStr) do
+      begin
+        if FieldByName('Z_Valid').AsString = 'N' then
+        begin
+          LabelHint.Caption := '您所在的通道已关闭，请联系调度人员.';
+          Exit;
+        end else
+        begin
+          nQueueMax := FieldByName('Z_QueueMax').AsInteger;
+        end;
+      end;
+
+      nStr := 'Select D_Value From $DT Where D_Memo = ''$PQ''';
+      nStr := MacroValue(nStr, [MI('$DT', sTable_SysDict),
+              MI('$PQ', sFlag_PoundQueue)]);
+
+      with FDM.SQLQuery(nStr) do
+      begin
+        if FieldByName('D_Value').AsString = 'Y' then
+        nPoundQueue := 'Y';
+      end;
+
+      nStr := 'Select D_Value From $DT Where D_Memo = ''$DQ''';
+      nStr := MacroValue(nStr, [MI('$DT', sTable_SysDict),
+              MI('$DQ', sFlag_DelayQueue)]);
+
+      with FDM.SQLQuery(nStr) do
+      begin
+      if  FieldByName('D_Value').AsString = 'Y' then
+        begin
+          if nPoundQueue <> 'Y' then
+          begin
+            nStr := 'Select Count(*) From $TB Where T_InFact Is Null And ' +
+                    'T_Valid=''$Yes'' And T_Line=''$SN'' And T_InFact<''$IT'' And T_Vip=''$VIP''';
+          end else
+          begin
+            nStr := ' Select Count(*) From $TB left join S_PoundLog on S_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
+                    ' Where T_InFact Is Null And ' +
+                    ' T_Valid=''$Yes'' And T_Line=''$SN'' And P_PDate<''$IT'' And T_Vip=''$VIP''';
+          end;
+        end else
+        begin
+          nStr := 'Select Count(*) From $TB Where T_InFact Is Null And ' +
+                  'T_Valid=''$Yes'' And T_Line=''$SN'' And T_InTime<''$IT'' And T_Vip=''$VIP''';
+        end;
+
+        nStr := MacroValue(nStr, [MI('$TB', sTable_ZTTrucks),
+              MI('$Yes', sFlag_Yes), MI('$SN', nLine),
+              MI('$IT', DateTime2Str(nDate)),MI('$VIP', nVip)]);
+      end;
+      //xxxxx
+
+      with FDM.SQLQuery(nStr) do
+      begin
+        if Fields[0].AsInteger < 1 then
+        begin
+          nStr := '您已排到队首,请关注大屏调度准备进厂.';
+          LabelHint.Caption := nStr;
+        end else
+        begin
+          nStr := '您所在通道前面还有【 %d 】辆车等待进厂';
+          LabelHint.Caption := Format(nStr, [Fields[0].AsInteger]);
+        end;
+      end;
+
+      FLastQuery := GetTickCount;
+      FLastCard := nCard;
+      //已成功卡号
+      {$ENDIF}
+    {$ELSE}
     if nLine <> '' then
     begin
       nStr := 'Select Z_Valid,Z_Name From %s Where Z_ID=''%s'' ';
@@ -243,6 +478,7 @@ begin
     FLastQuery := GetTickCount;
     FLastCard := nCard;
     //已成功卡号
+    {$ENDIF}
   except
     on E: Exception do
     begin

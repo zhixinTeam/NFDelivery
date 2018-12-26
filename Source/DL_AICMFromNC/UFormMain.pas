@@ -95,8 +95,6 @@ end;
 
 procedure TfFormMain.FormCreate(Sender: TObject);
 begin
-  PanelPrint.Visible := False;
-
   gPath := ExtractFilePath(ParamStr(0));  gNeedSearchPurOrder:= False;
 
   InitSystemObject;
@@ -237,6 +235,7 @@ begin
 
     PanelPurch.Visible := True;
     PanelSale.Visible := True;
+    PanelPrint.Visible := True;
   end else
   begin
     LabelDec.Caption := IntToStr(gTimeCounter) + ' ';
@@ -258,6 +257,12 @@ end;
 
 procedure TfFormMain.ButtonClick(Sender: TObject);
 begin
+  if gSysParam.FTTCEK720ID = '' then
+  begin
+    ShowMsg('未配置发卡机,请联系管理员', sHint);
+    Exit;
+  end;
+
   if Sender = BtnSCard then
   begin
     {$IFDEF SaleAICMFromNC}
@@ -269,7 +274,14 @@ begin
   end;
 
   if Sender = BtnPrint then
+  begin
+    {$IFDEF PrintHuaYanDan}
     CreateBaseFrame(cFI_FramePrint, PanelWork);
+    {$ELSE}
+    ShowMsg('业务暂未开通', sHint);
+    Exit;
+    {$ENDIF}
+  end;
 
   if Sender = btnPurOrderCard then
   begin
@@ -288,6 +300,7 @@ begin
 
   PanelPurch.Visible := False;
   PanelSale.Visible := False;
+  PanelPrint.Visible := False;
 
   gTimeCounter := 120;
   TimerDec.Enabled := True;

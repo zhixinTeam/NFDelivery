@@ -396,6 +396,8 @@ begin
            FListB.Values['Printer'] := sFlag_Yes
       else FListB.Values['Printer'] := sFlag_No;
 
+      FListB.Values['LineGroup'] := nLine.FLineGroup;
+
       FListC.Add(PackerEncodeStr(FListB.Text));
       //单线数据
     end;
@@ -539,6 +541,8 @@ begin
       nBm       := FieldByName('L_Bm').AsString;
       {$ELSE}
       nCusBz    := FieldByName('C_Memo').AsString;
+      if nCusBz = '' then
+        nCusBz := '00';
       {$ENDIF}
       //xxxxx
 
@@ -611,6 +615,13 @@ begin
       nCode := nSeal + ' ' + FormatDateTime('YYYY',Now)
                  + Copy(nBill, nPrefixLen + 3, 2)
                  + Copy(nBill, nPrefixLen + 5, 2) + ' ' + nCusBz;
+      {$ENDIF}
+
+      {$IFDEF YSNF}
+      nCode := nPCCode + '@7' + nCusBz + nSeal + '@2    '; //换行
+      //如果有汉字,则换行处理
+      nCode := nCode + FormatDateTime('YYYY',Now)
+                 + Copy(nBill, nPrefixLen + 3, 4) ;
       {$ENDIF}
 
       {$IFDEF HSNF}

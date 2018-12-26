@@ -19,8 +19,6 @@ type
     EditTruck: TcxTextEdit;
     dxLayout1Item8: TdxLayoutItem;
     EditValue: TcxTextEdit;
-    EditSMan: TcxComboBox;
-    dxLayout1Item13: TdxLayoutItem;
     EditCustom: TcxComboBox;
     dxLayout1Item3: TdxLayoutItem;
     EditNo: TcxButtonEdit;
@@ -36,7 +34,6 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditCustomKeyPress(Sender: TObject; var Key: Char);
-    procedure EditSManPropertiesEditValueChanged(Sender: TObject);
     procedure EditNoPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditTruckKeyPress(Sender: TObject; var Key: Char);
@@ -122,7 +119,6 @@ procedure TfFormHYData.InitFormData(const nID: string);
 begin
   EditDate.Date := Now;
   EditValue.Text := '0';
-  LoadSaleMan(EditSMan.Properties.Items);
 end;
 
 //Desc: 选择客户
@@ -142,9 +138,9 @@ begin
     CreateBaseFormItem(cFI_FormGetCustom, '', @nP);
     if (nP.FCommand <> cCmd_ModalResult) or (nP.FParamA <> mrOK) then Exit;
 
-    SetCtrlData(EditSMan, nP.FParamD);
     SetCtrlData(EditCustom, nP.FParamB);
-    
+    EditName.Text := nP.FParamC;
+
     if EditCustom.ItemIndex < 0 then
     begin
       nStr := Format('%s=%s.%s', [nP.FParamB, nP.FParamB, nP.FParamC]);
@@ -166,23 +162,6 @@ begin
     if (nP.FCommand = cCmd_ModalResult) and(nP.FParamA = mrOk) then
       EditTruck.Text := nP.FParamB;
     EditTruck.SelectAll;
-  end;
-end;
-
-//Desc: 业务员变更,选择客户
-procedure TfFormHYData.EditSManPropertiesEditValueChanged(Sender: TObject);
-var nStr: string;
-begin
-  EditCustom.Text := '';
-  
-  if EditSMan.ItemIndex >= 0 then
-  begin
-    AdjustStringsItem(EditCustom.Properties.Items, True);
-    nStr := 'C_ID=Select C_ID,C_Name From %s Where C_SaleMan=''%s''';
-    nStr := Format(nStr, [sTable_Customer, GetCtrlData(EditSMan)]);
-
-    FDM.FillStringsData(EditCustom.Properties.Items, nStr, -1, '.');
-    AdjustStringsItem(EditCustom.Properties.Items, False);
   end;
 end;
 
@@ -260,12 +239,15 @@ end;
 
 //Desc: 保存SQL
 procedure TfFormHYData.GetSaveSQLList(const nList: TStrings);
-var nStr: string;
+var nStr, nID: string;
 begin
-  nStr := 'Insert Into $Table(H_Custom,H_CusName,H_SerialNo,H_Truck,H_Value,' +
-          'H_BillDate,H_ReportDate,H_Reporter) Values(''$Cus'',''$CName'',' +
+  nID := GetSerialNo(sFlag_BusGroup, sFlag_HYDan, False);
+
+  nStr := 'Insert Into $Table(H_No,H_Custom,H_CusName,H_SerialNo,H_Truck,H_Value,' +
+          'H_BillDate,H_ReportDate,H_Reporter) Values(''$ID'',''$Cus'',''$CName'',' +
           '''$No'',''$TN'',$Val,''$BD'',$RD,''$RE'')';
   nStr := MacroValue(nStr, [MI('$Table', sTable_StockHuaYan),
+          MI('$ID', nID),
           MI('$Cus', GetCtrlData(EditCustom)), MI('$CName', EditName.Text),
           MI('$No', EditNo.Text), MI('$TN', EditTruck.Text),
           MI('$Val', EditValue.Text), MI('$BD', DateTime2Str(EditDate.Date)),

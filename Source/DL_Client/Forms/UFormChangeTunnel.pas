@@ -36,7 +36,7 @@ type
     FParam: PFormCommandParam;
     FZTTunnelID: string;
     //’ªµ¿±‡∫≈
-    FOldStockNo: string;
+    FOldStockNo, FOldLineGroup: string;
     //ŒÔ¡œ±‡∫≈
 
     procedure InitFormData;
@@ -91,6 +91,7 @@ begin
     FParam := nParam;
     FZTTunnelID := FParam.FParamA;
     FOldStockNo := FParam.FParamB;
+    FOldLineGroup := FParam.FParamC;
     InitFormData;
 
     FParam.FCommand := cCmd_ModalResult;
@@ -146,6 +147,13 @@ begin
 
   for nIdx:=Low(gZTLines) to High(gZTLines) do
   begin
+    {$IFDEF ForceLineGroup}
+    if FOldLineGroup <> '' then
+    begin
+      if gZTLines[nIdx].FLineGroup <> FOldLineGroup then
+        Continue;
+    end;
+    {$ENDIF}
     {$IFDEF FilterTunnel}
     if gZTLines[nIdx].FStock <> FOldStockNo then
       Continue;

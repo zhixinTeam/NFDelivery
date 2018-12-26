@@ -923,6 +923,17 @@ begin
     Exit;
   end;
 
+  {$IFDEF RemoteSnap}
+  if nTrucks[0].FSnapTruck then
+  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nDept,nSnapStr) then
+  begin
+    MakeGateSound(nSnapStr, nPos, False);
+    Exit;
+  end;
+  nStr := nSnapStr + ',请出厂';
+  MakeGateSound(nStr, nPos, True);
+  {$ENDIF}
+
   nRet := False;
   if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
     nRet := SaveLadingBills(sFlag_TruckOut, nTrucks) else
@@ -951,18 +962,6 @@ begin
 
     Exit;
   end;
-
-  {$IFDEF RemoteSnap}
-  if nTrucks[0].FSnapTruck then
-  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nDept,nSnapStr) then
-  begin
-    MakeGateSound(nSnapStr, nPos, False);
-    Exit;
-  end;
-  nStr := nSnapStr + ',请出厂';
-  MakeGateSound(nStr, nPos, True);
-  {$ENDIF}
-
 
   if (nReader <> '') and (Pos('nodoor', LowerCase(nOptions)) < 1) then
     HardOpenDoor(nReader);
@@ -1135,6 +1134,17 @@ begin
     Exit;
   end;
 
+  {$IFDEF RemoteSnap}
+  if nTrucks[0].FSnapTruck then
+  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nDept,nSnapStr) then
+  begin
+    MakeGateSound(nSnapStr, nPos, False);
+    Exit;
+  end;
+  nStr := nSnapStr + ',请出厂';
+  MakeGateSound(nStr, nPos, True);
+  {$ENDIF}
+
   nRet := False;
   if (nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew) then
     nRet := SaveLadingBills(sFlag_TruckOut, nTrucks) else
@@ -1162,17 +1172,6 @@ begin
 
     Exit;
   end;
-
-  {$IFDEF RemoteSnap}
-  if nTrucks[0].FSnapTruck then
-  if not VerifySnapTruck(nTrucks[0].FTruck,nTrucks[0].FID,nPos,nDept,nSnapStr) then
-  begin
-    MakeGateSound(nSnapStr, nPos, False);
-    Exit;
-  end;
-  nStr := nSnapStr + ',请出厂';
-  MakeGateSound(nStr, nPos, True);
-  {$ENDIF}
 
   HardOpenDoor(nReader);
   //抬杆
@@ -3050,7 +3049,9 @@ begin
     gDBConnManager.ReleaseConnection(nWorker);
   end;
 
+  {$IFNDEF PreShowEx}//特殊显示不再截取
   Result := Copy(Result, 1, 4);
+  {$ENDIF}
 end;
 
 //Date: 2015-01-14
@@ -3353,6 +3354,24 @@ begin
     begin
       nDai := Int(FValue * 1000) / nPLine.FPeerWeight;
 
+      {$IFDEF PreShowEx}
+        nStr := GetStockType(FID);
+        Result := Result + nStr + StringOfChar(' ' , 12 - Length(nStr));
+
+        Result := Result + Copy(nTrucks[0].FTruck, 1, 8);
+        nStr := FormatFloat('0000' , nDai);
+        Result := Result + StringOfChar('0' , 4 - Length(nStr)) + nStr;
+      {$ELSE}
+        nStr := GetStockType(FID);
+        Result := Result + nStr + StringOfChar(' ' , 7 - Length(nStr));
+
+        nStr := FormatFloat('00000' , nDai);
+        Result := Result + StringOfChar('0' , 5 - Length(nStr)) + nStr;
+
+        {$IFDEF PrepareShowTruck}
+        Result := Result + nTrucks[0].FTruck;
+        {$ENDIF}
+      {$ENDIF}
       nStr := GetStockType(FID);
       Result := Result + nStr + StringOfChar(' ' , 7 - Length(nStr));
 

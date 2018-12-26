@@ -40,10 +40,16 @@ const
   c_WeChatStatusDeleted          = 100;
 type
   TSysParam = record
+    FProgID     : string;                            //程序标识
     FLocalIP    : string;                            //本机IP
     FLocalMAC   : string;                            //本机MAC
     FLocalName  : string;                            //本机名称
     FMITServURL : string;                            //业务服务
+
+    FHYDanPrinter:string;                            //指定化验单打印的打印机
+    FCardPrinter: string;                            //指定小票打印机
+    FTTCEK720ID : string;                            //指定发卡机
+    FAICMPDCount: Integer;                           //自助拼单个数
   end;
   //系统参数
 
@@ -90,6 +96,7 @@ type
 resourcestring
   sImages     = 'Images\';
   sConfig     = 'Config.Ini';
+  sConfigSec  = 'Config';                   //主配置小节
   sForm       = 'FormInfo.Ini';
   sDB         = 'DBConn.Ini';
   sReportDir  = 'Report\';                  //报表目录

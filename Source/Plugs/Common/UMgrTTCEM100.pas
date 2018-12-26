@@ -390,6 +390,16 @@ begin
           FTunnel := nTmp.ValueAsString;
         //Í¨µÀºÅ
 
+        nTmp := FindNode('Post');
+        if Assigned(nTmp) then
+          FPost := nTmp.ValueAsString
+        else FPost := 'Sout';
+
+        nTmp := FindNode('Dept');
+        if Assigned(nTmp) then
+          FDept := nTmp.ValueAsString
+        else FDept := '';
+
         nTmp := FindNode('virtual');
         if Assigned(nTmp) then
         begin

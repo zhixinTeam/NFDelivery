@@ -10,7 +10,7 @@ interface
 uses
   Windows, DB, Classes, Controls, SysUtils, UBusinessPacker, UBusinessWorker,
   UBusinessConst, ULibFun, UAdjustForm, UFormCtrl, UDataModule, USelfHelpConst,
-  USysDB, USysLoger, UBase64, UFormWait, Graphics, ShellAPI, UDataReport;
+  USysDB, USysLoger, UBase64, UFormWait, Graphics, ShellAPI, UDataReport, DateUtils;
 
 type
   TLadingStockItem = record
@@ -111,8 +111,18 @@ function SaveWebOrderMatch(const nBillID,
 
 function PrintShipProReport(nRID: string; const nAsk: Boolean): Boolean;
 //打印复磅采购单
+function PrintBillReport(nBill: string; const nAsk: Boolean): Boolean;
+//打印提货单
+function PrintHuaYanReport(const nBill: string; var nHint: string;
+ const nPrinter: string = ''): Boolean;
+//打印标识为nHID的化验单
 function LoadSysDictItem(const nItem: string; const nList: TStrings): TDataSet;
 //读取系统字典项
+function IfHasLine(const nStockNo, nType, nBrand: string; var nHint: string): Boolean;
+//检查是否有可用通道
+function IsTruckGPSValid(const nTruckNo: string): Boolean;
+function IsCardValid(const nCard: string): Boolean;
+function IsPurTruckReady(const nTruck: string; var nHint: string): Boolean;
 
 implementation
 
@@ -730,6 +740,171 @@ begin
   Result := FDR.PrintSuccess;
 end;
 
+//Desc: 打印提货单
+function PrintBillReport(nBill: string; const nAsk: Boolean): Boolean;
+var nStr: string;
+    nParam: TReportParamItem;
+begin
+  Result := False;
+
+  if nAsk then
+  begin
+    nStr := '是否要打印提货单?';
+    if not QueryDlg(nStr, sAsk) then Exit;
+  end;
+
+  nStr := 'Select * From %s b ' +
+          '  Left Join %s p on b.L_ID=p.P_Bill ' +
+          'Where L_ID = ''%s'' ';
+  nStr := Format(nStr, [sTable_Bill, sTable_PoundLog, nBill]);
+
+  if FDM.SQLQuery(nStr).RecordCount < 1 then
+  begin
+    nStr := '编号为[ %s ] 的记录已无效!!';
+    nStr := Format(nStr, [nBill]);
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nStr := gPath + sReportDir + 'LadingBill.fr3';
+  //default
+  
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nStr := '无法正确加载报表文件';
+    ShowMsg(nStr, sHint); Exit;
+  end;
+
+  nParam.FName := 'UserName';
+  nParam.FValue := 'AICM';
+  FDR.AddParamItem(nParam);
+
+  nParam.FName := 'Company';
+  nParam.FValue := '';
+  FDR.AddParamItem(nParam);
+
+  FDR.Dataset1.DataSet := FDM.SQLQuery1;
+  FDR.Report1.PrintOptions.Printer := 'My_Default_Printer';
+  FDR.PrintReport;
+  Result := FDR.PrintSuccess;
+end;
+
+function GetReportFileByStock(const nStock: string): string;
+begin
+  Result := GetPinYinOfStr(nStock);
+
+  if Pos('dj', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan42_DJ.fr3'
+  else if Pos('gsysl', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan_gsl.fr3'
+  else if Pos('kzf', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan_kzf.fr3'
+  else if Pos('qz', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan_qz.fr3'
+  else if Pos('32', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan32.fr3'
+  else if Pos('42', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan42.fr3'
+  else if Pos('52', Result) > 0 then
+    Result := gPath + sReportDir + 'HuaYan42.fr3'
+  else Result := '';
+end;
+
+//Desc: 打印标识为nHID的化验单
+function PrintHuaYanReport(const nBill: string; var nHint: string;
+ const nPrinter: string = ''): Boolean;
+var nStr,nSR, nSeal,nDate3D,nDate28D,n28Ya1,nBD: string;
+    nDate: TDateTime;
+begin
+  nHint := '';
+  Result := False;
+
+  nSeal := '';
+  nBD := '';
+  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_HyPrintCount From %s sb ' +
+          ' Left Join %s sr on sr.R_SerialNo=sb.L_Seal ' +
+          ' Where sb.L_ID = ''%s''';
+  nStr := Format(nStr, [sTable_Bill, sTable_StockRecord, nBill]);
+
+  with FDM.SQLQuery(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nSeal := Fields[0].AsString;
+      n28Ya1 := Fields[1].AsString;
+      if Fields[2].AsInteger >= 1 then
+        nBD := '补';
+    end;
+  end;
+
+  nDate3D := FormatDateTime('YYYY-MM-DD HH:MM:SS', Now);
+  nDate28D := nDate3D;
+  nStr := 'Select top 1 L_Date From %s Where L_Seal = ''%s'' order by L_Date';
+  nStr := Format(nStr, [sTable_Bill, nSeal]);
+
+  with FDM.SQLQuery(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nDate3D := Fields[0].AsString;
+      try
+        nDate := StrToDateTime(nDate3D);
+        if n28Ya1 <> '' then
+          nDate := IncDay(nDate,29);
+        nDate28D := FormatDateTime('YYYY-MM-DD HH:MM:SS', nDate);
+      except
+      end;
+    end;
+  end;
+  
+  nSR := 'Select * From %s sr ' +
+         ' Left Join %s sp on sp.P_ID=sr.R_PID';
+  nSR := Format(nSR, [sTable_StockRecord, sTable_StockParam]);
+
+  nStr := 'Select hy.*,sr.*,b.*,C_Name,''$DD'' as R_Date3D ,''$BD'' as L_HyBd,''$TD'' as R_Date28D From $HY hy ' +
+          ' Left Join $Bill b On b.L_ID=hy.H_Bill ' +
+          ' Left Join $Cus cus on cus.C_ID=hy.H_Custom' +
+          ' Left Join ($SR) sr on sr.R_SerialNo=H_SerialNo ' +
+          'Where H_Bill=''$ID''';
+  //xxxxx
+
+  nStr := MacroValue(nStr, [MI('$DD', nDate3D), MI('$BD', nBD), MI('$TD', nDate28D),
+          MI('$HY', sTable_StockHuaYan), MI('$Bill', sTable_Bill),
+          MI('$Cus', sTable_Customer), MI('$SR', nSR), MI('$ID', nBill)]);
+  //xxxxx
+  WriteLog('化验单查询:'+nStr);
+  if FDM.SQLQuery(nStr).RecordCount < 1 then
+  begin
+    nHint := '提货单[ %s ]没有对应的化验单';
+    nHint := Format(nHint, [nBill]);
+    Exit;
+  end;
+
+  nStr := FDM.SQLQuery1.FieldByName('P_Stock').AsString;
+  nStr := GetReportFileByStock(nStr);
+
+  if not FDR.LoadReportFile(nStr) then
+  begin
+    nHint := '无法正确加载报表文件: ' + nStr;
+    Exit;
+  end;
+
+  if nPrinter = '' then
+       FDR.Report1.PrintOptions.Printer := 'My_Default_HYPrinter'
+  else FDR.Report1.PrintOptions.Printer := nPrinter;
+
+  FDR.Dataset1.DataSet := FDM.SQLQuery1;
+  FDR.PrintReport;
+  Result := FDR.PrintSuccess;
+
+  if Result then
+  begin
+    nStr := 'Update %s Set L_HyPrintCount=L_HyPrintCount + 1 ' +
+            'Where L_ID=''%s''';
+    nStr := Format(nStr, [sTable_Bill, nBill]);
+    FDM.ExecuteSQL(nStr);
+  end;
+end;
+
 //Date: 2010-4-13
 //Parm: 字典项;列表
 //Desc: 从SysDict中读取nItem项的内容,存入nList中
@@ -752,6 +927,107 @@ begin
       Next;
     end;
   end else Result := nil;
+end;
+
+function IfHasLine(const nStockNo, nType, nBrand: string; var nHint: string): Boolean;
+var nStr: string;
+    nList: TStrings;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
+
+  nList := TStringList.Create;
+
+  try
+    nList.Values['Type'] := nType;
+    if nBrand = '' then
+    begin
+      nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_DefaultBrand]);
+
+      with FDM.SQLQuery(nStr) do
+      begin
+        if RecordCount >0 then
+        begin
+          nList.Values['Brand'] := Fields[0].AsString;
+        end;
+      end;
+    end
+    else
+      nList.Values['Brand'] := nBrand;
+
+    if not CallBusinessCommand(cBC_AutoGetLineGroup,
+          nStockNo, PackerEncodeStr(nList.Text), @nOut) then
+    begin
+      nHint := '查询可用通道失败:' + nOut.FData;
+      Exit;
+    end;
+    Result := True;
+  finally
+    nList.Free;
+  end;
+end;
+
+function IsTruckGPSValid(const nTruckNo: string): Boolean;
+var
+  nSql:string;
+begin
+  Result := False;
+
+  nSql := 'select * from %s where T_Truck = ''%s'' ';
+  nSql := Format(nSql,[sTable_Truck,nTruckNo]);
+
+  with FDM.SQLQuery(nSql) do
+  begin
+    if recordcount>0 then
+    begin
+      if FieldByName('T_HasGPS').AsString = sFlag_Yes then//启用
+      begin
+        Result := True;
+      end;
+    end;
+  end;
+end;
+
+function IsCardValid(const nCard: string): Boolean;
+var
+  nSql:string;
+begin
+  Result := False;
+
+  nSql := 'select C_Card2,C_Card3 from %s where C_Card = ''%s'' ';
+  nSql := Format(nSql,[sTable_Card,nCard]);
+
+  with FDM.SQLQuery(nSql) do
+  begin
+    if recordcount>0 then
+    begin
+      if (Trim(Fields[0].AsString) <> '') or (Trim(Fields[1].AsString) <> '')then
+      begin
+        Result := True;
+      end;
+    end;
+  end;
+end;
+
+function IsPurTruckReady(const nTruck: string; var nHint: string): Boolean;
+var
+  nSql:string;
+begin
+  Result := True;
+  nHint := '';
+
+  nSql := 'select R_ID from %s where P_Truck = ''%s'' and P_Status <>''%s'' ';
+  nSql := Format(nSql,[sTable_CardProvide,nTruck,sFlag_TruckOut]);
+
+  with FDM.SQLQuery(nSql) do
+  begin
+    if recordcount>0 then
+    begin
+      Result := False;
+      nHint := Fields[0].AsString;
+    end;
+  end;
 end;
 
 end.

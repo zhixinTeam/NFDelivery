@@ -63,6 +63,7 @@ type
     FBuCha      : Integer;     //补差总装
     FStarted    : Boolean;     //是否启动
     FTruckEx    : string;      //格式化车牌
+    FCusName    : string;
   end;
 
   TQueueParam = record
@@ -1348,6 +1349,13 @@ begin
       begin
         if not FTruckPool[i].FEnable then Continue;
         //0.车辆无需处理
+
+        {$IFDEF AutoGetLineGroup}
+        {$IFNDEF NoPointLine}
+        if FTruckPool[i].FIsReal and (FRealCount >= FQueueMax) then Continue;
+        //实位车辆,队列已满
+        {$ENDIF}
+        {$ENDIF}
 
         if FTruckPool[i].FLine <> FLineID then Continue;
         //1.车辆和通道标识号不匹配

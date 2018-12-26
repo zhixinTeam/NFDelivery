@@ -281,7 +281,9 @@ ResourceString
   sFlag_WXSrvRemote   = 'WXServiceRemote';           //微信远程服务
 
   sFlag_HYDan         = 'Bus_HYDan';                 //化验单号
-  
+  sFlag_HYValue       = 'HYMaxValue';                //化验批次量
+  sFlag_AICMPDCount   = 'AICMPDCount';               //自助拼单个数
+
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
   sTable_User         = 'Sys_User';                  //用户表

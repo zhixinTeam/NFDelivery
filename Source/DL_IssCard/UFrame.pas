@@ -10,7 +10,8 @@ uses
   cxTextEdit, cxLabel, cxMaskEdit, cxDropDownEdit, UMgrBXFontCard,
   ExtCtrls, IdTCPServer, IdContext, IdGlobal, UBusinessConst, ULibFun,
   Menus, cxButtons, UMgrSendCardNo, USysLoger, cxCurrencyEdit, dxSkinsCore,
-  dxSkinsDefaultPainters, cxSpinEdit, DateUtils,UMgrKeyboardTunnels, USysBusiness;
+  dxSkinsDefaultPainters, cxSpinEdit, DateUtils,UMgrKeyboardTunnels,
+  UMgrTTCEDispenser, USysBusiness;
 
 type
   TFrame1 = class(TFrame)
@@ -36,6 +37,7 @@ type
     FLastTruck, FTruck: string;//该通道实时获取的最新车牌号
     FIdx  : Integer;
     FSaveMsg: string;//保存时产生的信息
+    FTTCEK720ID: string;//对应发卡机ID
     procedure OnKeyBoardDataEvent(const nKey: string);
     procedure OnKeyBoardData(const nKey: string);
     //读取磅重
@@ -74,9 +76,13 @@ begin
      (FKeyBoardTunnel.FOptions.Values['SnapPost'] <> '') then
   begin
     FSnapPost := FKeyBoardTunnel.FOptions.Values['SnapPost'];
+    FTTCEK720ID := FKeyBoardTunnel.FOptions.Values['TTCEK720ID'];
   end
   else
+  begin
     FSnapPost := 'SIn';
+    FTTCEK720ID := 'FK001';
+  end;
 
   for nIdx := Low(gPurOrderItems) to High(gPurOrderItems) do
   begin
@@ -200,8 +206,8 @@ var
 begin
   Result := False;
 
-  nSQL := 'select P_Card from %s where P_Truck =''%s'' and P_OutTime is null';
-  nSQL := Format(nSQL, [sTable_CardProvide, nTruck]);
+  nSQL := 'select P_Card from %s where P_Truck =''%s'' and P_Status <>''%s''';
+  nSQL := Format(nSQL, [sTable_CardProvide, nTruck, sFlag_TruckOut]);
   with FDM.QueryTemp(nSQL) do
   begin
     if RecordCount>0 then
@@ -214,6 +220,21 @@ begin
       end;
     end;
   end;
+
+  gPurOrderItems[FIdx].FOrder_id := '';
+  gPurOrderItems[FIdx].FZhiKaNo  := '';
+  gPurOrderItems[FIdx].FProvID   := '';
+  gPurOrderItems[FIdx].FProvName := '';
+
+  gPurOrderItems[FIdx].FgoodsID  := '';
+  gPurOrderItems[FIdx].FGoodsname:= '';
+  gPurOrderItems[FIdx].FMaxMum   := '';
+
+  gPurOrderItems[FIdx].FData := '';
+  gPurOrderItems[FIdx].FTrackNo := '';
+  gPurOrderItems[FIdx].FArea    := '';
+  gPurOrderItems[FIdx].FCanSave := False;
+
   nListA := TStringList.Create;
   nListB := TStringList.Create;
   try
@@ -250,6 +271,8 @@ begin
     gPurOrderItems[FIdx].FTrackNo := nTruck;
     gPurOrderItems[FIdx].FArea    := nListB.Values['SaleArea'];
     gPurOrderItems[FIdx].FCanSave := True;
+
+    DoSaveWork(FTTCEK720ID,FIdx);
   finally
     nListA.Free;
     nListB.Free;
@@ -288,7 +311,7 @@ end;
 procedure TFrame1.GetTruckTimerTimer(Sender: TObject);
 var nStr: string;
 begin
-  nStr := 'Select top 1 S_Truck From %s Where S_ID=''%s'' order by R_ID';
+  nStr := 'Select top 1 S_Truck From %s Where S_ID=''%s'' order by R_ID desc';
   nStr := Format(nStr, [sTable_SnapTruck, FSnapPost]);
 
   with FDM.QueryTemp(nStr) do

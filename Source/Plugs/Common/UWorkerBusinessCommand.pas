@@ -4214,7 +4214,15 @@ begin
       nNeedManu := FieldByName('D_Value').AsString = sFlag_Yes;
     end;
   end;
-  WriteLog('车牌识别:'+'岗位:'+nPos+'事件接收部门:'+nDept);
+
+  if not nNeedManu then
+  begin
+    WriteLog('车牌识别:'+'岗位:'+nPos+'事件接收部门:'+nDept+'人工干预:否');
+    Result := True;
+    Exit;
+  end
+  else
+    WriteLog('车牌识别:'+'岗位:'+nPos+'事件接收部门:'+nDept+'人工干预:是');
   {$IFDEF SaveAllSnap}
   nStr := 'Select * From %s Where S_ID=''%s''';
   nStr := Format(nStr, [sTable_SnapTruck, nPos]);
@@ -4439,6 +4447,25 @@ begin
       Next;
     end;
   end;
+
+  {$IFDEF ForceLineGroup}
+  if FListA.Values['LineGroup'] <> '' then
+  begin
+    FListC.Clear;
+    FListC.Add(FListA.Values['LineGroup']);
+    WriteLog('强制生产线模式:强制生产线为' + FListA.Values['LineGroup']);
+  end;
+  {$ENDIF}
+
+  {$IFDEF ManuLineGroup}
+  if FListA.Values['LineGroup'] <> '' then
+  begin
+    FListC.Clear;
+    FListC.Add(FListA.Values['LineGroup']);
+    WriteLog('人工指定生产线模式:指定生产线为' + FListA.Values['LineGroup']);
+  end;
+  {$ENDIF}
+
   nStrAdj := AdjustListStrFormat2(FListC, '''', True, ',', False);
 
   if nHideStock then
@@ -4594,27 +4621,27 @@ begin
              '车辆数量为:'+IntToStr(FLineItems[nIdx].FTruckCount) +
              '通道最大负载为:'+IntToStr(FLineItems[nIdx].FMaxCount) +
              '所属分组:'+FLineItems[nIdx].FGroupID);
-    if FLineItems[nIdx].FTruckCount < FLineItems[nIdx].FMaxCount then
-    begin
-      Inc(nI);
-      FLineItems[nIdx].FValid := True;
-    end;
+//    if FLineItems[nIdx].FTruckCount < FLineItems[nIdx].FMaxCount then
+//    begin
+//      Inc(nI);
+//      FLineItems[nIdx].FValid := True;
+//    end;
   end;
 
-  if nI = 0 then
-  begin
-    nData := '物料[ %s ]符合条件的通道已满.';
-    nData := Format(nData, [nBatStockNo]);
-    WriteLog('物料'+ nBatStockNo +'符合条件的通道已满.');
-    Exit;
-  end;
+//  if nI = 0 then
+//  begin
+//    nData := '物料[ %s ]符合条件的通道已满.';
+//    nData := Format(nData, [nBatStockNo]);
+//    WriteLog('物料'+ nBatStockNo +'符合条件的通道已满.');
+//    Exit;
+//  end;
 
   nI := 0;
   FOut.FData := '';
   for nIdx := Low(FLineItems) to High(FLineItems) do
   begin
-    if FLineItems[nIdx].FValid = False then
-      Continue;
+//    if FLineItems[nIdx].FValid = False then
+//      Continue;
     try
       if FOut.FData = '' then
       begin

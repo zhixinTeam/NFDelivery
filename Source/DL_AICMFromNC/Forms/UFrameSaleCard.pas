@@ -1,5 +1,6 @@
 unit UFrameSaleCard;
 
+{$I Link.Inc}
 interface
 
 uses
@@ -7,7 +8,7 @@ uses
   Dialogs, UFrameBase, ComCtrls, ExtCtrls, Buttons, StdCtrls,
   USelfHelpConst, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, cxTextEdit, cxMaskEdit,
-  cxButtonEdit, cxDropDownEdit, dxGDIPlusClasses, jpeg ;
+  cxButtonEdit, cxDropDownEdit, dxGDIPlusClasses, jpeg, cxCheckBox ;
 
 type
 
@@ -15,11 +16,12 @@ type
     Pnl_OrderInfo: TPanel;
     lvOrders: TListView;
     BtnSave: TSpeedButton;
+    PrintHY: TcxCheckBox;
     procedure lvOrdersClick(Sender: TObject);
     procedure BtnSaveClick(Sender: TObject);
   private
     { Private declarations }
-    FListA, FListB, FListC: TStrings;
+    FListA, FListB, FListC, FListD: TStrings;
     FSaleOrderItems : array of TOrderInfoItem; //订单数组
     FSaleOrderItem : TOrderInfoItem;
   private
@@ -47,7 +49,7 @@ implementation
 {$R *.dfm}
 
 uses
-    ULibFun, USysLoger, UDataModule, UMgrControl, USysBusiness, UMgrK720Reader,
+    ULibFun, USysLoger, UDataModule, UMgrControl, USysBusiness, UMgrTTCEDispenser,
     USysDB, UBase64;
 
 //------------------------------------------------------------------------------
@@ -64,10 +66,18 @@ end;
 
 procedure TfFrameSaleCard.OnCreateFrame;
 begin
+  {$IFDEF PrintHYEach}
+  PrintHY.Checked := False;
+  PrintHY.Visible := True;
+  {$ELSE}
+  PrintHY.Checked := False;
+  PrintHY.Visible := False;
+  {$ENDIF}
   DoubleBuffered := True;
   FListA := TStringList.Create;
   FListB := TStringList.Create;
   FListC := TStringList.Create;
+  FListD := TStringList.Create;
 end;
 
 procedure TfFrameSaleCard.OnDestroyFrame;
@@ -75,6 +85,7 @@ begin
   FListA.Free;
   FListB.Free;
   FListC.Free;
+  FListD.Free;
 end;
 
 procedure TfFrameSaleCard.LoadNcSaleList(nSTDid, nPassword: string);
@@ -237,14 +248,14 @@ begin
           ShowMsg('不同车牌号无法拼单,请重新选择', sHint);
           Exit;
         end;
-        nCanPd := nCanPd and (nInt < 2);
+        nCanPd := nCanPd and (nInt < gSysParam.FAICMPDCount);
       end
       else
         nCanPd := True;
 
       if not nCanPd then
       begin
-        ShowMsg('最多支持2个订单进行拼单,请重新选择', sHint);
+        ShowMsg('最多支持' + IntToStr(gSysParam.FAICMPDCount) +'个订单进行拼单,请重新选择', sHint);
         Exit;
       end;
       SubItems[4] := sCheck;
@@ -272,12 +283,12 @@ begin
 end;
 
 procedure TfFrameSaleCard.BtnSaveClick(Sender: TObject);
-var nMsg, nStr, nCard: string;
+var nMsg, nStr, nCard, nHint: string;
     nIdx, nInt: Integer;
-    nRet: Boolean;
+    nRet, nPrint: Boolean;
 begin
   nInt := 0;
-
+  BtnSave.Visible := False;
   for nIdx := Low(FSaleOrderItems) to High(FSaleOrderItems) do
   begin
     if FSaleOrderItems[nIdx].FSelect then
@@ -292,104 +303,165 @@ begin
     Exit;
   end;
 
-  for nIdx:=0 to 3 do
-  if gMgrK720Reader.ReadCard(nCard) then Break
-  else Sleep(500);
-  //连续三次读卡,成功则退出。
-
-  if nCard = '' then
-  begin
-    nMsg := '卡箱异常,请查看是否有卡.';
-    ShowMsg(nMsg, sWarn);
-    Exit;
-  end;
-
-  nCard := gMgrK720Reader.ParseCardNO(nCard);
-  WriteLog('读取到卡片: ' + nCard);
-  //解析卡片
-
-  nStr := GetCardUsed(nCard);
-  if (nStr = sFlag_Sale) or (nStr = sFlag_SaleNew) then
-    LogoutBillCard(nCard);
-  //销售业务注销卡片,其它业务则无需注销
-  nInt := 0;
-  for nIdx := Low(FSaleOrderItems) to High(FSaleOrderItems) do
-  begin
-    if not FSaleOrderItems[nIdx].FSelect then
-      Continue;
-
-    nInt := nInt + 1;
-
-    with FListB do
+  try
+    {$IFDEF AICMVerifyGPS}
+    for nIdx := Low(FSaleOrderItems) to High(FSaleOrderItems) do
     begin
-      Clear;
+      if not FSaleOrderItems[nIdx].FSelect then
+        Continue;
 
-      Values['Orders'] := EncodeBase64(FSaleOrderItems[nIdx].FOrders);
-      Values['Value'] := FloatToStr(FSaleOrderItems[nIdx].FValue);                                 //订单量
-      Values['Truck'] := FSaleOrderItems[nIdx].FTruck;
-      Values['Lading'] := sFlag_TiHuo;
-      Values['IsVIP'] := sFlag_TypeCommon;
-      Values['Pack'] := GetStockPackStyle(FSaleOrderItems[nIdx].FStockID);
-      Values['BuDan'] := sFlag_No;
-      Values['CusID'] := FSaleOrderItems[nIdx].FCusID;
-      Values['CusName'] := FSaleOrderItems[nIdx].FCusName;
-      Values['Brand'] := FSaleOrderItems[nIdx].FStockBrand;
-      Values['StockArea'] := FSaleOrderItems[nIdx].FStockArea;
-      Values['bm'] := FSaleOrderItems[nIdx].FBm;
-      Values['wxzhuid'] := FSaleOrderItems[nIdx].FWxZhuId;
-      Values['wxziid'] := FSaleOrderItems[nIdx].FWxZiId;
-      Values['PrintHY'] := sFlag_Yes;
+      if not IsTruckGPSValid(FSaleOrderItems[nIdx].FTruck) then
+      begin
+        ShowMsg(FSaleOrderItems[nIdx].FTruck + '未启用GPS,请联系管理员', sHint);
+        Exit;
+      end;
+    end;
+    {$ENDIF}
+
+    {$IFDEF AutoGetLineGroup}
+    for nIdx := Low(FSaleOrderItems) to High(FSaleOrderItems) do
+    begin
+      if not FSaleOrderItems[nIdx].FSelect then
+        Continue;
+
+      if not IfHasLine(FSaleOrderItems[nIdx].FStockID, sFlag_TypeCommon,
+                       FSaleOrderItems[nIdx].FStockBrand, nHint) then
+      begin
+        ShowMsg(nHint, sHint);
+        Exit;
+      end;
+    end;
+    {$ENDIF}
+
+    for nIdx:=0 to 3 do
+    begin
+      nCard := gDispenserManager.GetCardNo(gSysParam.FTTCEK720ID, nHint, False);
+      if nCard <> '' then
+        Break;
+      Sleep(500);
+    end;
+    //连续三次读卡,成功则退出。
+
+    if nCard = '' then
+    begin
+      nMsg := '卡箱异常,请查看是否有卡.';
+      ShowMsg(nMsg, sWarn);
+      Exit;
     end;
 
-    nStr := SaveBill(EncodeBase64(FListB.Text));
-    //call mit bus
-    nRet := nStr <> '';
+    WriteLog('读取到卡片: ' + nCard);
+    //解析卡片
+    if not IsCardValid(nCard) then
+    begin
+      gDispenserManager.RecoveryCard(gSysParam.FTTCEK720ID, nHint);
+      nMsg := '卡号' + nCard + '非法,回收中,请稍后重新取卡';
+      WriteLog(nMsg);
+      ShowMsg(nMsg, sWarn);
+      Exit;
+    end;
+
+    nStr := GetCardUsed(nCard);
+    if (nStr = sFlag_Sale) or (nStr = sFlag_SaleNew) then
+      LogoutBillCard(nCard);
+    //销售业务注销卡片,其它业务则无需注销
+
+    FListC.Clear;
+
+    nInt := 0;
+    for nIdx := Low(FSaleOrderItems) to High(FSaleOrderItems) do
+    begin
+      if not FSaleOrderItems[nIdx].FSelect then
+        Continue;
+
+      nInt := nInt + 1;
+
+      LoadSysDictItem(sFlag_PrintBill, FListD);
+      //需打印品种
+      nPrint := FListD.IndexOf(FSaleOrderItems[nIdx].FStockID) >= 0;
+
+      with FListB do
+      begin
+        Clear;
+
+        Values['Orders'] := EncodeBase64(FSaleOrderItems[nIdx].FOrders);
+        Values['Value'] := FloatToStr(FSaleOrderItems[nIdx].FValue);                                 //订单量
+        Values['Truck'] := FSaleOrderItems[nIdx].FTruck;
+        Values['Lading'] := sFlag_TiHuo;
+        Values['IsVIP'] := sFlag_TypeCommon;
+        Values['Pack'] := GetStockPackStyle(FSaleOrderItems[nIdx].FStockID);
+        Values['BuDan'] := sFlag_No;
+        Values['CusID'] := FSaleOrderItems[nIdx].FCusID;
+        Values['CusName'] := FSaleOrderItems[nIdx].FCusName;
+        Values['Brand'] := FSaleOrderItems[nIdx].FStockBrand;
+        Values['StockArea'] := FSaleOrderItems[nIdx].FStockArea;
+        Values['bm'] := FSaleOrderItems[nIdx].FBm;
+        Values['wxzhuid'] := FSaleOrderItems[nIdx].FWxZhuId;
+        Values['wxziid'] := FSaleOrderItems[nIdx].FWxZiId;
+        if PrintHY.Checked  then
+             Values['PrintHY'] := sFlag_Yes
+        else Values['PrintHY'] := sFlag_No;
+        {$IFDEF RemoteSnap}
+        Values['SnapTruck'] := sFlag_Yes;
+        {$ELSE}
+        Values['SnapTruck'] := sFlag_No;
+        {$ENDIF}
+      end;
+
+      nStr := SaveBill(EncodeBase64(FListB.Text));
+      //call mit bus
+      nRet := nStr <> '';
+      if not nRet then
+      begin
+        nMsg := '生成提货单信息失败,请联系管理员尝试手工制卡.';
+        ShowMsg(nMsg, sHint);
+        Exit;
+      end;
+
+      nRet := SaveBillCard(nStr, nCard);
+
+      if nRet and nPrint then
+        FListC.Add(nStr);
+      //SaveWebOrderMatch(nStr,FSaleOrderItems[nIdx].FOrders,sFlag_Sale);
+    end;
+
     if not nRet then
     begin
-      nMsg := '生成提货单信息失败,请联系管理员尝试手工制卡.';
+      nMsg := '办理磁卡失败,请重试.';
       ShowMsg(nMsg, sHint);
       Exit;
     end;
 
-    nRet := SaveBillCard(nStr, nCard);
-    //SaveWebOrderMatch(nStr,FSaleOrderItems[nIdx].FOrders,sFlag_Sale);
+    nRet := gDispenserManager.SendCardOut(gSysParam.FTTCEK720ID, nHint);
+    //发卡
+
+    if nRet then
+    begin
+      nMsg := '提货单[ %s ]发卡成功,卡号[ %s ],请收好您的卡片';
+      nMsg := Format(nMsg, [nStr, nCard]);
+
+      WriteLog(nMsg);
+      ShowMsg(nMsg,sWarn);
+
+      for nIdx := 0 to FListC.Count - 1 do
+      begin
+        PrintBillReport(FListC.Strings[nIdx], False);
+        Sleep(200);
+      end;
+    end
+    else begin
+      gDispenserManager.RecoveryCard(gSysParam.FTTCEK720ID, nHint);
+
+      nMsg := '卡号[ %s ]关联订单失败,请到开票窗口重新关联.';
+      nMsg := Format(nMsg, [nCard]);
+
+      WriteLog(nMsg);
+      ShowMsg(nMsg,sWarn);
+    end;
+
+    gTimeCounter := 0;
+  finally
+    BtnSave.Visible := True;
   end;
-
-  if not nRet then
-  begin
-    nMsg := '办理磁卡失败,请重试.';
-    ShowMsg(nMsg, sHint);
-    Exit;
-  end;
-
-  for nIdx := 0 to 3 do
-  begin
-    nRet := gMgrK720Reader.SendReaderCmd('FC0');
-    if nRet then Break;
-
-    Sleep(500);
-  end;
-  //发卡
-
-  if nRet then
-  begin
-    nMsg := '提货单[ %s ]发卡成功,卡号[ %s ],请收好您的卡片';
-    nMsg := Format(nMsg, [nStr, nCard]);
-
-    WriteLog(nMsg);
-    ShowMsg(nMsg,sWarn);
-  end
-  else begin
-    gMgrK720Reader.RecycleCard;
-
-    nMsg := '卡号[ %s ]关联订单失败,请到开票窗口重新关联.';
-    nMsg := Format(nMsg, [nCard]);
-
-    WriteLog(nMsg);
-    ShowMsg(nMsg,sWarn);
-  end;
-
-  gTimeCounter := 0;
 end;
 
 function TfFrameSaleCard.DealCommand(Sender: TObject; const nCmd: Integer;

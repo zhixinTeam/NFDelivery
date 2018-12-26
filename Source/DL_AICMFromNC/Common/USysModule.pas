@@ -9,9 +9,9 @@ unit USysModule;
 interface
 
 uses
-  UClientWorker, UMITPacker, UMgrK720Reader, UMgrSDTReader,
+  UClientWorker, UMITPacker, UMgrTTCEDispenser, UMgrSDTReader,
   UFrameMain, UFrameQueryCard, UFrameMakeCard, UFrameInputCertificate,
-  UFramePurchaseCard, UFrameSaleCard;
+  UFramePurchaseCard, UFrameSaleCard, UFramePrintHYDan;
 
 procedure InitSystemObject;
 procedure RunSystemObject;
@@ -21,7 +21,7 @@ implementation
 
 uses
   SysUtils, USysLoger, USelfHelpConst, ULibFun, UMgrChannel, UChannelChooser,
-  UMemDataPool, USysMAC, USysDB, UDataModule;
+  UMemDataPool, USysMAC, USysDB, UDataModule, IniFiles;
 
 //Desc: 初始化系统对象
 procedure InitSystemObject;
@@ -43,8 +43,8 @@ begin
   gChannelChoolser.AutoUpdateLocal := False;
   //channel
 
-  gMgrK720Reader := TK720ReaderManager.Create;
-  gMgrK720Reader.LoadConfig(gPath + 'K720Reader.XML');
+  gDispenserManager := TDispenserManager.Create;
+  gDispenserManager.LoadConfig(gPath + 'TTCE_K720.xml');
 
   gSDTReaderManager.LoadConfig(gPath + 'SDTReader.XML');
   gSDTReaderManager.TempDir := gPath + 'Temp\';
@@ -53,11 +53,19 @@ end;
 //Desc: 运行系统对象
 procedure RunSystemObject;
 var nStr: string;
+    nTmp: TIniFile;
 begin
-  with gSysParam do
+  nTmp := TIniFile.Create(gPath + sConfig);
+  with gSysParam, nTmp do
   begin
+    FProgID := ReadString(sConfigSec, 'ProgID', 'ZXSOFT');
+    //程序标识决定以下所有参数
     FLocalMAC   := MakeActionID_MAC;
     GetLocalIPConfig(FLocalName, FLocalIP);
+
+    FHYDanPrinter := ReadString(FProgID,'hydanprinter','');
+    FCardPrinter  := ReadString(FProgID,'cardprinter','');
+    FTTCEK720ID   := ReadString(FProgID,'TTCEK720ID','');
   end;
 
   nStr := 'Select D_Value From %s Where D_Name=''%s''';
@@ -78,17 +86,29 @@ begin
     //update channel
   end;
 
-  gMgrK720Reader.StartReader;
+  gSysParam.FAICMPDCount := 2;
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_AICMPDCount]);
+
+  with FDM.SQLQuery(nStr) do
+  if RecordCount > 0 then
+  begin
+    gSysParam.FAICMPDCount := Fields[0].AsInteger;
+  end;
+
+  gDispenserManager.StartDispensers;
   //启动读卡器
 
   gSDTReaderManager.StartReader;
   //启动身份证读卡器
+  if Assigned(nTmp) then nTmp.Free;
 end;
 
 //Desc: 释放系统对象
 procedure FreeSystemObject;
 begin
-  gMgrK720Reader.StopReader;
+  gDispenserManager.StopDispensers;
   //关闭读卡器
 
   gSDTReaderManager.StopReader;

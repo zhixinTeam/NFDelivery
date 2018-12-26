@@ -212,7 +212,7 @@ begin
   nStr := SQLQuery.FieldByName('T_Line').AsString;
   nLine := nStr;
   nStockNo := SQLQuery.FieldByName('T_StockNo').AsString;
-  if not SelectTruckTunnel(nLine, nStockNo) then
+  if not SelectTruckTunnel(nLine, nStockNo, SQLQuery.FieldByName('T_LineGroup').AsString) then
     Exit;
 
   nLine := UpperCase(Trim(nLine));
