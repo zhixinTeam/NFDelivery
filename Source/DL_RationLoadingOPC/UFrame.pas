@@ -112,10 +112,7 @@ begin
   WriteLog('接收到卡号:' + nCard);
   FCard := nCard;
 
-  FCardUsed := GetCardUsed(nCard);
-  if FCardUsed=sFlag_Provide then
-       nRet := GetPurchaseOrders(nCard, sFlag_TruckBFP, nBills)
-  else nRet := GetLadingBills(nCard, sFlag_TruckBFP, nBills);
+  nRet := GetLadingBills(nCard, sFlag_TruckBFP, nBills);
 
   if (not nRet) or (Length(nBills) < 1) then
   begin
@@ -299,27 +296,30 @@ begin
   LineClose(FOPCTunnel.FID, sFlag_Yes);
   SetUIData(true);
 
-  try
-    CoInitialize(nil);
-    nOPCServer := TdOPCServer.Create(nil);
+  if Trim(FOPCTunnel.FStopTag) <> '' then
+  begin
+    try
+      CoInitialize(nil);
+      nOPCServer := TdOPCServer.Create(nil);
 
-    nOPCServer.ServerName  := FOPCTunnel.FServer;
-    nOPCServer.ComputerName:= FOPCTunnel.FComputer;
+      nOPCServer.ServerName  := FOPCTunnel.FServer;
+      nOPCServer.ComputerName:= FOPCTunnel.FComputer;
 
-    nGroup := nOPCServer.OPCGroups.Add('Group');         // make a new group
-    nGroup.IsActive := False;
+      nGroup := nOPCServer.OPCGroups.Add('Group');         // make a new group
+      nGroup.IsActive := False;
 
-    nGroup.OPCItems.AddItem(FOPCTunnel.FStopTag);
+      nGroup.OPCItems.AddItem(FOPCTunnel.FStopTag);
 
-    nOPCServer.Active := true;
+      nOPCServer.Active := true;
 
-    nGroup.OPCItems[0].WriteSync(FOPCTunnel.FStopOrder);
+      nGroup.OPCItems[0].WriteSync(FOPCTunnel.FStopOrder);
 
-    WriteLog(FOPCTunnel.FID +'发送停止命令成功');
-  finally
-    if Assigned(nOPCServer) then
-      nOPCServer.Free;
-    CoUninitialize;                        // !!!!!!!!!!!!!
+      WriteLog(FOPCTunnel.FID +'发送停止命令成功');
+    finally
+      if Assigned(nOPCServer) then
+        nOPCServer.Free;
+      CoUninitialize;                        // !!!!!!!!!!!!!
+    end;
   end;
 end;
 
@@ -365,6 +365,8 @@ begin
     nGroup := nOPCServer.OPCGroups.Add('Group');         // make a new group
 
     nGroup.OPCItems.AddItem(FOPCTunnel.FImpDataTag);
+
+    if FOPCTunnel.FUseTimeTag <> '' then
     nGroup.OPCItems.AddItem(FOPCTunnel.FUseTimeTag);
 
     nOPCServer.Active := true;

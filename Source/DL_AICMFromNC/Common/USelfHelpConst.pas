@@ -88,6 +88,8 @@ type
     FPd: string;
     FWxZhuId: string;
     FWxZiId: string;
+    FPhy: string;
+    FTransType: string;
     FSelect: Boolean;
   end;
 

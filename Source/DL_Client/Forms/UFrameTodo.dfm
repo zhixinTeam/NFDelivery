@@ -115,5 +115,12 @@ inherited fFrameTodo: TfFrameTodo
       Caption = #22788#29702#32467#26524
       OnClick = N1Click
     end
+    object N3: TMenuItem
+      Caption = '-'
+    end
+    object N2: TMenuItem
+      Caption = #26597#30475#25235#25293#22270#29255
+      OnClick = N2Click
+    end
   end
 end

@@ -32,7 +32,7 @@ inherited fFrameQueryDispatch: TfFrameQueryDispatch
       Top = 93
       Hint = 'T.T_Truck'
       ParentFont = False
-      TabOrder = 1
+      TabOrder = 2
       Width = 121
     end
     object cxTextEdit1: TcxTextEdit [1]
@@ -40,7 +40,7 @@ inherited fFrameQueryDispatch: TfFrameQueryDispatch
       Top = 93
       Hint = #25152#22312#38431#21015':'
       ParentFont = False
-      TabOrder = 2
+      TabOrder = 3
       Width = 121
     end
     object cxTextEdit2: TcxTextEdit [2]
@@ -48,7 +48,7 @@ inherited fFrameQueryDispatch: TfFrameQueryDispatch
       Top = 93
       Hint = 'T.T_InTime'
       ParentFont = False
-      TabOrder = 3
+      TabOrder = 4
       Width = 121
     end
     object cxTextEdit3: TcxTextEdit [3]
@@ -56,7 +56,7 @@ inherited fFrameQueryDispatch: TfFrameQueryDispatch
       Top = 93
       Hint = 'T.T_InFact'
       ParentFont = False
-      TabOrder = 4
+      TabOrder = 5
       Width = 121
     end
     object EditTruck: TcxButtonEdit [4]
@@ -73,11 +73,29 @@ inherited fFrameQueryDispatch: TfFrameQueryDispatch
       OnKeyPress = OnCtrlKeyPress
       Width = 121
     end
+    object EditBrand: TcxButtonEdit [5]
+      Left = 241
+      Top = 36
+      ParentFont = False
+      Properties.Buttons = <
+        item
+          Default = True
+          Kind = bkEllipsis
+        end>
+      Properties.OnButtonClick = EditTruckPropertiesButtonClick
+      TabOrder = 1
+      Width = 121
+    end
     inherited dxGroup1: TdxLayoutGroup
       inherited GroupSearch1: TdxLayoutGroup
         object dxLayout1Item5: TdxLayoutItem
           Caption = #36710#29260#21495#30721':'
           Control = EditTruck
+          ControlOptions.ShowBorder = False
+        end
+        object dxLayout1Item6: TdxLayoutItem
+          Caption = #21697#29260':'
+          Control = EditBrand
           ControlOptions.ShowBorder = False
         end
       end

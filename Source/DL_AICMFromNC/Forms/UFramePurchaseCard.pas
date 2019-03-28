@@ -1,5 +1,6 @@
 unit UFramePurchaseCard;
 
+{$I Link.Inc}
 interface
 
 uses
@@ -292,6 +293,13 @@ begin
     Exit;
   end;
 
+  {$IFDEF BusinessOnly}
+  if IFHasBill(edt_TruckNo.Text) then
+  begin
+    ShowMsg('车辆存在未完成的销售提货单,无法开单,请联系管理员',sHint);
+    Exit;
+  end;
+  {$ENDIF}
 
   if not IsPurTruckReady(edt_TruckNo.Text, nHint) then
   begin

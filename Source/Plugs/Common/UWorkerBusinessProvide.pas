@@ -962,7 +962,7 @@ begin
         end;
       end;
 
-      FNextStatus := sFlag_TruckOut;
+      //FNextStatus := sFlag_TruckOut;
 
       nStr := 'Select D_CusID,D_Value,D_Type From %s ' +
               'Where D_Stock=''%s'' And D_Valid=''%s''';

@@ -132,8 +132,10 @@ begin
       LabelBill.Caption := '交货单号: ' + FieldByName('L_ID').AsString;
       LabelOrder.Caption := '客户名称: ' + FieldByName('L_CusName').AsString;
       LabelTruck.Caption := '车牌号码: ' + FieldByName('L_Truck').AsString;
-      LabelStock.Caption := '品种名称: ' + FieldByName('L_StockName').AsString;
-      LabelTon.Caption := '提货数量: ' + FieldByName('L_Value').AsString + '吨';
+      LabelStock.Caption := '品种名称: ' + FieldByName('L_StockName').AsString
+                             + '(' + FieldByName('L_StockBrand').AsString + ')';
+      LabelTon.Caption := '提货数量: ' + FieldByName('L_Value').AsString + '吨'
+                             + '(到货地点:' + FieldByName('L_StockArea').AsString + ')';
     end;
 
     //--------------------------------------------------------------------------
@@ -266,7 +268,7 @@ begin
                       'T_Valid=''$Yes'' And T_StockNo=''$SN'' And T_InFact<''$IT'' And T_Vip=''$VIP''';
             end else
             begin
-              nStr := ' Select Count(*) From $TB left join S_PoundLog on S_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
+              nStr := ' Select Count(*) From $TB left join Sys_PoundLog on Sys_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
                       ' Where T_InFact Is Null And ' +
                       ' T_Valid=''$Yes'' And T_StockNo=''$SN'' And P_PDate<''$IT'' And T_Vip=''$VIP''';
             end;
@@ -290,7 +292,7 @@ begin
                       'T_Valid=''$Yes'' And T_StockNo In ($SN) And T_InFact<''$IT'' And T_Vip=''$VIP''';
             end else
             begin
-              nStr := ' Select Count(*) From $TB left join S_PoundLog on S_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
+              nStr := ' Select Count(*) From $TB left join Sys_PoundLog on Sys_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
                       ' Where T_InFact Is Null And ' +
                       ' T_Valid=''$Yes'' And T_StockNo In ($SN) And P_PDate<''$IT'' And T_Vip=''$VIP''';
             end;
@@ -369,7 +371,7 @@ begin
                     'T_Valid=''$Yes'' And T_Line=''$SN'' And T_InFact<''$IT'' And T_Vip=''$VIP''';
           end else
           begin
-            nStr := ' Select Count(*) From $TB left join S_PoundLog on S_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
+            nStr := ' Select Count(*) From $TB left join Sys_PoundLog on Sys_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
                     ' Where T_InFact Is Null And ' +
                     ' T_Valid=''$Yes'' And T_Line=''$SN'' And P_PDate<''$IT'' And T_Vip=''$VIP''';
           end;
@@ -446,7 +448,7 @@ begin
                   'T_Valid=''$Yes'' And T_StockNo=''$SN'' And T_InFact<''$IT'' And T_Vip=''$VIP''';
         end else
         begin
-          nStr := ' Select Count(*) From $TB left join S_PoundLog on S_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
+          nStr := ' Select Count(*) From $TB left join Sys_PoundLog on Sys_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
                   ' Where T_InFact Is Null And ' +
                   ' T_Valid=''$Yes'' And T_StockNo=''$SN'' And P_PDate<''$IT'' And T_Vip=''$VIP''';
         end;

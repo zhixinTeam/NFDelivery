@@ -62,6 +62,7 @@ procedure MakeTruckShowPreInfoEx(const nPTruck: PTruckItem; nPLine: PLineItem;
 
 procedure UpdateDoubleChannel(const nTunnel: PMultiJSTunnel);
 //更新通道信息
+function GetBatCodeByLine(const nLID, nStockNo, nTunnel: string): Boolean;
 
 implementation
 
@@ -2077,6 +2078,14 @@ begin
     MakeTruckShowPreInfoEx(nPTruck, nPLine, nTunnelPreShow);
   end;
 
+  {$IFDEF BatCodeByLine}
+  if not GetBatCodeByLine(nPTruck.FBill,nPTruck.FStockNo,nTunnel) then
+  begin
+    WriteHardHelperLog('提货单[' + nPTruck.FBill + ']获取批次失败');
+    Exit;
+  end;
+  {$ENDIF}
+
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
@@ -2348,6 +2357,15 @@ begin
       FDaiNum := nPTruck.FDai;
     end;
   end;
+
+  {$IFDEF BatCodeByLine}
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    if not GetBatCodeByLine(FID,FStockNo,nTunnel) then
+      Exit;
+  end;
+  {$ENDIF}
 
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
@@ -2732,6 +2750,15 @@ begin
 
     TruckStartFH(nPTruck, nTunnel);
     Exit;
+  end;
+  {$ENDIF}
+
+  {$IFDEF BatCodeByLine}
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    if not GetBatCodeByLine(FID,FStockNo,nTunnel) then
+      Exit;
   end;
   {$ENDIF}
   
@@ -3453,7 +3480,7 @@ begin
         Result := Format(Result, [nTrucks[0].FTruck]);
       end else
       begin
-        Result := PrepareShowInfo(nNewCard, nPLine.FLineID, nLevel);
+        Result := PrepareShowInfo(nNewCard, nPLine.FLineID, '', nLevel);
         //后车预刷卡信息
       end;
     end else
@@ -3850,6 +3877,37 @@ begin
   WriteNearReaderLog('PrepareShowInfoEx: [' + nStr + ']');
   if nStr <> '' then
     gDisplayManager.Display(nTunnelPreShow, nStr);
+end;
+
+//Date: 2019-01-09
+//Parm: 提货单号、通道号
+//Desc: 现场刷卡获取批次号
+function GetBatCodeByLine(const nLID, nStockNo, nTunnel: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+    nSendEvent: Boolean;
+    nStr,nEvent,nEID: string;
+begin
+  nSendEvent := False;
+  Result := CallBusinessCommand(cBC_GetStockBatcodeByLine, nLID, nTunnel, @nOut);
+
+  if Result then
+  begin
+    if nOut.FExtParam <> '' then
+    begin
+      nSendEvent := True;
+      nEvent := nOut.FExtParam;
+    end;
+  end
+  else
+  begin
+    nSendEvent := True;
+    nEvent := nOut.FData;
+  end;
+
+  if nSendEvent then
+  begin
+    CallBusinessCommand(cBC_SaveBatEvent, nStockNo, nEvent, @nOut);
+  end;
 end;
 
 end.

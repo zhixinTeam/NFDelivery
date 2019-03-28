@@ -137,6 +137,16 @@ const
 
   cBC_AutoGetLineGroup         = $0133;   //自动获取分组
 
+  cBC_GetTruckList             = $0134;   //获取车辆列表及校验车牌
+  cBC_TruckManulSign           = $0135;   //手工签到
+
+  cBC_GetStockBatcodeByLine    = $0136;   //现场刷卡获取物料批次
+  cBC_SaveBatEvent             = $0137;   //保存批次号事件
+
+  cBC_GetGroupByArea           = $0138;   //获取区域流向分组
+
+  cBC_GetUnLodingPlace         = $0139;   //获取卸货地点
+
   cBC_WX_VerifPrintCode       = $0501;   //微信：验证喷码信息
   cBC_WX_WaitingForloading    = $0502;   //微信：工厂待装查询
   cBC_WX_BillSurplusTonnage   = $0503;   //微信：网上订单可下单数量查询

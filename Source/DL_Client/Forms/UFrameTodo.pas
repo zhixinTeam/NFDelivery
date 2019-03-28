@@ -26,6 +26,8 @@ type
     dxLayout1Item1: TdxLayoutItem;
     PMenu1: TPopupMenu;
     N1: TMenuItem;
+    N2: TMenuItem;
+    N3: TMenuItem;
     procedure BtnAddClick(Sender: TObject);
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
@@ -33,6 +35,7 @@ type
       AButtonIndex: Integer);
     procedure PMenu1Popup(Sender: TObject);
     procedure N1Click(Sender: TObject);
+    procedure N2Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -157,6 +160,24 @@ begin
 
     InitFormData(FWhere);
   end;
+end;
+
+procedure TfFrameTodo.N2Click(Sender: TObject);
+var nParam: TFormCommandParam;
+begin
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('请选择要查看的记录', sHint); Exit;
+  end;
+
+  if Pos('车牌识别',SQLQuery.FieldByName('E_Event').AsString) <= 0 then
+  begin
+    ShowMsg('非抓拍事件,无法查看', sHint); Exit;
+  end;
+
+  nParam.FCommand := cCmd_AddData;
+  nParam.FParamA := SQLQuery.FieldByName('E_Key').AsString;
+  CreateBaseFormItem(cFI_FormSnapView, PopedomItem, @nParam);
 end;
 
 initialization

@@ -980,6 +980,7 @@ var nStr, nSql: string;
     nIdx, nQue, nLineCount:Integer;
     nNetWeight:Double;
     nWxZhuId, nWxZiId, nCreateTime, nInTime, nOutTime, nType, nStockNo, nTruck: string;
+    nSeal, nPDate, nMDate, nLadeTime, nPID, nQueueMsg,nCompany: string;
 begin
   Result := False;
   FListA.Text := PackerDecodeStr(FIn.FData);
@@ -999,8 +1000,9 @@ begin
 
       //销售净重
       nSql := 'select L_Value,L_WxZhuId,L_WxZiId,L_Type,L_StockNo, L_Truck,' +
-              'L_Date,L_InTime,L_OutFact from %s where l_id=''%s''';
-      nSql := Format(nSql,[sTable_Bill,FListA.Values['WOM_LID']]);
+              'L_Date,L_InTime,L_OutFact,L_Seal,L_PDate,L_MDate,L_LadeTime,' +
+              'P_ID,L_Company from %s Left Join %s On P_Bill=L_ID where l_id=''%s''';
+      nSql := Format(nSql,[sTable_Bill, sTable_PoundLog, FListA.Values['WOM_LID']]);
       with gDBConnManager.WorkerQuery(nDBConn, nSql) do
       begin
         if recordcount>0 then
@@ -1014,6 +1016,13 @@ begin
           nType := FieldByName('L_Type').AsString;
           nStockNo := FieldByName('L_StockNo').AsString;
           nTruck := FieldByName('L_Truck').AsString;
+
+          nSeal := FieldByName('L_Seal').AsString;
+          nPDate := FieldByName('L_PDate').AsString;
+          nMDate := FieldByName('L_MDate').AsString;
+          nLadeTime := FieldByName('L_LadeTime').AsString;
+          nPID := FieldByName('P_ID').AsString;
+          nCompany := FieldByName('L_Company').AsString;
         end;
       end;
 
@@ -1050,18 +1059,37 @@ begin
     end;
   end;
 
+  if FListA.Values['WOM_StatusType'] = '4' then
+  begin
+    nQueueMsg := FListA.Values['WOM_QueueMsg'];
+  end
+  else
+  begin
+    nQueueMsg := '%s在当前队列位置排号:%d';
+    nQueueMsg := Format(nQueueMsg, [nTruck, nQue]);
+  end;
+
   nStr := '{'
       +'"head":{'
       +'"wxzbid" : "%s",'
       +'"wxfbid" : "%s",'
       +'"remcardtime" : "%s",'
-      +'"queumessage" : "%s在当前队列位置排号:%d",'
+      +'"queumessage" : "%s",'
       +'"getintotime" : "%s",'
+      +'"callnumtime" : "%s",'
       +'"leavetime" : "%s",'
+      +'"vdef1" : "%s",'
+      +'"vdef2" : "%s",'
+      +'"vdef3" : "%s",'
+      +'"vdef4" : "%s",'
+      +'"vdef5" : "%s",'
+      +'"vdef6" : "%s",'
+      +'"vdef7" : "%s",'
       +'"nnum" : "%f"}'
       +'}';
-  nStr := Format(nStr,[nWxZhuId, nWxZiId, nCreateTime, nTruck, nQue, nInTime,
-                       nOutTime, nNetWeight]);
+  nStr := Format(nStr,[nWxZhuId, nWxZiId, nCreateTime, nQueueMsg, nInTime,
+                       FListA.Values['WOM_QueueTime'], nOutTime, nSeal, nPID,
+                       nPDate, nMDate, nLadeTime, nInTime, nCompany, nNetWeight]);
   WriteLog('修改订单状态入参'+nStr);
 
   try

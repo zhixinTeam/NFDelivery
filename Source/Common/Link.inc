@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE CSNF}
+{$DEFINE CZNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -112,8 +112,30 @@
   //预刷卡品种类型(包装类型)
   {$DEFINE SaleAICMFromNC}
   //销售自助办卡
-  {.$DEFINE PurAICMFromNC}
+  {$DEFINE PurAICMFromNC}
   //采购自助办卡
+  {$DEFINE PrintHYEach}
+  //随车开化验单
+  {.$DEFINE PrintHuaYanDan}
+  //打印化验单
+  {.$DEFINE PrintHeGeZheng}
+  //打印合格证
+  {$DEFINE BatCodeByLine}
+  //现场获取批次
+  {$DEFINE SaveOrderNo}
+  //保存订单编号
+  {$DEFINE HdFilterTruck}
+  //合单只获取同车号订单
+  {$DEFINE SaveAllSnapInfo}
+  //保存停车场抓拍原始记录
+  {$DEFINE PoundSaveSnapInfo}
+  //保存过磅车牌识别信息
+  {$DEFINE GetLastHYInfo}
+  //获取最近一次化验记录(当批次号对应化验记录不存在时)
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE DaiNoWeight}
+  //包装不报重量
 {$ENDIF}
 //江山南方
 
@@ -138,8 +160,36 @@
   //车辆毛重上限控制
   {$DEFINE PurAICMFromNC}
   //采购自助办卡
+  {$DEFINE MITTruckProber}
+  //中间件控制车检
 {$ENDIF}
-//永丰南方(永丰、安抚、上高)
+//永丰南方(永丰、上高)
+
+{$IFDEF AFNF}
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE JSTruck}
+  //格式化计数器车牌
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE ORDERVALUE}
+  //显示大票量发货量
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+  {$DEFINE CardProvide}
+  //采用复磅模式
+  {$DEFINE AllowMultiM}
+  //散装允许多次过重车
+  {$DEFINE TruckMValueMaxControl}
+  //车辆毛重上限控制
+  {$DEFINE PurAICMFromNC}
+  //采购自助办卡
+  {$DEFINE MITTruckProber}
+  //中间件控制车检(旧版驱动)
+{$ENDIF}
+//安福南方
 
 {$IFDEF SMNF}
   {$DEFINE AutoSan}
@@ -210,8 +260,6 @@
   //打印化验单
   {$DEFINE PrintHeGeZheng}
   //打印合格证
-  {$DEFINE TotalHuaYanDan}
-  //化验单统一模板
   {$DEFINE AICMVerifyGPS}
   //自助机开单GPS校验
 {$ENDIF}
@@ -240,6 +288,8 @@
   //随车开单时只打合格证
   {$DEFINE CardProvide}
   //采用复磅模式
+  {$DEFINE PrePTruckYs}
+  //采购预制皮重车辆验收
 {$ENDIF}
 //南城南方
 
@@ -262,6 +312,10 @@
   //通道进行分组
   {$DEFINE CombinePrintBill}
   //销售尾单合单后合并打印
+  {$DEFINE SaleAICMFromNC}
+  //销售自助办卡
+  {.$DEFINE PurAICMFromNC}
+  //采购自助办卡
 {$ENDIF}
 //桐庐南方
 
@@ -302,6 +356,10 @@
   //预刷卡显示车牌
   {$DEFINE PrepareShowOnLading}
   //刷卡装车时控制预刷卡(不使用预刷卡读卡器)
+  {$DEFINE SaleAICMFromNC}
+  //销售自助办卡
+  {.$DEFINE PurAICMFromNC}
+  //采购自助办卡
 {$ENDIF}
 //山亚南方
 
@@ -332,10 +390,18 @@
   //显示订单量
   {$DEFINE GROUPBYBRAND}
   //根据品牌分组
+  {$DEFINE GROUPBYAREA}
+  //根据区域流向分组(若此分组不启用,则继续使用品牌分组)
   {$DEFINE DaiStepWuCha}
   //包装阶梯误差
   {$DEFINE YanShouByCard}
   //刷卡验收并进行连锁控制
+  {$DEFINE SaleAICMFromNC}
+  //销售自助办卡
+  {.$DEFINE PurAICMFromNC}
+  //采购自助办卡
+  {$DEFINE PrintHyOnSaveBill}
+  //开单打印化验单
 {$ENDIF}
 //诸葛南方
 
@@ -411,6 +477,8 @@
   //过磅失败倒车下磅
   {$DEFINE DaiStepWuCha}
   //包装阶梯误差
+  {$DEFINE LEDShowTruckEx}
+  //大屏显示格式化车牌
 {$ENDIF}
 
 //金鲤南方
@@ -491,6 +559,18 @@
   //计数显示屏
   {$DEFINE JSDoubleChannel}
   //计数双通道
+  {$DEFINE PrintHYEach}
+  //随车开化验单
+  {$DEFINE PrintHuaYanDan}
+  //打印化验单
+  {$DEFINE PrintHeGeZheng}
+  //打印合格证
+  {$DEFINE HeGeZhengSimpleData}
+  //打印合格证(只取提货信息)
+  {$DEFINE SaleAICMFromNC}
+  //销售自助办卡
+  {$DEFINE PurAICMFromNC}
+  //采购自助办卡
 {$ENDIF}
 
 //黄山
@@ -527,7 +607,7 @@
   //采用NC编码组合喷码
   {$DEFINE JudgeOrder}
   //验证订单是否出厂
-  {.$DEFINE SaleAICMFromNC}
+  {$DEFINE SaleAICMFromNC}
   //销售自助办卡
   {$DEFINE PurAICMFromNC}
   //采购自助办卡
@@ -537,6 +617,8 @@
   //一车多卡
   {$DEFINE FilterTunnel}
   //过滤无关通道
+  {$DEFINE BusinessOnly}
+  //业务唯一
 {$ENDIF}
 
 //衢州
@@ -575,7 +657,7 @@
   //验证订单是否出厂
   {$DEFINE SaleAICMFromNC}
   //销售自助办卡
-  {.$DEFINE PurAICMFromNC}
+  {$DEFINE PurAICMFromNC}
   //采购自助办卡
   {$DEFINE LEDShowTruckEx}
   //大屏显示格式化车牌

@@ -9,7 +9,7 @@ interface
 
 uses
   Windows, Classes, DB, SysUtils, SyncObjs, UMgrDBConn, UWaitItem, ULibFun,
-  USysLoger, USysDB, UMgrRemoteVoice, UMgrVoiceNet;
+  USysLoger, USysDB, UMgrRemoteVoice, UMgrVoiceNet, UMITConst, UFormCtrl;
 
 type
   PLineItem = ^TLineItem;
@@ -1477,6 +1477,8 @@ procedure TTruckQueueDBReader.MakePoolTruckIn(const nIdx: Integer;
  const nLine: PLineItem);
 var nStr: string;
     nTruck: PTruckItem;
+    nWXZhuID, nOrder, nMsg: string;
+    nExit: Boolean;
 begin
   New(nTruck);
   nLine.FTrucks.Add(nTruck);
@@ -1528,6 +1530,52 @@ begin
 
   {$IFDEF DEBUG}
   WriteLog(Format('车辆[ %s ]进[ %s ]队.', [nTruck.FTruck, nLine.FName]));
+  {$ENDIF}
+
+  {$IFDEF SaleAICMFromNC}
+  nExit := False;
+  nWXZhuID := '';
+
+  nStr := 'Select WOM_LID From %s Where WOM_LID=''%s'' and WOM_StatusType=%d ';
+  nStr := Format(nStr, [sTable_WebOrderMatch, nTruck.FBill, c_WeChatStatusInQueue]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr),FOwner do
+  begin
+    nExit := RecordCount > 0;
+  end;
+
+  if nExit then
+    Exit;
+
+  nStr := 'Select L_WxZhuId, L_ZhiKa From %s Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, nTruck.FBill]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr),FOwner do
+  begin
+    if RecordCount < 1 then Exit;
+
+    nWXZhuID := Fields[0].AsString;
+    nOrder   := Fields[1].AsString;
+  end;
+
+  if Trim(nWXZhuID) <> '' then//过滤非微信下单
+  begin
+    nMsg := '车辆[ %s ]请进厂提货,提货道号[ %s ],名称[ %s ]';
+    nMsg := Format(nMsg,[nTruck.FTruck, nLine.FLineID, nLine.FName]);
+
+    nStr := MakeSQLByStr([
+            SF('WOM_WebOrderID'   , nOrder),
+            SF('WOM_LID'          , nTruck.FBill),
+            SF('WOM_StatusType'   , c_WeChatStatusInQueue),
+            SF('WOM_MsgType'      , cSendWeChatMsgType_AddBill),
+            SF('WOM_BillType'     , sFlag_Sale),
+            SF('WOM_QueueMsg'     , nMsg),
+            SF('WOM_QueueTime'     , sField_SQLServer_Now, sfVal),
+            SF('WOM_deleted'     , sFlag_No)
+            ], sTable_WebOrderMatch, '', True);
+    gDBConnManager.WorkerExec(FDBConn, nStr);
+  //微信推送
+  end;
   {$ENDIF}
 end;
 

@@ -451,6 +451,17 @@ begin
     Exit;
   end;
 
+  if (nBills[0].FPoundStation = '') and
+     (not VerifyStockCanPound(nBills[0].FStockNo, FPoundTunnel.FID, nHint)) then
+  begin
+    nVoice := '%s请到%s过磅';
+    nVoice := Format(nVoice, [nBills[0].FTruck, nHint]);
+    PlayVoice(nVoice);
+    WriteLog(nVoice);
+    SetUIData(True);
+    Exit;
+  end;
+
   {$IFDEF RemoteSnap}
   if not VerifySnapTruck(FLastReader, nBills[0], nHint, nPos) then
   begin
@@ -461,6 +472,22 @@ begin
     WriteSysLog(nHint);
     SetUIData(True);
     Exit;
+  end
+  else
+  begin
+    if nHint <> '' then
+    begin
+      RemoteSnapDisPlay(nPos, nHint,sFlag_Yes);
+      WriteSysLog(nHint);
+    end;
+  end;
+  {$ENDIF}
+
+  {$IFDEF PoundSaveSnapInfo}
+  if not SaveSnapTruckInfo(FLastReader, nBills[0], nHint, nPos) then
+  begin
+    RemoteSnapDisPlay(nPos, nHint,sFlag_No);
+    WriteSysLog(nHint);
   end
   else
   begin
@@ -875,6 +902,7 @@ begin
     nP.FParamA := FBillItems[0].FCusID;
     nP.FParamB := FBillItems[0].FStockNo;
     nP.FParamC := sFlag_Sale;
+    nP.FParamE := FBillItems[0].FTruck;
     CreateBaseFormItem(cFI_FormGetOrder, PopedomItem, @nP);
 
     if (nP.FCommand <> cCmd_ModalResult) or (nP.FParamA <> mrOK) then Exit;
@@ -1074,7 +1102,7 @@ begin
   with FUIData, gSysParam do
   if (FType = sFlag_San) and (FNextStatus = sFlag_TruckBFP) then
   begin
-    nNet := GetTruckEmptyValue(FTruck);
+    nNet := GetTruckEmptyValue(FTruck, FType);
     nVal := FPData.FValue * 1000 - nNet * 1000;
 
     if (nNet > 0) and
@@ -1189,9 +1217,14 @@ begin
               sFlag_DepBangFang, sFlag_Solution_YN, sFlag_DepJianZhuang, True);
             WriteSysLog(nHint);
 
+            {$IFDEF DaiNoWeight}
+            nHint := '车辆[n1]%s实际装车量误差较大,请去包装点包';
+            nHint := Format(nHint, [FTruck]);
+            {$ELSE}
             nHint := '车辆[n1]%s净重[n2]%.2f吨,开票量[n2]%.2f吨,'+
                      '误差量[n2]%.2f公斤,请去包装点包';
             nHint := Format(nHint, [FTruck,nNet,FInnerData.FValue,nVal]);
+            {$ENDIF}
             PlayVoice(nHint);
             Exit;
           end;
@@ -1284,9 +1317,55 @@ end;
 function TfFrameAutoPoundItem.SavePoundProvide: Boolean;
 var nVal, nNet, nPlan: Double;
     nStr,nNextStatus: string;
+    nHint, nMemo: string;
 begin
   Result := False;
   //init
+  nVal := 0;
+
+  if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
+  begin
+    nVal := FUIData.FPData.FValue - FUIData.FMData.FValue;
+    if nVal > 0 then
+      nVal := FUIData.FMData.FValue
+    else
+      nVal := FUIData.FPData.FValue;
+  end;
+
+  with FUIData, gSysParam do
+  if nVal > 0 then
+  begin
+    nNet := GetTruckEmptyValue(FTruck, FType);
+    nVal := nVal * 1000 - nNet * 1000;
+
+    if (nNet > 0) and
+       (((nVal > 0) and (FPoundPZ > 0) and (nVal > FPoundPZ)) or
+        ((nVal < 0) and (FPoundPF > 0) and (-nVal > FPoundPF))) then
+    begin
+      nHint := '车辆[ %s ]实时皮重误差较大,详情如下:' + #13#10 +
+              '※.实时皮重: %.2f吨' + #13#10 +
+              '※.历史皮重: %.2f吨' + #13#10 +
+              '※.误差量: %.2f公斤' + #13#10 +
+              '允许过磅,请选是;禁止过磅,请选否.';
+      nHint := Format(nHint, [FTruck, FPData.FValue, nNet, nVal]);
+
+      if not VerifyManualEventRecord(FID + sFlag_ManualB, nHint) then
+      begin
+        nMemo := 'Truck=%s;PStation=%s;Pound_PValue=%.2f;Pound_Card=%s';
+        nMemo := Format(nMemo, [FTruck, FPoundTunnel.FID, FPData.FValue, FCard]);
+
+        AddManualEventRecord(FID + sFlag_ManualB, FTruck, nHint,
+            sFlag_DepBangFang, sFlag_Solution_YN, sFlag_DepDaTing, True, nMemo);
+        WriteSysLog(nHint);
+
+        nHint := '[n1]%s皮重超出预警,请下磅联系开票员处理后再次过磅';
+        nHint := Format(nHint, [FTruck]);
+        PlayVoice(nHint);
+        Exit;
+      end;
+      //判断皮重是否超差
+    end;
+  end;
 
   if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) and
      (FUIData.FCardUse <> sFlag_ShipTmp) and (FUIData.FMuiltiType <> sFlag_Yes) then
@@ -1401,7 +1480,7 @@ begin
   with FUIData, gSysParam do
   if (FPData.FValue > 0) and (FMData.FValue > 0) then
   begin
-    nNet := GetTruckEmptyValue(FTruck);
+    nNet := GetTruckEmptyValue(FTruck, FType);
     nVal := FPData.FValue * 1000 - nNet * 1000;
 
     if (nNet > 0) and
@@ -1583,6 +1662,24 @@ begin
     nStr := GetTruckNO(FUIData.FTruck) + '重量  ' + GetValue(nValue);
     {$IFDEF HSNF}
     nStr := GetTruckNO(FUIData.FTruck) + ',请下磅';
+    {$ENDIF}
+    {$IFDEF JSNF}
+    if (FUIData.FType = sFlag_Dai) and (FUIData.FCardUse = sFlag_Sale) then
+    begin
+      if FUIData.FMData.FValue <= 0 then
+        nStr := GetTruckNO(FUIData.FTruck) + ',皮重称重完毕'
+      else
+        nStr := GetTruckNO(FUIData.FTruck) + ',毛重称重完毕';
+    end;
+
+    if FUIData.FPreTruckP then
+    begin
+      if (FUIData.FMData.FValue > 0) and (FUIData.FPData.FValue > 0) then
+      begin
+        nStr := GetTruckNO(FUIData.FTruck) + GetOrigin(FUIData.FOrigin) +
+              '净重: ' + GetValue(Abs(FUIData.FMData.FValue-FUIData.FPData.FValue));
+      end;
+    end;
     {$ENDIF}
     LEDDisplay(nStr);
     

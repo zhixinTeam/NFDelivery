@@ -192,6 +192,7 @@ ResourceString
   sFlag_PoundWuCha    = 'PoundWuCha';                //过磅误差分组
   sFlag_PoundPWuChaZ  = 'PoundPWuChaZ';              //皮重正误差
   sFlag_PoundPWuChaF  = 'PoundPWuChaF';              //皮重负误差
+  sFlag_ForceVPoundP  = 'ForceVPoundP';              //强制校验皮重D/S
   sFlag_PDaiWuChaZ    = 'PoundDaiWuChaZ';            //袋装正误差
   sFlag_PDaiWuChaF    = 'PoundDaiWuChaF';            //袋装负误差
   sFlag_PDaiPercent   = 'PoundDaiPercent';           //按比例计算误差
@@ -214,6 +215,7 @@ ResourceString
   sFlag_ZTLineGroup   = 'ZTLineGroup';               //栈台分组
   sFlag_BatBrandGroup = 'BatBrandGroup';             //批次品牌分组
   sFlag_BatStockGroup = 'BatStockGroup';             //批次物料分组
+  sFlag_AutoBatBrand  = 'AutoBatch_Brand';           //自动批次区分品牌
   sFlag_StockBrandShow= 'StockBrandShow';            //预刷卡品种显示
   sFlag_PoundStation  = 'PoundStation';              //地磅可用磅站,用于指定过磅
   sFlag_OrderFilterH  = 'OrderFilterH';              //工厂订单过滤
@@ -257,6 +259,8 @@ ResourceString
   sFlag_AskPrintStockBill  = 'AskPrintStockBill';     //需打印单品种打印前是否询问
   sFlag_ProvoideCorrections  = 'ProvideCorrections';  //供应勘误
   sFlag_BatcodeDefaultValidDays  = 'BatcodeDefaultValidDays';  //出厂编号默认有限期天数
+  sFlag_LineKw        = 'LineKw';                     //装车线所属库位
+  sFlag_TransType     = 'TransType';                  //运输方式
 
   sFlag_BusGroup      = 'BusFunction';               //业务编码组
   sFlag_BillNo        = 'Bus_Bill';                  //交货单号
@@ -283,6 +287,10 @@ ResourceString
   sFlag_HYDan         = 'Bus_HYDan';                 //化验单号
   sFlag_HYValue       = 'HYMaxValue';                //化验批次量
   sFlag_AICMPDCount   = 'AICMPDCount';               //自助拼单个数
+  sFlag_PoundStock    = 'PoundStock';                //地磅允许过磅物料
+  sFlag_AutoVipByLine = 'AutoVIPByLine';             //根据通道类型自动调整提货单类型
+  sFlag_UnLodingPlace = 'UnLodingPlace';             //卸货地点
+  sFlag_ForceUPStock  = 'ForceUPStock';              //强制卸货地点物料
 
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
@@ -313,6 +321,7 @@ ResourceString
 
   sTable_Mine         = 'S_Mine';                    //矿点表
   sTable_Truck        = 'S_Truck';                   //车辆表
+  sTable_TruckSnap    = 'S_TruckSnap';               //停车场车辆抓拍原始数据表
   sTable_Batcode      = 'S_Batcode';                 //批次号
   sTable_ZTLines      = 'S_ZTLines';                 //装车道
   sTable_ZTTrucks     = 'S_ZTTrucks';                //车辆队列
@@ -1554,6 +1563,8 @@ const
       +'WOM_MsgType Integer,'
       +'WOM_BillType char(1),'
       +'WOM_SyncNum Integer default 0,'
+      +'WOM_QueueMsg varchar(100),'
+      +'WOM_QueueTime datetime,'
       +'WOM_deleted char(1) default ''N'')';
   {-----------------------------------------------------------------------------
    商城订单与提货单对照表: WebOrderMatch
@@ -1563,6 +1574,8 @@ const
    *.WOM_StatusType: 订单状态 0.开卡  1.完成
    *.WOM_MsgType: 消息类型 开单  出厂  报表 删单
    *.WOM_SyncNum: 发送次数
+   *.WOM_QueueMsg: 入队信息
+   *.WOM_QueueTime: 入队时间
    *.WOM_BillType: 业务类型  采购 销售
   -----------------------------------------------------------------------------}
 
@@ -1724,6 +1737,8 @@ begin
   AddSysTableItem(sTable_StockParamExt, sSQL_NewStockRecord);
   AddSysTableItem(sTable_StockRecord, sSQL_NewStockRecord);
   AddSysTableItem(sTable_StockHuaYan, sSQL_NewStockHuaYan);
+
+  AddSysTableItem(sTable_TruckSnap, sSQL_NewTruck);
 end;
 
 //Desc: 清理系统表

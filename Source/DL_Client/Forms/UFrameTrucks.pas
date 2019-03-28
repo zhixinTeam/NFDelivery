@@ -15,7 +15,7 @@ uses
   cxContainer, dxLayoutControl, cxMaskEdit, cxButtonEdit, cxTextEdit,
   ADODB, cxLabel, UBitmapPanel, cxSplitter, cxGridLevel, cxClasses,
   cxGridCustomView, cxGridCustomTableView, cxGridTableView,
-  cxGridDBTableView, cxGrid, ComCtrls, ToolWin, Menus;
+  cxGridDBTableView, cxGrid, ComCtrls, ToolWin, Menus, cxCheckBox;
 
 type
   TfFrameTrucks = class(TfFrameNormal)
@@ -37,6 +37,8 @@ type
     N9: TMenuItem;
     N10: TMenuItem;
     N11: TMenuItem;
+    ChkSnap: TcxCheckBox;
+    dxLayout1Item5: TdxLayoutItem;
     procedure EditNamePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnAddClick(Sender: TObject);
@@ -80,7 +82,10 @@ begin
   N10.Visible := True;
   N11.Visible := True;
   {$ENDIF}
-  Result := 'Select * From ' + sTable_Truck;
+  if ChkSnap.Checked then
+    Result := 'Select * From ' + sTable_TruckSnap
+  else
+    Result := 'Select * From ' + sTable_Truck;
   if nWhere <> '' then
     Result := Result + ' Where (' + nWhere + ')';
   Result := Result + ' Order By T_PY';

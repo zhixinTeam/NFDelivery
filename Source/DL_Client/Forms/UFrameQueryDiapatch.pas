@@ -41,6 +41,8 @@ type
     dxLayout1Item4: TdxLayoutItem;
     EditTruck: TcxButtonEdit;
     dxLayout1Item5: TdxLayoutItem;
+    EditBrand: TcxButtonEdit;
+    dxLayout1Item6: TdxLayoutItem;
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure N1Click(Sender: TObject);
@@ -90,7 +92,7 @@ end;
 
 function TfFrameQueryDispatch.InitFormDataSQL(const nWhere: string): string;
 begin
-  Result := ' Select zt.*,Z_Name,L_CusID,L_CusName,L_Status,L_Value ' +
+  Result := ' Select zt.*,Z_Name,L_CusID,L_CusName,L_Status,L_Value,L_StockBrand ' +
             'From $ZT zt ' +
             ' Left Join $ZL zl On zl.Z_ID=zt.T_Line ' +
             ' Left Join $Bill b On b.L_ID=zt.T_Bill ';
@@ -115,6 +117,15 @@ begin
     if EditTruck.Text = '' then Exit;
 
     FWhere := Format('zt.T_Truck like ''%%%s%%''', [EditTruck.Text]);
+    InitFormData(FWhere);
+  end
+  else
+  if Sender = EditBrand then
+  begin
+    EditBrand.Text := Trim(EditBrand.Text);
+    if EditBrand.Text = '' then Exit;
+
+    FWhere := Format('b.L_StockBrand like ''%%%s%%''', [EditBrand.Text]);
     InitFormData(FWhere);
   end;
 end;
@@ -218,6 +229,18 @@ begin
   nLine := UpperCase(Trim(nLine));
   if (nLine = '') or (CompareText(nStr, nLine) = 0) then Exit;
   //null or same
+
+  {$IFDEF BatCodeByLine}
+  if ZTDispatchByLine(SQLQuery.FieldByName('R_ID').AsInteger,
+                      SQLQuery.FieldByName('T_Bill').AsString,
+                      SQLQuery.FieldByName('T_Line').AsString,
+                      nLine,
+                      nStockNo) then
+  begin
+    InitFormData(FWhere);
+  end;
+  Exit;
+  {$ENDIF}
 
   {$IFDEF AutoGetLineGroup}
   nList := Tstringlist.Create;

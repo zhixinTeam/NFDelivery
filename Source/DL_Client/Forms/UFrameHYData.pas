@@ -4,6 +4,7 @@
 *******************************************************************************}
 unit UFrameHYData;
 
+{$I Link.inc}
 interface
 
 uses
@@ -64,7 +65,13 @@ implementation
 {$R *.dfm}
 uses
   ULibFun, UMgrControl, UFormBase, USysConst, USysDB, UDataModule,
-  UFormDateFilter, USysBusiness;
+  UFormDateFilter, USysBusiness, USysLoger;
+
+//Desc: 记录日志
+procedure WriteLog(const nEvent: string);
+begin
+  gSysLoger.AddLog(nEvent);
+end;
 
 class function TfFrameHYData.FrameID: integer;
 begin
@@ -187,12 +194,79 @@ end;
 
 //Desc: 化验单
 procedure TfFrameHYData.N1Click(Sender: TObject);
-var nStr: string;
+var nStr, nSeal, nLastSeal: string;
 begin
   if cxView1.DataController.GetSelectedCount > 0 then
   begin
+    {$IFDEF GetLastHYInfo}
+    nSeal := SQLQuery.FieldByName('H_SerialNo').AsString;
+    if nSeal = '' then
+    begin
+      ShowMsg('批次号为空,无法打印', sHint);
+      Exit;
+    end;
+
+    nStr := 'Select * From %s Where R_SerialNo = ''%s''';
+    nStr := Format(nStr, [sTable_StockRecord, nSeal]);
+
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount > 0 then
+      begin
+        nStr := SQLQuery.FieldByName('H_ID').AsString;
+        PrintHuaYanReport(nStr, False);
+        Exit;
+      end;
+    end;
+
+    nLastSeal := '';
+
+    nStr := 'Select B_Prefix From %s ';
+    nStr := Format(nStr, [sTable_Batcode]);
+
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount > 0 then
+      begin
+        First;
+
+        while not eof do
+        begin
+          if Pos(Fields[0].AsString, nSeal) > 0 then
+          begin
+            nLastSeal := Fields[0].AsString;
+            Break;
+          end;
+          Next;
+        end;
+
+        if nLastSeal = '' then
+        begin
+          ShowMsg('查询最近批次号失败', sHint);
+          Exit;
+        end;
+      end;
+    end;
+
+    nStr := 'Select top 1 L_Seal From %s a, %s b Where a.L_Seal = b.R_SerialNo ' +
+    ' and b.R_SerialNo Like ''%%%s%%'' order by a.L_Date desc';
+    nStr := Format(nStr, [sTable_Bill, sTable_StockRecord, nLastSeal]);
+
+    WriteLog('查询最近批次号Sql:' + nStr);
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount <= 0 then
+      begin
+        ShowMsg('查询最近批次号失败', sHint);
+        Exit;
+      end;
+      PrintHuaYanReportEx(SQLQuery.FieldByName('H_ID').AsString,
+                          Fields[0].AsString, False);
+    end;
+    {$ELSE}
     nStr := SQLQuery.FieldByName('H_ID').AsString;
     PrintHuaYanReport(nStr, False);
+    {$ENDIF}
   end;
 end;
 

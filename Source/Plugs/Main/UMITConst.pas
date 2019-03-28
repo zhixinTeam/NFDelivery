@@ -49,6 +49,7 @@ const
   c_WeChatStatusCreateCard       = 1; //订单已办卡
   c_WeChatStatusFinished         = 3; //订单已完成
   c_WeChatStatusIn               = 2;  //订单已进厂
+  c_WeChatStatusInQueue          = 4;  //订单已入队
   c_WeChatStatusDeleted          = 100;
 
 type

@@ -516,7 +516,7 @@ begin
   nHint := '';
   Result := False;
 
-  nStr := 'Select sb.L_Seal,sr.R_28Ya1 From %s sb ' +
+  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_PrintHY From %s sb ' +
           ' Left Join %s sr on sr.R_SerialNo=sb.L_Seal ' +
           ' Where sb.L_ID = ''%s''';
   nStr := Format(nStr, [sTable_Bill, sTable_StockRecord, nBill]);
@@ -527,6 +527,14 @@ begin
     begin
       nSeal := Fields[0].AsString;
       n28Ya1 := Fields[1].AsString;
+
+      if Fields[2].AsString <> sFlag_Yes then
+      begin
+        Result := True;
+        nHint := '提货单[ %s ]无需打印化验单';
+        nHint := Format(nHint, [nBill]);
+        Exit;
+      end;
     end;
   end;
 
@@ -621,7 +629,7 @@ begin
   nStr := 'Select hy.*,sr.*,C_Name From $HY hy ' +
           ' Left Join $Cus cus on cus.C_ID=hy.H_Custom' +
           ' Left Join ($SR) sr on sr.R_SerialNo=H_SerialNo ' +
-          'Where H_Reporter=''$ID''';
+          'Where H_Bill=''$ID''';
   //xxxxx
 
   nStr := MacroValue(nStr, [MI('$HY', sTable_StockHuaYan),
@@ -636,16 +644,16 @@ begin
     Exit;
   end;
 
-  with FDM.SqlTemp do
-  begin
-    nField := FindField('L_PrintHY');
-    if Assigned(nField) and (nField.AsString <> sFlag_Yes) then
-    begin
-      nHint := '交货单[ %s ]无需打印合格证.';
-      nHint := Format(nHint, [nBill]);
-      Exit;
-    end;
-  end;
+//  with FDM.SqlTemp do
+//  begin
+//    nField := FindField('L_PrintHY');
+//    if Assigned(nField) and (nField.AsString <> sFlag_Yes) then
+//    begin
+//      nHint := '交货单[ %s ]无需打印合格证.';
+//      nHint := Format(nHint, [nBill]);
+//      Exit;
+//    end;
+//  end;
 
   nStr := gPath + 'Report\HeGeZheng.fr3';
   if not FDR.LoadReportFile(nStr) then

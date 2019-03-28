@@ -71,6 +71,8 @@ type
     dxLayout1Item23: TdxLayoutItem;
     EditBrand: TcxComboBox;
     dxLayout1Item24: TdxLayoutItem;
+    EditKw: TcxTextEdit;
+    dxLayout1Item25: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditStockPropertiesEditValueChanged(Sender: TObject);
@@ -80,6 +82,8 @@ type
     //记录编号
     FOldBase: string;
     //旧基数
+    FUseBrand: Boolean;
+    //使用品牌
     procedure LoadFormData(const nID: string);
     function OnVerifyCtrl(Sender: TObject; var nHint: string): Boolean; override;
     //验证数据
@@ -142,6 +146,17 @@ end;
 procedure TfFormBatcode.LoadFormData(const nID: string);
 var nStr: string;
 begin
+  FUseBrand := False;
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_AutoBatBrand]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+      FUseBrand := FieldByName('D_Value').AsString = sFlag_Yes;
+  end;
+
   nStr := 'D_ParamB=Select D_ParamB,D_Value From %s Where D_Name=''%s'' ' +
           'And D_Index>=0 Order By D_Index DESC';
   nStr := Format(nStr, [sTable_SysDict, sFlag_StockItem]);
@@ -184,10 +199,35 @@ begin
   {$ELSE}
   dxLayout1Item22.Visible := False;
   EditLineGroup.Text := '';
-
-  dxLayout1Item24.Visible := False;
-  EditBrand.Text := '';
   dxLayout1Item23.Visible := False;
+
+  if FUseBrand then
+  begin
+    dxLayout1Item24.Visible := True;
+    EditBrand.Properties.Items.Clear;
+
+    nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_Brands]);
+
+    with FDM.QueryTemp(nStr) do
+    if RecordCount > 0 then
+    begin
+      SplitStr(Fields[0].AsString, EditBrand.Properties.Items, 0, ';');
+    end;
+  end
+  else
+  begin
+    dxLayout1Item24.Visible := False;
+    EditBrand.Text := '';
+    dxLayout1Item23.Visible := False;
+  end;
+  {$ENDIF}
+
+  {$IFDEF BatCodeByLine}
+  dxLayout1Item25.Visible := True;
+  {$ELSE}
+  dxLayout1Item25.Visible := False;
+  EditKw.Text := '';
   {$ENDIF}
 
   if nID <> '' then
@@ -225,6 +265,15 @@ begin
       nStr := FieldByName('B_BrandGroup').AsString;
       SetCtrlData(EditBrand, nStr);
       ChkValid.Checked := FieldByName('B_Valid').AsString = sFlag_Yes;
+      {$ELSE}
+      if FUseBrand then
+      begin
+        nStr := FieldByName('B_BrandGroup').AsString;
+        SetCtrlData(EditBrand, nStr);
+      end;
+      {$ENDIF}
+      {$IFDEF BatCodeByLine}
+      EditKw.Text := FieldByName('B_Kw').AsString;
       {$ENDIF}
       Check2.Checked := FieldByName('B_AutoNew').AsString = sFlag_Yes;
     end;
@@ -254,15 +303,31 @@ begin
     nHint := '请选择物料';
     if not Result then Exit;
 
-    {$IFDEF AutoGetLineGroup}
-    nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s'' ' +
-            'And B_LineGroup = ''%s'' And B_BrandGroup=''%s''';
+    {$IFDEF BatCodeByLine}
+    nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s'' and B_Kw=''%s''';
     nStr := Format(nStr, [sTable_Batcode, GetCtrlData(EditStock),
-            GetCtrlData(EditType), GetCtrlData(EditLineGroup), GetCtrlData(EditBrand)]);
+            GetCtrlData(EditType), EditKw.Text]);
     {$ELSE}
-    nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s''';
-    nStr := Format(nStr, [sTable_Batcode, GetCtrlData(EditStock),
-            GetCtrlData(EditType)]);
+      {$IFDEF AutoGetLineGroup}
+      nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s'' ' +
+              'And B_LineGroup = ''%s'' And B_BrandGroup=''%s''';
+      nStr := Format(nStr, [sTable_Batcode, GetCtrlData(EditStock),
+              GetCtrlData(EditType), GetCtrlData(EditLineGroup), GetCtrlData(EditBrand)]);
+      {$ELSE}
+      if FUseBrand then
+      begin
+        nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s'' ' +
+                ' And B_BrandGroup=''%s''';
+        nStr := Format(nStr, [sTable_Batcode, GetCtrlData(EditStock),
+                GetCtrlData(EditType), GetCtrlData(EditBrand)]);
+      end
+      else
+      begin
+        nStr := 'Select R_ID From %s Where B_Stock=''%s'' And B_Type=''%s''';
+        nStr := Format(nStr, [sTable_Batcode, GetCtrlData(EditStock),
+                GetCtrlData(EditType)]);
+      end;
+      {$ENDIF}
     {$ENDIF}
 
     with FDM.QueryTemp(nStr) do
@@ -313,6 +378,14 @@ begin
   begin
     Result := Check1.Checked or (IsNumber(EditWeek.Text, False) and (StrToFloat(EditWeek.Text) >= 0));
     nHint := '请输入周期值';
+  end else
+
+  if Sender = EditKw then
+  begin
+    {$IFDEF BatCodeByLine}
+    Result := Length(Trim(EditKw.Text)) > 0;
+    nHint := '请输入库号,格式为:(1,2,3)';
+    {$ENDIF}
   end;
 end;
 
@@ -345,28 +418,55 @@ begin
        nStr := ''
   else nStr := SF('R_ID', FRecordID, sfVal);
 
-  nStr := MakeSQLByStr([SF('B_Stock', GetCtrlData(EditStock)),
-          SF('B_Name', EditName.Text),
-          SF('B_Prefix', EditPrefix.Text),
-          SF('B_Base', EditBase.Text, sfVal),
-          SF('B_Length', EditLen.Text, sfVal),
-          SF('B_Incement', EditInc.Text, sfVal),
-          SF('B_UseDate', nU),
+  if FUseBrand then
+  begin
+    nStr := MakeSQLByStr([SF('B_Stock', GetCtrlData(EditStock)),
+            SF('B_Name', EditName.Text),
+            SF('B_Prefix', EditPrefix.Text),
+            SF('B_Base', EditBase.Text, sfVal),
+            SF('B_Length', EditLen.Text, sfVal),
+            SF('B_Incement', EditInc.Text, sfVal),
+            SF('B_UseDate', nU),
 
-          SF('B_AutoNew', nN),
-          SF('B_Low', EditLow.Text, sfVal),
-          SF('B_High', EditHigh.Text, sfVal),
-          SF('B_Value', EditValue.Text, sfVal),
-          SF('B_Interval', EditWeek.Text, sfVal),
-          SF('B_LastDate', sField_SQLServer_Now, sfVal),
-          {$IFDEF AutoGetLineGroup}
-          SF('B_LineGroup', GetCtrlData(EditLineGroup)),
-          SF('B_BrandGroup', GetCtrlData(EditBrand)),
-          SF('B_Valid', nV),
-          {$ENDIF}
-          SF('B_Batcode', EditBatcode.Text),
-          SF('B_Type', GetCtrlData(EditType))
-          ], sTable_Batcode, nStr, FRecordID = '');
+            SF('B_AutoNew', nN),
+            SF('B_Low', EditLow.Text, sfVal),
+            SF('B_High', EditHigh.Text, sfVal),
+            SF('B_Value', EditValue.Text, sfVal),
+            SF('B_Interval', EditWeek.Text, sfVal),
+            SF('B_LastDate', sField_SQLServer_Now, sfVal),
+            SF('B_BrandGroup', GetCtrlData(EditBrand)),
+            SF('B_Batcode', EditBatcode.Text),
+            SF('B_Type', GetCtrlData(EditType))
+            ], sTable_Batcode, nStr, FRecordID = '');
+  end
+  else
+  begin
+    nStr := MakeSQLByStr([SF('B_Stock', GetCtrlData(EditStock)),
+            SF('B_Name', EditName.Text),
+            SF('B_Prefix', EditPrefix.Text),
+            SF('B_Base', EditBase.Text, sfVal),
+            SF('B_Length', EditLen.Text, sfVal),
+            SF('B_Incement', EditInc.Text, sfVal),
+            SF('B_UseDate', nU),
+
+            SF('B_AutoNew', nN),
+            SF('B_Low', EditLow.Text, sfVal),
+            SF('B_High', EditHigh.Text, sfVal),
+            SF('B_Value', EditValue.Text, sfVal),
+            SF('B_Interval', EditWeek.Text, sfVal),
+            SF('B_LastDate', sField_SQLServer_Now, sfVal),
+            {$IFDEF AutoGetLineGroup}
+            SF('B_LineGroup', GetCtrlData(EditLineGroup)),
+            SF('B_BrandGroup', GetCtrlData(EditBrand)),
+            SF('B_Valid', nV),
+            {$ENDIF}
+            {$IFDEF BatCodeByLine}
+            SF('B_Kw', EditKw.Text),
+            {$ENDIF}
+            SF('B_Batcode', EditBatcode.Text),
+            SF('B_Type', GetCtrlData(EditType))
+            ], sTable_Batcode, nStr, FRecordID = '');
+  end;
   FDM.ExecuteSQL(nStr);
 
   {$IFDEF CSNF}

@@ -5,6 +5,7 @@
 unit UFormMain;
 
 {.$DEFINE DEBUG}
+{$I Link.inc}
 interface
 
 uses
@@ -59,7 +60,7 @@ type
     //起始索引
     FWaiter: TWaitObject;
     //等待对象
-    FListA,FListB: TStrings;
+    FListA,FListB,FListC: TStrings;
     //数据列表
   protected
     procedure DoSync;
@@ -269,7 +270,8 @@ begin
   FStartIndex := nStart;
   FListA := TStringList.Create;
   FListB := TStringList.Create;
-  
+  FListC := TStringList.Create;
+
   FWaiter := TWaitObject.Create;
   FWaiter.Interval := 20 * 1000;
 end;
@@ -325,7 +327,7 @@ end;
 procedure TSyncThread.DoSync;
 var nStr: string;
     nDS: TDataSet;
-    nTruck: WideString;
+    nTruck, nTruckEx: WideString;
     nIdx,nInt,nRecord: Integer;
 begin
   nStr := 'Select Index,License,PlateColor,VehicleType,AbsTime From MVC_Data ' +
@@ -339,6 +341,7 @@ begin
   begin
     FListA.Clear;
     FListB.Clear;
+    FListC.Clear;
 
     nRecord := FStartIndex;
     First;
@@ -351,6 +354,7 @@ begin
       //xxxx
 
       nTruck := Trim(FieldByName('License').AsString);
+      nTruckEx := Trim(FieldByName('License').AsString);
       nInt := Length(nTruck);
 
       if nInt < 5 then Continue;
@@ -370,15 +374,34 @@ begin
               SF('T_Valid', sFlag_Yes)
               ], sTable_Truck, '', True);
       FListB.Values[nTruck] := nStr;
+
+      {$IFDEF SaveAllSnapInfo}
+      nStr := MakeSQLByStr([SF('T_Truck', nTruckEx),
+              SF('T_PY', GetPinYinOfStr(nTruckEx)),
+              SF('T_PlateColor', FieldByName('PlateColor').AsString),
+              SF('T_Type', FieldByName('VehicleType').AsString),
+              SF('T_LastTime', FieldByName('AbsTime').AsString),
+              SF('T_NoVerify', sFlag_No),
+              SF('T_Valid', sFlag_Yes)
+              ], sTable_TruckSnap, '', True);
+      FListC.Add(nStr);
+      {$ENDIF}
     finally
       nDS.Next;
     end;
   end;
 
+  FDM.ADOConn.Connected := False;
+
   FDM.ADOConn.Connected := True;
-  try
-    FDM.ADOConn.BeginTrans;
+
+  if FDM.ADOConn.InTransaction then
+    FDM.ADOConn.RollbackTrans;
+
+  FDM.ADOConn.BeginTrans;
     //开启事务
+
+  try
 
     for nIdx:=FListA.Count - 1 downto 0 do
     begin
@@ -393,6 +416,14 @@ begin
         FDM.SQLTemp.SQL.Text := FListB.Values[nStr]; //update
         FDM.SQLTemp.ExecSQL;
       end;
+    end;
+
+    for nIdx:=FListC.Count - 1 downto 0 do
+    begin
+      nStr := FListC[nIdx];
+      FDM.SQLTemp.Close;
+      FDM.SQLTemp.SQL.Text := nStr;
+      FDM.SQLTemp.ExecSQL;
     end;
 
     FDM.ADOConn.CommitTrans;

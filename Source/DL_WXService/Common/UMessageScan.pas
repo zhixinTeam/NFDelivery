@@ -32,12 +32,14 @@ type
     //提货单出厂消息推送计时计数
     FNumInFactMsg: Integer;
     //提货单进厂消息推送计时计数
+    FFaildMsg: Integer;
+    //失败消息推送计时计数
   protected
     function SendSaleMsgToWebMall(nList: TStrings):Boolean;
     //销售发送消息
     function SendOrderMsgToWebMall(nList: TStrings):Boolean;
     //采购发送消息
-    procedure UpdateMsgNum(const nSuccess: Boolean; nLID: string);
+    procedure UpdateMsgNum(const nSuccess: Boolean; nLID: string; nCount: Integer);
     //更新消息状态
     procedure DoSaveOutFactMsg;
     //执行出厂消息插入
@@ -66,7 +68,9 @@ type
     //扫描线程
   public
     FSyncTime:Integer;
-    //设定同步次数阀值
+    //设定同步次数
+    FSyncMaxTime:Integer;
+    //设定同步最大次数
     constructor Create;
     destructor Destroy; override;
     //创建释放
@@ -124,8 +128,10 @@ begin
     nNode := nXML.Root.NodeByName('Item');
     try
       FSyncTime:= StrToInt(nNode.NodeByName('SyncTime').ValueAsString);
+      FSyncMaxTime:= StrToInt(nNode.NodeByName('SyncMaxTime').ValueAsString);
     except
       FSyncTime:= 5;
+      FSyncMaxTime := 30;
     end;
   finally
     nXML.Free;
@@ -178,14 +184,15 @@ begin
 end;
 
 procedure TMessageScanThread.Execute;
-var nErr, nSuccessCount, nFailCount: Integer;
+var nErr, nSuccessCount, nFailCount, nSyncCount: Integer;
     nStr: string;
     nResult : Boolean;
     nInit: Int64;
     nOut: TWorkerBusinessCommand;
 begin
   FNumOutFactMsg := 0;
-  FNumInFactMsg := 0;
+  FNumInFactMsg  := 0;
+  FFaildMsg      := 119;//程序启动先执行失败数据处理
 
   while not Terminated do
   try
@@ -194,12 +201,16 @@ begin
 
     Inc(FNumOutFactMsg);
     Inc(FNumInFactMsg);
+    Inc(FFaildMsg);
 
     if FNumInFactMsg >= 3 then
       FNumInFactMsg := 0;
 
     if FNumOutFactMsg >= 5 then
       FNumOutFactMsg := 0;
+
+    if FFaildMsg >= 120 then//2h
+      FFaildMsg := 0;
 
     //--------------------------------------------------------------------------
     if not FSyncLock.SyncLockEnter() then Continue;
@@ -221,8 +232,20 @@ begin
         DoSaveInFactMsg;
       end;
 
-      nStr:= 'select top 100 * from %s where WOM_SyncNum <= %d And WOM_deleted <> ''%s''';
-      nStr:= Format(nStr,[sTable_WebOrderMatch, gMessageScan.FSyncTime, sFlag_Yes]);
+      if FFaildMsg = 0 then
+      begin
+        WriteLog('失败消息处理...');
+        nStr:= 'select top 50 * from %s where (WOM_SyncNum > %d and WOM_SyncNum <=%d)'
+               +' And WOM_deleted <> ''%s''';
+        nStr:= Format(nStr,[sTable_WebOrderMatch, gMessageScan.FSyncTime,
+                            gMessageScan.FSyncMaxTime, sFlag_Yes]);
+      end
+      else
+      begin
+        nStr:= 'select top 100 * from %s where WOM_SyncNum <= %d And WOM_deleted <> ''%s''';
+        nStr:= Format(nStr,[sTable_WebOrderMatch, gMessageScan.FSyncTime, sFlag_Yes]);
+      end;
+
       with gDBConnManager.WorkerQuery(FDBConn, nStr) do
       begin
         if RecordCount < 1 then
@@ -243,6 +266,9 @@ begin
           FListA.Values['WOM_StatusType']:= FieldByName('WOM_StatusType').AsString;
           FListA.Values['WOM_MsgType']:= FieldByName('WOM_MsgType').AsString;
           FListA.Values['WOM_BillType']:= FieldByName('WOM_BillType').AsString;
+          FListA.Values['WOM_QueueMsg']:= FieldByName('WOM_QueueMsg').AsString;
+          FListA.Values['WOM_QueueTime']:= FieldByName('WOM_QueueTime').AsString;
+          nSyncCount := FieldByName('WOM_SyncNum').AsInteger;
 
           FDBConn.FConn.BeginTrans;
           try
@@ -259,7 +285,7 @@ begin
             begin
               Inc(nFailCount);
             end;
-            UpdateMsgNum(nResult,FListA.Values['WOM_LID']);
+            UpdateMsgNum(nResult,FListA.Values['WOM_LID'],nSyncCount);
             FDBConn.FConn.CommitTrans;
           except
             if FDBConn.FConn.InTransaction then
@@ -430,14 +456,15 @@ begin
 //  end;
 end;
 
-procedure TMessageScanThread.UpdateMsgNum(const nSuccess: Boolean; nLID: string);
+procedure TMessageScanThread.UpdateMsgNum(const nSuccess: Boolean; nLID: string;
+                                          nCount: Integer);
 var nStr: string;
     nUpdateDBWorker: PDBWorker;
 begin
   nUpdateDBWorker := nil;
 
   try
-    if nSuccess then
+    if nSuccess or (nCount >= gMessageScan.FSyncMaxTime) then
     begin
       nStr := 'Update %s set WOM_deleted = ''%s'' where WOM_LID = ''%s''';
       nStr:= Format(nStr,[sTable_WebOrderMatch, sFlag_Yes,nLID]);
@@ -462,7 +489,7 @@ var nStr: string;
     nErr,nIdx: Integer;
     nOut: TWorkerWebChatData;
 begin
-  nStr:= 'select top 100 * from %s where WOM_StatusType =%d Order by R_ID desc';
+  nStr:= 'select top 10000 * from %s where WOM_StatusType =%d Order by R_ID desc';
   nStr:= Format(nStr,[sTable_WebOrderMatch, c_WeChatStatusCreateCard]);
   //查询最近100条网上开单记录
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
@@ -589,7 +616,7 @@ var nStr: string;
     nErr,nIdx: Integer;
     nOut: TWorkerWebChatData;
 begin
-  nStr:= 'select top 100 * from %s where WOM_StatusType =%d Order by R_ID desc';
+  nStr:= 'select top 10000 * from %s where WOM_StatusType =%d Order by R_ID desc';
   nStr:= Format(nStr,[sTable_WebOrderMatch, c_WeChatStatusCreateCard]);
   //查询最近100条网上开单记录
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do

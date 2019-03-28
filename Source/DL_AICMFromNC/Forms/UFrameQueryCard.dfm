@@ -1,19 +1,21 @@
 inherited fFrameQueryCard: TfFrameQueryCard
   Width = 873
   Height = 750
-  Color = clBlack
   object LabelTruck: TcxLabel
     Left = 0
     Top = 0
     Align = alTop
     AutoSize = False
     Caption = #36710#29260#21495#30721':'
+    ParentColor = False
     ParentFont = False
+    Style.Color = clWhite
     Style.Font.Charset = DEFAULT_CHARSET
     Style.Font.Color = clWhite
     Style.Font.Height = -64
     Style.Font.Name = #23435#20307
     Style.Font.Style = [fsBold]
+    Style.TextColor = clBlack
     Style.IsFontAssigned = True
     Properties.Alignment.Horz = taLeftJustify
     Properties.Alignment.Vert = taVCenter
@@ -35,6 +37,7 @@ inherited fFrameQueryCard: TfFrameQueryCard
     Style.Font.Height = -64
     Style.Font.Name = #23435#20307
     Style.Font.Style = [fsBold]
+    Style.TextColor = clBlack
     Style.IsFontAssigned = True
     Properties.Alignment.Vert = taVCenter
     Transparent = True
@@ -54,7 +57,7 @@ inherited fFrameQueryCard: TfFrameQueryCard
     Style.Font.Height = -64
     Style.Font.Name = #23435#20307
     Style.Font.Style = [fsBold]
-    Style.TextColor = clWhite
+    Style.TextColor = clBlack
     Style.IsFontAssigned = True
     Properties.Alignment.Vert = taVCenter
     Transparent = True
@@ -75,6 +78,7 @@ inherited fFrameQueryCard: TfFrameQueryCard
     Style.Font.Height = -64
     Style.Font.Name = #23435#20307
     Style.Font.Style = [fsBold]
+    Style.TextColor = clBlack
     Style.IsFontAssigned = True
     Properties.Alignment.Horz = taLeftJustify
     Properties.Alignment.Vert = taVCenter
@@ -95,6 +99,7 @@ inherited fFrameQueryCard: TfFrameQueryCard
     Style.Font.Height = -64
     Style.Font.Name = #23435#20307
     Style.Font.Style = [fsBold]
+    Style.TextColor = clBlack
     Style.IsFontAssigned = True
     Properties.Alignment.Horz = taLeftJustify
     Properties.Alignment.Vert = taVCenter
@@ -115,6 +120,7 @@ inherited fFrameQueryCard: TfFrameQueryCard
     Style.Font.Height = -64
     Style.Font.Name = #23435#20307
     Style.Font.Style = [fsBold]
+    Style.TextColor = clBlack
     Style.IsFontAssigned = True
     Properties.Alignment.Horz = taLeftJustify
     Properties.Alignment.Vert = taVCenter
@@ -134,6 +140,7 @@ inherited fFrameQueryCard: TfFrameQueryCard
     Style.Font.Height = -64
     Style.Font.Name = #23435#20307
     Style.Font.Style = []
+    Style.TextColor = clBlack
     Style.IsFontAssigned = True
     Properties.Alignment.Horz = taCenter
     Properties.Alignment.Vert = taVCenter

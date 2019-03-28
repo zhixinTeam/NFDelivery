@@ -34,7 +34,10 @@ type
     EditArea: TComboEdit;
     Label9: TLabel;
     lblKD: TLabel;
-    BtnNo: TSpeedButton;
+    Label11: TLabel;
+    EditResult: TComboEdit;
+    Label12: TLabel;
+    EditJS: TEdit;
     procedure tmrGetOrderTimer(Sender: TObject);
     procedure FormShow(Sender: TObject);
     procedure FormKeyUp(Sender: TObject; var Key: Word; var KeyChar: Char;
@@ -42,7 +45,6 @@ type
     procedure BtnCancelClick(Sender: TObject);
     procedure BtnOKClick(Sender: TObject);
     procedure FormActivate(Sender: TObject);
-    procedure BtnNoClick(Sender: TObject);
   private
     { Private declarations }
   public
@@ -51,6 +53,7 @@ type
 
 var
   gCardNO: string;
+  gList: TStrings;
   FrmShowOrderInfo: TFrmShowOrderInfo;
 
 implementation
@@ -66,34 +69,55 @@ begin
   Self.Hide;
 end;
 
-procedure TFrmShowOrderInfo.BtnNoClick(Sender: TObject);
-begin
-  inherited;
-  if Length(gOrders)>0 then
-  with gOrders[0] do
-  begin
-    FSeal := EditArea.Text;
-    FKZComment := EditKZComment.Text;
-    FKZValue := StrToFloatDef(EditKZValue.Text, 0);
-    FYSValid := 'N';
-    if SavePurchaseOrders('X', gOrders) then
-         ShowMessage('拒收成功')
-    else ShowMessage('拒收失败');
-
-    MainForm.Show;
-  end;
-end;
-
 procedure TFrmShowOrderInfo.BtnOKClick(Sender: TObject);
+var nStr : string;
+    nForceUnLoadPlace: Boolean;
 begin
   inherited;
+  gList.Clear;
+  nForceUnLoadPlace := False;
+  if GetUnLoadList('ForceUPStock', nStr) then
+  begin
+    gList.Text := nStr;
+    if gList.IndexOf(gOrders[0].FStockNo) >= 0 then
+      nForceUnLoadPlace := True;
+
+  end;
+
+  nStr := Trim(EditJS.Text);
+  if EditResult.ItemIndex = 1 then
+  begin
+    if nStr = '' then
+    begin
+      ShowMessage('请输入拒收原因');
+      Exit;
+    end;
+  end;
+
+  if nForceUnLoadPlace then
+  begin
+    if EditArea.Text = '' then
+    begin
+      ShowMessage('请选择卸货地点');
+      Exit;
+    end;
+  end;
+
   if Length(gOrders)>0 then
   with gOrders[0] do
   begin
     FSeal := EditArea.Text;
     FKZComment := EditKZComment.Text;
     FKZValue := StrToFloatDef(EditKZValue.Text, 0);
-    FYSValid := 'Y';
+    if EditResult.ItemIndex = 1 then
+      FYSValid := 'N'
+    else
+    begin
+      FYSValid := 'Y';
+      nStr := '';
+    end;
+    FMemo := nStr;
+
     if SavePurchaseOrders('X', gOrders) then
          ShowMessage('验收成功')
     else ShowMessage('验收失败');
@@ -113,6 +137,8 @@ begin
   lblKD.Text       := '';
   tmrGetOrder.Enabled := True;
   SetLength(gOrders, 0);
+  if not Assigned(gList) then
+    gList := TStringList.Create;
 end;
 
 procedure TFrmShowOrderInfo.FormKeyUp(Sender: TObject; var Key: Word;
@@ -149,9 +175,10 @@ begin
   EditKZComment.ItemIndex := 0;
   lblKD.Text       := '';
   BtnOK.Enabled := False;
-  BtnNo.Enabled := False;
   tmrGetOrder.Enabled := True;
   SetLength(gOrders, 0);
+  if not Assigned(gList) then
+    gList := TStringList.Create;
 end;
 
 procedure TFrmShowOrderInfo.tmrGetOrderTimer(Sender: TObject);
@@ -196,10 +223,47 @@ begin
     lblKD.Text       := FOrigin;
 
     EditKZValue.Text := FloatToStr(FKZValue);
+
+    if FYSValid = 'N' then
+    begin
+      EditResult.ItemIndex := 1;
+      EditJs.Text := FMemo;
+    end
+    else
+    begin
+      EditResult.ItemIndex := 0;
+      EditJs.Text := '';
+    end;
+
+  end;
+
+  gList.Clear;
+
+  if not GetUnLoadList('UnLodingPlace', nStr) then
+  begin
+    nStr := '读取卸货地点失败';
+
+    ShowMessage(nStr);
+    Exit;
+  end;
+
+  if nStr = '' then
+  begin
+    nStr := '读取卸货地点失败';
+
+    ShowMessage(nStr);
+    Exit;
+  end;
+
+  gList.Text := nStr;
+
+  EditArea.Items.Clear;
+  for nIdx := 0 to gList.Count - 1 do
+  begin
+    EditArea.Items.Add(gList.Strings[nIdx]);
   end;
 
   BtnOK.Enabled := True;
-  BtnNo.Enabled := True;
 end;
 
 end.

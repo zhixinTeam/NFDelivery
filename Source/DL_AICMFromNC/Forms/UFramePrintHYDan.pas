@@ -1,5 +1,6 @@
 unit UFramePrintHYDan;
 
+{$I Link.Inc}
 interface
 
 uses
@@ -78,7 +79,7 @@ begin
 end;
 
 procedure TfFramePrintHYDan.btnPrintClick(Sender: TObject);
-var nMsg, nStr, nID: string;
+var nMsg, nStr, nID, nSeal, nLastSeal: string;
     nIdx: Integer;
 begin
   nID := Trim(EditID.Text);
@@ -89,7 +90,7 @@ begin
     Exit;
   end;
 
-  nStr := 'Select L_ID From %s Where L_ID like ''%%%s%%''';
+  nStr := 'Select L_ID, L_Seal From %s Where L_ID like ''%%%s%%''';
   nStr := Format(nStr, [sTable_Bill, nID]);
 
   with FDM.SQLQuery(nStr) do
@@ -110,9 +111,82 @@ begin
     end;
 
     nID := Fields[0].AsString;
+    nSeal := Fields[1].AsString;
   end;
 
+  {$IFDEF GetLastHYInfo}
+  if nSeal = '' then
+  begin
+    ShowMsg('批次号为空,无法打印', sHint);
+    Exit;
+  end;
+
+  nStr := 'Select * From %s Where R_SerialNo = ''%s''';
+  nStr := Format(nStr, [sTable_StockRecord, nSeal]);
+
+  with FDM.SQLQuery(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      PrintHuaYanReport(nID, nMsg, gSysParam.FHYDanPrinter);
+      if nMsg <> '' then
+      begin
+        ShowMsg(nMsg, sHint);
+        EditID.SetFocus;
+        Exit;
+      end;
+      EditID.Text := '';
+      gTimeCounter := 0;
+      Exit;
+    end;
+  end;
+
+  nLastSeal := '';
+
+  nStr := 'Select B_Prefix From %s ';
+  nStr := Format(nStr, [sTable_Batcode]);
+
+  with FDM.SQLQuery(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      First;
+
+      while not eof do
+      begin
+        if Pos(Fields[0].AsString, nSeal) > 0 then
+        begin
+          nLastSeal := Fields[0].AsString;
+          Break;
+        end;
+        Next;
+      end;
+
+      if nLastSeal = '' then
+      begin
+        ShowMsg('查询最近批次号失败', sHint);
+        Exit;
+      end;
+    end;
+  end;
+
+  nStr := 'Select top 1 L_Seal From %s a, %s b Where a.L_Seal = b.R_SerialNo ' +
+  ' and b.R_SerialNo Like ''%%%s%%'' order by a.L_Date desc';
+  nStr := Format(nStr, [sTable_Bill, sTable_StockRecord, nLastSeal]);
+
+  WriteLog('查询最近批次号Sql:' + nStr);
+  with FDM.SQLQuery(nStr) do
+  begin
+    if RecordCount <= 0 then
+    begin
+      ShowMsg('查询最近批次号失败', sHint);
+      Exit;
+    end;
+    PrintHuaYanReportEx(nID, Fields[0].AsString, nMsg, gSysParam.FHYDanPrinter);
+  end;
+  {$ELSE}
   PrintHuaYanReport(nID, nMsg, gSysParam.FHYDanPrinter);
+  {$ENDIF}
 
   if nMsg <> '' then
   begin

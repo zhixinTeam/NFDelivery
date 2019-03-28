@@ -126,6 +126,8 @@ begin
       FSaleOrderItems[i].FPd    := FListB.Values['ispd'];
       FSaleOrderItems[i].FWxZhuId    := FListB.Values['wxzhuid'];
       FSaleOrderItems[i].FWxZiId    := FListB.Values['wxziid'];
+      FSaleOrderItems[i].FPhy    := FListB.Values['isphy'];
+      FSaleOrderItems[i].FTransType    := FListB.Values['transtype'];
       FSaleOrderItems[i].FSelect    := False;
       AddListViewItem(FSaleOrderItems[i]);
     end;
@@ -152,6 +154,9 @@ begin
   col.Caption := '物料名称';
   col.Width := 230;
   col := lvOrders.Columns.Add;
+  col.Caption := '品牌';
+  col.Width := 100;
+  col := lvOrders.Columns.Add;
   col.Caption := '车牌号码';
   col.Width := 150;
   col := lvOrders.Columns.Add;
@@ -160,6 +165,9 @@ begin
   col := lvOrders.Columns.Add;
   col.Caption := '拼单';
   col.Width := 70;
+  col := lvOrders.Columns.Add;
+  col.Caption := '到货地点';
+  col.Width := 100;
   col := lvOrders.Columns.Add;
   col.Caption := '选择';
   col.Width := 70;
@@ -174,12 +182,14 @@ begin
   nlistitem.Caption := nSaleOrderItem.FCusName;
 
   nlistitem.SubItems.Add(nSaleOrderItem.FStockName);
+  nlistitem.SubItems.Add(nSaleOrderItem.FStockBrand);
   nlistitem.SubItems.Add(nSaleOrderItem.FTruck);
   nlistitem.SubItems.Add(FloatToStr(nSaleOrderItem.FValue));
   if nSaleOrderItem.FPd = sFlag_Yes then
     nlistitem.SubItems.Add('是')
   else
     nlistitem.SubItems.Add('否');
+  nlistitem.SubItems.Add(nSaleOrderItem.FStockArea);
   nlistitem.SubItems.Add(sUncheck);
 end;
 
@@ -192,9 +202,9 @@ begin
   begin
     with lvOrders.Selected do
     begin
-      if SubItems[4] = sCheck then
+      if SubItems[6] = sCheck then
       begin
-        SubItems[4] := sUnCheck;
+        SubItems[6] := sUnCheck;
         FSaleOrderItems[lvOrders.Selected.Index].FSelect := False;
 
         nCanSave := False;
@@ -258,7 +268,7 @@ begin
         ShowMsg('最多支持' + IntToStr(gSysParam.FAICMPDCount) +'个订单进行拼单,请重新选择', sHint);
         Exit;
       end;
-      SubItems[4] := sCheck;
+      SubItems[6] := sCheck;
       FSaleOrderItems[lvOrders.Selected.Index].FSelect := True;
     end;
 
@@ -271,6 +281,21 @@ begin
         Break;
       end;
     end;
+
+    {$IFDEF PrintHYEach}
+    if nCanSave then
+    begin
+      for nIdx := Low(FSaleOrderItems) to High(FSaleOrderItems) do
+      begin
+        if FSaleOrderItems[nIdx].FPhy = sFlag_Yes then
+        begin
+          PrintHY.Checked := True;
+        end;
+      end;
+    end
+    else
+      PrintHY.Checked := False;
+    {$ENDIF}
     btnSave.Visible := nCanSave = True;
   end;
 end;
@@ -286,6 +311,7 @@ procedure TfFrameSaleCard.BtnSaveClick(Sender: TObject);
 var nMsg, nStr, nCard, nHint: string;
     nIdx, nInt: Integer;
     nRet, nPrint: Boolean;
+    nTruck: string;
 begin
   nInt := 0;
   BtnSave.Visible := False;
@@ -294,6 +320,37 @@ begin
     if FSaleOrderItems[nIdx].FSelect then
     begin
       Inc(nInt);
+      nTruck := FSaleOrderItems[nIdx].FTruck;
+
+      {$IFDEF BusinessOnly}
+      if not IsPurTruckReady(nTruck, nHint) then
+      begin
+        nStr := '车辆[%s]存在未完成的采购单据[%s],无法办卡';
+        nStr := Format(nStr,[nTruck, nHint]);
+        ShowMsg(nStr, sHint);
+        Exit;
+      end;
+      {$ENDIF}
+
+      if Pos('散',FSaleOrderItems[nIdx].FStockName) > 0 then
+      begin
+        if IFHasBill(nTruck) then
+        begin
+          ShowMsg('车辆存在未完成的提货单,无法开单,请联系管理员',sHint);
+          Exit;
+        end;
+      end
+      else
+      begin
+        if gSysParam.FAICMPDCount <= 1 then
+        begin
+          if IFHasBill(nTruck) then
+          begin
+            ShowMsg('车辆存在未完成的提货单,无法开单,请联系管理员',sHint);
+            Exit;
+          end;
+        end;
+      end;
     end;
   end;
 
@@ -387,7 +444,7 @@ begin
         Values['Value'] := FloatToStr(FSaleOrderItems[nIdx].FValue);                                 //订单量
         Values['Truck'] := FSaleOrderItems[nIdx].FTruck;
         Values['Lading'] := sFlag_TiHuo;
-        Values['IsVIP'] := sFlag_TypeCommon;
+        Values['IsVIP'] := GetTransType(FSaleOrderItems[nIdx].FTransType);
         Values['Pack'] := GetStockPackStyle(FSaleOrderItems[nIdx].FStockID);
         Values['BuDan'] := sFlag_No;
         Values['CusID'] := FSaleOrderItems[nIdx].FCusID;
@@ -447,6 +504,17 @@ begin
         PrintBillReport(FListC.Strings[nIdx], False);
         Sleep(200);
       end;
+
+      {$IFDEF PrintHyOnSaveBill}
+      for nIdx := 0 to FListC.Count - 1 do
+      begin
+        PrintHuaYanReport(FListC.Strings[nIdx], nMsg, gSysParam.FHYDanPrinter);
+
+        if nMsg <> '' then
+          ShowMsg(nMsg, sHint);
+        Sleep(200);
+      end;
+      {$ENDIF}
     end
     else begin
       gDispenserManager.RecoveryCard(gSysParam.FTTCEK720ID, nHint);

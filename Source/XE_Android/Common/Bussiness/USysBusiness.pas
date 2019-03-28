@@ -69,6 +69,8 @@ function LogOut: Boolean;
 
 function IsStockValid(const nStocks: string): Boolean;
 function TruckStatusToStr(const nStatus: string): string;
+function GetUnLoadList(const nUnLoadPlace: string;
+ var nList: string): Boolean;
 implementation
 
 //Desc: ¼ÇÂ¼ÈÕÖ¾
@@ -429,6 +431,22 @@ begin
   nStr := PackerEncodeStr(gSysParam.FOperator);
   Result := CallBusinessCommand(cBC_UserLogOut, nStr, '', @nOut);
   //if (not Result) or (nOut.FData = '') then Exit;
+end;
+
+function GetUnLoadList(const nUnLoadPlace: string;
+ var nList: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
+  nList := '';
+
+  Result := CallBusinessCommand(cBC_GetUnLoadingPlace, nUnLoadPlace, '', @nOut, False);
+
+  if Result then
+  begin
+    nList := nOut.FData;
+  end;
+  //xxxxx
 end;
 
 end.

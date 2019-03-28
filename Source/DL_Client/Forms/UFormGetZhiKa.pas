@@ -4,6 +4,7 @@
 *******************************************************************************}
 unit UFormGetZhiKa;
 
+{$I Link.inc}
 interface
 
 uses
@@ -55,6 +56,8 @@ type
     //客户编号
     FStockID: string;
     //物料编号
+    FTruck: string;
+    //车牌号码
     FOrderType: string;
     //订单类型
     FMineName: string;
@@ -102,7 +105,7 @@ begin
     FStockID := gParam.FParamB;
     FOrderType := gParam.FParamC;
     FMineName := gParam.FParamD;
-
+    FTruck := gParam.FParamE;
     FListA := TStringList.Create;
     EditName.Properties.ReadOnly := FCusID <> '';
     TimerDelay.Enabled := True;
@@ -224,6 +227,10 @@ begin
 
   FListA.Values['NoDate'] := sFlag_Yes;
   FListA.Values['CustomerID'] := nID;
+  {$IFDEF HdFilterTruck}
+  if FTruck <> '' then
+    FListA.Values['Truck'] := FTruck;
+  {$ENDIF}
   FListA.Values['Order'] := 'invtype,NPLANNUM ASC';
 
   nStr := GetQueryOrderSQL(nStr, EncodeBase64(FListA.Text));

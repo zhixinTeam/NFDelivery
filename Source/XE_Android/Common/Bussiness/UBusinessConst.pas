@@ -78,6 +78,7 @@ const
   cBC_SyncSaleMan             = $0081;   //远程同步业务员
   cBC_SyncStockBill           = $0082;   //同步单据到远程
   cBC_CheckStockValid         = $0083;   //验证是否允许发货
+  cBC_GetUnLoadingPlace       = $0139;   //读取卸货地点
 
 type
   PSystemParam = ^TSystemParam;
