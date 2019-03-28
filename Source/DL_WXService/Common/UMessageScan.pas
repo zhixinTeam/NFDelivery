@@ -489,8 +489,9 @@ var nStr: string;
     nErr,nIdx: Integer;
     nOut: TWorkerWebChatData;
 begin
-  nStr:= 'select top 10000 * from %s where WOM_StatusType =%d Order by R_ID desc';
-  nStr:= Format(nStr,[sTable_WebOrderMatch, c_WeChatStatusCreateCard]);
+  nStr:= 'select top 100 * from %s where WOM_StatusType =%d ' +
+         'And WOM_HasOut <> ''%s'' ';
+  nStr:= Format(nStr,[sTable_WebOrderMatch, c_WeChatStatusCreateCard, sFlag_Yes]);
   //查询最近100条网上开单记录
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
   begin
@@ -530,8 +531,10 @@ end;
 
 function TMessageScanThread.SaveSaleOutFactMsg(nList: TStrings): Boolean;
 var nStr, nLID, nTableName: string;
+    nHasOut : Boolean;
 begin
   Result := False;
+  nHasOut := False;
   nLID := nList.Values['WOM_LID'];
 
   nStr := 'select L_ID from %s where L_ID=''%s'' and L_OutFact is not null ';
@@ -554,8 +557,18 @@ begin
   begin
     if RecordCount >= 1 then
     begin
-      Exit;
+      nHasOut := True;
     end;
+  end;
+
+  if nHasOut then
+  begin
+    nStr := 'Update %s set WOM_HasOut = ''%s'' where WOM_LID = ''%s'' and WOM_StatusType =%d';
+    nStr:= Format(nStr,[sTable_WebOrderMatch, sFlag_Yes,nLID,c_WeChatStatusCreateCard]);
+    gDBConnManager.WorkerExec(FDBConn, nStr);
+    //更新为已处理
+    WriteLog('查询到提货单'+ nLID +'出厂消息已存在,更新状态...');
+    Exit;
   end;
 
   WriteLog('查询到提货单'+ nLID +'已出厂,插入推送消息...');
@@ -616,8 +629,9 @@ var nStr: string;
     nErr,nIdx: Integer;
     nOut: TWorkerWebChatData;
 begin
-  nStr:= 'select top 10000 * from %s where WOM_StatusType =%d Order by R_ID desc';
-  nStr:= Format(nStr,[sTable_WebOrderMatch, c_WeChatStatusCreateCard]);
+  nStr:= 'select top 100 * from %s where WOM_StatusType =%d ' +
+         'And WOM_HasIn <> ''%s'' ';
+  nStr:= Format(nStr,[sTable_WebOrderMatch, c_WeChatStatusCreateCard, sFlag_Yes]);
   //查询最近100条网上开单记录
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
   begin
@@ -655,6 +669,7 @@ end;
 
 function TMessageScanThread.SaveSaleInFactMsg(nList: TStrings): Boolean;
 var nStr, nLID, nTableName: string;
+    nHasIn : Boolean;
 begin
   Result := False;
   nLID := nList.Values['WOM_LID'];
@@ -679,8 +694,18 @@ begin
   begin
     if RecordCount >= 1 then
     begin
-      Exit;
+      nHasIn := True;
     end;
+  end;
+
+  if nHasIn then
+  begin
+    nStr := 'Update %s set WOM_HasIn = ''%s'' where WOM_LID = ''%s'' and WOM_StatusType =%d';
+    nStr:= Format(nStr,[sTable_WebOrderMatch, sFlag_Yes,nLID,c_WeChatStatusCreateCard]);
+    gDBConnManager.WorkerExec(FDBConn, nStr);
+    //更新为已处理
+    WriteLog('查询到提货单'+ nLID +'进厂消息已存在,更新状态...');
+    Exit;
   end;
 
   WriteLog('查询到提货单'+ nLID +'已进厂,插入推送消息...');
