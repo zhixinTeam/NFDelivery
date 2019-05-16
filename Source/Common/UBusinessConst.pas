@@ -146,6 +146,7 @@ const
   cBC_GetGroupByArea           = $0138;   //获取区域流向分组
 
   cBC_GetUnLodingPlace         = $0139;   //获取卸货地点
+  cBC_VerifySanCardUseCount    = $0140;   //校验散装现场刷卡次数
 
   cBC_WX_VerifPrintCode       = $0501;   //微信：验证喷码信息
   cBC_WX_WaitingForloading    = $0502;   //微信：工厂待装查询

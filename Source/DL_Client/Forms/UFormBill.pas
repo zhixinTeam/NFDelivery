@@ -194,6 +194,10 @@ begin
   {$ELSE}
   dxLayout1Item16.Visible := False;
   {$ENDIF}
+
+  {$IFDEF ManuSeal}
+  EditFQ.Properties.ReadOnly := True;
+  {$ENDIF}
   
   AdjustCtrlData(Self);
 end;
@@ -250,6 +254,22 @@ begin
   if (Sender = EditTruck) and (Key = Char(VK_Return)) then
   begin
     EditHisValueMax.Text := Format('%.2f', [GetTruckHisValueMax(EditTruck.Text)]);
+  end;
+  {$ENDIF}
+
+  {$IFDEF ManuSeal}
+  if (Sender = EditFQ) and (Key = Char(VK_SPACE)) then
+  begin
+    Key := #0;
+    nP.FParamA := FOrder.FStockID;
+    CreateBaseFormItem(cFI_FormGetBatCode, '', @nP);
+
+    if (nP.FCommand = cCmd_ModalResult) and(nP.FParamA = mrOk) then
+    begin
+      EditFQ.Text := nP.FParamB;
+    end;
+
+    EditFQ.SelectAll;
   end;
   {$ENDIF}
 end;
@@ -388,6 +408,14 @@ begin
   end;
   {$ENDIF}
 
+  {$IFDEF ManuSeal}
+  if Trim(EditFQ.Text) = '' then
+  begin
+    ShowMsg('«Î—°‘Ò≈˙¥Œ∫≈', sHint);
+    Exit
+  end;
+  {$ENDIF}
+
   if not VerifyTruckGPS then
   begin
     ModalResult := mrCancel;
@@ -434,6 +462,7 @@ begin
     Values['PoundName']    := EditPoundStation.Text;
 
     Values['bm'] := FOrder.FBm;
+    Values['SpecialCus'] := FOrder.FSpecialCus;
 
     if PrintHY.Checked  then
          Values['PrintHY'] := sFlag_Yes

@@ -409,6 +409,16 @@ begin
     Exit;
   end;
 
+  {$IFDEF DaiNoPrint}
+  if nDS.FieldByName('L_Type').AsString = sFlag_Dai then
+  begin
+    nStr := '交货单[ %s ] 提货类型为袋装,无需打印交货单';
+    nStr := Format(nStr, [nBill]);
+    WriteLog(nStr);
+    Exit;
+  end;
+  {$ENDIF}
+
   nStr := gPath + 'Report\LadingBill.fr3';
   if not FDR.LoadReportFile(nStr) then
   begin
@@ -516,7 +526,7 @@ begin
   nHint := '';
   Result := False;
 
-  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_PrintHY From %s sb ' +
+  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_PrintHY,sb.L_Type From %s sb ' +
           ' Left Join %s sr on sr.R_SerialNo=sb.L_Seal ' +
           ' Where sb.L_ID = ''%s''';
   nStr := Format(nStr, [sTable_Bill, sTable_StockRecord, nBill]);
@@ -535,6 +545,16 @@ begin
         nHint := Format(nHint, [nBill]);
         Exit;
       end;
+
+      {$IFDEF DaiNoPrint}
+      if Fields[3].AsString = sFlag_Dai then
+      begin
+        nStr := '交货单[ %s ] 提货类型为袋装,无需打印化验单';
+        nStr := Format(nStr, [nBill]);
+        WriteLog(nStr);
+        Exit;
+      end;
+      {$ENDIF}
     end;
   end;
 

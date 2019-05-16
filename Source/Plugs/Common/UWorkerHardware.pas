@@ -477,7 +477,8 @@ end;
 function THardwareCommander.PrintCode(var nData: string): Boolean;
 var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck,nBm,nPCCode,nCusBz: string;
     nPrefixLen, nIDLen: Integer;
-    nEvent,nEID:string;
+    nEvent,nEID,nCusName:string;
+    nLDate: TDateTime;
 begin
   Result := True;
   if not gCodePrinterManager.EnablePrinter then Exit;
@@ -511,11 +512,11 @@ begin
     //无提货单配置
 
     {$IFDEF BMPrintCode}
-    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck,L_Bm From %s ' +
+    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck,L_Bm,L_Date,L_CusName From %s ' +
             'Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
     {$ELSE}
-    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck,C_Memo From %s ' +
+    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck,L_Date,C_Memo,L_CusName From %s ' +
             ' left join %s on L_CusName = C_Name ' +
             'Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, sTable_Customer, FIn.FData]);
@@ -536,7 +537,9 @@ begin
       nArea     := FieldByName('L_Area').AsString;
       nSeal     := FieldByName('L_Seal').AsString;
       nCusCode  := FieldByName('L_CusCode').AsString;
+      nCusName  := FieldByName('L_CusName').AsString;
       nTruck    := FieldByName('L_Truck').AsString;
+      nLDate    := FieldByName('L_Date').AsDateTime;
       {$IFDEF BMPrintCode}
       nBm       := FieldByName('L_Bm').AsString;
       {$ELSE}
@@ -596,6 +599,8 @@ begin
       {$IFDEF XKNF}
       if Pos('-', nSeal) > 0 then
         nSeal := Copy(nSeal, 1, Pos('-', nSeal) - 1);
+      nSeal := StringReplace(nSeal,FormatDateTime('YYYY',Now),'',[rfReplaceAll]);
+      nSeal := Trim(nSeal);
       nCode := nPCCode + nSeal + FormatDateTime('YYYY',Now)
                  + Copy(nBill, nPrefixLen + 3, 4) ;
       {$ENDIF}
@@ -622,6 +627,34 @@ begin
       //如果有汉字,则换行处理
       nCode := nCode + FormatDateTime('YYYY',Now)
                  + Copy(nBill, nPrefixLen + 3, 4) ;
+      {$ENDIF}
+
+      {$IFDEF LGNF}
+      nCusName := GetPinYinOfStr(nCusName);
+      while Length(nCusName) < 6 do
+        nCusName := nCusName + '0';
+
+      nCusName := Copy(nCusName,1,6);
+
+      nCode := nPCCode + '@7LG' + FormatDateTime('YYMMDDHHMM',nLDate) + '@2    '; //换行
+      //如果有汉字,则换行处理
+      nCode := nCode + nCusName + nSeal;
+      {$ENDIF}
+
+      {$IFDEF JFNF}
+      nSeal := nCusCode + nSeal;
+
+      nCode := nPCCode + '@7' + FormatDateTime('YYYYMMDD',Now) + '@2    '; //换行
+      //如果有汉字,则换行处理
+      nCode := nCode + nSeal;
+      {$ENDIF}
+
+      {$IFDEF HYNF}
+      nSeal := nCusCode + nSeal;
+
+      nCode := nPCCode + '@7' + FormatDateTime('YYYYMMDD',Now) + '@2    '; //换行
+      //如果有汉字,则换行处理
+      nCode := nCode + nSeal;
       {$ENDIF}
 
       {$IFDEF HSNF}

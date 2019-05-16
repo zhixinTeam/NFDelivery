@@ -250,6 +250,10 @@ inherited fFramePoundQuery: TfFramePoundQuery
       Caption = #31216#37325#26102#25235#25293
       OnClick = N4Click
     end
+    object N15: TMenuItem
+      Caption = #24211#24213#35745#37327#25235#25293
+      OnClick = N15Click
+    end
     object N13: TMenuItem
       Caption = '-'
     end

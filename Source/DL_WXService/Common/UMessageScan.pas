@@ -490,7 +490,7 @@ var nStr: string;
     nOut: TWorkerWebChatData;
 begin
   nStr:= 'select top 100 * from %s where WOM_StatusType =%d ' +
-         'And WOM_HasOut <> ''%s'' ';
+         'And IsNull(WOM_HasOut, '''') <> ''%s'' ';
   nStr:= Format(nStr,[sTable_WebOrderMatch, c_WeChatStatusCreateCard, sFlag_Yes]);
   //查询最近100条网上开单记录
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
@@ -537,7 +537,7 @@ begin
   nHasOut := False;
   nLID := nList.Values['WOM_LID'];
 
-  nStr := 'select L_ID from %s where L_ID=''%s'' and L_OutFact is not null ';
+  nStr := 'select L_OutFact from %s where L_ID=''%s'' ';
   nStr := Format(nStr,[sTable_Bill,nLID]);
   //xxxxx
 
@@ -545,8 +545,15 @@ begin
   begin
     if RecordCount <= 0 then
     begin
+      nStr := 'Update %s set WOM_HasOut = ''%s'' where WOM_LID = ''%s'' and WOM_StatusType =%d';
+      nStr:= Format(nStr,[sTable_WebOrderMatch, sFlag_Yes,nLID,c_WeChatStatusCreateCard]);
+      gDBConnManager.WorkerExec(FDBConn, nStr);
+      //更新为已处理
+      WriteLog('查询到提货单'+ nLID +'已丢失,更新状态...');
       Exit;
     end;
+    if Fields[0].AsString = '' then
+      Exit;
   end;
 
   nStr := 'select WOM_LID from %s where WOM_LID=''%s'' and WOM_StatusType=%d ';
@@ -579,6 +586,11 @@ begin
                        nLID,c_WeChatStatusFinished,cSendWeChatMsgType_OutFactory,
                        nList.Values['WOM_BillType']]);
   gDBConnManager.WorkerExec(FDBConn, nStr);
+
+  nStr := 'Update %s set WOM_HasOut = ''%s'' where WOM_LID = ''%s'' and WOM_StatusType =%d';
+  nStr:= Format(nStr,[sTable_WebOrderMatch, sFlag_Yes,nLID,c_WeChatStatusCreateCard]);
+  gDBConnManager.WorkerExec(FDBConn, nStr);
+  //更新为已处理
   Result := True;
 end;
 
@@ -630,7 +642,7 @@ var nStr: string;
     nOut: TWorkerWebChatData;
 begin
   nStr:= 'select top 100 * from %s where WOM_StatusType =%d ' +
-         'And WOM_HasIn <> ''%s'' ';
+         'And IsNull(WOM_HasIn, '''') <> ''%s'' ';
   nStr:= Format(nStr,[sTable_WebOrderMatch, c_WeChatStatusCreateCard, sFlag_Yes]);
   //查询最近100条网上开单记录
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
@@ -674,16 +686,23 @@ begin
   Result := False;
   nLID := nList.Values['WOM_LID'];
 
-  nStr := 'select L_ID from %s where L_ID=''%s'' and L_OutFact is null and L_InTime is not null';
+  nStr := 'select L_InTime from %s where L_ID=''%s'' ';
   nStr := Format(nStr,[sTable_Bill,nLID]);
   //xxxxx
 
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
   begin
-    if RecordCount <= 0 then
+    if RecordCount <= 0 then//单据不存在
     begin
+      nStr := 'Update %s set WOM_HasIn = ''%s'' where WOM_LID = ''%s'' and WOM_StatusType =%d';
+      nStr:= Format(nStr,[sTable_WebOrderMatch, sFlag_Yes,nLID,c_WeChatStatusCreateCard]);
+      gDBConnManager.WorkerExec(FDBConn, nStr);
+      //更新为已处理
+      WriteLog('查询到提货单'+ nLID +'已丢失,更新状态...');
       Exit;
     end;
+    if Fields[0].AsString = '' then
+      Exit;
   end;
 
   nStr := 'select WOM_LID from %s where WOM_LID=''%s'' and WOM_StatusType=%d ';
@@ -716,6 +735,12 @@ begin
                        nLID,c_WeChatStatusIn,cSendWeChatMsgType_OutFactory,
                        nList.Values['WOM_BillType']]);
   gDBConnManager.WorkerExec(FDBConn, nStr);
+
+  nStr := 'Update %s set WOM_HasIn = ''%s'' where WOM_LID = ''%s'' and WOM_StatusType =%d';
+  nStr:= Format(nStr,[sTable_WebOrderMatch, sFlag_Yes,nLID,c_WeChatStatusCreateCard]);
+  gDBConnManager.WorkerExec(FDBConn, nStr);
+  //更新为已处理
+
   Result := True;
 end;
 

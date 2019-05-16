@@ -184,6 +184,7 @@ const
   cFI_FormShipPoundCG   = $1171;                     //船运离岸单(采购)
 
   cFI_FormSnapView      = $1204;                     //抓拍图片浏览
+  cFI_FormGetBatCode    = $1205;                     //获取批次
 
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据

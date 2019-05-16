@@ -169,6 +169,7 @@ begin
     FStockArea := FieldByName('areaclname').AsString;
     FStockBrand:= FieldByName('vdef5').AsString;
     FBm:= FieldByName('bm').AsString;
+    FSpecialCus:= FieldByName('specialcus').AsString;
 
     FListA.Text := nOrder.FOrders;
     if not GetOrderFHValue(FListA) then

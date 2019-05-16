@@ -83,6 +83,7 @@ ResourceString
   sFlag_Enabled       = 'Y';                         //启用
   sFlag_Disabled      = 'N';                         //禁用
   sFlag_SHaulback     = 'P';                         //回空
+  sFlag_OK            = 'O';                         //OK
 
   sFlag_Integer       = 'I';                         //整数
   sFlag_Decimal       = 'D';                         //小数
@@ -179,6 +180,7 @@ ResourceString
   sFlag_PSanWuChaStop = 'PoundSanWuChaStop';         //超出误差停止业务
   sFlag_ForceAddWater = 'ForceAddWater';             //强制加水品种
   sFlag_ShadowWeight  = 'ShadowWeight';              //影子重量
+  sFlag_SanMaxLadeValue= 'SanMaxLadeValue';          //散装最大开单量限制
 
   sFlag_AICMPurStock  = 'AICMPurStock';              //自助机允许办卡物料
   sFlag_PrintPur      = 'PrintStockPur';             //需打印品种(采购)
@@ -261,6 +263,8 @@ ResourceString
   sFlag_BatcodeDefaultValidDays  = 'BatcodeDefaultValidDays';  //出厂编号默认有限期天数
   sFlag_LineKw        = 'LineKw';                     //装车线所属库位
   sFlag_TransType     = 'TransType';                  //运输方式
+  sFlag_DefaultPValue = 'DefaultPValue';             //默认皮重
+  sFlag_PValueWuCha   = 'PValueWuCha';               //皮重浮动范围
 
   sFlag_BusGroup      = 'BusFunction';               //业务编码组
   sFlag_BillNo        = 'Bus_Bill';                  //交货单号
@@ -291,6 +295,9 @@ ResourceString
   sFlag_AutoVipByLine = 'AutoVIPByLine';             //根据通道类型自动调整提货单类型
   sFlag_UnLodingPlace = 'UnLodingPlace';             //卸货地点
   sFlag_ForceUPStock  = 'ForceUPStock';              //强制卸货地点物料
+  sFlag_SanUseCardCount= 'SanCardUseCount';          //散装现场刷卡次数
+  sFlag_MaterailTunnel= 'MaterailTunnel';            //原材料卸货通道
+  sFlag_CusGroup      = 'CusGroup';                  //客户分组
 
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
@@ -627,7 +634,7 @@ const
        'L_MValueView $Float, L_ValueView $Float,' +
        'L_Man varChar(32), L_Date DateTime, L_Bm varChar(64),' +
        'L_WxZhuId varChar(32), L_WxZiId varChar(32), L_OrderNo varChar(20), ' +
-       'L_EmptyOut Char(1) Default ''N'', ' +
+       'L_EmptyOut Char(1) Default ''N'', L_CardCount Integer Default 0,' +
        'L_DelMan varChar(32), L_DelDate DateTime, L_Memo VarChar(500))';
   {-----------------------------------------------------------------------------
    交货单表: Bill
@@ -675,6 +682,7 @@ const
    *.L_MValueView,L_ValueView: 毛重(修改后),净重(修改后)
    *.L_OrderNo: 订单编号
    *.L_EmptyOut: 空车出厂
+   *.L_CardCount: 刷卡次数
   -----------------------------------------------------------------------------}
 
   sSQL_NewBillHaulback = 'Create Table $Table(R_ID $Inc, H_ID varChar(20),' +

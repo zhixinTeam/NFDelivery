@@ -92,7 +92,7 @@ procedure TFrame1.LoadBillItems(const nCard: string);
 var
   nStr: string;
   nBills: TLadingBillItems;
-  nRet: Boolean;
+  nRet,nHisMValueControl: Boolean;
   nOPCServer: TdOPCServer;
   nGroup: TdOPCGroup;
   nIdx: Integer;
@@ -130,10 +130,28 @@ begin
   FHasDone := ReadDoneValue(FUIData.FID, FUseTime);
 
   FSetValue := FUIData.FValue;
+
+  nVal := GetSanMaxLadeValue;
+  if (nVal > 0) and (FUIData.FValue > nVal) then//开单量大于系统设定最大量
+  begin
+    FSetValue := nVal;
+    nEvent := '车辆[ %s ]交货单[ %s ],' +
+              '开单量[ %.2f ]大于系统设定最大量[ %.2f ],调整后开单量[ %.2f ].';
+    nEvent := Format(nEvent, [FUIData.FTruck, FUIData.FID,
+                              FUIData.FValue, nVal, nVal]);
+    WriteLog(nEvent);
+  end;
+
   nVal := ReadTruckHisMValueMax(FUIData.FTruck);
   nPreKD := GetSanPreKD;
 
-  if (nVal > 0) and ((FUIData.FPData.FValue + FUIData.FValue) > nVal) then
+  nHisMValueControl := False;
+  if Assigned(FOPCTunnel.FOptions) And
+       (UpperCase(FOPCTunnel.FOptions.Values['HisMValueControl']) = sFlag_Yes) then
+    nHisMValueControl := True;
+
+  if nHisMValueControl and (nVal > 0) and
+  ((FUIData.FPData.FValue + FUIData.FValue) > nVal) then
   begin
     FSetValue := nVal - FUIData.FPData.FValue - nPreKD;
 

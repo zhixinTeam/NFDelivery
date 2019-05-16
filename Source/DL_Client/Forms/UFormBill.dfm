@@ -70,6 +70,7 @@ inherited fFormBill: TfFormBill
       ParentFont = False
       Properties.MaxLength = 100
       TabOrder = 7
+      OnKeyPress = EditLadingKeyPress
       Width = 120
     end
     object EditType: TcxComboBox [6]

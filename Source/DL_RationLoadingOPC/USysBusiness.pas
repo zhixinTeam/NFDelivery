@@ -171,6 +171,7 @@ function ReadDoneValue(const nID: string; var nUseTime: Double): Double;
 function SaveDoneValue(const nID: string; nValue, nUseTime: Double): Boolean;
 function ReadTruckHisMValueMax(const nTruck: string): Double;
 function GetSanPreKD: Double;
+function GetSanMaxLadeValue: Double;
 //------------------------------------------------------------------------------
 
 
@@ -1322,6 +1323,24 @@ begin
   with FDM.QueryTemp(nStr) do
   if RecordCount > 0 then
     Result := Fields[0].AsFloat;
+end;
+
+//Date: 2019/5/14
+//Desc: 散装最大开单量限制
+function GetSanMaxLadeValue: Double;
+var nSQL: string;
+begin
+  Result := 0;
+
+  nSQL := 'Select D_Value From %s Where D_Name=''%s''';
+  nSQL := Format(nSQL, [sTable_SysDict, sFlag_SanMaxLadeValue]);
+  with FDM.QueryTemp(nSQL) do
+  begin
+    if RecordCount > 0 then
+    begin
+      Result := Fields[0].AsFloat;
+    end;
+  end;
 end;
 
 end.

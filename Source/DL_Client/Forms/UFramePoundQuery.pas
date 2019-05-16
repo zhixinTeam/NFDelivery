@@ -51,6 +51,7 @@ type
     N12: TMenuItem;
     N13: TMenuItem;
     N14: TMenuItem;
+    N15: TMenuItem;
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
@@ -68,6 +69,7 @@ type
     procedure N11Click(Sender: TObject);
     procedure N12Click(Sender: TObject);
     procedure N14Click(Sender: TObject);
+    procedure N15Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -518,6 +520,70 @@ begin
     end;
 
     ShowMsg('上传成功',sHint);
+  end;
+end;
+
+procedure TfFramePoundQuery.N15Click(Sender: TObject);
+var nStr,nID,nDir: string;
+    nPic: TPicture;
+begin
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('请选择要查看的记录', sHint);
+    Exit;
+  end;
+
+  nID := SQLQuery.FieldByName('P_Bill').AsString;
+
+  if nID = '' then
+  begin
+    ShowMsg('磅单号所属提货单号为空', sHint);
+    Exit;
+  end;
+  
+  nDir := gSysParam.FPicPath + nID + '\';
+
+  if DirectoryExists(nDir) then
+  begin
+    ShellExecute(GetDesktopWindow, 'open', PChar(nDir), nil, nil, SW_SHOWNORMAL);
+    Exit;
+  end else ForceDirectories(nDir);
+
+  nPic := nil;
+  nStr := 'Select * From %s Where P_ID=''%s''';
+  nStr := Format(nStr, [sTable_Picture, nID]);
+
+  ShowWaitForm(ParentForm, '读取图片', True);
+  try
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount < 1 then
+      begin
+        ShowMsg('本次称重无抓拍', sHint);
+        Exit;
+      end;
+
+      nPic := TPicture.Create;
+      First;
+
+      While not eof do
+      begin
+        nStr := nDir + Format('%s_%s.jpg', [FieldByName('P_ID').AsString,
+                FieldByName('R_ID').AsString]);
+        //xxxxx
+
+        FDM.LoadDBImage(FDM.SqlTemp, 'P_Picture', nPic);
+        nPic.SaveToFile(nStr);
+        Next;
+      end;
+    end;
+
+    ShellExecute(GetDesktopWindow, 'open', PChar(nDir), nil, nil, SW_SHOWNORMAL);
+    //open dir
+  finally
+    nPic.Free;
+    CloseWaitForm;
+    FDM.SqlTemp.Close;
   end;
 end;
 

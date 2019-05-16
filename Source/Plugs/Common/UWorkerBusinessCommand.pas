@@ -161,6 +161,8 @@ type
     //获取区域流向分组
     function GetUnLoadingPlace(var nData: string): Boolean;
     //获取卸货地点及强制输入卸货地点物料
+    function VerifySanCardUseCount(var nData: string): Boolean;
+    //获取散装刷卡次数设置及校验
 
     //-------------------由DL向Web商城发起查询----------------------------------
     function SendEventMsg(var nData:string):boolean;
@@ -452,6 +454,7 @@ begin
    cBC_GetGroupByArea      : Result := GetGroupByArea(nData);
 
    cBC_GetUnLodingPlace    : Result := GetUnLoadingPlace(nData);
+   cBC_VerifySanCardUseCount: Result := VerifySanCardUseCount(nData);
 
    cBC_WebChat_SendEventMsg     :Result := SendEventMsg(nData);                //微信平台接口：发送模板消息
    cBC_WebChat_GetCustomerInfo  :Result := GetCustomerInfo(nData);             //微信平台接口：获取商城账户注册信息
@@ -763,7 +766,7 @@ end;
 //Desc: 获取指定物料号的编号
 function TWorkerBusinessCommander.GetStockBatcode(var nData: string): Boolean;
 var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType, nLineGroup, nBatStockNo: string;
-    nBatchNew, nSelect, nUBatStockGroup, nUAutoBrand: string;
+    nBatchNew, nSelect, nUBatStockGroup, nUAutoBrand, nSeal: string;
     nVal, nPer: Double;
     nInt, nInc, nRID: Integer;
     nNew: Boolean;
@@ -1115,6 +1118,11 @@ begin
       Exit;
     end;
 
+    {$IFDEF ManuSeal}
+    nSeal := Trim(FListA.Values['Seal']);
+    WriteLog('手动批次(使用人工选择批次):' + nSeal);
+    {$ENDIF}
+
     First;
     nVal := 0;
     nInc := 1;
@@ -1124,6 +1132,11 @@ begin
 
     while not Eof do
     try
+      {$IFDEF ManuSeal}
+      if (nSeal <> '') and
+         (FieldByName('D_ID').AsString <> nSeal) then Continue;
+      //与人工选择批次不符
+      {$ENDIF}
       nStr := Trim(FListA.Values['Brand']);
       if (nUBrand=sFlag_Yes) and (nStr <> '') and
          (FieldByName('D_Brand').AsString <> nStr) then Continue;
@@ -1281,6 +1294,7 @@ begin
      't1.vdef5,t1.pk_cumandoc,custcode,cmnecode,custname,t_cd.def30,'+          //客商信息(t1.vdef5:品牌)
      't1.vdef2,t_def.docname,t1.vdef9 as bm,t1.vdef15 as isphy,' +              //客商2(t1.vdef2:区域流向PK;docname:区域流向名)
      't1.vdef17 as ispd,t1.vdef18 as wxzhuid,t2.vdef15 as wxziid,' +
+     't_cb.engname as specialcus,' +                                            //特殊客户  尖峰南方使用
      'invcode,invname,invtype,t1.pk_corp as company,t1.vdef12 as transtype ' +                         //物料
      'from meam_bill t1 ' +
      '  left join sm_user t_su on t_su.cuserid=t1.coperator ' +
@@ -3481,7 +3495,7 @@ begin
           Values['Maxnumber'] := FieldBYName('NPLANNUM').AsString;
 
           Values['SaleArea']  := FieldByName('areaclname').AsString;
-
+          Values['SpecialCus']:= FieldByName('specialcus').AsString;
           Values['BM']  := FieldByName('bm').AsString;
         end;
 
@@ -3794,6 +3808,7 @@ begin
           Values['wxziid']  := FieldByName('wxziid').AsString;
           Values['isphy']  := FieldByName('isphy').AsString;
           Values['transtype']  := FieldByName('transtype').AsString;
+          Values['SpecialCus']:= FieldByName('specialcus').AsString;
         end;
 
         FListC.Add(FListB.Values['PK']);
@@ -5222,6 +5237,59 @@ begin
   end;
 
   FOut.FData := FListC.Text;
+  Result := True;
+end;
+
+//Date: 2019-04-04
+//Desc: 获取散装刷卡次数设置及校验
+function TWorkerBusinessCommander.VerifySanCardUseCount(var nData: string): Boolean;
+var nStr: string;
+    nSetCount, nNowCount: Integer;
+begin
+  Result := False;
+  FOut.FData := '';//default
+
+  nSetCount := 5;
+  nNowCount := 0;
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SanUseCardCount]);
+  //xxxxx
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount < 1 then
+    begin
+      Result := True;//不限制
+      Exit;
+    end;
+
+    nSetCount := Fields[0].AsInteger;
+  end;
+
+  nStr := 'Select L_CardCount From %s Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, FIn.FData]);
+  //xxxxx
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount < 1 then
+    begin
+      Result := True;//不限制
+      Exit;
+    end;
+
+    nNowCount := Fields[0].AsInteger;
+  end;
+  WriteLog('散装刷卡次数设定:' + IntToStr(nSetCount) + '提货单' + FIn.FData
+           + '当前刷卡次数:' + IntToStr(nNowCount));
+  if nNowCount > nSetCount then
+    Exit;
+
+  nStr := 'Update %s Set L_CardCount=L_CardCount + 1 where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, FIn.FData]);
+  gDBConnManager.WorkerExec(FDBConn, nStr);
+  
   Result := True;
 end;
 

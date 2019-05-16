@@ -191,5 +191,9 @@ inherited fFrameQueryDispatch: TfFrameQueryDispatch
       Caption = #26597#35810#36710#24207#21015
       OnClick = N6Click
     end
+    object N12: TMenuItem
+      Caption = #37325#32622#21047#21345#27425#25968
+      OnClick = N12Click
+    end
   end
 end

@@ -57,6 +57,7 @@ type
     FKDValue: Double;       //开单量
     FOrderNo: string;       //订单编号
     FCompany: string;       //公司ID
+    FSpecialCus: string;    //是否为特殊客户
   end;
 
   TOrderItems = array of TOrderItem;
@@ -103,6 +104,10 @@ type
     function AllowedSanMultiBill: Boolean;
     function AutoVipByLine(const nStockNo: string; nValue: Double): Boolean;
     //根据通道类型自动变为VIP提货单
+    function GetCusGroup(const nCusID, nDefaultGroup, nStockNo: string): string;
+    //读取特殊客户分组
+    function VerifyHYRecord(const nSeal: string): Boolean;
+    //检查检定记录是否存在
     function VerifyBeforSave(var nData: string): Boolean;
     function VerifyBeforSaveMulCard(var nData: string): Boolean;
     function SaveBills(var nData: string): Boolean;
@@ -334,6 +339,42 @@ begin
   end;
 end;
 
+//Date: 2019-05-09
+//Desc: 读取特殊客户分组
+function TWorkerBusinessBills.GetCusGroup(const nCusID, nDefaultGroup,nStockNo: string): string;
+var nStr: string;
+begin
+  Result := nDefaultGroup;
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s'' And D_ParamB=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_CusGroup, nCusID, nStockNo]);
+
+  WriteLog('读取特殊客户分组sql:' + nStr);
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    Result := Fields[0].AsString;
+    WriteLog('特殊客户所在分组:' + Result);
+  end;
+end;
+
+//Date: 2019-05-09
+//Desc: 检查检定记录是否存在
+function TWorkerBusinessBills.VerifyHYRecord(const nSeal: string): Boolean;
+var nStr: string;
+begin
+  Result := False;
+
+  nStr := 'Select R_SerialNo From %s Where R_SerialNo=''%s''';
+  nStr := Format(nStr, [sTable_StockRecord, nSeal]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    Result := True;
+  end;
+end;
+
 //Date: 2017/6/21
 //Parm: 无
 //Desc: 获取默认的品牌名称
@@ -515,12 +556,14 @@ begin
 
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
   begin
+    {$IFDEF ZGNF}
     if RecordCount < 1 then
     begin
       nData := '没有车辆[ %s ]的档案,无法开单.';
       nData := Format(nData, [nTruck]);
       Exit;
     end;
+    {$ENDIF}
 
     if FieldByName('T_Valid').AsString = sFlag_No then
     begin
@@ -806,7 +849,7 @@ begin
           FAreaToName := FieldByName('docname').AsString;
           //区域流向
           FCompany := FieldByName('company').AsString;
-
+          FSpecialCus := FieldByName('specialcus').AsString;
           nIdx := GetStockInfo(FStockID);
           if nIdx < 0 then
           begin
@@ -1268,7 +1311,14 @@ begin
       FListC.Values['Type']  := FListA.Values['IsVIP'];
       FListC.Values['Brand'] := nBrand;
       FListC.Values['Value'] := FloatToStr(FOrderItems[nIdx].FKDValue);
-      FListC.Values['LineGroup'] := FListA.Values['LineGroup'];
+
+      if FOrderItems[nIdx].FSpecialCus <> '' then
+        FListC.Values['LineGroup'] := GetCusGroup(FOrderItems[nIdx].FCusID,
+                                                  FListA.Values['LineGroup'],
+                                                  FOrderItems[nIdx].FStockID)
+      else
+        FListC.Values['LineGroup'] := FListA.Values['LineGroup'];
+      FListC.Values['Seal']  := FListA.Values['Seal'];
 
       if not TWorkerBusinessCommander.CallMe(cBC_GetStockBatcode,
           FOrderItems[nIdx].FStockID, PackerEncodeStr(FListC.Text), @nOut) then
@@ -1284,6 +1334,12 @@ begin
           FOut.FBase.FErrCode := sFlag_ForceHint;
           FOut.FBase.FErrDesc := PBWDataBase(@nOut).FErrDesc;
         end;
+
+        {$IFDEF VerifyHYRecord}
+        if not VerifyHYRecord(FListA.Values['Seal']) then
+        raise Exception.Create('批次号[' +
+                      FListA.Values['Seal'] +']检定记录不存在,开单失败');
+        {$ENDIF}
       end;
       {$ENDIF}
 
@@ -3097,7 +3153,7 @@ begin
     begin
       FListB.Add(FID);
       //交货单列表
-      
+
       nSQL := MakeSQLByStr([SF('L_Status', sFlag_TruckOut),
               SF('L_NextStatus', ''),
               SF('L_Card', ''),
@@ -3140,11 +3196,13 @@ begin
       end;
     end;
 
+    {$IFNDEF SyncDataByBFM}
     if not nDaiQuickSync then
      if not TWorkerBusinessCommander.CallMe(cBC_SyncME25,
           FListB.Text, '', @nOut) then
       raise Exception.Create(nOut.FData);
     //同步销售到NC榜单
+    {$ENDIF}
 
     if nBills[0].FCardUse = sFlag_Sale then
     begin
@@ -3310,6 +3368,24 @@ begin
       gHardShareData('TruckOut:' + nBills[0].FCard);
     //单次过磅自动出厂
   end;
+
+  {$IFDEF SyncDataByBFM}
+  if FIn.FExtParam = sFlag_TruckBFM then
+  begin
+    FListB.Clear;
+    for nIdx:=Low(nBills) to High(nBills) do
+    with nBills[nIdx] do
+    begin
+      FListB.Add(FID);
+      //交货单列表
+    end;
+
+    if not nDaiQuickSync then
+      TWorkerBusinessCommander.CallMe(cBC_SyncME25,
+          FListB.Text, '', @nOut);
+    //同步销售到NC榜单
+  end;
+  {$ENDIF}
 end;
 
 function TWorkerBusinessBills.LinkToNCSystem(var nData: string;

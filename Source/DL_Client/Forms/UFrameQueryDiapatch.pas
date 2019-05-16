@@ -43,6 +43,7 @@ type
     dxLayout1Item5: TdxLayoutItem;
     EditBrand: TcxButtonEdit;
     dxLayout1Item6: TdxLayoutItem;
+    N12: TMenuItem;
     procedure EditTruckPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure N1Click(Sender: TObject);
@@ -51,6 +52,7 @@ type
     procedure N6Click(Sender: TObject);
     procedure N9Click(Sender: TObject);
     procedure N11Click(Sender: TObject);
+    procedure N12Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -92,6 +94,11 @@ end;
 
 function TfFrameQueryDispatch.InitFormDataSQL(const nWhere: string): string;
 begin
+  {$IFDEF SanCardUseCount}
+  N12.Visible := True;
+  {$ELSE}
+  N12.Visible := False;
+  {$ENDIF}
   Result := ' Select zt.*,Z_Name,L_CusID,L_CusName,L_Status,L_Value,L_StockBrand ' +
             'From $ZT zt ' +
             ' Left Join $ZL zl On zl.Z_ID=zt.T_Line ' +
@@ -525,6 +532,19 @@ begin
 
     InitFormData(FWhere);
     ShowMsg('清理完毕', sHint);
+  end;
+end;
+
+procedure TfFrameQueryDispatch.N12Click(Sender: TObject);
+var nStr: string;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    nStr := 'Update %s Set L_CardCount=0 where L_ID=''%s''';
+    nStr := Format(nStr, [sTable_Bill, SQLQuery.FieldByName('T_Bill').AsString]);
+    FDM.ExecuteSQL(nStr);
+
+    ShowMsg('重置完毕', sHint);
   end;
 end;
 

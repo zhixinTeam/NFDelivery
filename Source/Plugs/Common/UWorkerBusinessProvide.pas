@@ -1253,10 +1253,12 @@ begin
         FPoundID := Fields[0].AsString;
       end;
 
+      {$IFNDEF SyncDataByBFM}
       if not TWorkerBusinessCommander.CallMe(cBC_SyncME03,
           FPoundID, FExtID_2, @nOut) then
         raise Exception.Create(nOut.FData);
       //同步供应到NC榜单
+      {$ENDIF}
 
       nSQL := 'Select P_CType, P_Card From %s Where P_ID=''%s''';
       nSQL := Format(nSQL, [sTable_ProvBase, FZhiKa]);
@@ -1303,6 +1305,29 @@ begin
       gHardShareData('TruckOut:' + nPound[0].FCard);
     //磅房处理自动出厂
   end;
+
+  {$IFDEF SyncDataByBFM}
+  if FIn.FExtParam = sFlag_TruckBFM then
+  begin
+    with nPound[0] do
+    begin
+      nSQL := 'Select P_ID From %s Where P_Order=''%s''';
+      nSQL := Format(nSQL, [sTable_PoundLog, FExtID_1]);
+      //未称毛重记录
+
+      with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+      if RecordCount > 0 then
+      begin
+        FPoundID := Fields[0].AsString;
+      end;
+
+      if not TWorkerBusinessCommander.CallMe(cBC_SyncME03,
+          FPoundID, FExtID_2, @nOut) then
+        raise Exception.Create(nOut.FData);
+      //同步供应到NC榜单
+    end;
+  end;
+  {$ENDIF}
 end;
 
 //Date: 2014-09-15

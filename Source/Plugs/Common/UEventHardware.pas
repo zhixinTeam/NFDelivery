@@ -39,7 +39,7 @@ uses
   UMgrRemoteVoice, UMgrVoiceNet, UMgrCodePrinter, UMgrLEDDisp, UMgrTTCEM100,
   UMgrRemoteSnap,
   UMgrRFID102{$IFDEF HKVDVR}, UMgrCamera{$ENDIF}, UMgrLEDDispCounter,
-  UJSDoubleChannel, UMgrSendCardNo;
+  UJSDoubleChannel, UMgrSendCardNo, UMgrBasisWeight;
 
 class function THardwareWorker.ModuleInfo: TPlugModuleInfo;
 begin
@@ -150,6 +150,11 @@ begin
     {$IFDEF FixLoad}
     nStr := '定置装车';
     gSendCardNo.LoadConfig(nCfg + 'PLCController.xml');
+    {$ENDIF}
+    {$IFDEF BasisWeight}
+    nStr := '定量装车业务';
+    gBasisWeightManager := TBasisWeightManager.Create;
+    gBasisWeightManager.LoadConfig(nCfg + 'Tunnels.xml');
     {$ENDIF}
   except
     on E:Exception do
@@ -275,6 +280,12 @@ begin
   gSendCardNo.StartPrinter;
   //sendcard
   {$ENDIF}
+
+  {$IFDEF BasisWeight}
+  //gBasisWeightManager.TunnelManager.OnUserParseWeight := WhenParsePoundWeight;
+  gBasisWeightManager.OnStatusChange := WhenBasisWeightStatusChange;
+  gBasisWeightManager.StartService;
+  {$ENDIF}
 end;
 
 procedure THardwareWorker.AfterStopServer;
@@ -349,6 +360,11 @@ begin
   if Assigned(gSendCardNo) then
   gSendCardNo.StopPrinter;
   //sendcard
+  {$ENDIF}
+
+  {$IFDEF BasisWeight}
+  gBasisWeightManager.StopService;
+  gBasisWeightManager.OnStatusChange := nil;
   {$ENDIF}
 end;
 

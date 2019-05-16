@@ -443,7 +443,7 @@ end;
 //Parm: 交货单[FIn.FData];岗位[FIn.FExtParam]
 //Desc: 保存指定岗位提交的交货单列表
 function TWorkerBusinessShipPro.SavePostProvideItems(var nData: string): Boolean;
-var nSQL,nStr,nYS,nNS: string;
+var nSQL,nStr,nYS,nNS,nWT: string;
     nInt, nIdx: Integer;
     nNet, nVal: Double;
     {$IFDEF HardMon}
@@ -504,6 +504,28 @@ begin
   //过磅时，验证读卡器与卡片分组
   {$ENDIF}
 
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_StockIfYS]);
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+       nYS := Fields[0].AsString
+  else nYS := sFlag_No;
+
+  FListB.Clear;
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_NFStock]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    First;
+    while not Eof do
+    begin
+      FListB.Add(Fields[0].AsString);
+      Next;
+    end;
+  end;
+
   FListA.Clear;
   //用于存储SQL列表
 
@@ -522,28 +544,6 @@ begin
   //----------------------------------------------------------------------------
   if FIn.FExtParam = sFlag_TruckBFP then //称量皮重
   begin
-    nStr := 'Select D_Value From %s Where D_Name=''%s''';
-    nStr := Format(nStr, [sTable_SysDict, sFlag_StockIfYS]);
-    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
-    if RecordCount > 0 then
-         nYS := Fields[0].AsString
-    else nYS := sFlag_No;
-
-    FListB.Clear;
-    nStr := 'Select D_Value From %s Where D_Name=''%s''';
-    nStr := Format(nStr, [sTable_SysDict, sFlag_NFStock]);
-
-    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
-    if RecordCount > 0 then
-    begin
-      First;
-      while not Eof do
-      begin
-        FListB.Add(Fields[0].AsString);
-        Next;
-      end;
-    end;
-
     with nPound[0] do
     begin
       FStatus := sFlag_TruckBFP;
@@ -645,6 +645,12 @@ begin
     begin
       FStatus := sFlag_TruckSH;
       FNextStatus := sFlag_TruckOut;
+
+      {$IFDEF PrePTruckYs}
+      FNextStatus := sFlag_TruckXH;
+      if (FListB.IndexOf(FStockNo) >= 0) or (nYS <> sFlag_Yes) then
+        FNextStatus := sFlag_TruckOut;
+      {$ENDIF}
 
       if (FMuiltiPound = sFlag_Yes) and (FMuiltiType = sFlag_Yes) then
       begin  //复磅业务低第一次过磅
@@ -755,38 +761,65 @@ begin
   begin
     with nPound[0] do
     begin
-      FStatus := sFlag_TruckXH;
-      FNextStatus := sFlag_TruckBFM;
+      if FPreTruckP then
+      begin
+        FStatus := sFlag_TruckXH;
+        FNextStatus := sFlag_TruckOut;
 
-      nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
-      nStr := Format(nStr, [sTable_SysDict, sFlag_ForceAddWater, FStockNo]);
-      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
-      if RecordCount > 0 then
-           nYS := Fields[0].AsString
-      else nYS := sFlag_No;
+        nStr := SF('P_ID', FPoundID);
+        //where
+        nSQL := MakeSQLByStr([
+                SF('P_YTime', sField_SQLServer_Now, sfVal),
+                SF('P_YMan', FIn.FBase.FFrom.FUser),
+                SF('P_YSResult', FYSValid),
+                SF('P_YLineName', FSeal),    //保存批次号
+                SF('P_KZComment', FKZComment), //扣杂原因
+                SF('P_KZValue', FKZValue, sfVal)
+                ], sTable_PoundLog, nStr, False);
+        //验收扣杂
+        FListA.Add(nSQL);
 
-      if nYS = sFlag_Yes then
-        FNextStatus := sFlag_TruckWT;
-      //强制加水业务  
+        nSQL := MakeSQLByStr([
+                SF('P_Status', FStatus),
+                SF('P_NextStatus', FNextStatus)
+                ], sTable_CardProvide,  SF('P_Card', FCard), False);
+        FListA.Add(nSQL);
+      end
+      else
+      begin
+        FStatus := sFlag_TruckXH;
+        FNextStatus := sFlag_TruckBFM;
 
-      nStr := SF('P_ID', FPoundID);
-      //where
-      nSQL := MakeSQLByStr([
-              SF('P_YTime', sField_SQLServer_Now, sfVal),
-              SF('P_YMan', FIn.FBase.FFrom.FUser),
-              SF('P_YSResult', FYSValid),
-              SF('P_YLineName', FSeal),    //保存批次号
-              SF('P_KZComment', FKZComment), //扣杂原因
-              SF('P_KZValue', FKZValue, sfVal)
-              ], sTable_PoundLog, nStr, False);
-      //验收扣杂
-      FListA.Add(nSQL);
+        nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+        nStr := Format(nStr, [sTable_SysDict, sFlag_ForceAddWater, FStockNo]);
+        with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+        if RecordCount > 0 then
+             nWT := Fields[0].AsString
+        else nWT := sFlag_No;
 
-      nSQL := MakeSQLByStr([
-              SF('P_Status', FStatus),
-              SF('P_NextStatus', FNextStatus)
-              ], sTable_CardProvide,  SF('P_Card', FCard), False);
-      FListA.Add(nSQL);
+        if nWT = sFlag_Yes then
+          FNextStatus := sFlag_TruckWT;
+        //强制加水业务  
+
+        nStr := SF('P_ID', FPoundID);
+        //where
+        nSQL := MakeSQLByStr([
+                SF('P_YTime', sField_SQLServer_Now, sfVal),
+                SF('P_YMan', FIn.FBase.FFrom.FUser),
+                SF('P_YSResult', FYSValid),
+                SF('P_YLineName', FSeal),    //保存批次号
+                SF('P_KZComment', FKZComment), //扣杂原因
+                SF('P_KZValue', FKZValue, sfVal)
+                ], sTable_PoundLog, nStr, False);
+        //验收扣杂
+        FListA.Add(nSQL);
+
+        nSQL := MakeSQLByStr([
+                SF('P_Status', FStatus),
+                SF('P_NextStatus', FNextStatus)
+                ], sTable_CardProvide,  SF('P_Card', FCard), False);
+        FListA.Add(nSQL);
+      end;
     end;
   end else
 
@@ -1029,10 +1062,12 @@ begin
         FListA.Add(nSQL);
       end;
 
+      {$IFNDEF SyncDataByBFM}
       if not TWorkerBusinessCommander.CallMe(cBC_SyncME03,
           FPoundID, '', @nOut) then
         raise Exception.Create(nOut.FData);
       //同步供应到NC榜单
+      {$ENDIF}
 
       FListC.Clear;
       FListC.Values['DLID']  := FPoundID;
@@ -1058,12 +1093,40 @@ begin
     raise;
   end;
 
-  if (FIn.FExtParam = sFlag_TruckBFM) or (FIn.FExtParam = sFlag_TruckSH) then
+  if (FIn.FExtParam = sFlag_TruckSH)
+  and (nPound[0].FNextStatus = sFlag_TruckOut) then
+  begin
+    if Assigned(gHardShareData) then
+      gHardShareData('TruckSH:' + nPound[0].FCard);
+    //单次过磅自动出厂
+  end;
+
+  if (FIn.FExtParam = sFlag_TruckXH)
+  and (nPound[0].FNextStatus = sFlag_TruckOut) then
+  begin
+    if Assigned(gHardShareData) then
+      gHardShareData('TruckSH:' + nPound[0].FCard);
+    //单次过磅自动出厂
+  end;
+
+  if FIn.FExtParam = sFlag_TruckBFM then
   begin
     if Assigned(gHardShareData) then
       gHardShareData('TruckOut:' + nPound[0].FCard);
     //磅房处理自动出厂
   end;
+
+  {$IFDEF SyncDataByBFM}
+  if FIn.FExtParam = sFlag_TruckBFM then
+  begin
+    with nPound[0] do
+    begin
+      TWorkerBusinessCommander.CallMe(cBC_SyncME03,
+          FPoundID, '', @nOut);
+      //同步供应到NC榜单
+    end;
+  end;
+  {$ENDIF}
 end;
 
 //Date: 2014-09-15

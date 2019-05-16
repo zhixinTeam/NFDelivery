@@ -3,7 +3,7 @@
   描述: 发货明细
 *******************************************************************************}
 unit UFrameQuerySaleDetail;
-
+{$I Link.inc}
 interface
 
 uses
@@ -266,14 +266,16 @@ var nPID, nStr: string;
 begin
   if cxView1.DataController.GetSelectedCount > 0 then
   begin
+    nPID := SQLQuery.FieldByName('L_ID').AsString;
+
+    {$IFNDEF SyncDataByBFM}
     if SQLQuery.FieldByName('L_OutFact').AsString = '' then
     begin
       nStr := Format('提货单[ %s ]未出厂,无法上传', [nPID]);
       ShowMsg(nStr, sHint);
       Exit;
     end;
-
-    nPID := SQLQuery.FieldByName('L_ID').AsString;
+    {$ENDIF}
 
     nStr := Format('确认上传提货单[ %s ]吗?', [nPID]);
     if not QueryDlg(nStr, sHint) then Exit;
