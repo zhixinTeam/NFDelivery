@@ -981,10 +981,12 @@ var nStr, nSql: string;
     nNetWeight:Double;
     nWxZhuId, nWxZiId, nCreateTime, nInTime, nOutTime, nType, nStockNo, nTruck: string;
     nSeal, nPDate, nMDate, nLadeTime, nPID, nQueueMsg,nCompany: string;
+    nDaiQuickSync: Boolean;
 begin
   Result := False;
   FListA.Text := PackerDecodeStr(FIn.FData);
   nNetWeight := 0;
+  nDaiQuickSync := False;
   nDBConn := nil;
 
   with gParamManager.ActiveParam^ do
@@ -997,6 +999,14 @@ begin
       end;
       if not nDBConn.FConn.Connected then
       nDBConn.FConn.Connected := True;
+
+      nSql := 'select D_Value from %s where D_Name=''DaiQuickSync''';
+      nSql := Format(nSql,[sTable_SysDict]);
+      with gDBConnManager.WorkerQuery(nDBConn, nSql) do
+      begin
+        if RecordCount > 0 then
+         nDaiQuickSync := Fields[0].AsString = sFlag_Yes;
+      end;
 
       //销售净重
       nSql := 'select L_Value,L_WxZhuId,L_WxZiId,L_Type,L_StockNo, L_Truck,' +
@@ -1067,6 +1077,28 @@ begin
   begin
     nQueueMsg := '%s在当前队列位置排号:%d';
     nQueueMsg := Format(nQueueMsg, [nTruck, nQue]);
+  end;
+
+  if FListA.Values['WOM_StatusType'] = '3' then
+  begin
+    if nPDate = '' then
+      nPDate := nCreateTime;
+
+    if nDaiQuickSync and (nType = sFlag_Dai) then
+    begin
+      nMDate := nCreateTime;
+    end
+    else
+    begin
+      if nMDate = '' then
+        nMDate := nOutTime;
+
+      if nMDate = '' then
+        nMDate := nCreateTime;
+    end;
+
+    if nLadeTime = '' then
+      nLadeTime := nCreateTime;
   end;
 
   nStr := '{'

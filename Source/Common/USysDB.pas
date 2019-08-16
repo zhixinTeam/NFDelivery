@@ -167,6 +167,7 @@ ResourceString
   sFlag_ManualC       = 'C';                         //净重超出误差范围
   sFlag_ManualE       = 'E';                         //车牌识别
   sFlag_ManualF       = 'F';                         //喷码发送
+  sFlag_ManualP       = 'P';                         //自动预制皮重
 
   sFlag_SysParam      = 'SysParam';                  //系统参数
   sFlag_EnableBakdb   = 'Uses_BackDB';               //备用库
@@ -181,6 +182,7 @@ ResourceString
   sFlag_ForceAddWater = 'ForceAddWater';             //强制加水品种
   sFlag_ShadowWeight  = 'ShadowWeight';              //影子重量
   sFlag_SanMaxLadeValue= 'SanMaxLadeValue';          //散装最大开单量限制
+  sFlag_OutByPreYs    = 'TruckOutByPreYs';           //验收后自动出厂物料
 
   sFlag_AICMPurStock  = 'AICMPurStock';              //自助机允许办卡物料
   sFlag_PrintPur      = 'PrintStockPur';             //需打印品种(采购)
@@ -251,6 +253,7 @@ ResourceString
   sFlag_BatchBrand    = 'Batch_Brand';               //批次区分品牌
   sFlag_BatchValid    = 'Batch_Valid';               //启用批次管理
   sFlag_BatchStockGroup = 'Batch_StockGroup';        //启用批次物料分组
+  sFlag_NoBatGroupStock = 'NoBatGroupStock';         //存在通道分组单批次独立物料
   sFlag_PoundBaseValue= 'PoundBaseValue';            //磅房跳动基数
   sFlag_OutOfHaulBack = 'OutOfHaulBack';             //退货(回空)时限
   sFlag_DefaultBrand  = 'DefaultBrand';              //默认品牌
@@ -298,6 +301,12 @@ ResourceString
   sFlag_SanUseCardCount= 'SanCardUseCount';          //散装现场刷卡次数
   sFlag_MaterailTunnel= 'MaterailTunnel';            //原材料卸货通道
   sFlag_CusGroup      = 'CusGroup';                  //客户分组
+  sFlag_PTruckControl = 'PTruckControl';             //原材料进厂车辆数量总控制
+  sFlag_PTimeControlTotal = 'PTimeControl';          //原材料进厂时间总控制
+  sFlag_PoundControl  = 'PoundControlTotal';         //允许过磅物料总控制
+  sFlag_AICMHYDanPCount= 'AICMHYDanPCount';          //自助机化验单打印次数
+  sFlag_DaiQuickSync  = 'DaiQuickSync';              //袋装开单即推单
+  sFlag_SetPValue     = 'SetPValue';                 //预设皮重阀值
 
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
@@ -380,7 +389,8 @@ ResourceString
   sTable_GrabBak      = 'P_GrabBak';                 //抓斗秤称重记录表
   sTable_SnapTruck    = 'Sys_SnapTruck';             //车辆抓拍记录
   sTable_WebOrderMatch   = 'S_WebOrderMatch';        //商城订单映射
-
+  sTable_PTruckControl = 'Sys_PTruckControl';        //供应商进厂车辆数量控制表
+  sTable_PTimeControl = 'Sys_PTimeControl';          //原材料进厂时间控制表
 const
   sFlag_Departments   = 'Departments';               //部门列表
   sFlag_DepDaTing     = '大厅';                      //服务大厅
@@ -1587,6 +1597,35 @@ const
    *.WOM_BillType: 业务类型  采购 销售
   -----------------------------------------------------------------------------}
 
+  sSQL_NewPTruckControlInfo = 'Create Table $Table(R_ID $Inc, C_CusID varChar(32),' +
+       'C_CusName varChar(150), C_StockNo varChar(32), C_StockName varChar(150), C_Count Integer,' +
+       'C_Valid char(1) default ''Y'', C_Memo varchar(200))';
+  {-----------------------------------------------------------------------------
+   原材料进厂控制表:
+   *.R_ID: 编号
+   *.C_CusID: 客户编号
+   *.C_CusName: 客户名称
+   *.C_StockNo: 物料编号
+   *.C_StockName: 物料名称
+   *.C_Count: 数量
+   *.C_Valid: 是否有效
+   *.C_Memo: 备注
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewPTimeControlInfo = 'Create Table $Table(R_ID $Inc, X_StockNo varChar(32),' +
+       'X_StockName varChar(150), X_BeginTime varChar(10),' +
+       'X_EndTime varChar(10), X_Valid char(1) default ''Y'', X_Memo varchar(200))';
+  {-----------------------------------------------------------------------------
+   基本信息表: BaseInfo
+   *.R_ID: 编号
+   *.X_StockNo: 物料编号
+   *.X_StockName: 物料名称
+   *.X_BeginTime: 起始时间
+   *.X_EndTime: 结束时间
+   *.X_Valid: 是否有效
+   *.X_Memo: 备注
+  -----------------------------------------------------------------------------}
+
 function CardStatusToStr(const nStatus: string): string;
 //磁卡状态
 function TruckStatusToStr(const nStatus: string): string;
@@ -1747,6 +1786,8 @@ begin
   AddSysTableItem(sTable_StockHuaYan, sSQL_NewStockHuaYan);
 
   AddSysTableItem(sTable_TruckSnap, sSQL_NewTruck);
+  AddSysTableItem(sTable_PTruckControl,sSQL_NewPTruckControlInfo);
+  AddSysTableItem(sTable_PTimeControl,sSQL_NewPTimeControlInfo);
 end;
 
 //Desc: 清理系统表

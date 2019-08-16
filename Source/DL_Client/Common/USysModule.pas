@@ -52,8 +52,12 @@ uses
   //发货明细EX
   UFramePoundMtAuto,UFramePoundMtAutoItem,UFramePoundMtQuery,
   //码头抓斗秤
-  UFormSnapView, UFormGetBatCode,
+  UFormSnapView, UFormGetBatCode, UFormPTruckControl, UFramePTruckControl,
   //抓拍图片展示
+  UFramePTimeControl, UFormPTimeControl,
+  UFramePoundControl, UFormPoundControl,
+  UFrameLineKwControl, UFormLineKwControl,
+  UFormAddWater,
   UFrameBillHaulBack, UFormBillHaulBack, UFormGetPoundHis
   {$IFDEF PrintChinese},
   UFrameChineseBase, UFormChineseBase, UFrameChineseDict ,UFormChineseDict,

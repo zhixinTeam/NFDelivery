@@ -496,37 +496,62 @@ begin
 end;
 
 //Desc: 获取nStock品种的报表文件
-function GetReportFileByStock(const nStock: string): string;
+function GetReportFileByStock(const nStock, nBrand: string): string;
 begin
   Result := GetPinYinOfStr(nStock);
 
-  if Pos('dj', Result) > 0 then
-    Result := gPath + 'Report\HuaYan42_DJ.fr3'
-  else if Pos('gsysl', Result) > 0 then
-    Result := gPath + 'Report\HuaYan_gsl.fr3'
-  else if Pos('kzf', Result) > 0 then
-    Result := gPath + 'Report\HuaYan_kzf.fr3'
-  else if Pos('qz', Result) > 0 then
-    Result := gPath + 'Report\HuaYan_qz.fr3'
-  else if Pos('32', Result) > 0 then
-    Result := gPath + 'Report\HuaYan32.fr3'
-  else if Pos('42', Result) > 0 then
-    Result := gPath + 'Report\HuaYan42.fr3'
-  else if Pos('52', Result) > 0 then
-    Result := gPath + 'Report\HuaYan42.fr3'
-  else Result := '';
+  {$IFNDEF GetReportByBrand}
+  nBrand := '';
+  {$ENDIF}
+
+  if nBrand = '' then
+  begin
+    if Pos('dj', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42_DJ.fr3'
+    else if Pos('gsysl', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_gsl.fr3'
+    else if Pos('kzf', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_kzf.fr3'
+    else if Pos('qz', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_qz.fr3'
+    else if Pos('32', Result) > 0 then
+      Result := gPath + 'Report\HuaYan32.fr3'
+    else if Pos('42', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42.fr3'
+    else if Pos('52', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42.fr3'
+    else Result := '';
+  end
+  else
+  begin
+    if Pos('dj', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42_DJ' + nBrand +'.fr3'
+    else if Pos('gsysl', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_gsl' + nBrand +'.fr3'
+    else if Pos('kzf', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_kzf' + nBrand +'.fr3'
+    else if Pos('qz', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_qz' + nBrand +'.fr3'
+    else if Pos('32', Result) > 0 then
+      Result := gPath + 'Report\HuaYan32' + nBrand +'.fr3'
+    else if Pos('42', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42' + nBrand +'.fr3'
+    else if Pos('52', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42' + nBrand +'.fr3'
+    else Result := '';
+  end;
 end;
 
 //Desc: 打印标识为nHID的化验单
 function PrintHuaYanReport(const nBill: string; var nHint: string;
  const nPrinter: string = ''): Boolean;
-var nStr,nSR, nSeal,nDate3D,nDate28D,n28Ya1: string;
+var nStr,nSR, nSeal,nDate3D,nDate28D,n28Ya1,nBrand: string;
     nDate: TDateTime;
 begin
   nHint := '';
   Result := False;
 
-  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_PrintHY,sb.L_Type From %s sb ' +
+  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_PrintHY,sb.L_Type,sb.L_StockBrand From %s sb ' +
           ' Left Join %s sr on sr.R_SerialNo=sb.L_Seal ' +
           ' Where sb.L_ID = ''%s''';
   nStr := Format(nStr, [sTable_Bill, sTable_StockRecord, nBill]);
@@ -537,7 +562,7 @@ begin
     begin
       nSeal := Fields[0].AsString;
       n28Ya1 := Fields[1].AsString;
-
+      nBrand := Fields[4].AsString;
       if Fields[2].AsString <> sFlag_Yes then
       begin
         Result := True;
@@ -545,16 +570,6 @@ begin
         nHint := Format(nHint, [nBill]);
         Exit;
       end;
-
-      {$IFDEF DaiNoPrint}
-      if Fields[3].AsString = sFlag_Dai then
-      begin
-        nStr := '交货单[ %s ] 提货类型为袋装,无需打印化验单';
-        nStr := Format(nStr, [nBill]);
-        WriteLog(nStr);
-        Exit;
-      end;
-      {$ENDIF}
     end;
   end;
 
@@ -603,7 +618,7 @@ begin
   end;
 
   nStr := FDM.SqlTemp.FieldByName('P_Stock').AsString;
-  nStr := GetReportFileByStock(nStr);
+  nStr := GetReportFileByStock(nStr, nBrand);
 
   if not FDR.LoadReportFile(nStr) then
   begin

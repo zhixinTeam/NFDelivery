@@ -146,6 +146,15 @@ begin
       //gHKSnapHelper := THKSnapHelper.Create;
       gHKSnapHelper.LoadConfig(nCfg + 'RemoteSnap.xml');
     end;
+    {$ELSE}
+      {$IFDEF PoundSaveSnapInfo}
+      nStr := '海康威视远程抓拍';
+      if FileExists(nCfg + 'RemoteSnap.xml') then
+      begin
+        //gHKSnapHelper := THKSnapHelper.Create;
+        gHKSnapHelper.LoadConfig(nCfg + 'RemoteSnap.xml');
+      end;
+      {$ENDIF}
     {$ENDIF}
     {$IFDEF FixLoad}
     nStr := '定置装车';
@@ -273,6 +282,11 @@ begin
   {$IFDEF RemoteSnap}
   gHKSnapHelper.StartSnap;
   //remote snap
+  {$ELSE}
+    {$IFDEF PoundSaveSnapInfo}
+    gHKSnapHelper.StartSnap;
+    //remote snap
+    {$ENDIF}
   {$ENDIF}
 
   {$IFDEF FixLoad}
@@ -354,6 +368,11 @@ begin
   {$IFDEF RemoteSnap}
   gHKSnapHelper.StopSnap;
   //remote snap
+  {$ELSE}
+    {$IFDEF PoundSaveSnapInfo}
+    gHKSnapHelper.StopSnap;
+    //remote snap
+    {$ENDIF}
   {$ENDIF}
 
   {$IFDEF FixLoad}

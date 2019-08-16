@@ -179,5 +179,9 @@ inherited fFrameTrucks: TfFrameTrucks
       Visible = False
       OnClick = N11Click
     end
+    object N12: TMenuItem
+      Caption = #26597#30475#39044#21046#30382#37325#25235#25293
+      OnClick = N12Click
+    end
   end
 end

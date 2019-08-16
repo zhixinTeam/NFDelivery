@@ -155,6 +155,7 @@ type
     FSeal       : string;          //验收点
     FCardType   : string;          //卡片类型
     FYSValid    : string;          //验收结果
+    FPreTruckP  : Boolean;         //预置皮重；
   end;
 
   TLadingBillItems = array of TLadingBillItem;
@@ -248,7 +249,7 @@ begin
         FPType      := Values['PType'];
         FPoundID    := Values['PoundID'];
         FSelected   := Values['Selected'] = 'Y';
-
+        FPreTruckP  := Values['PreTruckP'] = 'Y';
         with FPData do
         begin
           FStation  := Values['PStation'];
@@ -366,6 +367,10 @@ begin
         if FSelected then
              Values['Selected'] := 'Y'
         else Values['Selected'] := 'N';
+
+        if FPreTruckP then
+             Values['PreTruckP'] := 'Y'
+        else Values['PreTruckP'] := 'N';
 
         Values['KZValue']    := FloatToStr(FKZValue);
         Values['KZComment']  := FKZComment;

@@ -57,6 +57,7 @@ type
     N13: TMenuItem;
     N14: TMenuItem;
     N15: TMenuItem;
+    N16: TMenuItem;
     procedure EditIDPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnDelClick(Sender: TObject);
@@ -73,6 +74,7 @@ type
     procedure N12Click(Sender: TObject);
     procedure N13Click(Sender: TObject);
     procedure N15Click(Sender: TObject);
+    procedure N16Click(Sender: TObject);
   protected
     FStart,FEnd: TDate;
     //时间区间
@@ -542,6 +544,29 @@ begin
 
   PrintHuaYanReport(nStr, True);
   PrintHeGeReport(nStr, True);
+end;
+
+procedure TfFrameBill.N16Click(Sender: TObject);
+var nStr,nTruck: string;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    nStr := SQLQuery.FieldByName('L_Memo').AsString;
+    nTruck := nStr;
+    if not ShowInputBox('请输入新的备注:', '修改', nTruck, 80) then Exit;
+
+    if (nTruck = '') or (nStr = nTruck) then Exit;
+    //无效或一致
+
+    nStr := 'Update %s Set L_Memo=''%s'' Where R_ID=%s';
+    nStr := Format(nStr, [sTable_Bill, nTruck,
+            SQLQuery.FieldByName('R_ID').AsString]);
+    //xxxxx
+
+    FDM.ExecuteSQL(nStr);
+    InitFormData(FWhere);
+    ShowMsg('备注修改成功', sHint);
+  end;
 end;
 
 initialization

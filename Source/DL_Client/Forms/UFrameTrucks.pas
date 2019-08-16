@@ -39,6 +39,7 @@ type
     N11: TMenuItem;
     ChkSnap: TcxCheckBox;
     dxLayout1Item5: TdxLayoutItem;
+    N12: TMenuItem;
     procedure EditNamePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnAddClick(Sender: TObject);
@@ -54,11 +55,13 @@ type
     procedure N8Click(Sender: TObject);
     procedure N10Click(Sender: TObject);
     procedure N11Click(Sender: TObject);
+    procedure N12Click(Sender: TObject);
   private
     { Private declarations }
   protected
     function InitFormDataSQL(const nWhere: string): string; override;
     {*查询SQL*}
+    function DeleteDirectory(nDir :String): boolean;
   public
     { Public declarations }
     class function FrameID: integer; override;
@@ -69,7 +72,7 @@ implementation
 {$R *.dfm}
 uses
   ULibFun, UMgrControl, USysBusiness, USysConst, USysDB, UDataModule, UFormBase,
-  UFormInputbox;
+  UFormInputbox, ShellAPI, UFormWait;
 
 class function TfFrameTrucks.FrameID: integer;
 begin
@@ -351,6 +354,80 @@ begin
     InitFormData(FWhere);
     ShowMsg('修改历史最大毛重成功', sHint);
   end;
+end;
+
+procedure TfFrameTrucks.N12Click(Sender: TObject);
+var nStr,nID,nDir: string;
+    nPic: TPicture;
+begin
+  if cxView1.DataController.GetSelectedCount < 1 then
+  begin
+    ShowMsg('请选择要查看的记录', sHint);
+    Exit;
+  end;
+
+  nID := SQLQuery.FieldByName('R_ID').AsString;
+  nDir := gSysParam.FPicPath + nID + '\';
+
+  DeleteDirectory(gSysParam.FPicPath + nID);
+  if DirectoryExists(nDir) then
+  begin
+    ShellExecute(GetDesktopWindow, 'open', PChar(nDir), nil, nil, SW_SHOWNORMAL);
+    Exit;
+  end else ForceDirectories(nDir);
+
+  nPic := nil;
+  nStr := 'Select * From %s Where P_ID=''%s''';
+  nStr := Format(nStr, [sTable_Picture, nID]);
+
+  ShowWaitForm(ParentForm, '读取图片', True);
+  try
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount < 1 then
+      begin
+        ShowMsg('本次预制无抓拍', sHint);
+        Exit;
+      end;
+
+      nPic := TPicture.Create;
+      First;
+
+      While not eof do
+      begin
+        nStr := nDir + Format('%s_%s.jpg', [FieldByName('P_ID').AsString,
+                FieldByName('R_ID').AsString]);
+        //xxxxx
+
+        FDM.LoadDBImage(FDM.SqlTemp, 'P_Picture', nPic);
+        nPic.SaveToFile(nStr);
+        Next;
+      end;
+    end;
+
+    ShellExecute(GetDesktopWindow, 'open', PChar(nDir), nil, nil, SW_SHOWNORMAL);
+    //open dir
+  finally
+    nPic.Free;
+    CloseWaitForm;
+    FDM.SqlTemp.Close;
+  end;
+end;
+
+function TfFrameTrucks.DeleteDirectory(nDir :String): boolean;
+var
+f: TSHFILEOPSTRUCT;
+begin
+  FillChar(f, SizeOf(f), 0);
+  with f do
+  begin
+    Wnd := 0;
+    wFunc := FO_DELETE;
+    pFrom := PChar(nDir+#0);
+    pTo := PChar(nDir+#0);
+    fFlags := FOF_ALLOWUNDO+FOF_NOCONFIRMATION+FOF_NOERRORUI;
+  end;
+  Result := (SHFileOperation(f) = 0);
 end;
 
 initialization

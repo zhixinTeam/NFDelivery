@@ -71,6 +71,21 @@ type
     FSpecialCus: string;  //是否为特殊客户
   end;
 
+  TOrderItem = record
+    FOrderID: string;       //订单编号
+    FStockID: string;       //物料编号
+    FStockName: string;     //物料名称
+    FStockBrand: string;    //水泥品牌
+    FCusName: string;       //客户名称
+    FSaleMan: string;       //业务员
+    FTruck: string;         //车牌号码
+    FBatchCode: string;     //批次号
+    FAreaName: string;      //到货地点
+    FAreaTo: string;        //区域流向
+    FValue: Double;         //订单可用
+    FPlanNum: Double;       //计划量
+  end;
+
 //------------------------------------------------------------------------------
 function AdjustHintToRead(const nHint: string): string;
 //调整提示内容
@@ -195,6 +210,10 @@ function LoadZTLineGroup(const nList: TStrings; const nWhere: string = ''): Bool
 function LoadPoundStation(const nList: TStrings; const nWhere: string = ''): Boolean;
 //指定磅站
 
+function LoadPoundStock(const nList: TStrings; const nWhere: string = ''): Boolean;
+//读取可用地磅物料列表到nList中,包含附加数据
+function LoadLine(const nList: TStrings; const nWhere: string = ''): Boolean;
+//读取通道列表到nList中,包含附加数据
 function PrintBillReport(nBill: string; const nAsk: Boolean): Boolean;
 //打印提货单
 function PrintPoundReport(const nPound: string; nAsk: Boolean): Boolean;
@@ -347,6 +366,16 @@ function FreeCapture(nLogin: Integer): Boolean;
 //释放抓拍
 function GetSanMaxLadeValue: Double;
 //散装最大开单量限制
+function AutoGetSanHDOrder(nCusID,nStockID,nTruck:string;
+                           nHDValue: Double; var nOrderStr: string): Boolean;
+//散装自动获取合单订单
+procedure SaveTruckPrePValue(const nTruck, nValue: string);
+//保存预制皮重
+function GetPrePValueSet: Double;
+//获取系统设定皮重
+function SaveTruckPrePicture(const nTruck: string;const nTunnel: PPTTunnelItem;
+                             const nLogin: Integer = -1): Boolean;
+//保存nTruck的预制皮重照片
 implementation
 
 //Desc: 记录日志
@@ -2680,6 +2709,44 @@ begin
   Result := nList.Count > 0;
 end;
 
+//Desc: 读取可用地磅物料列表到nList中,包含附加数据
+function LoadPoundStock(const nList: TStrings; const nWhere: string = ''): Boolean;
+var nStr,nW: string;
+begin
+  if nWhere = '' then
+       nW := ''
+  else nW := Format(' And (%s)', [nWhere]);
+
+  nStr := 'M_ID=Select M_ID,M_Name From %s ' +
+          'Where 1=1 %s Order By R_ID';
+  nStr := Format(nStr, [sTable_Materails, nW]);
+
+  AdjustStringsItem(nList, True);
+  FDM.FillStringsData(nList, nStr, -1, '.', DSA(['M_ID']));
+
+  AdjustStringsItem(nList, False);
+  Result := nList.Count > 0;
+end;
+
+//Desc: 读取通道列表到nList中,包含附加数据
+function LoadLine(const nList: TStrings; const nWhere: string = ''): Boolean;
+var nStr,nW: string;
+begin
+  if nWhere = '' then
+       nW := ''
+  else nW := Format(' And (%s)', [nWhere]);
+
+  nStr := 'Z_ID=Select Z_ID,Z_Name From %s ' +
+          'Where 1=1 %s Order By R_ID';
+  nStr := Format(nStr, [sTable_ZTLines, nW]);
+
+  AdjustStringsItem(nList, True);
+  FDM.FillStringsData(nList, nStr, -1, '.', DSA(['M_ID']));
+
+  AdjustStringsItem(nList, False);
+  Result := nList.Count > 0;
+end;
+
 //Date: 2017/7/10
 //Parm: 销售提货单号
 //Desc: 获取销售提货单号的排队顺序
@@ -2729,7 +2796,7 @@ begin
                 'T_Valid=''$Yes'' And T_StockNo=''$SN'' And T_InFact<''$IT'' And T_Vip=''$VIP''';
       end else
       begin
-        nStr := ' Select Count(*) From $TB left join S_PoundLog on S_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
+        nStr := ' Select Count(*) From $TB left join Sys_PoundLog on Sys_PoundLog.P_Bill=S_ZTTrucks.T_Bill ' +
                 ' Where T_InQueue Is Null And ' +
                 ' T_Valid=''$Yes'' And T_StockNo=''$SN'' And P_PDate<''$IT'' And T_Vip=''$VIP''';
       end;
@@ -2761,30 +2828,69 @@ end;
 
 //------------------------------------------------------------------------------
 //Desc: 获取nStock品种的报表文件
-function GetReportFileByStock(const nStock: string): string;
+function GetReportFileByStock(const nStock, nBrand: string): string;
 begin
   Result := GetPinYinOfStr(nStock);
 
+  {$IFDEF GetReportByBrand}
+  if nBrand = '' then
+  begin
+    if Pos('dj', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42_DJ.fr3'
+    else if Pos('gsysl', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_gsl.fr3'
+    else if Pos('kzf', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_kzf.fr3'
+    else if Pos('qz', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_qz.fr3'
+    else if Pos('32', Result) > 0 then
+      Result := gPath + 'Report\HuaYan32.fr3'
+    else if Pos('42', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42.fr3'
+    else if Pos('52', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42.fr3'
+    else Result := '';
+  end
+  else
+  begin
+    if Pos('dj', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42_DJ' + nBrand +'.fr3'
+    else if Pos('gsysl', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_gsl' + nBrand +'.fr3'
+    else if Pos('kzf', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_kzf' + nBrand +'.fr3'
+    else if Pos('qz', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_qz' + nBrand +'.fr3'
+    else if Pos('32', Result) > 0 then
+      Result := gPath + 'Report\HuaYan32' + nBrand +'.fr3'
+    else if Pos('42', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42' + nBrand +'.fr3'
+    else if Pos('52', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42' + nBrand +'.fr3'
+    else Result := '';
+  end;
+  {$ELSE}
   if Pos('dj', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan42_DJ.fr3'
+    Result := gPath + 'Report\HuaYan42_DJ.fr3'
   else if Pos('gsysl', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan_gsl.fr3'
+    Result := gPath + 'Report\HuaYan_gsl.fr3'
   else if Pos('kzf', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan_kzf.fr3'
+    Result := gPath + 'Report\HuaYan_kzf.fr3'
   else if Pos('qz', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan_qz.fr3'
+    Result := gPath + 'Report\HuaYan_qz.fr3'
   else if Pos('32', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan32.fr3'
+    Result := gPath + 'Report\HuaYan32.fr3'
   else if Pos('42', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan42.fr3'
+    Result := gPath + 'Report\HuaYan42.fr3'
   else if Pos('52', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan42.fr3'
+    Result := gPath + 'Report\HuaYan42.fr3'
   else Result := '';
+  {$ENDIF}
 end;
 
 //Desc: 打印标识为nHID的化验单
 function PrintHuaYanReport(const nHID: string; const nAsk: Boolean): Boolean;
-var nStr,nSeal,nDate3D,nDate28D,n28Ya1,nBD,nLID: string;
+var nStr,nSeal,nDate3D,nDate28D,n28Ya1,nBD,nLID,nBrand: string;
     nDate: TDateTime;
 begin
   if nAsk then
@@ -2797,7 +2903,7 @@ begin
   nSeal := '';
   nBD := '';
   nLID := '';
-  nStr := 'Select hy.H_SerialNo,sr.R_28Ya1,b.L_HyPrintCount,b.L_ID From %s hy ' +
+  nStr := 'Select hy.H_SerialNo,sr.R_28Ya1,b.L_HyPrintCount,b.L_ID,b.L_StockBrand From %s hy ' +
           ' Left Join %s b On b.L_ID=hy.H_Bill ' +
           ' Left Join %s sr on sr.R_SerialNo=hy.H_SerialNo ' +
           ' Where hy.H_ID = ''%s''';
@@ -2810,6 +2916,7 @@ begin
       nSeal := Fields[0].AsString;
       n28Ya1 := Fields[1].AsString;
       nLID := Fields[3].AsString;
+      nBrand := Fields[4].AsString;
       if Fields[2].AsInteger >= 1 then
         nBD := '补';
     end;
@@ -2860,7 +2967,7 @@ begin
   end;
 
   nStr := FDM.SqlTemp.FieldByName('P_Stock').AsString;
-  nStr := GetReportFileByStock(nStr);
+  nStr := GetReportFileByStock(nStr, nBrand);
 
   if not FDR.LoadReportFile(nStr) then
   begin
@@ -2887,7 +2994,7 @@ end;
 
 //Desc: 打印标识为nHID的化验单
 function PrintHuaYanReportEx(const nHID, nSeal: string; const nAsk: Boolean): Boolean;
-var nStr,nDate3D,nDate28D,n28Ya1,nBD,nLID: string;
+var nStr,nDate3D,nDate28D,n28Ya1,nBD,nLID,nBrand: string;
     nDate: TDateTime;
 begin
   if nAsk then
@@ -2899,7 +3006,7 @@ begin
 
   nBD := '';
   nLID := '';
-  nStr := 'Select hy.H_SerialNo,sr.R_28Ya1,b.L_HyPrintCount,b.L_ID From %s hy ' +
+  nStr := 'Select hy.H_SerialNo,sr.R_28Ya1,b.L_HyPrintCount,b.L_ID,b.L_StockBrand From %s hy ' +
           ' Left Join %s b On b.L_ID=hy.H_Bill ' +
           ' Left Join %s sr on sr.R_SerialNo=''%s'' ' +
           ' Where hy.H_ID = ''%s''';
@@ -2911,6 +3018,7 @@ begin
     begin
       n28Ya1 := Fields[1].AsString;
       nLID := Fields[3].AsString;
+      nBrand := Fields[4].AsString;
       if Fields[2].AsInteger >= 1 then
         nBD := '补';
     end;
@@ -2961,7 +3069,7 @@ begin
   end;
 
   nStr := FDM.SqlTemp.FieldByName('P_Stock').AsString;
-  nStr := GetReportFileByStock(nStr);
+  nStr := GetReportFileByStock(nStr, nBrand);
 
   if not FDR.LoadReportFile(nStr) then
   begin
@@ -4165,6 +4273,259 @@ begin
     if RecordCount > 0 then
     begin
       Result := Fields[0].AsFloat;
+    end;
+  end;
+end;
+
+function AutoGetSanHDOrder(nCusID,nStockID,nTruck:string;
+                           nHDValue: Double; var nOrderStr: string): Boolean;
+var nList: TStrings;
+    nItems: array of TOrderItem;
+    //订单列表
+    nIdx, nInt: Integer;
+    nStr: string;
+    nVal: Double;
+begin
+  Result := False;
+
+  nList := TStringList.Create;
+  try
+    nList.Clear;
+
+    nList.Values['NoDate'] := sFlag_Yes;
+    nList.Values['CustomerID'] := nCusID;
+    nList.Values['StockNo'] := nStockID;
+
+    if nTruck <> '' then
+      nList.Values['Truck'] := nTruck;
+
+    nList.Values['Order'] := 'invtype,NPLANNUM ASC';
+
+    nStr := GetQueryOrderSQL('103', EncodeBase64(nList.Text));
+
+    WriteLog('车辆' + nTruck + '自动合单读取可用订单SQL:' + nStr);
+
+    with FDM.QueryTemp(nStr, True) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nOrderStr := '车辆' + nTruck + '自动合单无可用订单,请联系客户下单';
+        WriteLog(nOrderStr);
+        Exit;
+      end;
+
+      SetLength(nItems, RecordCount);
+      nIdx := 0;
+
+      nList.Clear;
+      First;
+
+      while not Eof do
+      begin
+        with nItems[nIdx] do
+        begin
+          FOrderID := FieldByName('PK_MEAMBILL').AsString;
+          FStockID := FieldByName('invcode').AsString;
+          FStockName := FieldByName('invname').AsString;
+          FSaleMan := FieldByName('VBILLTYPE').AsString;
+          FStockBrand:= FieldByName('vdef5').AsString;
+          FCusName := FieldByName('custname').AsString;
+          FTruck := FieldByName('cvehicle').AsString;
+          FBatchCode := FieldByName('vbatchcode').AsString;
+
+          FAreaTo := FieldByName('docname').AsString;
+
+          FAreaName := FieldByName('areaclname').AsString;
+
+          FValue := 0;
+          FPlanNum := FieldByName('NPLANNUM').AsFloat;
+          nList.Add(FOrderID);
+        end;
+
+        Inc(nIdx);
+        Next;
+      end;
+
+      if nList.Count > 0 then
+      begin
+        if not GetOrderFHValue(nList) then Exit;
+        //获取已发货量
+
+        nInt := 0;
+        nVal := 0;
+        for nIdx:=Low(nItems) to High(nItems) do
+        begin
+          nStr := nList.Values[nItems[nIdx].FOrderID];
+          if not IsNumber(nStr, True) then Continue;
+
+
+          nItems[nIdx].FValue := nItems[nIdx].FPlanNum -
+                                 Float2Float(StrToFloat(nStr), cPrecision, True);
+
+          if nItems[nIdx].FValue < nHDValue then Continue;
+
+          //可用量 = 计划量 - 已发量
+          WriteLog('车辆' + nTruck + '当前可用订单' + nItems[nIdx].FOrderID
+                   + '可用量' + FloatToStr(nItems[nIdx].FValue));
+          if nItems[nIdx].FValue > nVal then
+          begin
+            nInt := nIdx;
+            nVal := nItems[nIdx].FValue;
+          end;
+        end;
+
+        if nVal <= 0 then
+        begin
+          nOrderStr := '车辆' + nTruck + '自动合单失败,需合单量'
+                       + FloatToStr(nHDValue) + '吨,当前无满足要求订单,请联系客户补量';
+          WriteLog(nOrderStr);
+          Exit;
+        end;
+          
+        WriteLog('车辆' + nTruck + '确认使用合单订单' + nItems[nInt].FOrderID
+                   + '可用量' + FloatToStr(nItems[nInt].FValue) + '序号' + IntToStr(nInt));
+
+        with nList,nItems[nInt] do
+        begin
+          Clear;
+          Values['CusID']     := nCusID;
+          Values['CusName']   := FCusName;
+          Values['SaleMan']   := FSaleMan;
+
+          Values['StockID']   := FStockID;
+          Values['StockName'] := FStockName;
+          Values['StockBrand']:= FStockBrand;
+
+          Values['StockArea'] := FAreaName;
+          Values['AreaTo']    := FAreaTo;
+
+          Values['Truck']     := FTruck;
+          Values['BatchCode'] := FBatchCode;
+          Values['Orders']    := FOrderID;
+          Values['Value']     := FloatToStr(FValue);
+        end;
+
+        nOrderStr := nList.Text;
+        WriteLog('可用订单Str:' + nOrderStr);
+        Result := True;
+      end;
+    end;
+  finally
+    nList.Free;
+  end;
+end;
+
+procedure SaveTruckPrePValue(const nTruck, nValue: string);
+var nStr, nOldPValue, nOldPTime, nDept,nEvent: string;
+begin
+  nStr := 'Select D_ParamB From $Table ' +
+          'Where D_Name=''$Name'' and D_Memo=''$Memo''';
+  nStr := MacroValue(nStr, [MI('$Table', sTable_SysDict),
+                            MI('$Name', sFlag_SysParam),
+                            MI('$Memo', sFlag_SetPValue)]);
+  //xxxxx
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+      nDept := Fields[0].AsString;
+  end;
+
+  nStr := 'Select T_PrePValue,T_PrePTime From %s Where T_Truck =''%s'' ';
+  nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nOldPValue := Fields[0].AsString;
+      nOldPTime := Fields[1].AsString;
+    end;
+  end;
+
+  nStr := 'update %s set T_PrePValue=%s,T_PrePMan=''%s'',T_PrePTime=%s '
+          + ' where t_truck=''%s''';
+  nStr := format(nStr,[sTable_Truck,nValue,gSysParam.FUserName
+                      ,sField_SQLServer_Now,nTruck]);
+  FDM.ExecuteSQL(nStr);
+
+  nEvent := '车辆[ %s ]重新进行预制皮重,上次预制皮重[ %s ],预制时间[ %s ];本次预制皮重[ %s ],预制时间[ %s ];';
+  nEvent := Format(nEvent, [nTruck,nOldPValue,nOldPTime,nValue,sField_SQLServer_Now]);
+
+  nStr := SF('E_ID', nTruck+sFlag_ManualP);
+  nStr := MakeSQLByStr([
+          SF('E_ID', nTruck+sFlag_ManualP),
+          SF('E_Key', nTruck),
+          SF('E_From', sFlag_DepBangFang),
+          SF('E_Result', 'Null', sfVal),
+
+          SF('E_Event', nEvent),
+          SF('E_Solution', sFlag_Solution_OK),
+          SF('E_Departmen', nDept),
+          SF('E_Date', sField_SQLServer_Now, sfVal)
+          ], sTable_ManualEvent, '', True);
+  //xxxxx
+  FDM.ExecuteSQL(nStr);
+end;
+
+function GetPrePValueSet: Double;
+var nStr: string;
+begin
+  Result := 30;//init
+
+  nStr := 'Select D_Value From $Table ' +
+          'Where D_Name=''$Name'' and D_Memo=''$Memo''';
+  nStr := MacroValue(nStr, [MI('$Table', sTable_SysDict),
+                            MI('$Name', sFlag_SysParam),
+                            MI('$Memo', sFlag_SetPValue)]);
+  //xxxxx
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+      nStr := Fields[0].AsString;
+    if IsNumber(nStr,True) then
+      Result := StrToFloatDef(nStr,30);
+  end;
+end;
+
+//Date: 2014-09-18
+//Parm: 车牌号;磅站通道
+//Desc: 保存nTruck的预制皮重照片
+function SaveTruckPrePicture(const nTruck: string;const nTunnel: PPTTunnelItem;
+                            const nLogin: Integer): Boolean;
+var nStr,nRID: string;
+    nIdx: Integer;
+    nList: TStrings;
+begin
+  Result := False;
+  nRID := '';
+  nStr := 'Select R_ID From %s Where T_Truck =''%s'' order by R_ID desc ';
+  nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount <= 0 then
+      Exit;
+    nRID := Fields[0].AsString;
+  end;
+
+  nStr := 'Delete from %s where P_ID=''%s'' ';
+  nStr := format(nStr,[sTable_Picture, nRID]);
+  FDM.ExecuteSQL(nStr);
+
+  if Assigned(nTunnel) then //过磅称重
+  begin
+    nList := TStringList.Create;
+    try
+      CapturePictureEx(nTunnel, nLogin, nList);
+      //capture file
+
+      for nIdx:=0 to nList.Count - 1 do
+        SavePicture(nRID, nTruck, '', nList[nIdx]);
+      //save file
+    finally
+      nList.Free;
     end;
   end;
 end;

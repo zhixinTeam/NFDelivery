@@ -1400,6 +1400,10 @@ begin
               SF('L_Bm',   FListA.Values['bm']),
               {$ENDIF}
 
+              {$IFDEF SaveAreaName}
+              SF('L_AreaName',   FOrderItems[nIdx].FAreaToName),
+              {$ENDIF}
+
               {$IFDEF SaleAICMFromNC}
               SF('L_WxZhuId',   FListA.Values['wxzhuid']),
               SF('L_WxZiId',   FListA.Values['wxziid']),
@@ -3395,6 +3399,7 @@ var nSQL: string;
     nVal, nDec: Double;
     nWorker: PDBWorker;
     nOut: TWorkerBusinessCommand;
+    nDs: TDataSet;
 begin
   FListB.Clear;
   FListC.Clear;
@@ -3409,14 +3414,32 @@ begin
   if not TWorkerBusinessCommander.CallMe(cBC_GetSQLQueryDispatch, '',
          PackerEncodeStr(FListC.Text), @nOut) then
   begin
-    nData := '获取读NC订单语句失败，条件为[ %s ]';
+    nData := '获取读NC调拨订单语句失败，条件为[ %s ]';
     nData := Format(nData, [FListC.Text]);
     Exit;
   end;
 
   nWorker := nil;
   try
-    with gDBConnManager.SQLQuery(nOut.FData, nWorker, sFlag_DB_NC) do
+    nDs := gDBConnManager.SQLQuery(nOut.FData, nWorker, sFlag_DB_NC);
+
+    if nDs.RecordCount < 1 then
+    begin
+      if not TWorkerBusinessCommander.CallMe(cBC_GetSQLQueryOrder, '103',
+             PackerEncodeStr(FListC.Text), @nOut) then
+      begin
+        nData := '获取读NC销售订单语句失败，条件为[ %s ]';
+        nData := Format(nData, [FListC.Text]);
+        Exit;
+      end;
+
+      if Assigned(nWorker) then
+        nDs := gDBConnManager.WorkerQuery(nWorker, nOut.FData)
+      else
+        nDs := gDBConnManager.SQLQuery(nOut.FData, nWorker, sFlag_DB_NC);
+    end;
+
+    with nDs do
     begin
       if RecordCount < 1 then
       begin
@@ -3566,7 +3589,8 @@ begin
             SF('L_Area', FAreaTo)
             ], sTable_Bill, SF('L_ID', nBill.FID), False);
     FListA.Add(nSQL);
-
+    WriteLog('销售固定卡更新提货单SQL:' + nSQL);
+    
     nSQL := 'Select * From %s Where B_ID=''%s''';
     nSQL := Format(nSQL, [sTable_Order, FOrder]);
     with gDBConnManager.WorkerQuery(FDBConn, nSQL) do

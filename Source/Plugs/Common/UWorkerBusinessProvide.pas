@@ -567,7 +567,7 @@ end;
 //Parm: 交货单[FIn.FData];岗位[FIn.FExtParam]
 //Desc: 保存指定岗位提交的交货单列表
 function TWorkerBusinessProvide.SavePostProvideItems(var nData: string): Boolean;
-var nSQL,nStr,nS,nN,nYS: string;
+var nSQL,nStr,nS,nN,nYS,nPreYs: string;
     nInt, nIdx: Integer;
     nNet, nVal: Double;
     {$IFDEF HardMon}
@@ -580,7 +580,8 @@ begin
   AnalyseBillItems(FIn.FData, nPound);
   nInt := Length(nPound);
   //解析数据
-
+  nPreYs := '';
+  
   if nInt < 1 then
   begin
     nData := '岗位[ %s ]提交的单据为空.';
@@ -861,9 +862,12 @@ begin
       FNextStatus := sFlag_TruckOut;
 
       {$IFDEF PrePTruckYs}
-      FNextStatus := sFlag_TruckXH;
-      if (FListB.IndexOf(FStockNo) >= 0) or (nYS <> sFlag_Yes) then
-        FNextStatus := sFlag_TruckOut;
+      if FPreTruckP then
+      begin
+        FNextStatus := sFlag_TruckXH;
+        if (FListB.IndexOf(FStockNo) >= 0) or (nYS <> sFlag_Yes) then
+          FNextStatus := sFlag_TruckOut;
+      end;
       {$ENDIF}
 
       nSQL := MakeSQLByStr([
@@ -949,6 +953,17 @@ begin
           FExtID_1 := Fields[0].AsString;
         end;
       end;
+
+      nStr := 'Select top 1 P_BID From %s ' +
+                'Where P_ID=''%s'' order by R_ID Desc';
+      nStr := Format(nStr, [sTable_ProvBase, FZhiKa]);
+
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+      if RecordCount > 0 then
+      begin
+        FExtID_2 := Fields[0].AsString;
+      end;
+
       if FMData.FValue <= 0 then
       begin
         nStr := 'Select top 1 D_MValue From %s ' +
@@ -962,7 +977,8 @@ begin
         end;
       end;
 
-      //FNextStatus := sFlag_TruckOut;
+      if FPreTruckP then
+        FNextStatus := sFlag_TruckOut;
 
       nStr := 'Select D_CusID,D_Value,D_Type From %s ' +
               'Where D_Stock=''%s'' And D_Valid=''%s''';
@@ -1051,6 +1067,41 @@ begin
               SF('P_NextStatus', FNextStatus)
               ], sTable_ProvBase, SF('P_ID', FZhiKa), False);
       FListA.Add(nSQL);
+
+      nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_OutByPreYs, FStockNo]);
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+      if RecordCount > 0 then
+           nPreYs := Fields[0].AsString
+      else nPreYs := sFlag_No;
+
+      if nPreYs = sFlag_Yes then
+      with nPound[0] do
+      begin
+        nSQL := MakeSQLByStr([
+                SF('D_Status', sFlag_TruckOut),
+                SF('D_NextStatus', ''),
+                SF('D_OutFact', sField_SQLServer_Now, sfVal),
+                SF('D_OutMan', FIn.FBase.FFrom.FUser)
+                ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);
+        FListA.Add(nSQL);
+
+        nSQL := 'Update %s Set P_DID=NULL,' +
+                'P_PDate=NULL,P_PMan=NULL,P_PValue=0,' +
+                'P_MDate=NULL,P_MMan=NULL,P_MValue=0,' +
+                'P_IsUsed=''%s'', P_Status=''%s'', P_NextStatus=''%s'' ' +
+                'Where P_ID=''%s''';
+        nSQL := Format(nSQL, [sTable_ProvBase, sFlag_No, sFlag_TruckNone,
+                sFlag_TruckNone, FZhiKa]);
+        FListA.Add(nSQL);
+
+        nSQL := 'Select P_CType, P_Card From %s Where P_ID=''%s''';
+        nSQL := Format(nSQL, [sTable_ProvBase, FZhiKa]);
+        with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+        if (RecordCount > 0) And (Fields[0].AsString <> sFlag_ProvCardG) then
+          CallMe(cBC_LogoffCard, Fields[1].AsString, '', @nOut);
+        //如果是临时卡，注销卡片
+      end;
     end;
   end else
 
@@ -1283,27 +1334,100 @@ begin
     raise;
   end;
 
-  if (FIn.FExtParam = sFlag_TruckSH)
-  and (nPound[0].FNextStatus = sFlag_TruckOut) then
+  if nPreYs = sFlag_Yes then
   begin
-    if Assigned(gHardShareData) then
-      gHardShareData('TruckSH:' + nPound[0].FCard);
-    //单次过磅自动出厂
-  end;
+    with nPound[0] do
+    begin
+      nSQL := 'Select P_ID From %s Where P_Order=''%s''';
+      nSQL := Format(nSQL, [sTable_PoundLog, FExtID_1]);
+      //未称毛重记录
 
-  if (FIn.FExtParam = sFlag_TruckXH)
-  and (nPound[0].FNextStatus = sFlag_TruckOut) then
+      with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+      if RecordCount > 0 then
+      begin
+        FPoundID := Fields[0].AsString;
+      end;
+
+      {$IFNDEF SyncDataByBFM}
+      if not TWorkerBusinessCommander.CallMe(cBC_SyncME03,
+          FPoundID, FExtID_2, @nOut) then
+        raise Exception.Create(nOut.FData);
+      //同步供应到NC榜单
+      {$ENDIF}
+    end;
+  end
+  else
   begin
-    if Assigned(gHardShareData) then
-      gHardShareData('TruckSH:' + nPound[0].FCard);
-    //单次过磅自动出厂
+    if (FIn.FExtParam = sFlag_TruckSH)
+    and (nPound[0].FNextStatus = sFlag_TruckOut) then
+    begin
+      if Assigned(gHardShareData) then
+      begin
+        {$IFDEF AutoOutByStokNo}
+        nSQL := 'Select D_Value From %s Where D_Name=''AutoOutStock'' and D_Value=''%s''';
+        nSQL := Format(nSQL, [sTable_SysDict, nPound[0].FStockNo]);
+
+        with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+        if RecordCount > 0 then
+        begin
+          gHardShareData('TruckSH:' + nPound[0].FCard);
+          //磅房处理自动出厂
+          WriteLog('磅房根据物料号处理自动出厂');
+        end;
+        {$ELSE}
+          gHardShareData('TruckSH:' + nPound[0].FCard);
+          //单次过磅自动出厂
+          WriteLog('磅房处理自动出厂');
+        {$ENDIF}
+      end;
+    end;
+
+    if (FIn.FExtParam = sFlag_TruckXH)
+    and (nPound[0].FNextStatus = sFlag_TruckOut) then
+    begin
+      if Assigned(gHardShareData) then
+      begin
+        {$IFDEF AutoOutByStokNo}
+        nSQL := 'Select D_Value From %s Where D_Name=''AutoOutStock'' and D_Value=''%s''';
+        nSQL := Format(nSQL, [sTable_SysDict, nPound[0].FStockNo]);
+
+        with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+        if RecordCount > 0 then
+        begin
+          gHardShareData('TruckSH:' + nPound[0].FCard);
+          //磅房处理自动出厂
+          WriteLog('磅房根据物料号处理自动出厂');
+        end;
+        {$ELSE}
+          gHardShareData('TruckSH:' + nPound[0].FCard);
+          //单次过磅自动出厂
+          WriteLog('磅房处理自动出厂');
+        {$ENDIF}
+      end;
+    end;
   end;
 
   if FIn.FExtParam = sFlag_TruckBFM then
   begin
     if Assigned(gHardShareData) then
-      gHardShareData('TruckOut:' + nPound[0].FCard);
-    //磅房处理自动出厂
+    begin
+      {$IFDEF AutoOutByStokNo}
+      nSQL := 'Select D_Value From %s Where D_Name=''AutoOutStock'' and D_Value=''%s''';
+      nSQL := Format(nSQL, [sTable_SysDict, nPound[0].FStockNo]);
+
+      with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+      if RecordCount > 0 then
+      begin
+        gHardShareData('TruckOut:' + nPound[0].FCard);
+        //磅房处理自动出厂
+        WriteLog('磅房根据物料号处理自动出厂');
+      end;
+      {$ELSE}
+        gHardShareData('TruckOut:' + nPound[0].FCard);
+        //磅房处理自动出厂
+        WriteLog('磅房处理自动出厂');
+      {$ENDIF}
+    end;
   end;
 
   {$IFDEF SyncDataByBFM}

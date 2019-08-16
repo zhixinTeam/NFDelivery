@@ -24,6 +24,8 @@ type
     procedure GetInOutData(var nIn,nOut: PBWDataBase); override;
     function DoDBWork(var nData: string): Boolean; override;
     //base funciton
+    function VerifyPTruckCount(const nPID, nStockNo: string; var nHint: string): Boolean;
+    function VerifyPTime(const nStockNo: string; var nHint: string): Boolean;
 
     function SaveCardProvide(var nData: string): Boolean;
     function DeleteCardProvide(var nData: string): Boolean;
@@ -113,12 +115,23 @@ end;
 function TWorkerBusinessShipPro.SaveCardProvide(var nData: string): Boolean;
 var nStr, nTruck: string;
     nOut: TWorkerBusinessCommand;
+    nHint : string;
 begin
   FListA.Text := PackerDecodeStr(FIn.FData);
   nTruck := FListA.Values['Truck'];
   //init card
   if Trim(FListA.Values['Card']) = '' then
     raise Exception.Create('卡号异常,请尝试重新办理或联系管理员');
+
+  {$IFDEF PTruckCount}
+  if not VerifyPTruckCount(FListA.Values['ProID'],FListA.Values['StockNo'], nHint) then
+    raise Exception.Create(nHint);
+  {$ENDIF}
+
+  {$IFDEF PTimeControl}
+  if not VerifyPTime(FListA.Values['StockNo'], nHint) then
+    raise Exception.Create(nHint);
+  {$ENDIF}
 
   TWorkerBusinessCommander.CallMe(cBC_SaveTruckInfo, nTruck, '', @nOut);
   //保存车牌号
@@ -443,7 +456,7 @@ end;
 //Parm: 交货单[FIn.FData];岗位[FIn.FExtParam]
 //Desc: 保存指定岗位提交的交货单列表
 function TWorkerBusinessShipPro.SavePostProvideItems(var nData: string): Boolean;
-var nSQL,nStr,nYS,nNS,nWT: string;
+var nSQL,nStr,nYS,nNS,nWT,nPreYs: string;
     nInt, nIdx: Integer;
     nNet, nVal: Double;
     {$IFDEF HardMon}
@@ -456,6 +469,7 @@ begin
   AnalyseBillItems(FIn.FData, nPound);
   nInt := Length(nPound);
   //解析数据
+  nPreYs := '';
 
   if nInt < 1 then
   begin
@@ -784,6 +798,54 @@ begin
                 SF('P_NextStatus', FNextStatus)
                 ], sTable_CardProvide,  SF('P_Card', FCard), False);
         FListA.Add(nSQL);
+
+        nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+        nStr := Format(nStr, [sTable_SysDict, sFlag_OutByPreYs, FStockNo]);
+        with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+        if RecordCount > 0 then
+             nPreYs := Fields[0].AsString
+        else nPreYs := sFlag_No;
+
+        if nPreYs = sFlag_Yes then//验收后直接出厂
+        begin
+          with nPound[0] do
+          begin
+            if FCardKeep = sFlag_ProvCardG then
+            begin
+              nSQL := 'Update %s Set P_Pound=NULL,' +
+                      'P_BFPTime=NULL,P_BFPMan=NULL,P_BFPValue=0,' +
+                      'P_BFMTime=NULL,P_BFMMan=NULL,P_BFMValue=0,' +
+                      'P_BFPTime2=NULL,P_BFPMan2=NULL,P_BFPValue2=0,' +
+                      'P_BFMTime2=NULL,P_BFMMan2=NULL,P_BFMValue2=0,' +
+                      'P_Status=''%s'', P_NextStatus=''%s'' ' +
+                      'Where P_Card=''%s''';
+              nSQL := Format(nSQL, [sTable_CardProvide, sFlag_TruckNone,
+                      sFlag_TruckNone, FCard]);
+              FListA.Add(nSQL);
+            end else
+
+            begin
+              nSQL := 'Update %s Set C_Status=''%s'', C_TruckNo=NULL Where C_Card=''%s''';
+              nSQL := Format(nSQL, [sTable_Card, sFlag_CardIdle, FCard]);
+              FListA.Add(nSQL);
+
+              nSQL := 'Update %s Set P_Pound=NULL, P_Card=NULL, ' +
+                      'P_Status=''%s'', P_NextStatus=NULL ' +
+                      'Where P_Card=''%s''';
+              nSQL := Format(nSQL, [sTable_CardProvide, sFlag_TruckOut,
+                      FCard]);
+              FListA.Add(nSQL);
+            end;
+
+            FListC.Clear;
+            FListC.Values['DLID']  := FPoundID;
+            FListC.Values['MType'] := sFlag_Provide;
+            FListC.Values['BillType'] := IntToStr(cMsg_WebChat_BillFinished);
+            TWorkerBusinessCommander.CallMe(cBC_WebChat_DLSaveShopInfo,
+             PackerEncodeStr(FListC.Text), '', @nOut);
+            //保存同步信息
+          end;
+        end;
       end
       else
       begin
@@ -1093,27 +1155,87 @@ begin
     raise;
   end;
 
-  if (FIn.FExtParam = sFlag_TruckSH)
-  and (nPound[0].FNextStatus = sFlag_TruckOut) then
+  if nPreYs = sFlag_Yes then
   begin
-    if Assigned(gHardShareData) then
-      gHardShareData('TruckSH:' + nPound[0].FCard);
-    //单次过磅自动出厂
-  end;
+    {$IFNDEF SyncDataByBFM}
+    if not TWorkerBusinessCommander.CallMe(cBC_SyncME03,
+        nPound[0].FPoundID, '', @nOut) then
+      raise Exception.Create(nOut.FData);
+    //同步供应到NC榜单
+    {$ENDIF}
+  end
+  else
+  begin
+    if (FIn.FExtParam = sFlag_TruckSH)
+    and (nPound[0].FNextStatus = sFlag_TruckOut) then
+    begin
+      if Assigned(gHardShareData) then
+      begin
+        {$IFDEF AutoOutByStokNo}
+        nSQL := 'Select D_Value From %s Where D_Name=''AutoOutStock'' and D_Value=''%s''';
+        nSQL := Format(nSQL, [sTable_SysDict, nPound[0].FStockNo]);
 
-  if (FIn.FExtParam = sFlag_TruckXH)
-  and (nPound[0].FNextStatus = sFlag_TruckOut) then
-  begin
-    if Assigned(gHardShareData) then
-      gHardShareData('TruckSH:' + nPound[0].FCard);
-    //单次过磅自动出厂
+        with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+        if RecordCount > 0 then
+        begin
+          gHardShareData('TruckSH:' + nPound[0].FCard);
+          //磅房处理自动出厂
+          WriteLog('磅房根据物料号处理自动出厂');
+        end;
+        {$ELSE}
+          gHardShareData('TruckSH:' + nPound[0].FCard);
+          //单次过磅自动出厂
+          WriteLog('磅房处理自动出厂');
+        {$ENDIF}
+      end;
+    end;
+
+    if (FIn.FExtParam = sFlag_TruckXH)
+    and (nPound[0].FNextStatus = sFlag_TruckOut) then
+    begin
+      if Assigned(gHardShareData) then
+      begin
+        {$IFDEF AutoOutByStokNo}
+        nSQL := 'Select D_Value From %s Where D_Name=''AutoOutStock'' and D_Value=''%s''';
+        nSQL := Format(nSQL, [sTable_SysDict, nPound[0].FStockNo]);
+
+        with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+        if RecordCount > 0 then
+        begin
+          gHardShareData('TruckSH:' + nPound[0].FCard);
+          //磅房处理自动出厂
+          WriteLog('磅房根据物料号处理自动出厂');
+        end;
+        {$ELSE}
+          gHardShareData('TruckSH:' + nPound[0].FCard);
+          //单次过磅自动出厂
+          WriteLog('磅房处理自动出厂');
+        {$ENDIF}
+      end;
+    end;
   end;
 
   if FIn.FExtParam = sFlag_TruckBFM then
   begin
     if Assigned(gHardShareData) then
-      gHardShareData('TruckOut:' + nPound[0].FCard);
-    //磅房处理自动出厂
+    begin
+      {$IFDEF AutoOutByStokNo}
+      nSQL := 'Select D_Value From %s Where D_Name=''AutoOutStock'' and D_Value=''%s''';
+      nSQL := Format(nSQL, [sTable_SysDict, nPound[0].FStockNo]);
+
+      with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+      if RecordCount > 0 then
+      begin
+        gHardShareData('TruckOut:' + nPound[0].FCard);
+        //磅房处理自动出厂
+        WriteLog('磅房根据物料号处理自动出厂');
+      end;
+      {$ELSE}
+        gHardShareData('TruckOut:' + nPound[0].FCard);
+        //磅房处理自动出厂
+        WriteLog('磅房处理自动出厂');
+      {$ENDIF}
+    end;
   end;
 
   {$IFDEF SyncDataByBFM}
@@ -1161,6 +1283,116 @@ begin
   finally
     gBusinessPackerManager.RelasePacker(nPacker);
     gBusinessWorkerManager.RelaseWorker(nWorker);
+  end;
+end;
+
+function TWorkerBusinessShipPro.VerifyPTruckCount(const nPID,
+  nStockNo: string; var nHint: string): Boolean;
+var nStr: string;
+    nCount, nCountSet : Integer;
+    nBDate, nEDate: string;
+begin
+  Result := True;
+  nHint := '';
+  nStr := 'Select * From %s Where C_CusName=''%s''';
+  nStr := Format(nStr, [sTable_PTruckControl, sFlag_PTruckControl]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount <= 0 then
+      Exit;
+    WriteLog('原材料进厂车辆数量总控制:' + FieldByName('C_Valid').AsString);
+    if FieldByName('C_Valid').AsString <> sFlag_Yes then
+      Exit;
+  end;
+
+  nCount := 0;
+  nCountSet := 0;
+
+  nStr := 'Select * From %s Where C_CusID=''%s'' and C_StockNo=''%s'' and C_Valid=''%s''';
+  nStr := Format(nStr, [sTable_PTruckControl, nPID, nStockNo, sFlag_Yes]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount <= 0 then
+    begin
+      WriteLog('供应商' + nPID + '原材料'+ nStockNo + '未配置限定规则或规则未启用');
+      Exit;
+    end;
+    nCountSet := FieldByName('C_Count').AsInteger;
+    WriteLog('原材料进厂车辆数量控制:' + FieldByName('C_Count').AsString);
+  end;
+
+  nBDate := FormatDateTime('YYYY-MM-DD', Now) + ' 00:00:00';
+  nEDate := FormatDateTime('YYYY-MM-DD', Now) + ' 23:59:59';
+
+  nStr := 'Select Count(*) as P_Count From %s Where P_CusID=''%s'' and P_MID=''%s'' '
+         +'And (P_Date>=''%s'' and P_Date <=''%s'')';
+  nStr := Format(nStr, [sTable_CardProvide, nPID, nStockNo, nBDate, nEDate]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount <= 0 then
+    begin
+      Exit;
+    end;
+    nCount := FieldByName('P_Count').AsInteger;
+
+    if (nCount > 0) and (nCount >= nCountSet) then
+    begin
+      nHint := '供应商' + nPID + '原材料'+ nStockNo
+               + '当前已开单数量' + IntToStr(nCount)
+               + '超出日进厂设定数量' + IntToStr(nCountSet) + '无法开单';
+      WriteLog(nHint);
+      Result := False;
+    end;
+  end;
+end;
+
+function TWorkerBusinessShipPro.VerifyPTime(const nStockNo: string; var nHint: string): Boolean;
+var nStr: string;
+    nBDate, nEDate: string;
+begin
+  Result := True;
+  nHint := '';
+  nStr := 'Select * From %s Where X_StockName=''%s''';
+  nStr := Format(nStr, [sTable_PTimeControl, sFlag_PTimeControlTotal]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount <= 0 then
+      Exit;
+    WriteLog('原材料进厂时间总控制:' + FieldByName('X_Valid').AsString);
+    if FieldByName('X_Valid').AsString <> sFlag_Yes then
+      Exit;
+  end;
+
+  nStr := 'Select * From %s Where X_StockNo=''%s'' and X_Valid=''%s''';
+  nStr := Format(nStr, [sTable_PTimeControl, nStockNo, sFlag_Yes]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount <= 0 then
+    begin
+      WriteLog('原材料'+ nStockNo + '未配置限定规则或规则未启用');
+      Exit;
+    end;
+    WriteLog('原材料进厂时间控制:' + FieldByName('X_BeginTime').AsString
+            + '-->' + FieldByName('X_EndTime').AsString);
+    nBDate := FormatDateTime('YYYY-MM-DD', Now) + ' ' + FieldByName('X_BeginTime').AsString;
+    nEDate := FormatDateTime('YYYY-MM-DD', Now) + ' ' + FieldByName('X_EndTime').AsString;
+
+    try
+      if (Now < StrToDateTime(nBDate)) or (Now > StrToDateTime(nEDate)) then
+      begin
+        nHint := '原材料'+ nStockNo
+                 + '允许办卡时间段:' + FieldByName('X_BeginTime').AsString
+                 + '-->' + FieldByName('X_EndTime').AsString + '当前时间无法开单';
+        WriteLog(nHint);
+        Result := False;
+      end;
+    except
+    end;
   end;
 end;
 

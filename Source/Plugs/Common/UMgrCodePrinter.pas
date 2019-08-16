@@ -739,6 +739,30 @@ begin
   end;
 end;
 
+function ModbusCRC(const nData: string): Word;
+const
+  cPoly = $A001; //多项式：A001(1010 0000 0000 0001)
+var i,nIdx,nLen: Integer;
+    nNoZero: Boolean;
+begin
+  Result := $FFFF;
+  nLen := Length(nData);
+
+  for nIdx:=1 to nLen do
+  begin
+    Result := Ord(nData[nIdx]) xor Result;
+    for i:=1 to 8 do
+    begin
+      nNoZero := Result and $0001 <> 0;
+      Result := Result shr 1;
+
+      if nNoZero then
+        Result := Result xor cPoly;
+      //xxxxx
+    end;
+  end;
+end;
+
 //------------------------------------------------------------------------------
 type
   TPrinterZero = class(TCodePrinterBase)
@@ -951,12 +975,71 @@ begin
   Result := True;
 end;
 
+//------------------------------------------------------------------------------
+type
+  TPrinterWSDP011C = class(TCodePrinterBase)
+  protected
+    function PrintCode(const nCode: string;
+     var nHint: string; const nVersion: Integer=0): Boolean; override;
+  public
+    class function DriverName: string; override;
+  end;
+
+class function TPrinterWSDP011C.DriverName: string;
+begin
+  Result := 'WSDP011C';
+end;
+
+//Desc: 打印编码
+function TPrinterWSDP011C.PrintCode(const nCode: string;
+  var nHint: string; const nVersion: Integer=0): Boolean;
+var nStr,nData,nDataVerify: string;
+    nCrc: TByteWord;
+    nBuf: TIdBytes;
+begin
+  //protocol: 55 len order datas ModbusCRC AA
+  nData := Char($55) + Char($00) + Char(Length(nCode) + 17);
+  nData := nData + Char($53) + Char($4E);
+  nData := nData + Char($03) + Char($00) + Char($00) + Char($01);
+
+  nDataVerify := Char($01) + Char($00) + Char($01) + Char($00) + Char(Length(nCode));
+  nDataVerify := nDataVerify + nCode;
+
+  nCrc := TByteWord(ModbusCRC(nDataVerify));
+  nDataVerify := nDataVerify + Char(nCrc.FH) + Char(nCrc.FL) + Char($AA);
+
+  nData := nData + nDataVerify;
+
+  FClient.Socket.Write(nData, Indy8BitEncoding);
+  Sleep(200);
+
+  if FPrinter.FResponse then
+  begin
+    SetLength(nBuf, 0);
+    FClient.Socket.ReadBytes(nBuf, 12, False);
+    nStr := BytesToString(nBuf,Indy8BitEncoding);
+
+    nData :=  Char($55) + Char($00) + Char($0C)+ Char($4F)+ Char($4B);
+    nData :=  nData + Char($03)+ Char($00) + Char($00) + Char($01);
+    nData :=  nData + Char($FF)+ Char($FF) + Char($AA);
+    if nstr <> nData then
+    begin
+      nHint := '喷码机应答错误!';
+      Result := False;
+      Exit;
+    end;
+  end;
+
+  Result := True;
+end;
+
 initialization
   gCodePrinterManager := TCodePrinterManager.Create;
   gCodePrinterManager.RegDriver(TPrinterZero);
   gCodePrinterManager.RegDriver(TPrinterJY);
   gCodePrinterManager.RegDriver(TPrinterWSD);
   gCodePrinterManager.RegDriver(TPrinterSGB);
+  gCodePrinterManager.RegDriver(TPrinterWSDP011C);
 finalization
   FreeAndNil(gCodePrinterManager);
 end.

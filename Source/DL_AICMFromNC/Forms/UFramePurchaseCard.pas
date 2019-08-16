@@ -287,11 +287,13 @@ begin
     Exit;
   end;
 
+  {$IFNDEF AICMNoVerifyTruck}
   if edt_TruckNo.Properties.Items.IndexOf(edt_TruckNo.Text) < 0 then
   begin
     ShowMsg('请选择车牌号或输入完整车牌号', sHint);
     Exit;
   end;
+  {$ENDIF}
 
   {$IFDEF BusinessOnly}
   if IFHasBill(edt_TruckNo.Text) then
@@ -335,6 +337,14 @@ begin
 
   WriteLog('读取到卡片: ' + nCard);
   //解析卡片
+  if not IsCardValid(nCard) then
+  begin
+    gDispenserManager.RecoveryCard(gSysParam.FTTCEK720ID, nHint);
+    nMsg := '卡号' + nCard + '非法,回收中,请稍后重新取卡';
+    WriteLog(nMsg);
+    ShowMsg(nMsg, sWarn);
+    Exit;
+  end;
 
   nStr := GetCardUsed(nCard);
   if (nStr = sFlag_Sale) or (nStr = sFlag_SaleNew) then

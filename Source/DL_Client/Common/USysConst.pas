@@ -97,6 +97,10 @@ const
   cFI_FrameCardTmpPQuery= $0154;                     //磅房查询
   cFI_FrameBillHaulback = $0155;                     //回空查询
   cFI_FrameSaleDetailQueryView = $0160;              //发货明细Ex
+  cFI_FramePTruckControl = $0161;                    //供应商进厂车辆数量控制
+  cFI_FramePTimeControl = $0162;                     //原材料进厂时间控制
+  cFI_FramePoundControl = $0163;                     //过磅物料控制
+  cFI_FrameLineKwControl= $0164;                     //装车线库位控制
 
   cFI_FormMemo          = $1000;                     //备注窗口
   cFI_FormBackup        = $1001;                     //数据备份
@@ -185,6 +189,11 @@ const
 
   cFI_FormSnapView      = $1204;                     //抓拍图片浏览
   cFI_FormGetBatCode    = $1205;                     //获取批次
+  cFI_FormPTruckControl = $1206;                     //供应商进厂车辆数量控制
+  cFI_FormPTimeControl  = $1207;                     //原材料进厂时间控制
+  cFI_FormPoundControl  = $1208;                     //过磅物料控制
+  cFI_FormLineKwControl = $1209;                     //装车线库位控制
+  cFI_FormAddWater      = $1210;                     //车辆加水
 
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据
@@ -377,6 +386,7 @@ begin
   AddMenuModuleItem('MAIN_F01', cFI_FormLadDai, mtForm);
   AddMenuModuleItem('MAIN_F03', cFI_FrameZhanTaiQuery);
   AddMenuModuleItem('MAIN_F04', cFI_FrameZTDispatch);
+  AddMenuModuleItem('MAIN_F06', cFI_FormAddWater, mtForm);
 
   AddMenuModuleItem('MAIN_G01', cFI_FormLadSan, mtForm);
   AddMenuModuleItem('MAIN_G02', cFI_FrameFangHuiQuery);
@@ -416,6 +426,10 @@ begin
   AddMenuModuleItem('MAIN_M06', cFI_FrameProvTruckQuery);
   AddMenuModuleItem('MAIN_M07', cFI_FrameMine);
   AddMenuModuleItem('MAIN_M08', cFI_FormShipPoundCG, mtForm);
+  AddMenuModuleItem('MAIN_M09', cFI_FramePTruckControl);
+  AddMenuModuleItem('MAIN_M10', cFI_FramePTimeControl);
+  AddMenuModuleItem('MAIN_M11', cFI_FramePoundControl);
+  AddMenuModuleItem('MAIN_M12', cFI_FrameLineKwControl);
 
   AddMenuModuleItem('MAIN_N01', cFI_FrameCardProvide);
   AddMenuModuleItem('MAIN_N02', cFI_FormCardProvide, mtForm);

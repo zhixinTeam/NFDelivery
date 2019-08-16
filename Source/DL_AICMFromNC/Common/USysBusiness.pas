@@ -790,44 +790,100 @@ begin
   FDR.AddParamItem(nParam);
 
   FDR.Dataset1.DataSet := FDM.SQLQuery1;
-  FDR.Report1.PrintOptions.Printer := 'My_Default_Printer';
+  if gSysParam.FCardPrinter = '' then
+       FDR.Report1.PrintOptions.Printer := 'My_Default_HYPrinter'
+  else FDR.Report1.PrintOptions.Printer := gSysParam.FCardPrinter;
   FDR.PrintReport;
   Result := FDR.PrintSuccess;
 end;
 
-function GetReportFileByStock(const nStock: string): string;
+//Desc: 获取nStock品种的报表文件
+function GetReportFileByStock(const nStock, nBrand: string): string;
 begin
   Result := GetPinYinOfStr(nStock);
 
+  {$IFDEF GetReportByBrand}
+  if nBrand = '' then
+  begin
+    if Pos('dj', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42_DJ.fr3'
+    else if Pos('gsysl', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_gsl.fr3'
+    else if Pos('kzf', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_kzf.fr3'
+    else if Pos('qz', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_qz.fr3'
+    else if Pos('32', Result) > 0 then
+      Result := gPath + 'Report\HuaYan32.fr3'
+    else if Pos('42', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42.fr3'
+    else if Pos('52', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42.fr3'
+    else Result := '';
+  end
+  else
+  begin
+    if Pos('dj', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42_DJ' + nBrand +'.fr3'
+    else if Pos('gsysl', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_gsl' + nBrand +'.fr3'
+    else if Pos('kzf', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_kzf' + nBrand +'.fr3'
+    else if Pos('qz', Result) > 0 then
+      Result := gPath + 'Report\HuaYan_qz' + nBrand +'.fr3'
+    else if Pos('32', Result) > 0 then
+      Result := gPath + 'Report\HuaYan32' + nBrand +'.fr3'
+    else if Pos('42', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42' + nBrand +'.fr3'
+    else if Pos('52', Result) > 0 then
+      Result := gPath + 'Report\HuaYan42' + nBrand +'.fr3'
+    else Result := '';
+  end;
+  {$ELSE}
   if Pos('dj', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan42_DJ.fr3'
+    Result := gPath + 'Report\HuaYan42_DJ.fr3'
   else if Pos('gsysl', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan_gsl.fr3'
+    Result := gPath + 'Report\HuaYan_gsl.fr3'
   else if Pos('kzf', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan_kzf.fr3'
+    Result := gPath + 'Report\HuaYan_kzf.fr3'
   else if Pos('qz', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan_qz.fr3'
+    Result := gPath + 'Report\HuaYan_qz.fr3'
   else if Pos('32', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan32.fr3'
+    Result := gPath + 'Report\HuaYan32.fr3'
   else if Pos('42', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan42.fr3'
+    Result := gPath + 'Report\HuaYan42.fr3'
   else if Pos('52', Result) > 0 then
-    Result := gPath + sReportDir + 'HuaYan42.fr3'
+    Result := gPath + 'Report\HuaYan42.fr3'
   else Result := '';
+  {$ENDIF}
 end;
 
 //Desc: 打印标识为nHID的化验单
 function PrintHuaYanReport(const nBill: string; var nHint: string;
  const nPrinter: string = ''): Boolean;
-var nStr,nSR, nSeal,nDate3D,nDate28D,n28Ya1,nBD: string;
+var nStr,nSR, nSeal,nDate3D,nDate28D,n28Ya1,nBD,nBrand: string;
     nDate: TDateTime;
+    nPCount: Integer;
 begin
   nHint := '';
   Result := False;
 
+  nPCount := 5;
+  nStr := 'Select D_Value From %s ' +
+          ' Where D_Name = ''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_AICMHYDanPCount]);
+
+  with FDM.SQLQuery(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nPCount := Fields[0].AsInteger;
+    end;
+  end;
+
   nSeal := '';
   nBD := '';
-  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_HyPrintCount From %s sb ' +
+  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_HyPrintCount,sb.L_StockBrand From %s sb ' +
           ' Left Join %s sr on sr.R_SerialNo=sb.L_Seal ' +
           ' Where sb.L_ID = ''%s''';
   nStr := Format(nStr, [sTable_Bill, sTable_StockRecord, nBill]);
@@ -838,6 +894,13 @@ begin
     begin
       nSeal := Fields[0].AsString;
       n28Ya1 := Fields[1].AsString;
+      nBrand := Fields[3].AsString;
+      if Fields[2].AsInteger > nPCount then
+      begin
+        nHint :='超出设定打印次数,请联系管理员';
+        Exit
+      end;
+
       if Fields[2].AsInteger >= 1 then
         nBD := '补';
     end;
@@ -887,7 +950,7 @@ begin
   end;
 
   nStr := FDM.SQLQuery1.FieldByName('P_Stock').AsString;
-  nStr := GetReportFileByStock(nStr);
+  nStr := GetReportFileByStock(nStr, nBrand);
 
   if not FDR.LoadReportFile(nStr) then
   begin
@@ -915,14 +978,28 @@ end;
 //Desc: 打印标识为nHID的化验单
 function PrintHuaYanReportEx(const nBill, nSeal: string; var nHint: string;
  const nPrinter: string = ''): Boolean;
-var nStr,nSR,nDate3D,nDate28D,n28Ya1,nBD: string;
+var nStr,nSR,nDate3D,nDate28D,n28Ya1,nBD,nBrand: string;
     nDate: TDateTime;
+    nPCount: Integer;
 begin
   nHint := '';
   Result := False;
 
+  nPCount := 5;
+  nStr := 'Select D_Value From %s ' +
+          ' Where D_Name = ''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_AICMHYDanPCount]);
+
+  with FDM.SQLQuery(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nPCount := Fields[0].AsInteger;
+    end;
+  end;
+
   nBD := '';
-  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_HyPrintCount From %s sb ' +
+  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_HyPrintCount,sb.L_StockBrand From %s sb ' +
           ' Left Join %s sr on sr.R_SerialNo=''%s'' ' +
           ' Where sb.L_ID = ''%s''';
   nStr := Format(nStr, [sTable_Bill, sTable_StockRecord, nSeal, nBill]);
@@ -932,6 +1009,13 @@ begin
     if RecordCount > 0 then
     begin
       n28Ya1 := Fields[1].AsString;
+      nBrand := Fields[3].AsString;
+      if Fields[2].AsInteger > nPCount then
+      begin
+        nHint :='超出设定打印次数,请联系管理员';
+        Exit
+      end;
+
       if Fields[2].AsInteger >= 1 then
         nBD := '补';
     end;
@@ -981,7 +1065,7 @@ begin
   end;
 
   nStr := FDM.SQLQuery1.FieldByName('P_Stock').AsString;
-  nStr := GetReportFileByStock(nStr);
+  nStr := GetReportFileByStock(nStr, nBrand);
 
   if not FDR.LoadReportFile(nStr) then
   begin

@@ -479,6 +479,7 @@ var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck,nBm,nPCCode,nCusBz: string;
     nPrefixLen, nIDLen: Integer;
     nEvent,nEID,nCusName:string;
     nLDate: TDateTime;
+    nPCCodeEx: string;
 begin
   Result := True;
   if not gCodePrinterManager.EnablePrinter then Exit;
@@ -567,6 +568,7 @@ begin
                    '@2    '; //换行
           //如果有汉字,则换行处理
           nPCCode := '@6' + Fields[0].AsString ;
+          nPCCodeEx := Fields[0].AsString ;
         end;
       end;
 
@@ -636,9 +638,10 @@ begin
 
       nCusName := Copy(nCusName,1,6);
 
-      nCode := nPCCode + '@7LG' + FormatDateTime('YYMMDDHHMM',nLDate) + '@2    '; //换行
-      //如果有汉字,则换行处理
-      nCode := nCode + nCusName + nSeal;
+      nCusName := UpperCase(nCusName);
+
+      nCode := nPCCodeEx + '}1LG' + FormatDateTime('YYMMDDHHMM',nLDate) + '}1}2';
+      nCode := nCode + nCusName + nSeal + '}2';
       {$ENDIF}
 
       {$IFDEF JFNF}

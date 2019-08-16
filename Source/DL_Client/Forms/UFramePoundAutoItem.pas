@@ -105,6 +105,9 @@ type
     FLogin: Integer;
     //摄像机登陆
     FIsChkPoundStatus : Boolean;
+    FOnPound: Boolean;
+    //是否为磅上刷卡
+    FMaxPoundValue: Double;
     procedure SetUIData(const nReset: Boolean; const nOnlyData: Boolean = False);
     //界面数据
     procedure SetImageStatus(const nImage: TImage; const nOff: Boolean);
@@ -135,6 +138,8 @@ type
     //散装并新单
     function MakeNewSanBillEx(nBillValue: Double): Boolean;
     //散装并新单(不自动并单)
+    function MakeNewSanBillAutoHD(nBillValue: Double): Boolean;
+    //散装并新单
     function ChkPoundStatus:Boolean;
   public
     { Public declarations }
@@ -178,6 +183,7 @@ begin
   if gSysParam.FIsAdmin then
     Button1.Visible := True;
   FLogin := -1;
+  FOnPound := False;
 end;
 
 procedure TfFrameAutoPoundItem.OnDestroyFrame;
@@ -265,6 +271,7 @@ begin
   FBarrierGate := False;
   FEmptyPoundIdleLong := -1;
   FEmptyPoundIdleShort:= -1;
+  FMaxPoundValue := 0;
 
   FPoundTunnel := nTunnel;
   SetUIData(True);
@@ -282,6 +289,7 @@ begin
     FBarrierGate := Values['BarrierGate'] = sFlag_Yes;
     FEmptyPoundIdleLong := StrToInt64Def(Values['EmptyIdleLong'], 60);
     FEmptyPoundIdleShort:= StrToInt64Def(Values['EmptyIdleShort'], 5);
+    FMaxPoundValue:= StrToInt64Def(Values['MaxPoundValue'], 200);
   end;
 end;
 
@@ -727,8 +735,21 @@ begin
       Exit;
     end;
 
-    if Not ChkPoundStatus then Exit;
-    //检查地磅状态 如不为空磅，则喊话 退出称重
+    FOnPound := False;
+    if Assigned(FPoundTunnel.FOptions) then
+    with FPoundTunnel.FOptions do
+    begin
+      if FLastReader <> '' then
+        FOnPound := Values[FLastReader] = sFlag_Yes;
+    end;
+    //检查该读卡器是磅前读卡器还是磅上读卡器
+
+    if not FOnPound then
+    begin
+      WriteSysLog('读卡器' + FLastReader + '为磅前读卡器,开始校验地磅重量...');
+      if Not ChkPoundStatus then Exit;
+      //检查地磅状态 如不为空磅，则喊话 退出称重
+    end;
 
     FCardTmp := nCard;
     EditBill.Text := nCard;
@@ -771,7 +792,7 @@ end;
 //Parm: 需并单量
 //Desc: 从当前客户可用订单中开出指定量的新单
 function TfFrameAutoPoundItem.MakeNewSanBill(nBillValue: Double): Boolean;
-var nStr,nHint: string;
+var nStr,nHint,nOrderStr: string;
     nDec: Double;
     nIdx,nInt: Integer;
     nP: TFormCommandParam;
@@ -1127,7 +1148,7 @@ end;
 
 //Desc: 保存销售
 function TfFrameAutoPoundItem.SavePoundSale: Boolean;
-var nVal,nNet: Double;
+var nVal,nNet,nValSanMax: Double;
     nStr, nHint, nMemo: string;
 begin
   Result := False;
@@ -1317,15 +1338,15 @@ begin
 
         if FType = sFlag_San then
         begin
-          nVal := GetSanMaxLadeValue;
-          if (nVal > 0) and FloatRelation(nNet, nVal, rtGreater) then
+          nValSanMax := GetSanMaxLadeValue;
+          if (nValSanMax > 0) and FloatRelation(nNet, nValSanMax, rtGreater) then
           begin
             nStr := '车辆 %s 净重 %.2f 吨超出 %.2f 吨,请去现场卸货';
-            nStr := Format(nStr, [FTruck, nNet, nNet - nVal]);
+            nStr := Format(nStr, [FTruck, nNet, nNet - nValSanMax]);
             PlayVoice(nStr);
 
             nStr := '车辆 %s 净重 %.2f 吨,散装最大提货量设定 %.2f 吨超出 %.2f 吨,请去现场卸货';
-            nStr := Format(nStr, [FTruck, nNet, nVal, nNet - nVal]);
+            nStr := Format(nStr, [FTruck, nNet, nValSanMax, nNet - nValSanMax]);
             WriteSysLog(nStr);
             Exit;
           end;
@@ -1346,8 +1367,13 @@ begin
             if not MakeNewSanBillEx(nVal) then Exit;
             //散装发超时并新单(不自动并单)
             {$ELSE}
-            if not MakeNewSanBill(nVal) then Exit;
-            //散装发超时并新单
+              {$IFDEF SanAutoHD}
+               if not MakeNewSanBillAutoHD(nVal) then Exit;
+                  //散装发超时并新单
+              {$ELSE}
+              if not MakeNewSanBill(nVal) then Exit;
+              //散装发超时并新单
+              {$ENDIF}
             {$ENDIF}
           end;
         end;
@@ -1412,6 +1438,24 @@ begin
   Result := False;
   //init
   nVal := 0;
+
+  {$IFDEF AutoPreTruckP}
+  if FUIData.FPreTruckP then
+  begin
+    with FUIData do
+    begin
+      //重量小于设定，则重新保存皮重
+      if (StrToFloatDef(EditValue.Text,0) < GetPrePValueSet) then
+      begin
+        SaveTruckPrePValue(FTruck,EditValue.Text);
+        SaveTruckPrePicture(FTruck,FPoundTunnel,FLogin);
+
+        Result := True;
+        Exit;
+      end;
+    end;
+  end;
+  {$ENDIF}
 
   if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
   begin
@@ -1737,16 +1781,29 @@ begin
     Exit;
   end;
 
-  FIsSaving := True;
-  if FUIData.FCardUse = sFlag_Sale then      nRet := SavePoundSale
-  else if FUIData.FCardUse = sFlag_SaleNew then nRet := SavePoundSale
-  else if FUIData.FCardUse = sFlag_DuanDao then nRet := SavePoundDuanDao
-  else if FUIData.FCardUse = sFlag_Haulback then nRet:= SavePoundHaulBack
-  else if FUIData.FCardUse = sFlag_Provide then nRet := SavePoundProvide
-  else if FUIData.FCardUse = sFlag_ShipPro then nRet := SavePoundProvide
-  else if FUIData.FCardUse = sFlag_ShipTmp then nRet := SavePoundProvide
-  else nRet := False;
-
+  if (FMaxPoundValue > 0) and (nValue > FMaxPoundValue) then
+  begin
+    nRet := False;
+    nStr := GetTruckNO(FUIData.FTruck) + '重量  ' + GetValue(nValue);
+    LEDDisplay(nStr);
+    nStr := '车辆%s毛重%.2f吨超出地磅最大设定%.2f吨,禁止过磅,请联系管理员处理';
+    nStr := Format(nStr, [FUIData.FTruck, nValue, FPoundTunnel.FPort.FMaxValue]);
+    WriteSysLog(nStr);
+    PlayVoice(nStr);
+  end
+  else
+  begin
+    FIsSaving := True;
+    if FUIData.FCardUse = sFlag_Sale then      nRet := SavePoundSale
+    else if FUIData.FCardUse = sFlag_SaleNew then nRet := SavePoundSale
+    else if FUIData.FCardUse = sFlag_DuanDao then nRet := SavePoundDuanDao
+    else if FUIData.FCardUse = sFlag_Haulback then nRet:= SavePoundHaulBack
+    else if FUIData.FCardUse = sFlag_Provide then nRet := SavePoundProvide
+    else if FUIData.FCardUse = sFlag_ShipPro then nRet := SavePoundProvide
+    else if FUIData.FCardUse = sFlag_ShipTmp then nRet := SavePoundProvide
+    else nRet := False;
+  end;
+  
   if nRet then
   begin
     nStr := GetTruckNO(FUIData.FTruck) + '重量  ' + GetValue(nValue);
@@ -1766,7 +1823,7 @@ begin
     begin
       if (FUIData.FMData.FValue > 0) and (FUIData.FPData.FValue > 0) then
       begin
-        nStr := GetTruckNO(FUIData.FTruck) + GetOrigin(FUIData.FOrigin) +
+        nStr := Copy(FUIData.FTruck,1,8) + Copy(FUIData.FOrigin,1,4) +
               '净重: ' + GetValue(Abs(FUIData.FMData.FValue-FUIData.FPData.FValue));
       end;
     end;
@@ -2000,6 +2057,254 @@ begin
   finally
     FIsChkPoundStatus:= False;
     SetUIData(True);
+  end;
+end;
+
+//Date: 2019-06-04
+//Parm: 需并单量
+//Desc: 从当前客户可用订单中开出指定量的新单
+function TfFrameAutoPoundItem.MakeNewSanBillAutoHD(nBillValue: Double): Boolean;
+var nStr,nHint,nOrderStr: string;
+    nDec: Double;
+    nIdx,nInt: Integer;
+    nP: TFormCommandParam;
+    nOrder: TOrderItemInfo;
+begin
+  FListA.Clear;
+  Result := False;
+
+  for nIdx:=Low(FBillItems) to High(FBillItems) do
+    FListA.Add(FBillItems[nIdx].FZhiKa);
+  nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
+
+  FListB.Clear;
+  FListB.Values['MeamKeys'] := nStr;
+
+  nStr := EncodeBase64(FListB.Text);
+  nStr := GetQueryOrderSQL('103', nStr);
+
+  if nStr = '' then
+  begin
+    nStr := '获取订单信息失败,请联系管理员';
+    WriteSysLog(nStr);
+    PlayVoice(nStr);
+    Exit;
+  end;
+
+  with FDM.QueryTemp(nStr, True) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nStr := StringReplace(FListA.Text, #13#10, ',', [rfReplaceAll]);
+      nStr := Format('订单[ %s ]信息已丢失.', [nStr]);
+      WriteSysLog(nStr);
+
+      PlayVoice('订单信息已丢失');
+      Exit;
+    end;
+
+    SetLength(FOrderItems, RecordCount);
+    nInt := 0;
+    First;
+
+    while not Eof do
+    begin
+      with FOrderItems[nInt] do
+      begin
+        FOrder := FieldByName('pk_meambill').AsString;
+        FMaxValue := FieldByName('NPLANNUM').AsFloat;
+        FKDValue := 0;
+      end;
+
+      Inc(nInt);
+      Next;
+    end;
+  end;
+
+  if not GetOrderFHValue(FListA) then
+  begin
+    nStr := '获取订单剩余量失败,请联系管理员';
+    WriteSysLog(nStr);
+    PlayVoice(nStr);
+    Exit;
+  end;  
+  //获取已发货量
+
+  for nIdx:=Low(FOrderItems) to High(FOrderItems) do
+  with FOrderItems[nIdx] do
+  begin
+    nStr := FListA.Values[FOrder];
+    if not IsNumber(nStr, True) then Continue;
+
+    FMaxValue := FMaxValue - Float2Float(StrToFloat(nStr), cPrecision, False);
+    //可用量 = 计划量 - 已发量
+  end;
+
+  SortOrderByValue(FOrderItems);
+  //按可用量由小到大排序
+
+  for nIdx:=Low(FOrderItems) to High(FOrderItems) do//处理大订单模式
+  begin
+    if nIdx > 0 then
+      Continue;
+
+    WriteLog('车辆' + FUIData.FTruck + '实际净重' + FloatToStr(FInnerData.FValue + nBillValue)
+             + '已关联订单' + FOrderItems[nIdx].FOrder
+             + '当前可用量:' + FloatToStr(FOrderItems[nIdx].FMaxValue));
+
+    if FOrderItems[nIdx].FMaxValue<=0 then Continue;
+    //NC可用量不能为负
+
+    if FOrderItems[nIdx].FMaxValue >= (FInnerData.FValue + nBillValue) then
+    with FOrderItems[nIdx] do
+    begin
+      FDM.ADOConn.BeginTrans;
+      try
+        nStr := 'Update %s Set B_Freeze=B_Freeze+%.2f Where B_ID=''%s''';
+        nStr := Format(nStr, [sTable_Order, nBillValue, FOrder]);
+        FDM.ExecuteSQL(nStr);
+
+        for nInt:=Low(FBillItems) to High(FBillItems) do
+        begin
+          if FBillItems[nInt].FZhiKa <> FOrder then Continue;
+          //xxxxx
+
+          nStr := 'Update %s Set L_Value=L_Value+%.2f Where L_ID=''%s''';
+          nStr := Format(nStr, [sTable_Bill, nBillValue, FBillItems[nInt].FID]);
+          FDM.ExecuteSQL(nStr);
+        end;
+
+        FDM.ADOConn.CommitTrans;
+        //提货冻结量
+
+        Result := True;
+        Exit;
+      except
+        on E: Exception do
+        begin
+          FDM.ADOConn.RollbackTrans;
+          WriteSysLog(E.Message);
+          Exit;
+        end;
+      end;
+    end;
+  end;
+
+  //----------------------------------------------------------------------------
+  nDec := 0;
+  for nIdx:=Low(FOrderItems) to High(FOrderItems) do
+  begin
+    WriteLog('车辆' + FUIData.FTruck + '实际净重' + FloatToStr(FInnerData.FValue + nBillValue)
+             + '已关联订单' + FOrderItems[nIdx].FOrder
+             + '当前可用量:' + FloatToStr(FOrderItems[nIdx].FMaxValue));
+
+    if FOrderItems[nIdx].FMaxValue<=0 then Continue;
+    //NC可用量不能为负
+
+    nDec := nDec + FOrderItems[nIdx].FMaxValue;
+  end;
+
+  WriteLog('车辆' + FUIData.FTruck + '实际净重' + FloatToStr(FInnerData.FValue + nBillValue)
+             + '当前可用订单总量:' + FloatToStr(nDec));
+
+  if nDec >= (FInnerData.FValue + nBillValue) then
+  begin
+    Result := True;
+    Exit;
+  end;
+  //已开单完毕
+
+  if AutoGetSanHDOrder(FUIData.FCusID, FUIData.FStockNo, FUIData.FTruck,
+                       nBillValue, nOrderStr) then
+  begin
+    FListB.Clear;
+    FListB.Text := nOrderStr;
+
+    nStr := 'Select L_Lading,L_IsVIP,L_Seal,L_StockBrand From %s Where L_ID=''%s''';
+    nStr := Format(nStr, [sTable_Bill, FBillItems[0].FID]);
+
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount < 1 then
+      begin
+        nStr := '交货单[ %s ]已丢失,请联系管理员.';
+        nStr := Format(nStr, [FBillItems[0].FID]);
+
+        ShowDlg(nStr, sHint);
+        Exit;
+      end;
+
+      with FListA do
+      begin
+        Clear;
+        Values['Orders'] := EncodeBase64(FListB.Values['Orders']);
+        Values['Value'] := FloatToStr(nBillValue);
+        Values['Truck'] := FBillItems[0].FTruck;
+        Values['Lading'] := FieldByName('L_Lading').AsString;
+        Values['IsVIP'] := FieldByName('L_IsVIP').AsString;
+        Values['Seal'] := FieldByName('L_Seal').AsString;
+
+        Values['Card'] := FBillItems[0].FCard;
+        Values['Post'] := sFlag_TruckBFM;
+        Values['PValue'] := FloatToStr(FBillItems[0].FPData.FValue);
+
+        Values['Brand'] := FieldByName('L_StockBrand').AsString;
+      end;
+
+      nStr := SaveBill(EncodeBase64(FListA.Text));
+      //call mit bus
+      if nStr = '' then Exit;
+
+      with FUIData do
+      begin
+        nHint := '地磅[ %s ]车辆[ %s ]自动合单成功,详情如下:' + #13#10 +
+                '※.提货单号: %s' + #13#10 +
+                '※.开单量: %.2f吨' + #13#10 +
+                '※.超发量: %.2f吨' + #13#10 +
+                '※.合单订单号: %s' + #13#10 +
+                '※.合单提货单号: %s' + #13#10 +
+                '请知悉.';
+        nHint := Format(nHint, [FPoundTunnel.FName, FTruck, FID, FInnerData.FValue, nBillValue,
+                                FListB.Values['Orders'], nStr]);
+
+        if not VerifyManualEventRecord(FID + sFlag_ManualC, nHint, sFlag_OK,
+          False) then
+        begin
+          AddManualEventRecord(FID + sFlag_ManualC, FTruck, nHint,
+            sFlag_DepBangFang, sFlag_Solution_OK, sFlag_DepDaTing, True);
+          WriteSysLog(nHint);
+
+          nHint := '车辆' + FTruck + '自动合单完成';
+          PlayVoice(nHint);
+        end;
+      end;
+      Result := True;
+      LoadBillItems(FCardTmp, False);
+      //重新载入交货单
+    end;
+  end
+  else
+  begin
+    with FUIData do
+    begin
+      nHint := '地磅[ %s ]车辆[ %s ]自动合单失败,详情如下:' + #13#10 +
+              '※.提货单号: %s' + #13#10 +
+              '※.开单量: %.2f吨' + #13#10 +
+              '※.超发量: %.2f吨' + #13#10 +
+              nOrderStr;
+      nHint := Format(nHint, [FPoundTunnel.FName, FTruck, FID, FInnerData.FValue, nBillValue]);
+
+      if not VerifyManualEventRecord(FID + sFlag_ManualC, nHint, sFlag_OK,
+        False) then
+      begin
+        AddManualEventRecord(FID + sFlag_ManualC, FTruck, nHint,
+          sFlag_DepBangFang, sFlag_Solution_OK, sFlag_DepDaTing, True);
+        WriteSysLog(nHint);
+
+        nHint := '车辆' + FTruck + '自动合单失败,请联系管理员';
+        PlayVoice(nHint);
+      end;
+    end;
   end;
 end;
 

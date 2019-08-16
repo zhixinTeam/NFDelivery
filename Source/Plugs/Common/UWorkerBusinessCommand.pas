@@ -766,7 +766,7 @@ end;
 //Desc: 获取指定物料号的编号
 function TWorkerBusinessCommander.GetStockBatcode(var nData: string): Boolean;
 var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType, nLineGroup, nBatStockNo: string;
-    nBatchNew, nSelect, nUBatStockGroup, nUAutoBrand, nSeal: string;
+    nBatchNew, nSelect, nUBatStockGroup, nUAutoBrand, nSeal, nNoBatGroupStock: string;
     nVal, nPer: Double;
     nInt, nInc, nRID: Integer;
     nNew: Boolean;
@@ -906,9 +906,21 @@ begin
       end;
     end;
 
+    nNoBatGroupStock := sFlag_No;
+    nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Value = ''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_NoBatGroupStock, FIn.FData]);
+
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    begin
+      if RecordCount > 0 then
+      begin
+        nNoBatGroupStock := sFlag_Yes;
+      end;
+    end;
+
     nBatStockNo := FIn.FData;
 
-    if nUBatStockGroup = sFlag_Yes then
+    if (nNoBatGroupStock = sFlag_No) and (nUBatStockGroup = sFlag_Yes) then
     begin
       nStr := 'Select D_ParamB From %s Where D_Name=''%s'' and D_Value=''%s''';
       nStr := Format(nStr, [sTable_SysDict, sFlag_BatStockGroup, nBatStockNo]);
@@ -2151,7 +2163,7 @@ begin
   FListA.Text := FIn.FData;
   nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
 
-  nSQL := 'Select L_ID,L_ZhiKa,L_SaleMan,L_Truck,L_Value,L_PValue,L_PDate,' +
+  nSQL := 'Select L_ID,L_ZhiKa,L_SaleMan,L_Truck,L_Value,L_PValue,L_PDate,L_IsVIP,' +
           {$IFDEF LineGroup}
           'dict.D_ParamC As ncLineID, '      +    //NC生产线编号
           {$ENDIF}
@@ -2237,6 +2249,13 @@ begin
           if FDate < nDateMin then
             FDate := FieldByName('L_OutFact').AsDateTime;
           //xxxxx
+
+          if FieldByName('L_IsVip').AsString <> sFlag_TypeShip then
+          begin
+            if FDate < nDateMin then
+              FDate := FieldByName('L_Date').AsDateTime;
+            //xxxxx
+          end;
 
           if FDate < nDateMin then
             FDate := Date();
