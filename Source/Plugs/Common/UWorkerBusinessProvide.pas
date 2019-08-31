@@ -1023,10 +1023,13 @@ begin
         begin
           nVal := Float2Float(nVal, cPrecision, False);
           //将暗扣量扣减为2位小数;
-
+          WriteLog('暗扣规则存在,暗扣量:' + FloatToStr(nVal) + '暗扣前毛重:' +
+                   FloatToStr(FMData.FValue) + '暗扣前皮重:' + FloatToStr(FPData.FValue));
           if FMData.FValue > FPData.FValue then
                FMData.FValue := (FMData.FValue*1000 - nVal*1000) / 1000
           else FPData.FValue := (FPData.FValue*1000 - nVal*1000) / 1000;
+          WriteLog('暗扣后毛重:' + FloatToStr(FMData.FValue) +
+                   '暗扣后皮重:' + FloatToStr(FPData.FValue));
         end;
       end;
 
@@ -1038,6 +1041,9 @@ begin
       nStr := SF('P_Order', FExtID_1);
       //where
       nSQL := MakeSQLByStr([
+                {$IFDEF PrePTruckYs}
+                SF('P_MValue', FMData.FValue, sfVal),
+                {$ENDIF}
                 SF('P_KZValue', FKZValue, sfVal)
                 ], sTable_PoundLog, nStr, False);
       //验收扣杂
@@ -1055,6 +1061,7 @@ begin
               SF('D_YLineName', FSeal),    //保存批次号
               {$IFDEF PrePTruckYs}
               SF('D_Value', nVal, sfVal),
+              SF('D_MValue', FMData.FValue, sfVal),
               {$ENDIF}
               SF('D_Memo', FMemo)
               ], sTable_ProvDtl, SF('D_ID', FExtID_1), False);

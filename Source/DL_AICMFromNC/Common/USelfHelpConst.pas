@@ -11,6 +11,7 @@ const
   cFI_FrameQueryCard  = $0001;                       //磁卡查询
   cFI_FrameMakeCard   = $0002;                       //制卡
   cFI_FramePrint      = $0003;                       //打印
+  cFI_FrameSafeInfo   = $0008;                       //安全须知
 
   cFI_FrameInputCertificate = $0004;                 //输入取卡凭证
   cFI_FrameReadCardID = $0005;                       //身份证号查询
@@ -50,6 +51,7 @@ type
     FCardPrinter: string;                            //指定小票打印机
     FTTCEK720ID : string;                            //指定发卡机
     FAICMPDCount: Integer;                           //自助拼单个数
+    FSafeInfoFoot : string;                          //安全提醒页脚
   end;
   //系统参数
 
@@ -115,6 +117,7 @@ var
   gTimeCounter: Int64;           //计时器
   gNeedSearchPurOrder : Boolean;
   gNeedSearchSaleOrder : Boolean;
+  gAgree : Boolean;
 
 function GetIDCardNumCheckCode(nIDCardNum: string): string;
 //身份证号校验算法

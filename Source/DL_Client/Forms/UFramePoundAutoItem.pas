@@ -488,8 +488,7 @@ begin
   {$IFDEF RemoteSnap}
   if not VerifySnapTruck(FLastReader, nBills[0], nHint, nPos) then
   begin
-    nVoice := '%s车牌识别失败,请移动车辆或联系管理员';
-    nVoice := Format(nVoice, [nBills[0].FTruck]);
+    SaveSnapStatus(nBills[0], sFlag_No);
     PlayVoice(nHint);
     RemoteSnapDisPlay(nPos, nHint,sFlag_No);
     WriteSysLog(nHint);
@@ -498,22 +497,7 @@ begin
   end
   else
   begin
-    if nHint <> '' then
-    begin
-      RemoteSnapDisPlay(nPos, nHint,sFlag_Yes);
-      WriteSysLog(nHint);
-    end;
-  end;
-  {$ENDIF}
-
-  {$IFDEF PoundSaveSnapInfo}
-  if not SaveSnapTruckInfo(FLastReader, nBills[0], nHint, nPos) then
-  begin
-    RemoteSnapDisPlay(nPos, nHint,sFlag_No);
-    WriteSysLog(nHint);
-  end
-  else
-  begin
+    SaveSnapStatus(nBills[0], sFlag_Yes);
     if nHint <> '' then
     begin
       RemoteSnapDisPlay(nPos, nHint,sFlag_Yes);

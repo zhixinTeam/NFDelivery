@@ -263,6 +263,25 @@ begin
     Exit;
   end;
 
+  if (Sender = BtnSCard) or (Sender = btnPurOrderCard) then
+  begin
+    {$IFDEF AICMSafeInfo}
+    gAgree := False;
+    CreateBaseFrame(cFI_FrameSafeInfo, PanelWork);
+    gTimeCounter := 30;
+    TimerDec.Enabled := True;
+    //Ä¬ÈÏ30Ãë
+    while gTimeCounter > 0 do
+    begin
+      Application.ProcessMessages;
+      if gAgree then
+        Break;
+    end;
+    if not gAgree then
+      Exit;
+    {$ENDIF}
+  end;
+
   if Sender = BtnSCard then
   begin
     {$IFDEF SaleAICMFromNC}

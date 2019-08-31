@@ -11,7 +11,7 @@ uses
   Windows, DB, Classes, Controls, SysUtils, UBusinessPacker, UBusinessWorker,
   UBusinessConst, ULibFun, UAdjustForm, UFormCtrl, UDataModule, UDataReport,
   UFormBase, cxMCListBox, UMgrPoundTunnels, HKVNetSDK, USysConst, USysDB,
-  USysLoger, UBase64, UFormWait, Graphics, ShellAPI, DateUtils;
+  USysLoger, UBase64, UFormWait, Graphics, ShellAPI, DateUtils, StrUtils;
 
 type
   TLadingStockItem = record
@@ -376,6 +376,7 @@ function GetPrePValueSet: Double;
 function SaveTruckPrePicture(const nTruck: string;const nTunnel: PPTTunnelItem;
                              const nLogin: Integer = -1): Boolean;
 //保存nTruck的预制皮重照片
+function SaveSnapStatus(const nBill: TLadingBillItem; nStatus: string): Boolean;
 implementation
 
 //Desc: 记录日志
@@ -3442,35 +3443,55 @@ end;
 function VerifySnapTruck(const nReader: string; nBill: TLadingBillItem;
                          var nMsg, nPos: string): Boolean;
 var nStr, nDept: string;
-    nNeedManu, nUpdate: Boolean;
+    nNeedManu, nUpdate, nST, nSuccess, nSaveALL: Boolean;
     nSnapTruck, nTruck, nEvent, nPicName: string;
+    nLen: Integer;
 begin
   Result := False;
   nPos := '';
   nNeedManu := False;
   nSnapTruck := '';
   nDept := '';
+  nMsg := '';
+  nLen := 0;
+  nSuccess := False;
+  nSaveALL := False;
   nTruck := nBill.Ftruck;
-
-  if not nBill.FSnapTruck then
-  begin
-    Result := True;
-    nMsg := '读卡器[ %s ]车辆[ %s ]无需进行抓拍识别.';
-    nMsg := Format(nMsg, [nReader, nTruck]);
-    Exit;
-  end;
 
   nPos := ReadPoundReaderInfo(nReader,nDept);
 
   if nPos = '' then
   begin
     Result := True;
-    nMsg := '读卡器[ %s ]绑定岗位为空,无法进行抓拍识别.';
-    nMsg := Format(nMsg, [nReader]);
+    nStr := '读卡器[ %s ]绑定岗位为空,无法进行抓拍识别.';
+    nStr := Format(nStr, [nReader]);
+    WriteLog(nStr);
     Exit;
   end;
 
-  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s''';
+  nST := True;
+
+  nStr := 'Select T_SnapTruck From %s Where T_Truck=''%s''';
+  nStr := Format(nStr, [sTable_Truck, nTruck]);
+  //xxxxx
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nST := FieldByName('T_SnapTruck').AsString = sFlag_Yes;
+    end;
+  end;
+
+  if not nST then
+  begin
+    Result := True;
+    nMsg := '车辆[ %s ]无需进行车牌识别';
+    nMsg := Format(nMsg, [nTruck]);
+    Exit;
+  end;
+
+  nStr := 'Select D_Value,D_Index,D_ParamB From %s Where D_Name=''%s'' and D_Memo=''%s''';
   nStr := Format(nStr, [sTable_SysDict, sFlag_TruckInNeedManu,nPos]);
   //xxxxx
 
@@ -3479,31 +3500,159 @@ begin
     if RecordCount > 0 then
     begin
       nNeedManu := FieldByName('D_Value').AsString = sFlag_Yes;
-
+      nLen := FieldByName('D_Index').AsInteger;
+      nSaveALL := FieldByName('D_ParamB').AsString = sFlag_Yes;
       if nNeedManu then
       begin
-        nMsg := '读卡器[ %s ]绑定岗位[ %s ]干预规则:人工干预已启用.';
-        nMsg := Format(nMsg, [nReader, nPos]);
+        nStr := '读卡器[ %s ]绑定岗位[ %s ]干预规则:人工干预已启用.';
+        nStr := Format(nStr, [nReader, nPos]);
+        WriteLog(nStr);
       end
       else
       begin
-        nMsg := '读卡器[ %s ]绑定岗位[ %s ]干预规则:人工干预已关闭.';
-        nMsg := Format(nMsg, [nReader, nPos]);
+        nStr := '读卡器[ %s ]绑定岗位[ %s ]干预规则:人工干预已关闭.';
+        nStr := Format(nStr, [nReader, nPos]);
+        WriteLog(nStr);
         Result := True;
-        Exit;
       end;
     end
     else
     begin
       Result := True;
-      nMsg := '读卡器[ %s ]绑定岗位[ %s ]未配置干预规则,无法进行抓拍识别.';
-      nMsg := Format(nMsg, [nReader, nPos]);
+      nStr := '读卡器[ %s ]绑定岗位[ %s ]未配置干预规则,无法进行抓拍识别.';
+      nStr := Format(nStr, [nReader, nPos]);
+      WriteLog(nStr);
       Exit;
     end;
   end;
 
-  nStr := 'Select * From %s Where S_ID=''%s'' order by R_ID desc ';
-  nStr := Format(nStr, [sTable_SnapTruck, nPos]);
+  if not nNeedManu then//不干预 校验识别记录并保存用以统计失败率
+  begin
+    nStr := 'Select * From %s order by R_ID desc ';
+    nStr := Format(nStr, [sTable_SnapTruck]);
+    //xxxxx
+
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount < 1 then
+      begin
+        Exit;
+      end;
+
+      nPicName := '';
+
+      First;
+
+      while not Eof do
+      begin
+        nSnapTruck := FieldByName('S_Truck').AsString;
+        if nPicName = '' then//默认取最新一次抓拍
+          nPicName := FieldByName('S_PicName').AsString;
+        if Pos(nTruck,nSnapTruck) > 0 then
+        begin
+          nSuccess := True;
+          nPicName := FieldByName('S_PicName').AsString;
+          //取得匹配成功的图片路径
+          nMsg := '车辆[ %s ]车牌识别成功,抓拍车牌号:[ %s ]';
+          nMsg := Format(nMsg, [nTruck,nSnapTruck]);
+        end
+        else
+        if nLen > 0 then//模糊匹配
+        begin
+          if RightStr(nTruck,nLen) = RightStr(nSnapTruck,nLen) then
+          begin
+            nSuccess := True;
+            nPicName := FieldByName('S_PicName').AsString;
+            //取得匹配成功的图片路径
+            nMsg := '车辆[ %s ]车牌识别成功,抓拍车牌号:[ %s ]';
+            nMsg := Format(nMsg, [nTruck,nTruck]);
+          end;
+          //车牌识别成功
+        end;
+
+        if nSuccess then
+          Break;
+        Next;
+      end;
+    end;
+
+    if nSuccess then
+    begin
+      if nSaveALL then
+      begin
+        nStr := 'Select * From %s Where E_ID=''%s'' and E_From=''%s''';
+        nStr := Format(nStr, [sTable_ManualEvent, nBill.FID+sFlag_ManualE, nPos]);
+
+        with FDM.QueryTemp(nStr) do
+        begin
+          if RecordCount > 0 then
+          begin
+            nUpdate := True;
+          end
+          else
+          begin
+            nUpdate := False;
+          end;
+        end;
+
+        nEvent := nMsg;
+
+        nStr := SF('E_ID', nBill.FID+sFlag_ManualE);
+        nStr := MakeSQLByStr([
+                SF('E_ID', nBill.FID+sFlag_ManualE),
+                SF('E_Key', nPicName),
+                SF('E_From', nPos),
+                SF('E_Result', 'O'),
+
+                SF('E_Event', nEvent),
+                SF('E_Solution', sFlag_Solution_OK),
+                SF('E_Departmen', nDept),
+                SF('E_Date', sField_SQLServer_Now, sfVal)
+                ], sTable_ManualEvent, nStr, (not nUpdate));
+        //xxxxx
+        FDM.ExecuteSQL(nStr);
+      end;
+    end
+    else
+    begin
+      nStr := 'Select * From %s Where E_ID=''%s''';
+      nStr := Format(nStr, [sTable_ManualEvent, nBill.FID+sFlag_ManualE]);
+
+      with FDM.QueryTemp(nStr) do
+      begin
+        if RecordCount > 0 then
+        begin
+          nUpdate := True;
+        end
+        else
+        begin
+          nUpdate := False;
+        end;
+      end;
+
+      nEvent := '车辆[ %s ]车牌识别失败,请移动车辆并在夜间关闭车灯';
+      nEvent := Format(nEvent, [nTruck]);
+
+      nStr := SF('E_ID', nBill.FID+sFlag_ManualE);
+      nStr := MakeSQLByStr([
+              SF('E_ID', nBill.FID+sFlag_ManualE),
+              SF('E_Key', nPicName),
+              SF('E_From', nPos),
+              SF('E_Result', 'O'),
+
+              SF('E_Event', nEvent),
+              SF('E_Solution', sFlag_Solution_OK),
+              SF('E_Departmen', nDept),
+              SF('E_Date', sField_SQLServer_Now, sfVal)
+              ], sTable_ManualEvent, nStr, (not nUpdate));
+      //xxxxx
+      FDM.ExecuteSQL(nStr);
+    end;
+    Exit;
+  end;
+
+  nStr := 'Select * From %s order by R_ID desc ';
+  nStr := Format(nStr, [sTable_SnapTruck]);
   //xxxxx
 
   with FDM.QueryTemp(nStr) do
@@ -3532,8 +3681,21 @@ begin
         nMsg := '车辆[ %s ]车牌识别成功,抓拍车牌号:[ %s ]';
         nMsg := Format(nMsg, [nTruck,nSnapTruck]);
         Exit;
+      end
+      else
+      if nLen > 0 then//模糊匹配
+      begin
+        if RightStr(nTruck,nLen) = RightStr(nSnapTruck,nLen) then
+        begin
+          Result := True;
+          nPicName := FieldByName('S_PicName').AsString;
+          //取得匹配成功的图片路径
+          nMsg := '车辆[ %s ]车牌识别成功,抓拍车牌号:[ %s ]';
+          nMsg := Format(nMsg, [nTruck,nTruck]);
+          Exit;
+        end;
+        //车牌识别成功
       end;
-      //车牌识别成功
       Next;
     end;
   end;
@@ -3547,23 +3709,21 @@ begin
     begin
       if FieldByName('E_Result').AsString = 'N' then
       begin
-        nMsg := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ],管理员禁止';
-        nMsg := Format(nMsg, [nTruck,nSnapTruck]);
+        nMsg := '车辆[ %s ]车牌识别失败,管理员禁止';
+        nMsg := Format(nMsg, [nTruck]);
         Exit;
       end;
       if FieldByName('E_Result').AsString = 'Y' then
       begin
         Result := True;
-        nMsg := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ],管理员允许';
-        nMsg := Format(nMsg, [nTruck,nSnapTruck]);
+        nMsg := '车辆[ %s ]车牌识别失败,管理员允许';
+        nMsg := Format(nMsg, [nTruck]);
         Exit;
       end;
       nUpdate := True;
     end
     else
     begin
-      nMsg := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ]';
-      nMsg := Format(nMsg, [nTruck,nSnapTruck]);
       nUpdate := False;
       if not nNeedManu then
       begin
@@ -3573,8 +3733,10 @@ begin
     end;
   end;
 
-  nEvent := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ]';
-  nEvent := Format(nEvent, [nTruck,nSnapTruck]);
+  nEvent := '车辆[ %s ]车牌识别失败,请移动车辆并在夜间关闭车灯';
+  nEvent := Format(nEvent, [nTruck]);
+
+  nMsg := nEvent;
 
   nStr := SF('E_ID', nBill.FID+sFlag_ManualE);
   nStr := MakeSQLByStr([
@@ -4526,6 +4688,36 @@ begin
       //save file
     finally
       nList.Free;
+    end;
+  end;
+end;
+
+function SaveSnapStatus(const nBill: TLadingBillItem; nStatus: string): Boolean;
+var nStr: string;
+begin
+  Result := True;
+
+  if nStatus = sFlag_No then
+  begin
+  end
+  else
+  begin
+    nStr := 'Select * From %s Where E_ID=''%s''';
+    nStr := Format(nStr, [sTable_ManualEvent, nBill.FID+sFlag_ManualE]);
+
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount > 0 then
+      begin
+        if Trim(FieldByName('E_Result').AsString) <> '' then //被干预过，即使成功也不再更新
+        begin
+          Exit;
+        end;
+
+        nStr := 'Delete From %s Where E_ID=''%s''';
+        nStr := Format(nStr, [sTable_ManualEvent, nBill.FID+sFlag_ManualE]);
+        FDM.ExecuteSQL(nStr);
+      end;
     end;
   end;
 end;

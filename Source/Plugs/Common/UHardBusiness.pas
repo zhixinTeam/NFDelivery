@@ -3927,6 +3927,10 @@ begin
   for nIdx := 0 to 3 do
   try
     {$IFDEF RFIDOPENDOOR}
+      {$IFDEF BlueReader}
+      nStr := StringReplace(nReader, 'V', '1', [rfReplaceAll]);
+      gHardwareHelper.OpenDoor(nStr);
+      {$ENDIF}
     nStr := StringReplace(nReader, 'V', 'H', [rfReplaceAll]);
     gHYReaderManager.OpenDoor(nStr);
     {$ELSE}

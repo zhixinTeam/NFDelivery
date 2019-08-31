@@ -10,7 +10,7 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, ZnMD5, ULibFun, UFormCtrl, USysLoger,
-  USysDB, UMITConst, UBase64, UWorkerClientWebChat, UMgrQueue, DateUtils
+  USysDB, UMITConst, UBase64, UWorkerClientWebChat, UMgrQueue, StrUtils, DateUtils
   {$IFDEF HardMon}, UMgrHardHelper, UWorkerHardware{$ENDIF};
 
 type
@@ -4302,20 +4302,45 @@ end;
 function TWorkerBusinessCommander.VerifySnapTruck(var nData: string): Boolean;
 var nStr: string;
     nTruck, nBill, nPos, nSnapTruck, nEvent, nDept, nPicName: string;
-    nUpdate, nNeedManu: Boolean;
+    nUpdate, nNeedManu, nST: Boolean;
+    nLen: Integer;
 begin
   Result := False;
   FListA.Text := FIn.FData;
   nSnapTruck:= '';
   nEvent:= '' ;
   nNeedManu := False;
+  nLen := 0;
 
   nTruck := FListA.Values['Truck'];
   nBill  := FListA.Values['Bill'];
   nPos   := FListA.Values['Pos'];
   nDept  := FListA.Values['Dept'];
 
-  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s''';
+  nST := True;
+
+  nStr := 'Select T_SnapTruck From %s Where T_Truck=''%s''';
+  nStr := Format(nStr, [sTable_Truck, nTruck]);
+  //xxxxx
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nST := FieldByName('T_SnapTruck').AsString = sFlag_Yes;
+    end;
+  end;
+
+  if not nST then
+  begin
+    Result := True;
+    nData := '车辆[ %s ]无需进行车牌识别';
+    nData := Format(nData, [nTruck]);
+    FOut.FData := nData;
+    Exit;
+  end;
+
+  nStr := 'Select D_Value,D_Index From %s Where D_Name=''%s'' and D_Memo=''%s''';
   nStr := Format(nStr, [sTable_SysDict, sFlag_TruckInNeedManu,nPos]);
   //xxxxx
 
@@ -4324,6 +4349,7 @@ begin
     if RecordCount > 0 then
     begin
       nNeedManu := FieldByName('D_Value').AsString = sFlag_Yes;
+      nLen := FieldByName('D_Index').AsInteger;
     end;
   end;
 
@@ -4382,8 +4408,8 @@ begin
   FOut.FData := nData;
   //default
 
-  nStr := 'Select * From %s Where S_ID=''%s'' order by R_ID desc ';
-  nStr := Format(nStr, [sTable_SnapTruck, nPos]);
+  nStr := 'Select * From %s order by R_ID desc ';
+  nStr := Format(nStr, [sTable_SnapTruck]);
   //xxxxx
 
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
@@ -4416,6 +4442,20 @@ begin
         nData := Format(nData, [nTruck,nSnapTruck]);
         FOut.FData := nData;
         Exit;
+      end
+      else
+      if nLen > 0 then//模糊匹配
+      begin
+        if RightStr(nTruck,nLen) = RightStr(nSnapTruck,nLen) then
+        begin
+          Result := True;
+          nPicName := FieldByName('S_PicName').AsString;
+          //取得匹配成功的图片路径
+          nData := '车辆[ %s ]车牌识别成功,抓拍车牌号:[ %s ]';
+          nData := Format(nData, [nTruck,nSnapTruck]);
+          FOut.FData := nData;
+          Exit;
+        end;
       end;
       //车牌识别成功
       Next;
@@ -4431,16 +4471,16 @@ begin
     begin
       if FieldByName('E_Result').AsString = 'N' then
       begin
-        nData := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ],管理员禁止进厂';
-        nData := Format(nData, [nTruck,nSnapTruck]);
+        nData := '车辆[ %s ]车牌识别失败,管理员禁止进厂';
+        nData := Format(nData, [nTruck]);
         FOut.FData := nData;
         Exit;
       end;
       if FieldByName('E_Result').AsString = 'Y' then
       begin
         Result := True;
-        nData := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ],管理员允许';
-        nData := Format(nData, [nTruck,nSnapTruck]);
+        nData := '车辆[ %s ]车牌识别失败,管理员允许';
+        nData := Format(nData, [nTruck]);
         FOut.FData := nData;
         Exit;
       end;
@@ -4448,8 +4488,8 @@ begin
     end
     else
     begin
-      nData := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ]';
-      nData := Format(nData, [nTruck,nSnapTruck]);
+      nData := '车辆[ %s ]车牌识别失败,请移动车辆并在夜间关闭车灯';
+      nData := Format(nData, [nTruck]);
       FOut.FData := nData;
       nUpdate := False;
       if not nNeedManu then
@@ -4460,8 +4500,8 @@ begin
     end;
   end;
 
-  nEvent := '车辆[ %s ]车牌识别失败,抓拍车牌号:[ %s ]';
-  nEvent := Format(nEvent, [nTruck,nSnapTruck]);
+  nEvent := '车辆[ %s ]车牌识别失败,请移动车辆并在夜间关闭车灯';
+  nEvent := Format(nEvent, [nTruck]);
 
   nStr := SF('E_ID', nBill+sFlag_ManualE);
   nStr := MakeSQLByStr([

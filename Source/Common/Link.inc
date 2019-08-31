@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE SYNF}
+{$DEFINE ZGNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -128,8 +128,8 @@
   //合单只获取同车号订单
   {$DEFINE SaveAllSnapInfo}
   //保存停车场抓拍原始记录
-  {$DEFINE PoundSaveSnapInfo}
-  //保存过磅车牌识别信息
+  {$DEFINE RemoteSnap}
+  //车牌识别
   {$DEFINE GetLastHYInfo}
   //获取最近一次化验记录(当批次号对应化验记录不存在时)
   {$DEFINE AutoSan}
@@ -168,6 +168,12 @@
   //采购自助办卡
   {$DEFINE MITTruckProber}
   //中间件控制车检
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE FORCEOPENDOOR}
+  //强制抬杆
+  {$DEFINE BlueReader}
+  //蓝卡读卡器
 {$ENDIF}
 //永丰南方(永丰、上高)
 
@@ -428,6 +434,8 @@
   //采购自助办卡
   {$DEFINE PrintHyOnSaveBill}
   //开单打印化验单
+  {$DEFINE AICMSafeInfo}
+  //自助机入厂安全须知
 {$ENDIF}
 //诸葛南方
 

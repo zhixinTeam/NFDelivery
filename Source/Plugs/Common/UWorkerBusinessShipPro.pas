@@ -780,6 +780,59 @@ begin
         FStatus := sFlag_TruckXH;
         FNextStatus := sFlag_TruckOut;
 
+        nStr := 'Select D_CusID,D_Value,D_Type From %s ' +
+                'Where D_Stock=''%s'' And D_Valid=''%s''';
+        nStr := Format(nStr, [sTable_Deduct, FStockNo, sFlag_Yes]);
+
+        with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+        if RecordCount > 0 then
+        begin
+          First;
+
+          while not Eof do
+          begin
+            if FieldByName('D_CusID').AsString = FCusID then
+              Break;
+            //客户+物料参数优先
+
+            Next;
+          end;
+
+          if Eof then First;
+          //使用第一条规则
+
+          if FMData.FValue > FPData.FValue then
+               nNet := FMData.FValue - FPData.FValue
+          else nNet := FPData.FValue - FMData.FValue;
+
+          nVal := 0;
+          //待扣减量
+          nStr := FieldByName('D_Type').AsString;
+
+          if nStr = sFlag_DeductFix then
+            nVal := FieldByName('D_Value').AsFloat;
+          //定值扣减
+
+          if nStr = sFlag_DeductPer then
+          begin
+            nVal := FieldByName('D_Value').AsFloat;
+            nVal := nNet * nVal;
+          end; //比例扣减
+
+          if (nVal > 0) and (nNet > nVal) then
+          begin
+            nVal := Float2Float(nVal, cPrecision, False);
+            //将暗扣量扣减为2位小数;
+            WriteLog('暗扣规则存在,暗扣量:' + FloatToStr(nVal) + '暗扣前毛重:' +
+                     FloatToStr(FMData.FValue) + '暗扣前皮重:' + FloatToStr(FPData.FValue));
+            if FMData.FValue > FPData.FValue then
+                 FMData.FValue := (FMData.FValue*1000 - nVal*1000) / 1000
+            else FPData.FValue := (FPData.FValue*1000 - nVal*1000) / 1000;
+            WriteLog('暗扣后毛重:' + FloatToStr(FMData.FValue) +
+                     '暗扣后皮重:' + FloatToStr(FPData.FValue));
+          end;
+        end;
+
         nStr := SF('P_ID', FPoundID);
         //where
         nSQL := MakeSQLByStr([
@@ -788,6 +841,7 @@ begin
                 SF('P_YSResult', FYSValid),
                 SF('P_YLineName', FSeal),    //保存批次号
                 SF('P_KZComment', FKZComment), //扣杂原因
+                SF('P_MValue', FMData.FValue, sfVal),
                 SF('P_KZValue', FKZValue, sfVal)
                 ], sTable_PoundLog, nStr, False);
         //验收扣杂

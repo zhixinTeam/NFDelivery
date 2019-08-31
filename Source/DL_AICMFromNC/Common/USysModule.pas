@@ -11,7 +11,7 @@ interface
 uses
   UClientWorker, UMITPacker, UMgrTTCEDispenser, UMgrSDTReader,
   UFrameMain, UFrameQueryCard, UFrameMakeCard, UFrameInputCertificate,
-  UFramePurchaseCard, UFrameSaleCard, UFramePrintHYDan;
+  UFramePurchaseCard, UFrameSaleCard, UFramePrintHYDan, UFrameSafeInfo;
 
 procedure InitSystemObject;
 procedure RunSystemObject;
@@ -66,6 +66,7 @@ begin
     FHYDanPrinter := ReadString(FProgID,'hydanprinter','');
     FCardPrinter  := ReadString(FProgID,'cardprinter','');
     FTTCEK720ID   := ReadString(FProgID,'TTCEK720ID','');
+    FSafeInfoFoot := ReadString(FProgID,'SafeInfoFoot','兰溪诸葛南方水泥有限公司宣 ');
   end;
 
   nStr := 'Select D_Value From %s Where D_Name=''%s''';
