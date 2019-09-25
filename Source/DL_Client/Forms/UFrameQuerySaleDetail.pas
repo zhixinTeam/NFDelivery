@@ -268,6 +268,15 @@ begin
   begin
     nPID := SQLQuery.FieldByName('L_ID').AsString;
 
+    {$IFDEF DaiQuickSync}
+    if SQLQuery.FieldByName('L_Type').AsString = sFlag_Dai then
+    begin
+      nStr := Format('提货单[ %s ]提货类型为袋装且启用袋装开单即推单功能,无法再次上传', [nPID]);
+      ShowMsg(nStr, sHint);
+      Exit;
+    end;
+    {$ENDIF}
+
     {$IFNDEF SyncDataByBFM}
     if SQLQuery.FieldByName('L_OutFact').AsString = '' then
     begin

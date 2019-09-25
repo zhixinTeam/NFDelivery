@@ -542,16 +542,41 @@ begin
   end;
 end;
 
+//Desc: 获取nStock品种的报表文件(从数据库获取模板名称)
+function GetReportFileByStockFromDB(const nStock, nBrand: string): string;
+var nStr, nWhere: string;
+begin
+  Result := '';
+  if nBrand <> '' then
+  begin
+    nWhere := ' and D_ParamB = ''%s'' ';
+    nWhere := Format(nWhere, [nBrand]);
+  end
+  else
+    nWhere := '';
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo = ''%s'' %s order by D_ID desc';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_ReportFileMap, nStock, nWhere]);
+
+  with FDM.SQLQuery(nStr, FDM.SqlTemp) do
+  begin
+    if RecordCount > 0 then
+    begin
+      Result := gPath + 'Report\' + Fields[0].AsString;
+    end;
+  end;
+end;
+
 //Desc: 打印标识为nHID的化验单
 function PrintHuaYanReport(const nBill: string; var nHint: string;
  const nPrinter: string = ''): Boolean;
-var nStr,nSR, nSeal,nDate3D,nDate28D,n28Ya1,nBrand: string;
+var nStr,nSR, nSeal,nDate3D,nDate28D,n28Ya1,nBrand,nStock,nReport: string;
     nDate: TDateTime;
 begin
   nHint := '';
   Result := False;
 
-  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_PrintHY,sb.L_Type,sb.L_StockBrand From %s sb ' +
+  nStr := 'Select sb.L_Seal,sr.R_28Ya1,sb.L_PrintHY,sb.L_Type,sb.L_StockBrand,sb.L_StockName From %s sb ' +
           ' Left Join %s sr on sr.R_SerialNo=sb.L_Seal ' +
           ' Where sb.L_ID = ''%s''';
   nStr := Format(nStr, [sTable_Bill, sTable_StockRecord, nBill]);
@@ -563,6 +588,7 @@ begin
       nSeal := Fields[0].AsString;
       n28Ya1 := Fields[1].AsString;
       nBrand := Fields[4].AsString;
+      nStock := Fields[5].AsString;
       if Fields[2].AsString <> sFlag_Yes then
       begin
         Result := True;
@@ -572,6 +598,8 @@ begin
       end;
     end;
   end;
+
+  nReport := GetReportFileByStockFromDB(nStock, nBrand);
 
   nDate3D := FormatDateTime('YYYY-MM-DD HH:MM:SS', Now);
   nDate28D := nDate3D;
@@ -617,12 +645,12 @@ begin
     Exit;
   end;
 
-  nStr := FDM.SqlTemp.FieldByName('P_Stock').AsString;
-  nStr := GetReportFileByStock(nStr, nBrand);
+//  nStr := FDM.SqlTemp.FieldByName('P_Stock').AsString;
+//  nStr := GetReportFileByStock(nStr, nBrand);
 
-  if not FDR.LoadReportFile(nStr) then
+  if (nReport = '') or (not FDR.LoadReportFile(nReport)) then
   begin
-    nHint := '无法正确加载报表文件: ' + nStr;
+    nHint := '无法正确加载报表文件: ' + nReport;
     Exit;
   end;
 

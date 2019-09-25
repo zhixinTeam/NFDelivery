@@ -147,6 +147,7 @@ inherited fFramePurchaseCard: TfFramePurchaseCard
     Font.Height = -24
     Font.Name = 'MS Sans Serif'
     Font.Style = []
+    ReadOnly = True
     RowSelect = True
     ParentFont = False
     TabOrder = 1

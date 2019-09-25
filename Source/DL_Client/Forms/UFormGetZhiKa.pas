@@ -28,6 +28,7 @@ type
     FAreaTo: string;        //区域流向
     FValue: Double;         //订单可用
     FPlanNum: Double;       //计划量
+    FOrderNo: string;       //订单编号
   end;
 
   TfFormGetZhiKa = class(TfFormNormal)
@@ -264,6 +265,7 @@ begin
         with FItems[nIdx] do
         begin
           FOrderID := FieldByName('PK_MEAMBILL').AsString;
+          FOrderNo := FieldByName('VBILLCODE').AsString;
           FStockID := nStr;
           FStockName := FieldByName('invname').AsString;
           FSaleMan := FieldByName('VBILLTYPE').AsString;
@@ -375,7 +377,7 @@ begin
 
     with ListDetail.Items.Add,FItems[nIdx] do
     begin
-      Caption := FOrderID;
+      Caption := FOrderNo;
       SubItems.Add(FStockName);
       SubItems.Add(Format('%.2f', [FValue]));
       SubItems.Add(FAreaName);

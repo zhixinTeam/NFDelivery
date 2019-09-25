@@ -109,6 +109,20 @@ begin
     Exit;
   end;
 
+  if Assigned(FOPCTunnel.FOptions) And
+       (UpperCase(FOPCTunnel.FOptions.Values['ClearLj']) = sFlag_Yes) then
+  begin
+    if StrToFloatDef(EditValue.Text, 0) > 0.1 then
+    begin
+      nStr := '请清除累计量';
+      WriteLog(nStr);
+      LineClose(FOPCTunnel.FID, sFlag_Yes);
+      ShowLedText(FOPCTunnel.FID, nStr);
+      SetUIData(True);
+      Exit;
+    end;
+  end;
+
   WriteLog('接收到卡号:' + nCard);
   FCard := nCard;
 

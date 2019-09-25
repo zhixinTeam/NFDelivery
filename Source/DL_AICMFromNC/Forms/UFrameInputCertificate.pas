@@ -35,6 +35,7 @@ type
     FListA, FListB, FListC: TStrings;
     //列表信息
     FID: string;
+    FAICMFP: string;
     procedure LoadOrderInfo(nID: string);
     //加载订单信息
     procedure SyncCard(const nCard: TIdCardInfoStr;const nReader: TSDTReaderItem);
@@ -59,7 +60,7 @@ implementation
 
 uses
   ULibFun, USysLoger, UDataModule, UMgrControl, USelfHelpConst, UBase64,
-  USysBusiness, UFrameMakeCard, UFormBase;
+  USysBusiness, UFrameMakeCard, UFormBase, USysDB;
 
 //------------------------------------------------------------------------------
 //Desc: 记录日志
@@ -84,7 +85,19 @@ begin
 end;
 
 procedure TfFrameInputCertificate.OnCreateFrame;
+var nStr: string;
 begin
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_AICMFP]);
+
+  with FDM.SQLQuery(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      FAICMFP := Fields[0].AsString;
+    end;
+  end;
+
   DoubleBuffered := True;
   FListA := TStringList.Create;
   FListB := TStringList.Create;
@@ -227,6 +240,11 @@ begin
     //宣传订单
   end else
   begin
+    if FAICMFP = sFlag_Yes then
+    begin
+      ShowMsg('禁止密码取卡.', sHint);
+      Exit;
+    end;
     nP.FParamA  := '';
     nP.FParamB  := nStr;
     CreateBaseFrameItem(cFI_FrameSaleMakeCard, Self.Parent);

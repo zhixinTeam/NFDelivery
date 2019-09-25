@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE ZGNF}
+{$DEFINE HYNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -312,6 +312,8 @@
   //服务器抓拍
   {$DEFINE FixLoad}
   //转子秤定制装车
+  {$DEFINE FixLoadNoControlValue}
+  //转子秤定制装车(不控制开单量)
 {$ENDIF}
 //南城南方
 
@@ -603,6 +605,8 @@
   //销售自助办卡
   {.$DEFINE PurAICMFromNC}
   //采购自助办卡
+  {$DEFINE HdFilterTruck}
+  //合单只获取同车号订单
 {$ENDIF}
 
 //崇左南方
@@ -946,6 +950,8 @@
   //散装不自动并单
   {$DEFINE ValueLimit}
   //限制开单上限
+  {$DEFINE RemoteSnap}
+  //车牌识别
 {$ENDIF}
 
 //吉安
@@ -1015,7 +1021,7 @@
 {$ENDIF}
 
 //芦溪
-{$IFDEF LXNF}
+{$IFDEF LUXNF}
   {$DEFINE AutoSan}
   //散装允许自动过磅
   {$DEFINE HYRFID201}
@@ -1323,7 +1329,7 @@
 {$ENDIF}
 
 //兰溪
-{$IFDEF LXNF}
+{$IFDEF LANXNF}
   {$DEFINE AutoSan}
   //散装允许自动过磅
   {$DEFINE HYRFID201}

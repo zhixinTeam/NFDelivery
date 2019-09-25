@@ -387,6 +387,7 @@ begin
   //check valid
 
   {$IFDEF FixLoad}
+  {$IFNDEF FixLoadNoControlValue}
   if Trim(EditHisValueMax.Text) = '' then
     EditHisValueMax.Text := Format('%.2f', [GetTruckHisValueMax(EditTruck.Text)]);
   if Pos('ɢ', FOrder.FStockName) > 0 then
@@ -406,6 +407,7 @@ begin
       if not QueryDlg(nStr, sAsk) then Exit;
     end;
   end;
+  {$ENDIF}
   {$ENDIF}
 
   {$IFDEF ManuSeal}

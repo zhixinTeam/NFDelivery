@@ -2882,11 +2882,41 @@ begin
   else if Pos('32', Result) > 0 then
     Result := gPath + 'Report\HuaYan32.fr3'
   else if Pos('42', Result) > 0 then
-    Result := gPath + 'Report\HuaYan42.fr3'
+  begin
+    if Pos('P.C42.5', nStock) > 0 then
+      Result := gPath + 'Report\HuaYanPC42.fr3'
+    else
+      Result := gPath + 'Report\HuaYan42.fr3';
+  end
   else if Pos('52', Result) > 0 then
     Result := gPath + 'Report\HuaYan42.fr3'
   else Result := '';
   {$ENDIF}
+end;
+
+//Desc: 获取nStock品种的报表文件(从数据库获取模板名称)
+function GetReportFileByStockFromDB(const nStock, nBrand: string): string;
+var nStr, nWhere: string;
+begin
+  Result := '';
+  if nBrand <> '' then
+  begin
+    nWhere := ' and D_ParamB = ''%s'' ';
+    nWhere := Format(nWhere, [nBrand]);
+  end
+  else
+    nWhere := '';
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo = ''%s'' %s order by D_ID desc';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_ReportFileMap, nStock, nWhere]);
+
+  with FDM.QuerySQL(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      Result := gPath + 'Report\' + Fields[0].AsString;
+    end;
+  end;
 end;
 
 //Desc: 打印标识为nHID的化验单
@@ -2968,9 +2998,12 @@ begin
   end;
 
   nStr := FDM.SqlTemp.FieldByName('P_Stock').AsString;
-  nStr := GetReportFileByStock(nStr, nBrand);
+  nStr := GetReportFileByStockFromDB(nStr, nBrand);
 
-  if not FDR.LoadReportFile(nStr) then
+//  nStr := FDM.SqlTemp.FieldByName('P_Stock').AsString;
+//  nStr := GetReportFileByStock(nStr, nBrand);
+
+  if (nStr = '') or (not FDR.LoadReportFile(nStr)) then
   begin
     nStr := '无法正确加载报表文件';
     ShowMsg(nStr, sHint); Exit;

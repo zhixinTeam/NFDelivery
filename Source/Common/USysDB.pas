@@ -307,6 +307,8 @@ ResourceString
   sFlag_AICMHYDanPCount= 'AICMHYDanPCount';          //自助机化验单打印次数
   sFlag_DaiQuickSync  = 'DaiQuickSync';              //袋装开单即推单
   sFlag_SetPValue     = 'SetPValue';                 //预设皮重阀值
+  sFlag_AICMFP        = 'AICMFP';                    //自助机禁止密码取卡
+  sFlag_ReportFileMap = 'ReportFileMap';             //化验单模板匹配
 
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
