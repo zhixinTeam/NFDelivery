@@ -496,7 +496,7 @@ begin
 end;
 
 //Desc: 获取nStock品种的报表文件
-function GetReportFileByStock(const nStock, nBrand: string): string;
+function GetReportFileByStock(const nStock: string; var nBrand: string): string;
 begin
   Result := GetPinYinOfStr(nStock);
 

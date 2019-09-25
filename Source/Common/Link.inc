@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE HYNF}
+{$DEFINE SYNF}
 //特定系统
 
 {$IFDEF JDNF}
