@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE SYNF}
+{$DEFINE YSNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -607,6 +607,10 @@
   //采购自助办卡
   {$DEFINE HdFilterTruck}
   //合单只获取同车号订单
+  {$DEFINE PrintHeGeZheng}
+  //打印合格证
+  {$DEFINE HeGeZhengSimpleData}
+  //打印合格证(只取提货信息)
 {$ENDIF}
 
 //崇左南方

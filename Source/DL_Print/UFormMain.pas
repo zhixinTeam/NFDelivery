@@ -675,9 +675,43 @@ function PrintHeGeReport(const nBill: string; var nHint: string;
  const nPrinter: string = ''): Boolean;
 var nStr,nSR: string;
     nField: TField;
+    nStockNo, nStockName: string;
 begin
   nHint := '';
   Result := False;
+
+  nStr := 'Select L_StockNo, L_StockName from %s b ' +
+          'Where b.L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, nBill]);
+
+  with FDM.SQLQuery(nStr, FDM.SqlTemp) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nHint := '提货单[ %s ]已无效';
+      nHint := Format(nHint, [nBill]);
+      Exit;
+    end;
+    nStockNo := Fields[0].AsString;
+    nStockName := Fields[1].AsString;
+  end;
+
+  nStr := 'Select D_Value from %s ' +
+          'Where D_Name=''%s'' and D_Memo =''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_NoPrintHeGe, nStockNo]);
+
+  with FDM.SQLQuery(nStr, FDM.SqlTemp) do
+  begin
+    if RecordCount > 0 then
+    begin
+      if Fields[0].AsString = sFlag_Yes then
+      begin
+        nHint := '提货单[ %s ]物料[ %s ]无需打印合格证';
+        nHint := Format(nHint, [nBill, nStockName]);
+        Exit;
+      end;
+    end;
+  end;
 
   {$IFDEF HeGeZhengSimpleData}
   nSR := 'Select * from %s b ' +

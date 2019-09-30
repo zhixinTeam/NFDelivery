@@ -377,6 +377,7 @@ function SaveTruckPrePicture(const nTruck: string;const nTunnel: PPTTunnelItem;
                              const nLogin: Integer = -1): Boolean;
 //保存nTruck的预制皮重照片
 function SaveSnapStatus(const nBill: TLadingBillItem; nStatus: string): Boolean;
+function VipTruckForceLine(const nVip,nStockNo,nLID: string): Boolean;
 implementation
 
 //Desc: 记录日志
@@ -4752,6 +4753,35 @@ begin
         FDM.ExecuteSQL(nStr);
       end;
     end;
+  end;
+end;
+
+//Date: 2019/9/30
+//Desc: VIP提货单指定通道
+function VipTruckForceLine(const nVip,nStockNo,nLID: string): Boolean;
+var nSQL,nLine,nStr: string;
+begin
+  Result := True;
+
+  if nVip <> sFlag_TypeVIP then
+    Exit;
+
+  nSQL := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s'' ';
+  nSQL := Format(nSQL, [sTable_SysDict, sFlag_VIPForceLine, nStockNo]);
+  with FDM.QueryTemp(nSQL) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nLine := Fields[0].AsString;
+    end;
+  end;
+
+  if nLine <> '' then
+  begin
+    nStr := 'update %s set T_Line=''%s'' where T_Bill=''%s''';
+    nStr := format(nStr,[sTable_ZTTrucks, nLine, nLID]);
+    WriteLog('VIP单据更新通道SQL:' + nStr);
+    FDM.ExecuteSQL(nStr);
   end;
 end;
 

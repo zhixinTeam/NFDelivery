@@ -309,6 +309,8 @@ ResourceString
   sFlag_SetPValue     = 'SetPValue';                 //预设皮重阀值
   sFlag_AICMFP        = 'AICMFP';                    //自助机禁止密码取卡
   sFlag_ReportFileMap = 'ReportFileMap';             //化验单模板匹配
+  sFlag_NoPrintHeGe   = 'NoPrintHeGeStock';          //无需打印合格证物料
+  sFlag_VIPForceLine  = 'VIPForceLine';              //VIP强制定道
 
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组

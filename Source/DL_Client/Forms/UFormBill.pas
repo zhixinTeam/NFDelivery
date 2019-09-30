@@ -479,6 +479,8 @@ begin
   //call mit bus
   if FBills = '' then Exit;
 
+  VipTruckForceLine(GetCtrlData(EditType), FOrder.FStockID, FBills);
+
   if FBuDanFlag <> sFlag_Yes then
     SetBillCard(FBills, EditTruck.Text, True);
   //∞Ï¿Ì¥≈ø®

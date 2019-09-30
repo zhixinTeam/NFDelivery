@@ -234,10 +234,9 @@ begin
 
   SetUIData(False);
 
+  CoInitialize(nil);
+  nOPCServer := TdOPCServer.Create(nil);
   try
-    CoInitialize(nil);
-    nOPCServer := TdOPCServer.Create(nil);
-
     nOPCServer.ServerName  := FOPCTunnel.FServer;
     nOPCServer.ComputerName:= FOPCTunnel.FComputer;
 
@@ -330,10 +329,9 @@ begin
 
   if Trim(FOPCTunnel.FStopTag) <> '' then
   begin
+    CoInitialize(nil);
+    nOPCServer := TdOPCServer.Create(nil);
     try
-      CoInitialize(nil);
-      nOPCServer := TdOPCServer.Create(nil);
-
       nOPCServer.ServerName  := FOPCTunnel.FServer;
       nOPCServer.ComputerName:= FOPCTunnel.FComputer;
 
