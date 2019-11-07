@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE YSNF}
+{$DEFINE SYNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -394,6 +394,9 @@
   //抓拍EX模式
   {$DEFINE PoundVerfyOrder}
   //过磅校验订单(销售)
+  {$DEFINE EnableAlivision}
+  {$DEFINE AlivisionInClient}
+  //启用阿里图像识别
 {$ENDIF}
 //山亚南方
 

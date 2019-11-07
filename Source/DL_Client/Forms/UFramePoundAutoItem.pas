@@ -128,6 +128,8 @@ type
     function SavePoundDuanDao: Boolean;
     function SavePoundHaulBack: Boolean;
     //保存称重
+    procedure SaveAlivisionData;
+    //图像识别数据
     procedure WriteLog(nEvent: string);
     //记录日志
     procedure PlayVoice(const nStrtext: string);
@@ -156,7 +158,7 @@ implementation
 {$R *.dfm}
 
 uses
-  ULibFun, UFormBase, UMgrTruckProbe,
+  ULibFun, UFormBase, UFormCtrl, UMgrTruckProbe, UMgrAliVision,
   UMgrRemoteVoice, UMgrVoiceNet, UDataModule, USysBusiness, UMgrLEDDisp,
   USysLoger, USysConst, USysDB, UBase64;
 
@@ -1635,6 +1637,34 @@ begin
   //保存称重
 end;
 
+//Date: 2019-11-05
+//Desc: 保存图像识别数据
+procedure TfFrameAutoPoundItem.SaveAlivisionData;
+var nStr: string;
+    nPound: TPoundItem;
+begin
+  if not gVisionManager.GetPoundData(FPoundTunnel.FID, nPound) then
+  begin
+    nStr := '未配置标识为[ %s ]的图像识别节点.';
+    WriteLog(Format(nStr, [FPoundTunnel.FID]));
+    Exit;
+  end;
+
+  nPound.FValStr := FUIData.FID;
+  gVisionManager.SetPoundData(FPoundTunnel.FID, @nPound);
+  //保存单据号
+
+  nStr := MakeSQLByStr([SF('V_ID', FUIData.FID),
+          SF('V_Pound', FPoundTunnel.FID),
+          SF('V_Truck', FUIData.FTruck),
+          SF('V_Camera', nPound.FTruck),
+          SF('V_Date', sField_SQLServer_Now, sfVal),
+
+          SF_IF([SF('V_Status', sFlag_Yes),
+                 SF('V_Status', sFlag_No)], nPound.FStateNow = tsNormal)
+          ], sTable_Alivision, '', True);
+  FDM.ExecuteSQL(nStr);
+end;
 
 //Desc: 读取表头数据
 procedure TfFrameAutoPoundItem.OnPoundDataEvent(const nValue: Double);
@@ -1786,6 +1816,12 @@ begin
     else if FUIData.FCardUse = sFlag_ShipPro then nRet := SavePoundProvide
     else if FUIData.FCardUse = sFlag_ShipTmp then nRet := SavePoundProvide
     else nRet := False;
+
+    {$IFDEF AlivisionInClient}
+    if nRet then
+      SaveAlivisionData();
+    //xxxxx
+    {$ENDIF}
   end;
   
   if nRet then

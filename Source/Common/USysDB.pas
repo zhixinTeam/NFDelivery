@@ -360,6 +360,7 @@ ResourceString
   sTable_PoundLog     = 'Sys_PoundLog';              //过磅数据
   sTable_PoundBak     = 'Sys_PoundBak';              //过磅作废
   sTable_Picture      = 'Sys_Picture';               //存放图片
+  sTable_Alivision    = 'Sys_Alivision';             //图像识别
   sTable_PoundDaiWC   = 'Sys_PoundDaiWuCha';         //包装误差
   
   sTable_PoundStation = 'Sys_PoundStation';          //火车衡过磅数据
@@ -901,6 +902,19 @@ const
    *.P_Mate: 物料
    *.P_Date: 时间
    *.P_Picture: 图片
+  -----------------------------------------------------------------------------}
+
+  sSQL_NewAlivision = 'Create Table $Table(R_ID $Inc, V_ID varChar(15),' +
+       'V_Pound varChar(10), V_Truck varChar(15), V_Camera varChar(15),' +
+       'V_Status Char(1), V_Date DateTime)';
+  {-----------------------------------------------------------------------------
+   图像识别: Alivision
+   *.V_ID: 业务编号
+   *.V_Pound: 磅站号
+   *.V_Truck: 业务车牌
+   *.V_Camera: 识别车牌
+   *.V_Status: 识别状态
+   *.V_Date: 时间
   -----------------------------------------------------------------------------}
 
   sSQL_NewPoundDaiWC = 'Create Table $Table(R_ID $Inc,' +
@@ -1750,6 +1764,7 @@ begin
   AddSysTableItem(sTable_PoundLog, sSQL_NewPoundLog);
   AddSysTableItem(sTable_PoundBak, sSQL_NewPoundLog);
   AddSysTableItem(sTable_Picture, sSQL_NewPicture);
+  AddSysTableItem(sTable_Alivision, sSQL_NewAlivision);
   AddSysTableItem(sTable_PoundDaiWC, sSQL_NewPoundDaiWC);
 
   AddSysTableItem(sTable_PoundStation, sSQL_NewPoundLog);
