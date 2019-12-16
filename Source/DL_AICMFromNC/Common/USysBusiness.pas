@@ -128,7 +128,9 @@ function IsCardValid(const nCard: string): Boolean;
 function IsPurTruckReady(const nTruck: string; var nHint: string): Boolean;
 function IFHasBill(const nTruck: string): Boolean;
 function GetTransType(const nID: string): string;
-
+function GetTruckSanMaxLadeValue(const nTruck: string; var nForce: Boolean): Double;
+function GetAICMPurMinValue: Double;
+function GetStockPackStyleEx(const nStockID,nBrand: string): string;
 implementation
 
 //Desc: 记录日志
@@ -668,6 +670,21 @@ begin
   nStr := 'Select D_ParamC From %s Where (D_Name=''StockItem''' +
           ' and D_ParamB=''%s'')';
   nStr := Format(nStr, [sTable_SysDict, Trim(nStockID)]);
+
+  Result := '';
+  with FDM.SQLQuery(nStr) do
+  if RecordCount > 0 then
+     Result := Fields[0].AsString;
+
+  if Result = '' then Result := 'C';
+end;
+
+function GetStockPackStyleEx(const nStockID, nBrand: string): string;
+var nStr: string;
+begin
+  nStr := 'Select D_Value From %s Where (D_Name=''%s''' +
+          ' and D_Memo=''%s'' and D_ParamB=''%s'')';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_BrandBindPack, Trim(nStockID), nBrand]);
 
   Result := '';
   with FDM.SQLQuery(nStr) do
@@ -1281,6 +1298,52 @@ begin
         Result := Fields[0].AsString;
     end;
   end;
+end;
+
+//Date: 2019/5/14
+//Desc: 散装最大开单量限制
+function GetTruckSanMaxLadeValue(const nTruck: string; var nForce: Boolean): Double;
+var nSQL: string;
+begin
+  Result := 0;
+  nForce := False;
+  nSQL := 'Select D_Value From %s Where D_Name=''%s''';
+  nSQL := Format(nSQL, [sTable_SysDict, sFlag_ForceTruckSanMaxLade]);
+  with FDM.SQLQuery(nSql) do
+  begin
+    if RecordCount <= 0 then
+    begin
+      Exit;
+    end;
+
+    if Fields[0].AsString <> sFlag_Yes then
+      Exit;
+    nForce := True;
+  end;
+
+  if Trim(nTruck) = '' then
+  begin
+    Exit;
+  end;
+
+  nSQL := 'Select top 1 T_HZValueMax From %s Where T_Truck=''%s'' ';
+  nSQL := Format(nSQL, [sTable_Truck, nTruck]);
+
+  with FDM.SQLQuery(nSql) do
+  if RecordCount > 0 then
+    Result := Fields[0].AsFloat;
+end;
+
+function GetAICMPurMinValue: Double;
+var nSQL: string;
+begin
+  Result := 0;
+  nSQL := 'Select D_Value From %s Where D_Name=''%s''';
+  nSQL := Format(nSQL, [sTable_SysDict, sFlag_AICMPurMinValue]);
+
+  with FDM.SQLQuery(nSql) do
+  if RecordCount > 0 then
+    Result := Fields[0].AsFloat;
 end;
 
 end.

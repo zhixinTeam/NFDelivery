@@ -11,7 +11,8 @@ interface
 uses
   UClientWorker, UMITPacker, UMgrTTCEDispenser, UMgrSDTReader,
   UFrameMain, UFrameQueryCard, UFrameMakeCard, UFrameInputCertificate,
-  UFramePurchaseCard, UFrameSaleCard, UFramePrintHYDan, UFrameSafeInfo;
+  UFramePurchaseCard, UFrameSaleCard, UFramePrintHYDan, UFrameSafeInfo,
+  UFramePrintBill;
 
 procedure InitSystemObject;
 procedure RunSystemObject;

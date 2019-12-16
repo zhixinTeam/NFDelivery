@@ -58,6 +58,7 @@ type
     FOrderNo: string;       //订单编号
     FCompany: string;       //公司ID
     FSpecialCus: string;    //是否为特殊客户
+    FSnlx: string;          //水泥流向
   end;
 
   TOrderItems = array of TOrderItem;
@@ -850,6 +851,7 @@ begin
           //区域流向
           FCompany := FieldByName('company').AsString;
           FSpecialCus := FieldByName('specialcus').AsString;
+          FSnlx    := FieldByName('vdef10').AsString;
           nIdx := GetStockInfo(FStockID);
           if nIdx < 0 then
           begin
@@ -1413,6 +1415,10 @@ begin
               {$IFDEF SaveOrderNo}
               SF('L_OrderNo',     FOrderItems[nIdx].FOrderNo),
               {$ENDIF} //随车打印化验单
+
+              {$IFDEF SNLX}
+              SF('L_Snlx',     FOrderItems[nIdx].FSnlx),
+              {$ENDIF} //水泥流向
 
               SF('L_Truck', FListA.Values['Truck']),
               SF('L_Status', sFlag_BillNew),
@@ -3201,13 +3207,16 @@ begin
     end;
 
     {$IFNDEF SyncDataByBFM}
+    {$IFNDEF DaiSyncByZT}
+    {$IFNDEF SyncSanByBFM}
     if not nDaiQuickSync then
      if not TWorkerBusinessCommander.CallMe(cBC_SyncME25,
           FListB.Text, '', @nOut) then
       raise Exception.Create(nOut.FData);
     //同步销售到NC榜单
     {$ENDIF}
-
+    {$ENDIF}
+    {$ENDIF}
     if nBills[0].FCardUse = sFlag_Sale then
     begin
       nSQL := 'Update %s Set C_Status=''%s'' Where C_Card=''%s''';
@@ -3385,6 +3394,42 @@ begin
     end;
 
     if not nDaiQuickSync then
+      TWorkerBusinessCommander.CallMe(cBC_SyncME25,
+          FListB.Text, '', @nOut);
+    //同步销售到NC榜单
+  end;
+  {$ENDIF}
+
+  {$IFDEF DaiSyncByZT}//与DayQuickSync互斥
+  if FIn.FExtParam = sFlag_TruckZT then
+  begin
+    FListB.Clear;
+    for nIdx:=Low(nBills) to High(nBills) do
+    with nBills[nIdx] do
+    begin
+      FListB.Add(FID);
+      //交货单列表
+    end;
+
+    if not nDaiQuickSync then
+      TWorkerBusinessCommander.CallMe(cBC_SyncME25,
+          FListB.Text, '', @nOut);
+    //同步销售到NC榜单
+  end;
+  {$ENDIF}
+
+  {$IFDEF SyncSanByBFM}//与SyncDataByBFM互斥
+  if FIn.FExtParam = sFlag_TruckBFM then
+  begin
+    FListB.Clear;
+    for nIdx:=Low(nBills) to High(nBills) do
+    with nBills[nIdx] do
+    begin
+      FListB.Add(FID);
+      //交货单列表
+    end;
+
+    if nBills[0].FType = sFlag_San then
       TWorkerBusinessCommander.CallMe(cBC_SyncME25,
           FListB.Text, '', @nOut);
     //同步销售到NC榜单

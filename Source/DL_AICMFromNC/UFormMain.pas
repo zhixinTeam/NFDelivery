@@ -31,6 +31,8 @@ type
     BtnPrint: TImage;
     PanelReturn: TPanel;
     BtnReturn: TImage;
+    PanelPrintBill: TPanel;
+    BtnPrintBill: TImage;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure ComReaderRxChar(Sender: TObject; Count: Integer);
@@ -232,10 +234,12 @@ begin
     BtnPrint.Enabled:= True;
     BtnSCard.Enabled := True;
     BtnPurOrderCard.Enabled:= True;
+    BtnPrintBill.Enabled:= True;
 
     PanelPurch.Visible := True;
     PanelSale.Visible := True;
     PanelPrint.Visible := True;
+    PanelPrintBill.Visible := True;
   end else
   begin
     LabelDec.Caption := IntToStr(gTimeCounter) + ' ';
@@ -302,6 +306,12 @@ begin
     {$ENDIF}
   end;
 
+  if Sender = BtnPrintBill then
+  begin
+    gNeedClear:= True;
+    CreateBaseFrame(cFI_FramePrintBill, PanelWork);
+  end;
+
   if Sender = btnPurOrderCard then
   begin
     {$IFDEF PurAICMFromNC}
@@ -316,10 +326,12 @@ begin
   BtnSCard.Enabled := False;
   BtnPrint.Enabled:= False;
   BtnPurOrderCard.Enabled:= False;
+  BtnPrintBill.Enabled:= False;
 
   PanelPurch.Visible := False;
   PanelSale.Visible := False;
   PanelPrint.Visible := False;
+  PanelPrintBill.Visible := False;
 
   gTimeCounter := 120;
   TimerDec.Enabled := True;
@@ -357,10 +369,11 @@ var nHeight, nHeightPanel: Integer;
 begin
   nHeightPanel := PanelPurch.Height;
   nHeight := nHeightPanel;
-  PanelPurch.Top := nHeight;
+  PanelPurch.Top := PanelRight.Top + 2;
   PanelSale.Top := nHeight * 2 + nHeightPanel * 1;
-  PanelPrint.Top := nHeight * 3 + nHeightPanel * 2;
-  PanelReturn.Top := nHeight * 4 + nHeightPanel * 3;
+  PanelPrintBill.Top := nHeight * 3 + nHeightPanel * 2;
+  PanelPrint.Top := nHeight * 4 + nHeightPanel * 3;
+  PanelReturn.Top := nHeight * 5 + nHeightPanel * 4;
 end;
 
 

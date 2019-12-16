@@ -11,6 +11,7 @@ const
   cFI_FrameQueryCard  = $0001;                       //磁卡查询
   cFI_FrameMakeCard   = $0002;                       //制卡
   cFI_FramePrint      = $0003;                       //打印
+  cFI_FramePrintBill  = $0009;                       //打印小票
   cFI_FrameSafeInfo   = $0008;                       //安全须知
 
   cFI_FrameInputCertificate = $0004;                 //输入取卡凭证
@@ -117,6 +118,7 @@ var
   gTimeCounter: Int64;           //计时器
   gNeedSearchPurOrder : Boolean;
   gNeedSearchSaleOrder : Boolean;
+  gNeedClear : Boolean;
   gAgree : Boolean;
 
 function GetIDCardNumCheckCode(nIDCardNum: string): string;

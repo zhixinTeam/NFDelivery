@@ -475,10 +475,10 @@ end;
 //Parm: 交货单[FIn.FData];通道号[FIn.FExtParam]
 //Desc: 在指定通道上喷码
 function THardwareCommander.PrintCode(var nData: string): Boolean;
-var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck,nBm,nPCCode,nCusBz: string;
+var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck,nBm,nPCCode,nCusBz,nSnlx: string;
     nPrefixLen, nIDLen: Integer;
     nEvent,nEID,nCusName:string;
-    nLDate: TDateTime;
+    nLDate,nLadeDate: TDateTime;
     nPCCodeEx: string;
 begin
   Result := True;
@@ -517,7 +517,7 @@ begin
             'Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
     {$ELSE}
-    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck,L_Date,C_Memo,L_CusName From %s ' +
+    nStr := 'Select * From %s ' +
             ' left join %s on L_CusName = C_Name ' +
             'Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, sTable_Customer, FIn.FData]);
@@ -541,6 +541,14 @@ begin
       nCusName  := FieldByName('L_CusName').AsString;
       nTruck    := FieldByName('L_Truck').AsString;
       nLDate    := FieldByName('L_Date').AsDateTime;
+      if FieldByName('L_LadeTime').AsString = '' then
+        nLadeDate := Now
+      else
+        nLadeDate    := FieldByName('L_LadeTime').AsDateTime;
+      if Assigned(FindField('L_Snlx')) then
+        nSnlx := FieldByName('L_Snlx').AsString
+      else
+        nSnlx := '';
       {$IFDEF BMPrintCode}
       nBm       := FieldByName('L_Bm').AsString;
       {$ELSE}
@@ -593,8 +601,8 @@ begin
       {$ENDIF}
 
       {$IFDEF CZNF}
-      //崇左、金鲤喷码规则：水泥批次号+客户代码(bd_cumandoc.def30)+车号后四位
-      nCode := nSeal + FillString(nCusCode, 2, ' ');
+      //崇左喷码规则：水泥批次号+客户代码(bd_cumandoc.def30)+车号后四位
+      nCode := FormatDateTime('YYMMDD',nLadeDate) + nSeal + Copy(nCusCode, Length(nCusCode) - 3, 4);
       nCode := nCode + Copy(nTruck, Length(nTruck) - 3, 4);
       {$ENDIF}
 
@@ -658,6 +666,13 @@ begin
       nCode := nPCCode + '@7' + FormatDateTime('YYYYMMDD',Now) + '@2    '; //换行
       //如果有汉字,则换行处理
       nCode := nCode + nSeal;
+      {$ENDIF}
+
+      {$IFDEF CDNF}
+      nCode := FormatDateTime('YYYYMMDD',nLadeDate) + nSeal + '#';
+      if Pos('#', nSnlx) > 0 then
+        nCode := nCode + Copy(nSnlx, 1, Pos('#', nSnlx) - 1);
+      nCode := nCode + Copy(nTruck, Length(nTruck) - 2, 3);
       {$ENDIF}
 
       {$IFDEF HSNF}

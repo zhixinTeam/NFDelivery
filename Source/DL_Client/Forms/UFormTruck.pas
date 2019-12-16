@@ -39,6 +39,12 @@ type
     dxLayout1Item11: TdxLayoutItem;
     EditMValueMax: TcxTextEdit;
     dxLayout1Item12: TdxLayoutItem;
+    EditWarnPValue: TcxTextEdit;
+    dxLayout1Item13: TdxLayoutItem;
+    EditHz: TcxTextEdit;
+    dxLayout1Item14: TdxLayoutItem;
+    EditType: TcxComboBox;
+    dxLayout1Item15: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
   protected
     { Protected declarations }
@@ -96,6 +102,29 @@ end;
 procedure TfFormTruck.LoadFormData(const nID: string);
 var nStr: string;
 begin
+  {$IFDEF TruckType}
+  EditType.Properties.Items.Clear;
+
+  nStr := 'Select * From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_TruckType]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      First;
+
+      while not Eof do
+      begin
+        EditType.Properties.Items.Add(FieldByName('D_Value').AsString);
+        Next;
+      end;
+    end;
+  end;
+  {$ELSE}
+  dxLayout1Item15.Visible := False;
+  {$ENDIF}
+
   if nID <> '' then
   begin
     nStr := 'Select * From %s Where R_ID=%s';
@@ -124,6 +153,22 @@ begin
     dxLayout1Item12.Visible := False;
     {$ENDIF}
 
+    {$IFDEF WarnPValue}
+    EditWarnPValue.Text := FieldByName('T_WarnPValue').AsString;
+    {$ELSE}
+    dxLayout1Item13.Visible := False;
+    {$ENDIF}
+
+    {$IFDEF TruckHZValueMax}
+    EditHz.Text := FieldByName('T_HZValueMax').AsString;
+    {$ELSE}
+    dxLayout1Item14.Visible := False;
+    {$ENDIF}
+
+    {$IFDEF TruckType}
+    EditType.Text := FieldByName('T_CzType').AsString;
+    {$ENDIF}
+
     CheckVerify.Checked := FieldByName('T_NoVerify').AsString = sFlag_No;
     CheckValid.Checked := FieldByName('T_Valid').AsString = sFlag_Yes;
     CheckUserP.Checked := FieldByName('T_PrePUse').AsString = sFlag_Yes;
@@ -136,7 +181,7 @@ end;
 //Desc: 保存
 procedure TfFormTruck.BtnOKClick(Sender: TObject);
 var nStr,nTruck,nU,nV,nP,nVip,nGps,nEvent: string;
-    nVal, nMValMax: Double;
+    nVal, nMValMax,nWarnPVal: Double;
 begin
   nTruck := UpperCase(Trim(EditTruck.Text));
   if nTruck = '' then
@@ -151,6 +196,24 @@ begin
   begin
     ActiveControl := EditMValueMax;
     ShowMsg('请输入有效毛重上限', sHint);
+    Exit;
+  end;
+  {$ENDIF}
+
+  {$IFDEF WarnPValue}
+  if not IsNumber(EditWarnPValue.Text, True) then
+  begin
+    ActiveControl := EditWarnPValue;
+    ShowMsg('请输入预警皮重', sHint);
+    Exit;
+  end;
+  {$ENDIF}
+
+  {$IFDEF TruckHZValueMax}
+  if not IsNumber(EditHz.Text, True) then
+  begin
+    ActiveControl := EditHz;
+    ShowMsg('请输入核载重量', sHint);
     Exit;
   end;
   {$ENDIF}
@@ -181,6 +244,7 @@ begin
 
   nVal := StrToFloatDef(Trim(EditValue.Text), 0);
   nMValMax := StrToFloatDef(Trim(EditMValueMax.Text), 0);
+  nWarnPVal := StrToFloatDef(Trim(EditWarnPValue.Text), 0);
 
   nStr := MakeSQLByStr([SF('T_Truck', nTruck),
           SF('T_Owner', EditOwner.Text),
@@ -193,6 +257,15 @@ begin
           SF('T_PrePValue', nVal, sfVal),
           {$IFDEF TruckMValueMaxControl}
           SF('T_MValueMax', nMValMax, sfVal),
+          {$ENDIF}
+          {$IFDEF WarnPValue}
+          SF('T_WarnPValue', nWarnPVal, sfVal),
+          {$ENDIF}
+          {$IFDEF TruckHZValueMax}
+          SF('T_HZValueMax', StrToFloatDef(Trim(EditHz.Text), 0), sfVal),
+          {$ENDIF}
+          {$IFDEF TruckType}
+          SF('T_CzType', EditType.Text),
           {$ENDIF}
           SF('T_LastTime', sField_SQLServer_Now, sfVal)
           ], sTable_Truck, nStr, FTruckID = '');

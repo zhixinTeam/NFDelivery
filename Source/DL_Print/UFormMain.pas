@@ -390,12 +390,16 @@ begin
   //add flag
 
   nStr := 'Select * From %s b ' +
-          'Left Join %s p on b.L_ID=p.P_Bill Where L_ID In (%s)';
-  nStr := Format(nStr, [sTable_Bill, sTable_PoundLog, nBill]);
+          ' Left Join %s p on b.L_ID=p.P_Bill ' +
+          ' Left Join %s t on b.L_Truck=t.T_Truck ' +
+          ' Where L_ID In (%s)';
+  nStr := Format(nStr, [sTable_Bill, sTable_PoundLog, sTable_Truck, nBill]);
   {$ELSE}
   nStr := 'Select *,%s As L_ValidMoney From %s b ' +
-          'Left Join %s p on b.L_ID=p.P_Bill Where L_ID=''%s''';
-  nStr := Format(nStr, [nMoney, sTable_Bill, sTable_PoundLog, nBill]);
+          ' Left Join %s p on b.L_ID=p.P_Bill ' +
+          ' Left Join %s t on b.L_Truck=t.T_Truck ' +
+          ' Where L_ID=''%s''';
+  nStr := Format(nStr, [nMoney, sTable_Bill, sTable_PoundLog, sTable_Truck, nBill]);
   {$ENDIF}
 
   WriteLog('交货单号SQL:'+nStr);
@@ -467,8 +471,9 @@ begin
       //多张单据时取第一个
 
       nStr := 'Select * From %s b ' +
-              'Left Join %s p on b.L_ID=p.P_Bill Where L_ID In (%s)';
-      nStr := Format(nStr, [sTable_Bill, sTable_PoundLog, nBill]);
+              ' Left Join %s t on b.L_Truck=t.T_Truck ' +
+              ' Left Join %s p on b.L_ID=p.P_Bill Where L_ID In (%s)';
+      nStr := Format(nStr, [sTable_Bill, sTable_Truck, sTable_PoundLog, nBill]);
       FDM.SQLQuery(nStr, FDM.SQLQuery1);
     end;
   end;

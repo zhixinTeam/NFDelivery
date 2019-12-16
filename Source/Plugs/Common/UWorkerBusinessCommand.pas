@@ -144,6 +144,8 @@ type
     //发货单到榜单
     function SyncNC_ME03(var nData: string): Boolean;
     //供应订单到榜单
+    function SyncNC_ME03Ks(var nData: string): Boolean;
+    //供应订单到榜单
     function SyncNC_HaulBack(var nData: string): Boolean;
     //回空业务到磅单
     function GetPoundBaseValue(var nData: string): Boolean;
@@ -435,6 +437,7 @@ begin
    cBC_SyncME25            : Result := SyncNC_ME25(nData);
    cBC_SyncME03            : Result := SyncNC_ME03(nData);
    cBC_SyncHaulBack        : Result := SyncNC_HaulBack(nData);
+   cBC_SyncME03Ks          : Result := SyncNC_ME03Ks(nData);
 
    cBC_GetOrderFHValue     : Result := GetOrderFHValue(nData);
    cBC_GetOrderGYValue     : Result := GetOrderGYValue(nData);
@@ -2441,6 +2444,7 @@ begin
 
       nWorker.FConn.BeginTrans;
       try
+        WriteLog('同步NC计量磅单SQL:' + FListA[nIdx]);
         for nIdx:=0 to FListA.Count - 1 do
           gDBConnManager.WorkerExec(nWorker, FListA[nIdx]);
         //xxxxx
@@ -2474,6 +2478,239 @@ begin
   Result := False;
   nStr := 'Select * From %s Where P_ID=''%s''';
   nStr := Format(nStr, [sTable_PoundLog, FIn.FData]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount < 1 then
+    begin
+      nData := '称重单据[ %s ]信息已丢失.';
+      nData := Format(nData, [FIn.FData]);
+      Exit;
+    end;
+
+    SetLength(nBills, 1);
+    First;
+
+    with nBills[0] do
+    begin
+      FID      := FieldByName('P_Order').AsString;
+      FZhiKa   := FieldByName('P_Order').AsString;
+      FTruck   := FieldByName('P_Truck').AsString;
+      FPoundID := FieldByName('P_ID').AsString;
+      FMemo    := FieldByName('P_Memo').AsString;
+
+      if FZhiKa = '' then
+      begin
+        nData := '称重单据[ %s ]信订单号为空.';
+        nData := Format(nData, [FIn.FData]);
+        Exit;
+      end;
+
+      if FIn.FExtParam <> '' then
+        FZhiKa := FIn.FExtParam;
+      //xxxxx
+
+      with FPData do
+      begin
+        FValue    := FieldByName('P_PValue').AsFloat;
+        FDate     := FieldByName('P_PDate').AsDateTime;
+        FOperator := FieldByName('P_PMan').AsString;
+      end;
+
+      with FMData do
+      begin
+        FValue    := FieldByName('P_MValue').AsFloat;
+        FDate     := FieldByName('P_MDate').AsDateTime;
+        FOperator := FieldByName('P_MMan').AsString;
+      end;
+
+      FKZValue := FieldByName('P_KZValue').AsFloat;
+
+      if Assigned(FindField('P_PDValue')) then
+           FPDValue := FieldByName('P_PDValue').AsFloat
+      else FPDValue := 0;
+
+      FValue := Float2Float(FMData.FValue - FPData.FValue - FKZValue,
+                cPrecision, False);
+      //供应量
+    end;
+  end;
+
+  //----------------------------------------------------------------------------
+  nStr := 'select t1.*,t2.* from meam_bill t1 ' +
+          '  left join meam_bill_b t2 on t2.PK_MEAMBILL=t1.PK_MEAMBILL ' +
+          'where pk_meambill_b=''%s''';
+  nStr := Format(nStr, [nBills[0].FZhiKa]);
+
+  nWorker := nil;
+  try
+    nDS := gDBConnManager.SQLQuery(nStr, nWorker, sFlag_DB_NC);
+    with nDS do
+    begin
+      if RecordCount < 1 then
+      begin
+        nData := 'NC订单[ %s ]信息已丢失.';
+        nData := Format(nData, [nBills[0].FZhiKa]);
+        Exit;
+      end;
+
+      FListA.Clear;
+      nIdx := 0;
+      First;
+
+      nSQL := MakeSQLByStr([SF('bbillreturn', 'N'),
+              SF('bneedcheckgross', 'N'),
+              SF('bneedchecktare', 'N'),
+              SF('bnowreturn', 'N'),
+              SF('bpackage', 'N'),
+              SF('bpushbillstatus', 'N'),
+              SF('bsame_ew', 'N'),
+
+              SF('nabatenum', nBills[nIdx].FKZValue, sfVal),
+              SF('nclientabatenum', nBills[nIdx].FPDValue, sfVal),
+              SF('breturn', FieldByName('breplenishflag').AsString),
+              SF('cmainunit', FieldByName('cmainunit').AsString),
+              SF('coperatorid', FieldByName('coperator').AsString),
+
+              MakeField(nDS, 'pk_callbody_main', 1, 'cincalbodyid'),
+              MakeField(nDS, 'pk_corp_main', 1, 'cincorpid'),
+              MakeField(nDS, 'pk_warehouse_main', 1, 'cinwarehouseid'),
+
+              SF('cvehicle', nBills[nIdx].FTruck),
+              SF('dbizdate', Date2Str(nBills[nIdx].FPData.FDate)),
+              SF('dconfirmdate', Date2Str(nBills[nIdx].FPData.FDate)),
+              SF('dconfirmtime', DateTime2Str(nBills[nIdx].FPData.FDate)),
+              SF('ddelivmaketime', DateTime2Str(nBills[nIdx].FPData.FDate)),
+              SF('dgrossdate', Date2Str(nBills[nIdx].FMData.FDate)),
+              SF('dgrosstime', DateTime2Str(nBills[nIdx].FMData.FDate)),
+              SF('dlastmoditime', DateTime2Str(nBills[nIdx].FPData.FDate)),
+              SF('dmaketime', DateTime2Str(nBills[nIdx].FPData.FDate)),
+              SF('dr', 0, sfVal),
+              SF('dtaredate', Date2Str(nBills[nIdx].FPData.FDate)),
+              SF('dtaretime', DateTime2Str(nBills[nIdx].FPData.FDate)),
+              SF('ncreatetype', FieldByName('icreatetype').AsInteger, sfVal),
+              SF('ndelivbillprintcount', 1, sfVal),
+              SF('ngross', nBills[nIdx].FMData.FValue, sfVal),
+              SF('nmeammodel', FieldByName('nmeammodel').AsInteger, sfVal),
+              SF('nnet', nBills[nIdx].FValue, sfVal),
+              SF('nplannum', FieldByName('nplannum').AsFloat, sfVal),
+              SF('nstatus', '100', sfVal),
+              SF('ntare', nBills[nIdx].FPData.FValue, sfVal),
+              SF('ntareauditstatus', 1, sfVal),
+              SF('nweighmodel', '1', sfVal),
+
+              SF('pk_bsmodel', '0001ZA1000000001SIJ7'),
+              MakeField(nDS, 'pk_corp_main', 1, 'pk_corp'),
+              //SF('pk_corp', FieldByName('pk_corp').AsString),
+
+              SF('pk_cumandoc', FieldByName('pk_cumandoc').AsString),
+              SF('pk_invbasdoc', FieldByName('pk_invbasdoc').AsString),
+              SF('pk_invmandoc', FieldByName('pk_invmandoc').AsString),
+              SF('pk_poundbill', nBills[nIdx].FPoundID),
+              SF('ts', DateTime2Str(nBills[nIdx].FMData.FDate)),
+              SF('vbillcode', nBills[nIdx].FPoundID),
+              SF('vdef11', nBills[nIdx].FMemo),                                 //备注;堆场
+              MakeField(nDS, 'vdef1', 0),
+              MakeField(nDS, 'vdef10', 0),
+              MakeField(nDS, 'vdef12', 0),
+              MakeField(nDS, 'vdef13', 0),
+              MakeField(nDS, 'vdef14', 0),
+              MakeField(nDS, 'vdef15', 0),
+              MakeField(nDS, 'vdef16', 0),
+              MakeField(nDS, 'vdef17', 0),
+              MakeField(nDS, 'vdef18', 0),
+              MakeField(nDS, 'vdef19', 0),
+              MakeField(nDS, 'vdef2', 0),
+              MakeField(nDS, 'vdef20', 0),
+              MakeField(nDS, 'vdef3', 0),
+              MakeField(nDS, 'vdef4', 0),
+              MakeField(nDS, 'vdef5', 0),
+              MakeField(nDS, 'vdef6', 0),
+              MakeField(nDS, 'vdef7', 0),
+              MakeField(nDS, 'vdef8', 0),
+              MakeField(nDS, 'vdef9', 0),
+              SF('vsourcebillcode', FieldByName('vbillcode').AsString),
+              SF('wayofpoundcorrent', '1')
+              ], 'meam_poundbill', '', True);
+      FListA.Add(nSQL);
+
+      nSQL := MakeSQLByStr([SF('cassunit', FieldByName('cassunit').AsString),
+              SF('dbizdate', Date2Str(nBills[nIdx].FPData.FDate)),
+              SF('dr', 0, sfVal),
+              SF('nassrate', FieldByName('nassrate').AsFloat, sfVal),
+              SF('nassnum', FieldByName('nplanassnum').AsFloat, sfVal),
+              SF('nexecnum', FieldByName('nexecnum').AsFloat, sfVal),
+              SF('nnet', nBills[nIdx].FValue, sfVal),
+              SF('nplannum', FieldByName('nplannum').AsFloat, sfVal),
+
+              SF('pk_poundbill', nBills[nIdx].FPoundID),
+              SF('pk_poundbill_b', nBills[nIdx].FPoundID + '_2'),
+              SF('pk_sourcebill', FieldByName('pk_meambill').AsString),
+              SF('pk_sourcebill_b', FieldByName('pk_meambill_b').AsString),
+              SF('ts', DateTime2Str(nBills[nIdx].FMData.FDate)),
+              SF('vbatchcode', FieldByName('vbatchcode').AsString),
+              SF('vdef11', nBills[nIdx].FMemo),                                 //备注;堆场
+              MakeField(nDS, 'vdef1', 1),
+              MakeField(nDS, 'vdef10', 1),
+              //MakeField(nDS, 'vdef11', 1),
+              MakeField(nDS, 'vdef12', 1),
+              MakeField(nDS, 'vdef13', 1),
+              MakeField(nDS, 'vdef14', 1),
+              MakeField(nDS, 'vdef15', 1),
+              MakeField(nDS, 'vdef16', 1),
+              MakeField(nDS, 'vdef17', 1),
+              MakeField(nDS, 'vdef18', 1),
+              MakeField(nDS, 'vdef19', 1),
+              MakeField(nDS, 'vdef2', 1),
+              MakeField(nDS, 'vdef20', 1),
+              MakeField(nDS, 'vdef3', 1),
+              MakeField(nDS, 'vdef4', 1),
+              MakeField(nDS, 'vdef5', 1),
+              MakeField(nDS, 'vdef6', 1),
+              MakeField(nDS, 'vdef7', 1),
+              MakeField(nDS, 'vdef8', 1),
+              MakeField(nDS, 'vdef9', 1),
+              SF('vsourcebillcode', FieldByName('vbillcode').AsString)
+              ], 'meam_poundbill_b', '', True);
+      FListA.Add(nSQL);
+
+      WriteLog('开始同步采购磅单...');
+      nWorker.FConn.BeginTrans;
+      try
+        for nIdx:=0 to FListA.Count - 1 do
+          gDBConnManager.WorkerExec(nWorker, FListA[nIdx]);
+        //xxxxx
+
+        nWorker.FConn.CommitTrans;
+        Result := True;
+      except
+        on E:Exception do
+        begin
+          nWorker.FConn.RollbackTrans;
+          nData := '同步NC计量榜单错误,描述: ' + E.Message;
+          Exit;
+        end;
+      end;
+      WriteLog('同步采购磅单结束...');
+    end;
+  finally
+    gDBConnManager.ReleaseConnection(nWorker);
+  end;
+end;
+
+//Date: 2015-01-08
+//Parm: 榜单号(单个)[FIn.FData]
+//Desc: 同步原料过磅数据到NC计量榜单表中
+function TWorkerBusinessCommander.SyncNC_ME03KS(var nData: string): Boolean;
+var nStr,nSQL: string;
+    nIdx: Integer;
+    nDS: TDataSet;
+    nWorker: PDBWorker;
+    nBills: TLadingBillItems;
+begin
+  Result := False;
+  nStr := 'Select * From %s Where P_ID=''%s''';
+  nStr := Format(nStr, [sTable_PoundLogKs, FIn.FData]);
 
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
   begin

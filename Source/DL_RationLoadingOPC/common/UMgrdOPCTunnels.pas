@@ -29,6 +29,7 @@ type
     FStopOrder: string;              //停止命令
     FUseTimeTag: string;             //装车累计时间标记
     FUseTimeOrder: string;           //装车累计时间命令
+    FTruckTag: string;               //车牌号
     FOptions: TStrings;              //附加参数
   end;
 
@@ -136,13 +137,18 @@ begin
         FStopOrder := NodeByName('stoporder').ValueAsString;
         FUseTimeTag := NodeByName('usetimetag').ValueAsString;
         FUseTimeOrder := NodeByName('usetimeorder').ValueAsString;
-
+        FTruckTag := '';
         nTmp := FindNode('options');
         if Assigned(nTmp) then
         begin
           FOptions := TStringList.Create;
           SplitStr(nTmp.ValueAsString, FOptions, 0, ';');
         end else FOptions := nil;
+
+        if Assigned(FOptions) then
+        begin
+          FTruckTag := FOptions.Values['trucktag'];
+        end;
       end;
     end;
   finally

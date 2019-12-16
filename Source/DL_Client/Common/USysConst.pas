@@ -51,6 +51,7 @@ const
   cFI_FramePoundMtAuto  = $0040;                     //码头抓斗秤
   cFI_FramePoundMtQuery = $0041;                     //码头抓斗秤查询
   cFI_FramePoundQueryView = $0042;                   //磅房查询
+  cFI_FramePoundQueryKs = $0043;                     //磅房查询
 
   cFI_FrameTruckQuery   = $0050;                     //车辆查询
   cFI_FrameCusAccountQuery = $0051;                  //客户账户
@@ -101,6 +102,8 @@ const
   cFI_FramePTimeControl = $0162;                     //原材料进厂时间控制
   cFI_FramePoundControl = $0163;                     //过磅物料控制
   cFI_FrameLineKwControl= $0164;                     //装车线库位控制
+  cFI_FrameStockMatch   = $0165;                     //品种分组
+  cFI_FrameTruckType    = $0166;                     //车辆类型
 
   cFI_FormMemo          = $1000;                     //备注窗口
   cFI_FormBackup        = $1001;                     //数据备份
@@ -194,7 +197,8 @@ const
   cFI_FormPoundControl  = $1208;                     //过磅物料控制
   cFI_FormLineKwControl = $1209;                     //装车线库位控制
   cFI_FormAddWater      = $1210;                     //车辆加水
-
+  cFI_FormStockMatch    = $1211;                     //品种分组
+  cFI_FormTruckType     = $1212;                     //车辆类型
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据
   cCmd_ViewSysLog       = $0003;                     //系统日志
@@ -359,6 +363,7 @@ begin
   AddMenuModuleItem('MAIN_B11', cFI_FrameBatchQuery);
   AddMenuModuleItem('MAIN_B12', cFI_FrameChineseBase);
   AddMenuModuleItem('MAIN_B13', cFI_FrameChineseDict);
+  AddMenuModuleItem('MAIN_B14', cFI_FrameTruckType);
 
   AddMenuModuleItem('MAIN_C01', cFI_FrameStationPound);
   AddMenuModuleItem('MAIN_C02', cFI_FrameStationPQuery);
@@ -382,6 +387,7 @@ begin
   AddMenuModuleItem('MAIN_E06', cFI_FramePoundMtAuto);
   AddMenuModuleItem('MAIN_E07', cFI_FramePoundMtQuery);
   AddMenuModuleItem('MAIN_E08', cFI_FramePoundQueryView);
+  AddMenuModuleItem('MAIN_E09', cFI_FramePoundQueryKs);
 
   AddMenuModuleItem('MAIN_F01', cFI_FormLadDai, mtForm);
   AddMenuModuleItem('MAIN_F03', cFI_FrameZhanTaiQuery);
@@ -430,6 +436,7 @@ begin
   AddMenuModuleItem('MAIN_M10', cFI_FramePTimeControl);
   AddMenuModuleItem('MAIN_M11', cFI_FramePoundControl);
   AddMenuModuleItem('MAIN_M12', cFI_FrameLineKwControl);
+  AddMenuModuleItem('MAIN_M13', cFI_FrameStockMatch);
 
   AddMenuModuleItem('MAIN_N01', cFI_FrameCardProvide);
   AddMenuModuleItem('MAIN_N02', cFI_FormCardProvide, mtForm);

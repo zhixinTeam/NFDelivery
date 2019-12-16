@@ -39,7 +39,7 @@ uses
   UMgrRemoteVoice, UMgrVoiceNet, UMgrCodePrinter, UMgrLEDDisp, UMgrTTCEM100,
   UMgrRemoteSnap,
   UMgrRFID102{$IFDEF HKVDVR}, UMgrCamera{$ENDIF}, UMgrLEDDispCounter,
-  UJSDoubleChannel, UMgrSendCardNo, UMgrBasisWeight;
+  UJSDoubleChannel, UMgrSendCardNo, UMgrBasisWeight, UMgrBXFontCard;
 
 class function THardwareWorker.ModuleInfo: TPlugModuleInfo;
 begin
@@ -164,6 +164,15 @@ begin
     nStr := '定量装车业务';
     gBasisWeightManager := TBasisWeightManager.Create;
     gBasisWeightManager.LoadConfig(nCfg + 'Tunnels.xml');
+    {$ENDIF}
+
+    {$IFDEF LedNew}
+    nStr := '散装网口小屏(新驱动)';
+    if not Assigned(gBXFontCardManager) then
+    begin
+      gBXFontCardManager := TBXFontCardManager.Create;
+      gBXFontCardManager.LoadConfig(nCfg + 'BXFontLED.xml');
+    end;
     {$ENDIF}
   except
     on E:Exception do
@@ -300,6 +309,9 @@ begin
   gBasisWeightManager.OnStatusChange := WhenBasisWeightStatusChange;
   gBasisWeightManager.StartService;
   {$ENDIF}
+
+  if Assigned(gBXFontCardManager) then
+    gBXFontCardManager.StartService;
 end;
 
 procedure THardwareWorker.AfterStopServer;
@@ -385,6 +397,9 @@ begin
   gBasisWeightManager.StopService;
   gBasisWeightManager.OnStatusChange := nil;
   {$ENDIF}
+
+  if Assigned(gBXFontCardManager) then
+    gBXFontCardManager.StopService;
 end;
 
 end.

@@ -15,7 +15,7 @@ uses
   UMgrLEDDisp, UMgrRFID102, {$IFDEF HKVDVR}UMgrCamera, {$ENDIF}Graphics, DB,
   UMgrLEDDispCounter, UJSDoubleChannel,
   UMgrremoteSnap,UMgrVoiceNet, DateUtils, UMgrSendCardNo,
-  UMgrBasisWeight, UMgrPoundTunnels, UMgrTruckProbe;
+  UMgrBasisWeight, UMgrPoundTunnels, UMgrTruckProbe, UMgrBXFontCard;
 
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
 procedure WhenTTCE_M100_ReadCard(const nItem: PM100ReaderItem);
@@ -82,7 +82,8 @@ uses
 const
   sPost_In   = 'in';
   sPost_Out  = 'out';
-
+  sPost_ZT   = 'zt';
+  sPost_FH   = 'fh';
   sPost_SIn   = 'Sin';
   sPost_SOut  = 'Sout';
   sPost_PIn   = 'Pin';
@@ -571,6 +572,20 @@ begin
   end;
 end;
 
+procedure LEDDisplayNew(const nTunnel: string; nContent: string = '';
+                     nTitle: string = '');
+begin
+  WriteHardHelperLog(Format('LEDDisplayNew:%s.Content:%s.Title:%s',
+                          [nTunnel, nContent, nTitle]));
+  if nTunnel = '' then
+    Exit;
+  if Trim(nTitle) = '' then
+    nTitle := cBXDataNull;
+  if Trim(nContent) = '' then
+    nContent := cBXDataNull;
+  gBXFontCardManager.Display(nTitle, nContent, nTunnel);
+end;
+
 //Date: 2012-4-22
 //Parm: 卡号
 //Desc: 对nCard放行进厂
@@ -843,7 +858,7 @@ end;
 //Date: 2012-4-22
 //Parm: 卡号;读头;打印机;附加参数
 //Desc: 对nCard放行出厂
-procedure MakeTruckOut(const nCard,nReader,nPrinter,nHYPrinter,nPost,nDept: string;
+procedure MakeTruckOut(const nCard,nReader,nPrinter,nHYPrinter,nPost,nDept,nLed: string;
  const nOptions: string = '');
 var nStr, nCardType,nPrint,nID,nSnapStr,nPos: string;
     nIdx: Integer;
@@ -885,7 +900,7 @@ begin
     nStr := '读取磁卡信息失败';
     MakeGateSound(nStr, nPos, False);
     {$ENDIF}
-
+    LEDDisplayNew(nLed, '', nStr);
     Exit;
   end;
 
@@ -893,7 +908,7 @@ begin
   begin
     nStr := '磁卡[ %s ]没有需要出厂车辆.';
     nStr := Format(nStr, [nCard]);
-
+    LEDDisplayNew(nLed, '', nStr);
     WriteHardHelperLog(nStr, sPost_Out);
 
     {$IFDEF RemoteSnap}
@@ -909,7 +924,7 @@ begin
   begin
     nStr := '船号[ %s ]在门岗出厂业务无效.';
     nStr := Format(nStr, [nTrucks[0].FTruck]);
-
+    LEDDisplayNew(nLed, '', nStr);
     WriteHardHelperLog(nStr, sPost_Out);
     Exit;
   end;
@@ -922,7 +937,7 @@ begin
     if FNextStatus = sFlag_TruckOut then Continue;
     nStr := '车辆[ %s ]下一状态为:[ %s ],无法出厂.';
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
-
+    LEDDisplayNew(nLed, '', nStr);
     WriteHardHelperLog(nStr, sPost_Out);
 
     {$IFDEF RemoteSnap}
@@ -962,7 +977,7 @@ begin
   begin
     nStr := '车辆[ %s ]出厂放行失败.';
     nStr := Format(nStr, [nTrucks[0].FTruck]);
-
+    LEDDisplayNew(nLed, '', nStr);
     WriteHardHelperLog(nStr, sPost_Out);
 
     {$IFDEF RemoteSnap}
@@ -978,11 +993,11 @@ begin
     HardOpenDoor(nReader);
   //抬杆
 
-  nStr := '车辆%s已出厂';
+  nStr := '车辆%s请出厂,欢迎您再来提货';
   nStr := Format(nStr, [nTrucks[0].FTruck]);
   gDisplayManager.Display(nReader, nStr);
   //LED显示
-
+  LEDDisplayNew(nLed, '', nStr);
   {$IFDEF CombinePrintBill}
   //销售尾单合单后合并打印,只针对销售散装
   if ((nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew)) and
@@ -1063,7 +1078,7 @@ end;
 //Parm: 卡号;读头;打印机
 //Desc: 对nCard放行出
 function MakeTruckOutM100(const nCard,nReader,nPrinter, nHYPrinter,
-                          nPost,nDept: string): Boolean;
+                          nPost,nDept, nLed: string): Boolean;
 var nStr,nCardType, nID,nSnapStr,nPos: string;
     nIdx: Integer;
     nRet: Boolean;
@@ -1099,7 +1114,7 @@ begin
     nStr := Format(nStr, [nCard]);
     Result := True;
     //磁卡已无效
-
+    LEDDisplayNew(nLed, '', nStr);
     WriteHardHelperLog(nStr, sPost_Out);
 
     {$IFDEF RemoteSnap}
@@ -1116,7 +1131,7 @@ begin
     nStr := Format(nStr, [nCard]);
     Result := True;
     //磁卡已无效
-
+    LEDDisplayNew(nLed, '', nStr);
     WriteHardHelperLog(nStr, sPost_Out);
 
     {$IFDEF RemoteSnap}
@@ -1133,7 +1148,7 @@ begin
     if FNextStatus = sFlag_TruckOut then Continue;
     nStr := '车辆[ %s ]下一状态为:[ %s ],无法出厂.';
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
-
+    LEDDisplayNew(nLed, '', nStr);
     WriteHardHelperLog(nStr, sPost_Out);
 
     {$IFDEF RemoteSnap}
@@ -1172,7 +1187,7 @@ begin
   begin
     nStr := '车辆[ %s ]出厂放行失败.';
     nStr := Format(nStr, [nTrucks[0].FTruck]);
-
+    LEDDisplayNew(nLed, '', nStr);
     WriteHardHelperLog(nStr, sPost_Out);
 
     {$IFDEF RemoteSnap}
@@ -1187,11 +1202,11 @@ begin
   HardOpenDoor(nReader);
   //抬杆
 
-  nStr := '车辆%s已出厂';
+  nStr := '车辆%s请出厂,欢迎您再来提货';
   nStr := Format(nStr, [nTrucks[0].FTruck]);
   gDisplayManager.Display(nReader, nStr);
   //LED显示
-
+  LEDDisplayNew(nLed, '', nStr);
   {$IFDEF CombinePrintBill}
   //销售尾单合单后合并打印,只针对销售散装
   if ((nCardType = sFlag_Sale) or (nCardType = sFlag_SaleNew)) and
@@ -1376,7 +1391,7 @@ end;
 //Parm: 读头数据
 //Desc: 对nReader读到的卡号做具体动作
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
-var nStr, nGroup, nMemo, nHYPrinter: string;
+var nStr, nGroup, nMemo, nHYPrinter,nLed: string;
     nErrNum, nWaitTime: Integer;
     nDBConn: PDBWorker;
     nStart: TDateTime;
@@ -1435,10 +1450,13 @@ begin
       if nReader.FType = rtOut then
       begin
         if Assigned(nReader.FOptions) then
-             nHYPrinter := nReader.FOptions.Values['HYPrinter']
+        begin
+          nHYPrinter := nReader.FOptions.Values['HYPrinter'];
+          nLed := nReader.FOptions.Values['Led'];
+        end
         else nHYPrinter := '';
         MakeTruckOut(nStr, nReader.FID, nReader.FPrinter, nHYPrinter,
-                     nReader.FPost, nReader.FDept, nReader.FPound);
+                     nReader.FPost, nReader.FDept, nReader.FPound, nLed);
       end else
 
       if nReader.FType = rtGate then
@@ -1605,6 +1623,39 @@ begin
 
       Result := False;
       Exit;
+    end;
+  finally
+    SyncLock.Leave;
+  end;
+end;
+
+function IsJudgeValid(const nTunnel: string; const nStockType: string = ''): Boolean;
+var nIdx: Integer;
+    nLineItem: PLineItem;
+begin
+  with gTruckQueueManager do
+  try
+    Result := True;
+    SyncLock.Enter;
+    if (nStockType = sFlag_Dai) and (not IsDaiJudgeTunnel) then
+      Exit;
+
+    if (nStockType = sFlag_San) and (not IsSanJudgeTunnel) then
+      Exit;
+
+    nIdx := GetLine(nTunnel);
+
+    if nIdx < 0 then
+    begin
+      Exit;
+    end;
+
+    nLineItem := Lines[nIdx];
+
+    if not nLineItem.FIsValid then
+    begin
+      Result := False;
+      WriteHardHelperLog('通道无效禁止刷卡功能已启用,当前通道' + nTunnel + '已关闭,禁止刷卡');
     end;
   finally
     SyncLock.Leave;
@@ -1940,7 +1991,11 @@ begin
 
     WriteNearReaderLog(nStr);
     {$IFDEF YanShouOnlyShow}
-    gDisplayManager.Display(nTunnel, '磁卡无效');
+     {$IFDEF LedNew}
+     LEDDisplayNew(nTunnel, '', '磁卡无效');
+     {$ELSE}
+     gDisplayManager.Display(nTunnel, '磁卡无效');
+     {$ENDIF}
     {$ENDIF}
     Exit;
   end;
@@ -1952,7 +2007,11 @@ begin
 
     WriteNearReaderLog(nStr);
     {$IFDEF YanShouOnlyShow}
-    gDisplayManager.Display(nTunnel, '磁卡无效');
+     {$IFDEF LedNew}
+     LEDDisplayNew(nTunnel, '', '磁卡无效');
+     {$ELSE}
+     gDisplayManager.Display(nTunnel, '磁卡无效');
+     {$ENDIF}
     {$ENDIF}
     Exit;
   end;
@@ -1970,7 +2029,11 @@ begin
 
     nStr := '请去' + TruckStatusToStr(FNextStatus);
     {$IFDEF YanShouOnlyShow}
-    gDisplayManager.Display(nTunnel, nStr);
+     {$IFDEF LedNew}
+     LEDDisplayNew(nTunnel, '', nStr);
+     {$ELSE}
+     gDisplayManager.Display(nTunnel, nStr);
+     {$ENDIF}
     {$ELSE}
     gERelayManager.ShowTxt(nTunnel, nStr);
     {$ENDIF}
@@ -2022,7 +2085,11 @@ begin
           //xxxxx
 
           {$IFDEF YanShouOnlyShow}
-          gDisplayManager.Display(nTunnel, nStr);
+           {$IFDEF LedNew}
+           LEDDisplayNew(nTunnel, '', nStr);
+           {$ELSE}
+           gDisplayManager.Display(nTunnel, nStr);
+           {$ENDIF}
           {$ELSE}
           gERelayManager.ShowTxt(nTunnel, nStr);
           {$ENDIF}
@@ -2043,7 +2110,11 @@ begin
         //xxxxx
 
         {$IFDEF YanShouOnlyShow}
-        gDisplayManager.Display(nTunnel, nStr);
+         {$IFDEF LedNew}
+         LEDDisplayNew(nTunnel, '', nStr);
+         {$ELSE}
+         gDisplayManager.Display(nTunnel, nStr);
+         {$ENDIF}
         {$ELSE}
         gERelayManager.ShowTxt(nTunnel, nStr);
         {$ENDIF}
@@ -2057,7 +2128,11 @@ begin
         //xxxxx
 
         {$IFDEF YanShouOnlyShow}
-        gDisplayManager.Display(nTunnel, nStr);
+         {$IFDEF LedNew}
+         LEDDisplayNew(nTunnel, '', nStr);
+         {$ELSE}
+         gDisplayManager.Display(nTunnel, nStr);
+         {$ENDIF}
         {$ELSE}
         gERelayManager.ShowTxt(nTunnel, nStr);
         {$ENDIF}
@@ -2080,7 +2155,11 @@ begin
     //xxxxx
 
     {$IFDEF YanShouOnlyShow}
-    gDisplayManager.Display(nTunnel, nStr);
+     {$IFDEF LedNew}
+     LEDDisplayNew(nTunnel, '', nStr);
+     {$ELSE}
+     gDisplayManager.Display(nTunnel, nStr);
+     {$ENDIF}
     {$ELSE}
     gERelayManager.LineOpen(nTunnel);
     //打开开关
@@ -2089,6 +2168,13 @@ begin
     {$ENDIF}
 
     Exit;
+  end;
+
+  for nIdx := Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    FSeal := nTunnel;
+    FYSValid := sFlag_Yes;
   end;
 
   nRet := False;
@@ -2118,13 +2204,62 @@ begin
   //xxxxx
 
   {$IFDEF YanShouOnlyShow}
-  gDisplayManager.Display(nTunnel, nStr);
+   {$IFDEF LedNew}
+   LEDDisplayNew(nTunnel, '', nStr);
+   {$ELSE}
+   gDisplayManager.Display(nTunnel, nStr);
+   {$ENDIF}
   {$ELSE}
   gERelayManager.LineOpen(nTunnel);
   //打开开关
   gERelayManager.ShowTxt(nTunnel, nStr);
   //显示内容
   {$ENDIF}
+end;
+
+//Date: 2017-10-16
+//Parm: 车辆;所在道;岗位
+//Desc: 播放装车语音
+procedure MakeLadingSound(const nTruck: PTruckItem; const nLine: PLineItem;
+  const nPost: string);
+var nStr: string;
+    nIdx: Integer;
+    nNext: PTruckItem;
+begin
+  try
+    nIdx := nLine.FTrucks.IndexOf(nTruck);
+
+    if nIdx = nLine.FTrucks.Count - 1 then
+    begin
+      nStr := '车辆[p500]%s开始装车';
+      nStr := Format(nStr, [nTruck.FTruck]);
+
+      gNetVoiceHelper.PlayVoice(nStr, nPost);
+
+      WriteNearReaderLog(nStr);
+      //log content
+    end;
+    if (nIdx < 0) or (nIdx = nLine.FTrucks.Count - 1) then Exit;
+    //no exits or last
+
+    nNext := nLine.FTrucks[nIdx+1];
+    //next truck
+
+    nStr := '车辆[p500]%s开始装车,请%s准备';
+    nStr := Format(nStr, [nTruck.FTruck, nNext.FTruck]);
+
+    gNetVoiceHelper.PlayVoice(nStr, nPost);
+
+    WriteNearReaderLog(nStr);
+    //log content
+  except
+    on nErr: Exception do
+    begin
+      nStr := '播放[ %s ]语音失败,描述: %s';
+      nStr := Format(nStr, [nPost, nErr.Message]);
+      WriteNearReaderLog(nStr);
+    end;
+  end;
 end;
 
 //Date: 2012-4-24
@@ -2205,6 +2340,9 @@ begin
     if IsJSRun then Exit;
   end;
 
+  if not IsJudgeValid(nTunnel, sFlag_San) then
+    Exit;
+
   {$IFDEF DaiForceQueue}
   nBool := True;
   for nIdx:=Low(nTrucks) to High(nTrucks) do
@@ -2221,6 +2359,12 @@ begin
          nPTruck, nPLine, sFlag_Dai) then
   begin
     WriteNearReaderLog(nStr);
+    if nBool and (Pos('等候', nStr) > 0) then
+      nStr := nTrucks[0].FTruck + '请排队等候'
+    else
+      nStr := nTrucks[0].FTruck + '请换道装车';
+    gNetVoiceHelper.PlayVoice(nStr, sPost_ZT);
+
     Exit;
   end; //检查通道
 
@@ -2343,6 +2487,9 @@ begin
     //显示与刷卡信息
     {$ENDIF}
 
+    MakeLadingSound(nPTruck, nPLine, sPost_ZT);
+    //播放语音
+
     {$IFDEF StockPriorityInQueue}
     if not TruckStartJS(nPTruck.FTruck, nTunnel, FID, nStr,
        GetHasDai(FID) < 1) then
@@ -2368,6 +2515,9 @@ begin
   MakeTruckShowPreInfo(nTrucks[0].FCard, nTunnel);
   //显示与刷卡信息
   {$ENDIF}
+
+  MakeLadingSound(nPTruck, nPLine, sPost_ZT);
+  //播放语音
 
   {$IFDEF StockPriorityInQueue}
   for nIdx:=Low(nTrucks) to High(nTrucks) do
@@ -2455,6 +2605,9 @@ begin
     //重新定位车辆所在车道
     if IsJSRun then Exit;
   end;
+
+  if not IsJudgeValid(nTunnel, sFlag_San) then
+    Exit;
 
   {$IFDEF DaiForceQueue}
   nBool := True;
@@ -2876,6 +3029,13 @@ begin
     Exit;
   end;
 
+  if not IsJudgeValid(nTunnel, sFlag_San) then
+  begin
+    nStr := '通道关闭,禁止刷卡';
+
+    gERelayManager.ShowTxt(nTunnel, nStr);
+    Exit;
+  end;
   {$IFDEF SanForceQueue}
   nBool := True;
   for nIdx:=Low(nTrucks) to High(nTrucks) do
@@ -2911,6 +3071,14 @@ begin
     {$ENDIF}
 
     gERelayManager.ShowTxt(nTunnel, nStr);
+
+    if nBool and (Pos('等候', nStr) > 0) then
+      nStr := nTrucks[0].FTruck + '请排队等候'
+    else
+      nStr := nTrucks[0].FTruck + '请换库装车';
+
+    gNetVoiceHelper.PlayVoice(nStr, sPost_FH);
+
     Exit;
   end; //检查通道
 
@@ -2956,6 +3124,9 @@ begin
 
     TruckStartFH(nPTruck, nTunnel, nTrucks[0]);
 
+    MakeLadingSound(nPTruck, nPLine, sPost_FH);
+    //播放语音
+
     {$IFDEF FixLoad}
     WriteNearReaderLog('启动定置装车::'+nTunnel+'@'+nCard);
     //发送卡号和通道号到定置装车服务器
@@ -2977,6 +3148,9 @@ begin
 
   TruckStartFH(nPTruck, nTunnel, nTrucks[0]);
   //执行放灰
+
+  MakeLadingSound(nPTruck, nPLine, sPost_FH);
+  //播放语音
   {$IFDEF FixLoad}
   WriteNearReaderLog('启动定置装车::'+nTunnel+'@'+nCard);
   //发送卡号和通道号到定置装车服务器
@@ -3121,7 +3295,7 @@ end;
 //Parm: 主机;卡号
 //Desc: 对nHost.nCard新到卡号作出动作
 procedure WhenReaderCardIn(const nCard: string; const nHost: PReaderHost);
-var nReader, nStr: string;
+var nReader, nStr, nLed: string;
     nMutexTunnel: string;
 begin
   if nHost.FType = rtOnce then
@@ -3150,11 +3324,15 @@ begin
     if nHost.FFun = rfOut then
     begin
       if Assigned(nHost.FOptions) then
-           nStr := nHost.FOptions.Values['HYPrinter']
+      begin
+        nStr := nHost.FOptions.Values['HYPrinter'];
+        nLed := nHost.FOptions.Values['Led'];
+      end
       else nStr := '';
+      WriteHardHelperLog('磁卡:' + nCard + '开始执行出厂');
          MakeTruckOut(nCard, nReader, nHost.FPrinter, nStr,
                       nHost.FOptions.Values['Post'],
-                      nHost.FOptions.Values['Dept']);
+                      nHost.FOptions.Values['Dept'],nLed);
     end
     else
     {$IFDEF JSDoubleChannel}
@@ -3226,7 +3404,12 @@ begin
     begin
       gDisplayManager.Display(nHost.FTunnel, nHost.FLEDText);
       Exit;
-    end;   
+    end;
+
+    if nHost.FOptions.Values['YanShou'] = sFlag_Yes then
+    begin
+      Exit;
+    end;
   end;
 
   if nHost.FETimeOut then
@@ -3279,7 +3462,7 @@ end;
 //Parm: 三合一读卡器
 //Desc: 处理三合一读卡器信息
 procedure WhenTTCE_M100_ReadCard(const nItem: PM100ReaderItem);
-var nStr: string;
+var nStr, nLed: string;
     nRetain: Boolean;
 begin
   nRetain := False;
@@ -3295,8 +3478,12 @@ begin
     case nItem.FVType of
     rtOutM100 :
     begin
+      if Assigned(nItem.FOptions) then
+        nLed := nItem.FOptions.Values['Led']
+      else
+        nLed := '';
       nRetain := MakeTruckOutM100(nItem.FCard, nItem.FVReader, nItem.FVPrinter,
-                                  nItem.FVHYPrinter, nItem.FPost, nItem.FDept);
+                                  nItem.FVHYPrinter, nItem.FPost, nItem.FDept, nLed);
       if nRetain then
         WriteHardHelperLog('吞卡机执行动作:吞卡')
       else

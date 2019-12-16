@@ -3,6 +3,7 @@ object fMainForm: TfMainForm
   Top = 341
   Width = 638
   Height = 454
+  Caption = 'ict'
   Color = clWhite
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText

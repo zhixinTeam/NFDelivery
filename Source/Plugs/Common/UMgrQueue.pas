@@ -78,6 +78,8 @@ type
     FDelayQueue : Boolean;     //延时排队(厂内)
     FPoundQueue : Boolean;     //延时排队(厂内依据过皮时间)
     FNetVoice   : Boolean;     //网络播放语音
+    FDaiJudgeTunnel : Boolean; //袋装校验通道是否有效
+    FSanJudgeTunnel : Boolean; //散装校验通道是否有效
   end;
 
   TStockMatchItem = record
@@ -192,6 +194,8 @@ type
     function IsSanQueueClosed: Boolean;
     function IsDelayQueue: Boolean;
     function IsNetPlayVoice: Boolean;
+    function IsDaiJudgeTunnel: Boolean;
+    function IsSanJudgeTunnel: Boolean;
     //队列参数
     procedure RefreshParam;
     procedure RefreshTrucks(const nLoadLine: Boolean);
@@ -396,6 +400,34 @@ begin
   try
     FSyncLock.Enter;
     Result := FDBReader.FParam.FNetVoice;
+  finally
+    FSyncLock.Leave;
+  end;
+end;
+
+//Desc: 袋装校验通道
+function TTruckQueueManager.IsDaiJudgeTunnel: Boolean;
+begin
+  Result := False;
+
+  if Assigned(FDBReader) then
+  try
+    FSyncLock.Enter;
+    Result := FDBReader.FParam.FDaiJudgeTunnel;
+  finally
+    FSyncLock.Leave;
+  end;
+end;
+
+//Desc: 散装校验通道
+function TTruckQueueManager.IsSanJudgeTunnel: Boolean;
+begin
+  Result := False;
+
+  if Assigned(FDBReader) then
+  try
+    FSyncLock.Enter;
+    Result := FDBReader.FParam.FSanJudgeTunnel;
   finally
     FSyncLock.Leave;
   end;
@@ -686,6 +718,9 @@ begin
     FDelayQueue := False;
 
     FNetVoice   := False;
+
+    FDaiJudgeTunnel := False;
+    FSanJudgeTunnel := False;
   end;
 
   FWaiter := TWaitObject.Create;
@@ -1042,6 +1077,14 @@ begin
       if CompareText(Fields[1].AsString, sFlag_NetPlayVoice) = 0 then
         FParam.FNetVoice := Fields[0].AsString = sFlag_Yes;
       //NetVoice
+
+      if CompareText(Fields[1].AsString, sFlag_DaiJudgeTunnel) = 0 then
+        FParam.FDaiJudgeTunnel := Fields[0].AsString = sFlag_Yes;
+      //xxxxx
+
+      if CompareText(Fields[1].AsString, sFlag_SanJudgeTunnel) = 0 then
+        FParam.FSanJudgeTunnel := Fields[0].AsString = sFlag_Yes;
+      //xxxxx
       Next;
     end;
   end;

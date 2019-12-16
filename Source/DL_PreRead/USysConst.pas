@@ -514,6 +514,8 @@ begin
         nStr := FormatFloat('00000' , nDai);
         Result := Result + StringOfChar('0' , 5 - Length(nStr)) + nStr;
 
+        Result := Result + nBills[nIdx].FStockName;
+
         Inc(nHas);
       end;
     end;

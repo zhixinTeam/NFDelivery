@@ -310,8 +310,9 @@ end;
 procedure TfFrameSaleCard.BtnSaveClick(Sender: TObject);
 var nMsg, nStr, nCard, nHint: string;
     nIdx, nInt: Integer;
-    nRet, nPrint: Boolean;
+    nRet, nPrint, nForce: Boolean;
     nTruck: string;
+    nHzValue: Double;
 begin
   nInt := 0;
   BtnSave.Visible := False;
@@ -337,6 +338,12 @@ begin
         if IFHasBill(nTruck) then
         begin
           ShowMsg('车辆存在未完成的提货单,无法开单,请联系管理员',sHint);
+          Exit;
+        end;
+        nHzValue := GetTruckSanMaxLadeValue(nTruck, nForce);
+        if nForce and (nHzValue <= 0) then
+        begin
+          ShowMsg('核载量' + FloatToStr(nHzValue) + '未维护,无法开单,请联系管理员',sHint);
           Exit;
         end;
       end
@@ -445,7 +452,12 @@ begin
         Values['Truck'] := FSaleOrderItems[nIdx].FTruck;
         Values['Lading'] := sFlag_TiHuo;
         Values['IsVIP'] := GetTransType(FSaleOrderItems[nIdx].FTransType);
+        {$IFDEF AICMPackFromDict}
+        Values['Pack'] := GetStockPackStyleEx(FSaleOrderItems[nIdx].FStockID,
+                                              FSaleOrderItems[nIdx].FStockBrand);
+        {$ELSE}
         Values['Pack'] := GetStockPackStyle(FSaleOrderItems[nIdx].FStockID);
+        {$ENDIF}
         Values['BuDan'] := sFlag_No;
         Values['CusID'] := FSaleOrderItems[nIdx].FCusID;
         Values['CusName'] := FSaleOrderItems[nIdx].FCusName;

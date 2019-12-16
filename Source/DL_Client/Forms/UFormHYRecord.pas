@@ -115,6 +115,16 @@ type
     cxTextEdit19: TcxTextEdit;
     Label28: TLabel;
     cxTextEdit27: TcxTextEdit;
+    Label1: TLabel;
+    cxTextEdit1: TcxTextEdit;
+    Label2: TLabel;
+    cxTextEdit2: TcxTextEdit;
+    Label3: TLabel;
+    cxTextEdit3: TcxTextEdit;
+    Label4: TLabel;
+    cxTextEdit4: TcxTextEdit;
+    Label5: TLabel;
+    cxTextEdit5: TcxTextEdit;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditIDPropertiesButtonClick(Sender: TObject;

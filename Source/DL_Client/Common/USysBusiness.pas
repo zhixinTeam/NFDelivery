@@ -301,7 +301,7 @@ function DealManualEvent(const nEID, nResult: string; nMemo: string=''): Boolean
 //处理待处理事项
 
 
-function GetTruckEmptyValue(nTruck, nType: string): Double;
+function GetTruckEmptyValue(nTruck, nType, nStockNo: string): Double;
 //车辆有效皮重
 function GetStockTruckSort(nID: string=''): string;
 //车辆排队序列
@@ -342,6 +342,8 @@ function GetTruckHisMValueMax(const nTruck: string): Double;
 //获取车辆历史最大毛重
 function GetMaxMValue(const nTruck: string): Double;
 //获取毛重限值
+function GetMaxMValueTotal: Double;
+//获取毛重限值总控制
 function SyncSaleDetail(const nStr: string): Boolean;
 //同步提货单
 function SyncPoundDetail(const nStr: string): Boolean;
@@ -366,6 +368,7 @@ function FreeCapture(nLogin: Integer): Boolean;
 //释放抓拍
 function GetSanMaxLadeValue: Double;
 //散装最大开单量限制
+function GetTruckSanMaxLadeValue(const nTruck: string): Double;
 function AutoGetSanHDOrder(nCusID,nStockID,nTruck:string;
                            nHDValue: Double; var nOrderStr: string): Boolean;
 //散装自动获取合单订单
@@ -378,6 +381,8 @@ function SaveTruckPrePicture(const nTruck: string;const nTunnel: PPTTunnelItem;
 //保存nTruck的预制皮重照片
 function SaveSnapStatus(const nBill: TLadingBillItem; nStatus: string): Boolean;
 function VipTruckForceLine(const nVip,nStockNo,nLID: string): Boolean;
+function GetTruckTypeXzValue(const nTruck: string; var nType: string): Double;
+//获取车轴限值
 implementation
 
 //Desc: 记录日志
@@ -1787,8 +1792,9 @@ begin
   {$ELSE}
   nStr := 'Select * From %s b ' +
           '  Left Join %s p on b.L_ID=p.P_Bill ' +
+          '  Left Join %s t on b.L_Truck=t.t_truck ' +
           'Where L_ID In(%s)';
-  nStr := Format(nStr, [sTable_Bill, sTable_PoundLog, nBill]);
+  nStr := Format(nStr, [sTable_Bill, sTable_PoundLog, sTable_Truck, nBill]);
   {$ENDIF}
 
   if FDM.QueryTemp(nStr).RecordCount < 1 then
@@ -2645,8 +2651,8 @@ begin
 end;
 
 //Desc: 车辆有效皮重
-function GetTruckEmptyValue(nTruck, nType: string): Double;
-var nStr: string;
+function GetTruckEmptyValue(nTruck, nType, nStockNo: string): Double;
+var nStr, nBegDate: string;
 begin
 //  Result := 0;
 //
@@ -2663,7 +2669,63 @@ begin
 //    if Fields[0].AsString <> sFlag_Yes then
 //      Exit;
 //  end;
+  Result := 0;
 
+  {$IFDEF WarnPValue}
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo=''%s'' ';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_WPValueByStock, nStockNo]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount <= 0 then
+      Exit;
+    if Fields[0].AsString <> sFlag_Yes then
+      Exit;
+  end;
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_WarnPBegDate]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+       nBegDate := Fields[0].AsString
+  else nBegDate := '';
+
+  nStr := 'Select T_WarnPValue From %s Where T_Truck=''%s''';
+  nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+       Result := Fields[0].AsFloat
+  else Result := 0;
+
+  if Result <= 0 then
+  begin
+    if nBegDate <> '' then
+    begin
+      nStr := 'Select TOP 1 L_PValue From %s Where L_Truck=''%s'' and L_PValue is not null and L_Date >= ''%s''';
+      nStr := Format(nStr, [sTable_Bill, nTruck, nBegDate]);
+    end
+    else
+    begin
+      nStr := 'Select TOP 1 L_PValue From %s Where L_Truck=''%s'' and L_PValue is not null';
+      nStr := Format(nStr, [sTable_Bill, nTruck]);
+    end;
+
+    with FDM.QueryTemp(nStr) do
+    if RecordCount > 0 then
+         Result := Fields[0].AsFloat
+    else Result := 0;
+
+    if Result > 0 then
+    begin
+      nStr := 'Update %s Set T_WarnPValue=%.2f ' +
+              'Where T_Truck=''%s''';
+      nStr := Format(nStr, [sTable_Truck, Result, nTruck]);
+      FDM.ExecuteSQL(nStr);
+    end;
+  end;
+  {$ELSE}
   nStr := 'Select T_PValue From %s Where T_Truck=''%s''';
   nStr := Format(nStr, [sTable_Truck, nTruck]);
 
@@ -2671,6 +2733,7 @@ begin
   if RecordCount > 0 then
        Result := Fields[0].AsFloat
   else Result := 0;
+  {$ENDIF}
 end;
 
 //Desc: 读取栈台分组列表到nList中,包含附加数据
@@ -3003,6 +3066,7 @@ begin
 
 //  nStr := FDM.SqlTemp.FieldByName('P_Stock').AsString;
 //  nStr := GetReportFileByStock(nStr, nBrand);
+  WriteLog('报表文件路径:' + nStr);
 
   if (nStr = '') or (not FDR.LoadReportFile(nStr)) then
   begin
@@ -3477,7 +3541,7 @@ end;
 function VerifySnapTruck(const nReader: string; nBill: TLadingBillItem;
                          var nMsg, nPos: string): Boolean;
 var nStr, nDept: string;
-    nNeedManu, nUpdate, nST, nSuccess, nSaveALL: Boolean;
+    nNeedManu, nUpdate, nST, nSuccess, nSaveALL, nStrict: Boolean;
     nSnapTruck, nTruck, nEvent, nPicName: string;
     nLen: Integer;
 begin
@@ -3491,6 +3555,7 @@ begin
   nSuccess := False;
   nSaveALL := False;
   nTruck := nBill.Ftruck;
+  nStrict := False;
 
   nPos := ReadPoundReaderInfo(nReader,nDept);
 
@@ -3525,7 +3590,7 @@ begin
     Exit;
   end;
 
-  nStr := 'Select D_Value,D_Index,D_ParamB From %s Where D_Name=''%s'' and D_Memo=''%s''';
+  nStr := 'Select D_Value,D_Index,D_ParamB,D_ParamC From %s Where D_Name=''%s'' and D_Memo=''%s''';
   nStr := Format(nStr, [sTable_SysDict, sFlag_TruckInNeedManu,nPos]);
   //xxxxx
 
@@ -3536,6 +3601,7 @@ begin
       nNeedManu := FieldByName('D_Value').AsString = sFlag_Yes;
       nLen := FieldByName('D_Index').AsInteger;
       nSaveALL := FieldByName('D_ParamB').AsString = sFlag_Yes;
+      nStrict  := FieldByName('D_ParamC').AsString = sFlag_Yes;
       if nNeedManu then
       begin
         nStr := '读卡器[ %s ]绑定岗位[ %s ]干预规则:人工干预已启用.';
@@ -3562,10 +3628,18 @@ begin
 
   if not nNeedManu then//不干预 校验识别记录并保存用以统计失败率
   begin
-    nStr := 'Select * From %s order by R_ID desc ';
-    nStr := Format(nStr, [sTable_SnapTruck]);
-    //xxxxx
-
+    if nStrict then
+    begin
+      nStr := 'Select * From %s Where S_ID=''%s'' order by R_ID desc ';
+      nStr := Format(nStr, [sTable_SnapTruck, nPos]);
+      //xxxxx
+    end
+    else
+    begin
+      nStr := 'Select * From %s order by R_ID desc ';
+      nStr := Format(nStr, [sTable_SnapTruck]);
+      //xxxxx
+    end;
     with FDM.QueryTemp(nStr) do
     begin
       if RecordCount < 1 then
@@ -3685,9 +3759,18 @@ begin
     Exit;
   end;
 
-  nStr := 'Select * From %s order by R_ID desc ';
-  nStr := Format(nStr, [sTable_SnapTruck]);
-  //xxxxx
+  if nStrict then
+  begin
+    nStr := 'Select * From %s Where S_ID=''%s'' order by R_ID desc ';
+    nStr := Format(nStr, [sTable_SnapTruck, nPos]);
+    //xxxxx
+  end
+  else
+  begin
+    nStr := 'Select * From %s order by R_ID desc ';
+    nStr := Format(nStr, [sTable_SnapTruck]);
+    //xxxxx
+  end;
 
   with FDM.QueryTemp(nStr) do
   begin
@@ -4048,6 +4131,21 @@ begin
 
   nStr := 'Select T_MValueMax From %s Where T_Truck=''%s''';
   nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+    Result := Fields[0].AsFloat;
+  //xxxxx
+end;
+
+//Desc: 获取毛重限值总控制
+function GetMaxMValueTotal: Double;
+var nStr: string;
+begin
+  Result := 0;
+
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_MaxMValueTotal]);
 
   with FDM.QueryTemp(nStr) do
   if RecordCount > 0 then
@@ -4473,6 +4571,39 @@ begin
   end;
 end;
 
+//Date: 2019/5/14
+//Desc: 散装最大开单量限制
+function GetTruckSanMaxLadeValue(const nTruck: string): Double;
+var nSQL: string;
+begin
+  Result := 0;
+
+  nSQL := 'Select D_Value From %s Where D_Name=''%s''';
+  nSQL := Format(nSQL, [sTable_SysDict, sFlag_ForceTruckSanMaxLade]);
+  with FDM.QueryTemp(nSQL) do
+  begin
+    if RecordCount <= 0 then
+    begin
+      Exit;
+    end;
+
+    if Fields[0].AsString <> sFlag_Yes then
+      Exit;
+  end;
+
+  if Trim(nTruck) = '' then
+  begin
+    Exit;
+  end;
+
+  nSQL := 'Select top 1 T_HZValueMax From %s Where T_Truck=''%s'' ';
+  nSQL := Format(nSQL, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nSQL) do
+  if RecordCount > 0 then
+    Result := Fields[0].AsFloat;
+end;
+
 function AutoGetSanHDOrder(nCusID,nStockID,nTruck:string;
                            nHDValue: Double; var nOrderStr: string): Boolean;
 var nList: TStrings;
@@ -4488,7 +4619,9 @@ begin
   try
     nList.Clear;
 
-    nList.Values['NoDate'] := sFlag_Yes;
+    nList.Values['NoDate'] := '';
+    nList.Values['DateStart'] := FormatDateTime('YYYY-MM-DD',IncDay(Now, -10));
+    nList.Values['DateEnd'] := FormatDateTime('YYYY-MM-DD',IncDay(Now, 1));
     nList.Values['CustomerID'] := nCusID;
     nList.Values['StockNo'] := nStockID;
 
@@ -4782,6 +4915,39 @@ begin
     nStr := format(nStr,[sTable_ZTTrucks, nLine, nLID]);
     WriteLog('VIP单据更新通道SQL:' + nStr);
     FDM.ExecuteSQL(nStr);
+  end;
+end;
+
+//Desc: 获取车轴限值
+function GetTruckTypeXzValue(const nTruck: string; var nType: string): Double;
+var nStr: string;
+begin
+  Result := 0;
+  nType := '';
+
+  nStr := 'Select T_CzType From %s Where T_Truck=''%s''';
+  nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+    nType := Fields[0].AsString;
+  //xxxxx
+
+  WriteLog('车辆' + nTruck + '车轴类型:' + nType);
+
+  if nType = '' then
+  begin
+    Exit;
+  end;
+
+  nStr := 'Select D_ParamA From %s Where D_Name=''%s'' and D_Value=''%s'' ';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_TruckType, nType]);
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      Result := Fields[0].AsFloat;
+    end;
   end;
 end;
 

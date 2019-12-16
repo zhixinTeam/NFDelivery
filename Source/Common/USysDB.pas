@@ -168,6 +168,7 @@ ResourceString
   sFlag_ManualE       = 'E';                         //车牌识别
   sFlag_ManualF       = 'F';                         //喷码发送
   sFlag_ManualP       = 'P';                         //自动预制皮重
+  sFlag_ManualH       = 'H';                         //核载量
 
   sFlag_SysParam      = 'SysParam';                  //系统参数
   sFlag_EnableBakdb   = 'Uses_BackDB';               //备用库
@@ -183,6 +184,8 @@ ResourceString
   sFlag_ShadowWeight  = 'ShadowWeight';              //影子重量
   sFlag_SanMaxLadeValue= 'SanMaxLadeValue';          //散装最大开单量限制
   sFlag_OutByPreYs    = 'TruckOutByPreYs';           //验收后自动出厂物料
+  sFlag_ForceTruckSanMaxLade= 'ForceTruckSanMaxLade';//车辆散装最大开单量限制
+  sFlag_AICMPurMinValue= 'AICMPurMinValue';          //自助机采购订单最小剩余量
 
   sFlag_AICMPurStock  = 'AICMPurStock';              //自助机允许办卡物料
   sFlag_PrintPur      = 'PrintStockPur';             //需打印品种(采购)
@@ -268,6 +271,8 @@ ResourceString
   sFlag_TransType     = 'TransType';                  //运输方式
   sFlag_DefaultPValue = 'DefaultPValue';             //默认皮重
   sFlag_PValueWuCha   = 'PValueWuCha';               //皮重浮动范围
+  sFlag_DaiJudgeTunnel= 'DaiJudgeTunnel';            //袋装禁用队列
+  sFlag_SanJudgeTunnel= 'SanJudgeTunnel';            //散装禁用队列
 
   sFlag_BusGroup      = 'BusFunction';               //业务编码组
   sFlag_BillNo        = 'Bus_Bill';                  //交货单号
@@ -311,6 +316,13 @@ ResourceString
   sFlag_ReportFileMap = 'ReportFileMap';             //化验单模板匹配
   sFlag_NoPrintHeGe   = 'NoPrintHeGeStock';          //无需打印合格证物料
   sFlag_VIPForceLine  = 'VIPForceLine';              //VIP强制定道
+  sFlag_MaxMValueTotal= 'MaxMValueTotal';            //毛重上限总控制
+  sFlag_WarnPBegDate  = 'WarnPBegDate';              //预警皮重取值日期
+  sFlag_AICMBillPCount= 'AICMBillPCount';            //自助机补打小票次数
+  sFlag_TTControl     = 'TruckTypeControl';          //车轴总控制
+  sFlag_TruckType     = 'TruckType';                 //车轴
+  sFlag_BrandBindPack = 'BrandBindPack';             //自助机同品种不同品牌包装类型
+  sFlag_WPValueByStock= 'WarnPValueBYStock';         //根据物料校验皮重
 
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
@@ -367,6 +379,8 @@ ResourceString
   sTable_PoundStatBak = 'Sys_PoundStatBak';          //火车衡作废数据
   sTable_PoundStatIMP = 'Sys_PoundStatIMP';          //火车衡过磅数据
   sTable_PoundStatIMPBak = 'Sys_PoundStatIMPBak';    //火车衡作废数据
+
+  sTable_PoundLogKs   = 'Sys_PoundLogKS';            //矿山过磅数据
 
   sTable_Provider     = 'P_Provider';                //客户表
   sTable_Materails    = 'P_Materails';               //物料表
@@ -1771,6 +1785,8 @@ begin
   AddSysTableItem(sTable_PoundStatBak, sSQL_NewPoundLog);
   AddSysTableItem(sTable_PoundStatIMP, sSQL_NewPoundLog);
   AddSysTableItem(sTable_PoundStatIMPBak, sSQL_NewPoundLog);
+
+  AddSysTableItem(sTable_PoundLogKs, sSQL_NewPoundLog);
 
   AddSysTableItem(sTable_Provider, ssql_NewProvider);
   AddSysTableItem(sTable_Materails, sSQL_NewMaterails);

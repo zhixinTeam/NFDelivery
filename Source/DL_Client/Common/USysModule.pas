@@ -54,10 +54,12 @@ uses
   //码头抓斗秤
   UFormSnapView, UFormGetBatCode, UFormPTruckControl, UFramePTruckControl,
   //抓拍图片展示
+  UFrameStockMatch,UFormStockMatch,
   UFramePTimeControl, UFormPTimeControl,
   UFramePoundControl, UFormPoundControl,
   UFrameLineKwControl, UFormLineKwControl,
-  UFormAddWater,
+  UFormAddWater, UFramePoundQueryKs,
+  UFrameTruckType, UFormTruckType,
   UFrameBillHaulBack, UFormBillHaulBack, UFormGetPoundHis
   {$IFDEF PrintChinese},
   UFrameChineseBase, UFormChineseBase, UFrameChineseDict ,UFormChineseDict,

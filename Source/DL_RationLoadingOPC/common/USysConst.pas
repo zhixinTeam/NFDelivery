@@ -8,7 +8,7 @@ unit USysConst;
 interface
 
 uses
-  SysUtils, Classes, ComCtrls;
+  SysUtils, Classes, ComCtrls, Messages;
 
 const
   cSBar_Date            = 0;                         //日期面板索引
@@ -18,7 +18,7 @@ const
   
   cShouJuIDLength       = 7;                         //财务收据标识长度
   cItemIconIndex        = 11;                        //默认的提货单列表图标
-
+  WM_HAVE_CARD                = WM_USER + 1 ;   //刷卡
 const
   {*Frame ID*}
   cFI_FrameSysLog       = $0001;                     //系统日志

@@ -332,7 +332,8 @@ begin
       EditWValue.Text := Format('%.2f', [FValue - nVal]);
     end else
     begin
-      EditJValue.Text := '0.00';
+      nVal := FMData.FValue - FPData.FValue;
+      EditJValue.Text := Format('%.2f', [nVal]);
       EditWValue.Text := '0.00';
     end;
 

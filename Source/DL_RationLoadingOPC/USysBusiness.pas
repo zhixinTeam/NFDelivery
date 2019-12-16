@@ -172,6 +172,8 @@ function SaveDoneValue(const nID: string; nValue, nUseTime: Double): Boolean;
 function ReadTruckHisMValueMax(const nTruck: string): Double;
 function GetSanPreKD: Double;
 function GetSanMaxLadeValue: Double;
+function GetTruckMaxMValue(const nTruck: string): Double;
+function GetTruckSanMaxLadeValue(const nTruck: string): Double;
 //------------------------------------------------------------------------------
 
 
@@ -1298,9 +1300,22 @@ end;
 
 function SaveDoneValue(const nID: string; nValue, nUseTime: Double): Boolean;
 var nSQL: string;
+    nHasDone: Double;
 begin
   Result := False;
   if nID = '' then Exit;
+
+  nHasDone := 0;
+
+  nSQL := 'Select L_HasDone From %s Where L_ID=''%s'' ';
+  nSQL := Format(nSQL, [sTable_Bill, nID]);
+
+  with FDM.QueryTemp(nSQL) do
+  if RecordCount > 0 then
+    nHasDone := Fields[0].AsFloat;
+
+  if nHasDone >= nValue then
+    Exit;
 
   nSQL := 'Update %s Set L_HasDone = %.2f, L_UseTime = %.2f Where L_ID=''%s'' ';
   nSQL := Format(nSQL, [sTable_Bill, nValue, nUseTime, nID]);
@@ -1341,6 +1356,57 @@ begin
       Result := Fields[0].AsFloat;
     end;
   end;
+end;
+
+//Date: 2019/11/12
+//Desc: 车辆限载量
+function GetTruckMaxMValue(const nTruck: string): Double;
+var nSQL: string;
+begin
+  Result := 0;
+
+  nSQL := 'Select T_MValueMax From %s Where T_Truck=''%s''';
+  nSQL := Format(nSQL, [sTable_Truck, nTruck]);
+  with FDM.QueryTemp(nSQL) do
+  begin
+    if RecordCount > 0 then
+    begin
+      Result := Fields[0].AsFloat;
+    end;
+  end;
+end;
+
+//Date: 2019/5/14
+//Desc: 散装最大开单量限制
+function GetTruckSanMaxLadeValue(const nTruck: string): Double;
+var nSQL: string;
+begin
+  Result := 0;
+
+  nSQL := 'Select D_Value From %s Where D_Name=''%s''';
+  nSQL := Format(nSQL, [sTable_SysDict, sFlag_ForceTruckSanMaxLade]);
+  with FDM.QueryTemp(nSQL) do
+  begin
+    if RecordCount <= 0 then
+    begin
+      Exit;
+    end;
+
+    if Fields[0].AsString <> sFlag_Yes then
+      Exit;
+  end;
+
+  if Trim(nTruck) = '' then
+  begin
+    Exit;
+  end;
+
+  nSQL := 'Select top 1 T_HZValueMax From %s Where T_Truck=''%s'' ';
+  nSQL := Format(nSQL, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nSQL) do
+  if RecordCount > 0 then
+    Result := Fields[0].AsFloat;
 end;
 
 end.

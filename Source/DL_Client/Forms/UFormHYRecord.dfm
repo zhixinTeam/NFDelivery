@@ -1,9 +1,9 @@
 object fFormHYRecord: TfFormHYRecord
-  Left = 426
-  Top = 65
+  Left = 429
+  Top = 0
   BorderIcons = [biSystemMenu, biMinimize]
   BorderStyle = bsSingle
-  ClientHeight = 586
+  ClientHeight = 616
   ClientWidth = 470
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -22,7 +22,7 @@ object fFormHYRecord: TfFormHYRecord
     Left = 0
     Top = 0
     Width = 470
-    Height = 586
+    Height = 616
     Align = alClient
     TabOrder = 0
     TabStop = False
@@ -31,7 +31,7 @@ object fFormHYRecord: TfFormHYRecord
     LookAndFeel = FDM.dxLayoutWeb1
     object BtnOK: TButton
       Left = 314
-      Top = 552
+      Top = 582
       Width = 70
       Height = 23
       Caption = #20445#23384
@@ -40,7 +40,7 @@ object fFormHYRecord: TfFormHYRecord
     end
     object BtnExit: TButton
       Left = 389
-      Top = 552
+      Top = 582
       Width = 70
       Height = 23
       Caption = #21462#28040
@@ -510,14 +510,14 @@ object fFormHYRecord: TfFormHYRecord
         Caption = #28151#21512#26448#25530#21152#37327'(%)'
         ParentFont = False
         TabOrder = 18
-        Height = 90
+        Height = 208
         Width = 418
         object Label45: TLabel
           Left = 8
           Top = 20
-          Width = 84
+          Width = 78
           Height = 12
-          Caption = #31881#29028#28784'('#29028#30712#30707')'
+          Caption = #31881'    '#29028'   '#28784
         end
         object Label46: TLabel
           Left = 220
@@ -546,6 +546,41 @@ object fFormHYRecord: TfFormHYRecord
           Width = 78
           Height = 12
           Caption = #21161'    '#30952'   '#21058
+        end
+        object Label1: TLabel
+          Left = 220
+          Top = 68
+          Width = 72
+          Height = 12
+          Caption = #29028'   '#30712'   '#30707
+        end
+        object Label2: TLabel
+          Left = 8
+          Top = 92
+          Width = 78
+          Height = 12
+          Caption = #20854'         '#23427
+        end
+        object Label3: TLabel
+          Left = 220
+          Top = 92
+          Width = 72
+          Height = 12
+          Caption = #29123' '#29028' '#28809'  '#28195
+        end
+        object Label4: TLabel
+          Left = 8
+          Top = 117
+          Width = 78
+          Height = 12
+          Caption = #36873'  '#30719' '#31881'  '#26411
+        end
+        object Label5: TLabel
+          Left = 220
+          Top = 117
+          Width = 72
+          Height = 12
+          Caption = #30707'   '#28784'   '#28195
         end
         object EditFMH: TcxTextEdit
           Left = 96
@@ -585,6 +620,46 @@ object fFormHYRecord: TfFormHYRecord
           Hint = 'E.R_ZMJ'
           ParentFont = False
           TabOrder = 4
+          Width = 92
+        end
+        object cxTextEdit1: TcxTextEdit
+          Left = 296
+          Top = 64
+          Hint = 'E.R_MGS'
+          ParentFont = False
+          TabOrder = 5
+          Width = 92
+        end
+        object cxTextEdit2: TcxTextEdit
+          Left = 96
+          Top = 88
+          Hint = 'E.R_HHCOther'
+          ParentFont = False
+          TabOrder = 6
+          Width = 92
+        end
+        object cxTextEdit3: TcxTextEdit
+          Left = 297
+          Top = 88
+          Hint = 'E.R_MZ'
+          ParentFont = False
+          TabOrder = 7
+          Width = 92
+        end
+        object cxTextEdit4: TcxTextEdit
+          Left = 96
+          Top = 112
+          Hint = 'E.R_XKFM'
+          ParentFont = False
+          TabOrder = 8
+          Width = 92
+        end
+        object cxTextEdit5: TcxTextEdit
+          Left = 297
+          Top = 112
+          Hint = 'E.R_SHZ'
+          ParentFont = False
+          TabOrder = 9
           Width = 92
         end
       end

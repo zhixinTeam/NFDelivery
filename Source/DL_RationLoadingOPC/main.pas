@@ -6,13 +6,15 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   Dialogs, StdCtrls, IdBaseComponent, IdComponent, IdTCPConnection,
   IdTCPClient, ExtCtrls, IdContext, IdCustomTCPServer,
-  IdTCPServer, IniFiles, IdGlobal, UMgrSendCardNo;
+  IdTCPServer, IniFiles, IdGlobal, UMgrSendCardNo, dOPCIntf, dOPCComn,
+  dOPCDA, dOPC;
 
 type
   TFormMain = class(TForm)
     IdTCPServer1: TIdTCPServer;
     Memo1: TMemo;
     wPanel: TScrollBox;
+    gOPCServer: TdOPCServer;
     procedure FormShow(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -60,6 +62,7 @@ begin
   ResetPanelPosition;
   Memo1.Clear;
   IdTCPServer1.Active := True;
+  gOPCServer.Active := True;
 end;
 
 procedure TFormMain.LoadPoundItems;
@@ -68,6 +71,10 @@ var nIdx: Integer;
 begin
   with gOPCTunnelManager do
   begin
+    for nIdx:= 0 to Tunnels.Count-1 do
+    begin
+      gOPCServer.OPCGroups.Add('Group' + IntToStr(nIdx));
+    end;
     for nIdx:= 0 to Tunnels.Count-1 do
     begin
       if nIdx > 5 then
@@ -88,11 +95,22 @@ begin
         Name := 'fFrameOPCCtrl' + IntToStr(nIdx);
         Parent := wPanel;
 
-        FrameId := nIdx+1;
+        FrameId := nIdx;
 
         GroupBox1.Caption := nT.FName;
         OPCTunnel := nT;
-
+        if gOPCServer.ServerName = '' then
+          gOPCServer.ServerName := nT.FServer;
+        if gOPCServer.ComputerName = '' then
+          gOPCServer.ComputerName := nT.FComputer;
+        gOPCServer.OPCGroups[nIdx].OPCItems.AddItem(nT.FSetValTag);
+        gOPCServer.OPCGroups[nIdx].OPCItems.AddItem(nT.FImpDataTag);
+        if nT.FStartTag <> '' then
+          gOPCServer.OPCGroups[nIdx].OPCItems.AddItem(nT.FStartTag);
+        if nT.FStopTag <> '' then
+          gOPCServer.OPCGroups[nIdx].OPCItems.AddItem(nT.FStopTag);
+        if nT.FTruckTag <> '' then
+          gOPCServer.OPCGroups[nIdx].OPCItems.AddItem(nT.FTruckTag);
         FSysLoger:= gSysLoger;
       end;
     end;
@@ -152,6 +170,9 @@ begin
   RunSysObject;
 
   IdTCPServer1.DefaultPort := LocalPort;
+  gOPCServer.ServerName := '';
+  gOPCServer.ComputerName := '';
+  gOPCServer.OPCGroups.Clear;
 end;
 
 
@@ -163,6 +184,8 @@ begin
     Action := caNone; Exit;
   end;
   IdTCPServer1.Active := False;
+  gOPCServer.OPCGroups.Clear;
+  gOPCServer.Active := False;
 end;
 
 procedure TFormMain.RunSysObject;
@@ -267,9 +290,9 @@ begin
             end;
             Exit;
           end;
-          EditBill.Text := nCardNo;
           try
-            LoadBillItems(EditBill.Text);
+            FCard := nCardNo;
+            PostMessage(Handle , WM_HAVE_CARD , 0 , 0 ) ;
           except
             on E: Exception do
             begin

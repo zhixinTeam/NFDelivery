@@ -1041,6 +1041,11 @@ begin
       nStr := SF('P_Order', FExtID_1);
       //where
       nSQL := MakeSQLByStr([
+                SF('P_YTime', sField_SQLServer_Now, sfVal),
+                SF('P_YMan', FIn.FBase.FFrom.FUser),
+                SF('P_YSResult', FYSValid),
+                SF('P_YLineName', FSeal),    //保存批次号
+                SF('P_KZComment', FKZComment), //扣杂原因
                 {$IFDEF PrePTruckYs}
                 SF('P_MValue', FMData.FValue, sfVal),
                 {$ENDIF}

@@ -303,6 +303,12 @@ begin
   end;
   {$ENDIF}
 
+  if StrToFloatDef(FPurchaseItem.FMaxMum, 0) < GetAICMPurMinValue then
+  begin
+    ShowMsg('订单剩余量不足,无法开单', sHint);
+    Exit;
+  end;
+
   if not IsPurTruckReady(edt_TruckNo.Text, nHint) then
   begin
     nStr := '车辆[%s]存在未完成的采购单据[%s],无法办卡';

@@ -108,6 +108,8 @@ type
     FOnPound: Boolean;
     //是否为磅上刷卡
     FMaxPoundValue: Double;
+    FWarnPEventDept: string;
+    FTruckInterval: Integer;
     procedure SetUIData(const nReset: Boolean; const nOnlyData: Boolean = False);
     //界面数据
     procedure SetImageStatus(const nImage: TImage; const nOff: Boolean);
@@ -274,6 +276,8 @@ begin
   FEmptyPoundIdleLong := -1;
   FEmptyPoundIdleShort:= -1;
   FMaxPoundValue := 0;
+  FWarnPEventDept := sFlag_DepDaTing;
+  FTruckInterval := 20;
 
   FPoundTunnel := nTunnel;
   SetUIData(True);
@@ -292,6 +296,9 @@ begin
     FEmptyPoundIdleLong := StrToInt64Def(Values['EmptyIdleLong'], 60);
     FEmptyPoundIdleShort:= StrToInt64Def(Values['EmptyIdleShort'], 5);
     FMaxPoundValue:= StrToInt64Def(Values['MaxPoundValue'], 200);
+    if Values['WarnPEventDept'] <> '' then
+    FWarnPEventDept := Values['WarnPEventDept'];
+    FTruckInterval := StrToInt64Def(Values['TruckInterval'], 20);
   end;
 end;
 
@@ -522,10 +529,10 @@ begin
 
   nLast := -1;
   if GetTruckLastTime(nBills[0].FTruck, nLast) and (nLast > 0) and
-     (nLast < FPoundTunnel.FCardInterval) then
+     (nLast < FTruckInterval) then
   begin
     nStr := '车辆[ %s ]需等待 %d 秒后才能过磅';
-    nStr := Format(nStr, [nBills[0].FTruck, FPoundTunnel.FCardInterval - nLast]);
+    nStr := Format(nStr, [nBills[0].FTruck, FTruckInterval - nLast]);
     WriteLog(nStr);
 
     nStr := Format('磅站[ %s.%s ]: ',[FPoundTunnel.FID,
@@ -1183,7 +1190,7 @@ begin
   with FUIData, gSysParam do
   if (FType = sFlag_San) and (FNextStatus = sFlag_TruckBFP) then
   begin
-    nNet := GetTruckEmptyValue(FTruck, FType);
+    nNet := GetTruckEmptyValue(FTruck, FType, FStockNo);
     nVal := FPData.FValue * 1000 - nNet * 1000;
 
     if (nNet > 0) and
@@ -1203,7 +1210,7 @@ begin
         nMemo := Format(nMemo, [FTruck, FPoundTunnel.FID, FPData.FValue, FCard]);
         
         AddManualEventRecord(FID + sFlag_ManualB, FTruck, nHint,
-            sFlag_DepBangFang, sFlag_Solution_YNP, sFlag_DepDaTing, True, nMemo);
+            sFlag_DepBangFang, sFlag_Solution_YNP, FWarnPEventDept, True, nMemo);
         WriteSysLog(nHint);
 
         nHint := '[n1]%s皮重超出预警,请下磅联系开票员处理后再次过磅';
@@ -1248,6 +1255,63 @@ begin
           WriteSysLog(nStr);
 
           nStr := '[n1]%s毛重超出设定限值,请下磅联系开票员处理后再次过磅';
+          nStr := Format(nStr, [FTruck]);
+          PlayVoice(nStr);
+
+          Exit;
+        end;
+      end;
+      {$ENDIF}
+
+      {$IFDEF MValueMaxControlTotal}
+      nNet := GetMaxMValueTotal;
+
+      if (nNet > 0) and (nNet < FUIData.FMData.FValue) then
+      with FUIData do
+      begin
+        nStr := '车辆[ %s ]毛重超出设定毛重限值,详情如下:' + #13#10 +
+                '※.物料名称: [ %s ]' + #13#10 +
+                '※.车辆毛重: %.2f吨' + #13#10 +
+                '※.毛重限值: %.2f吨' + #13#10 +
+                '允许过磅,请选是;禁止过磅,请选否.';
+        nStr := Format(nStr, [FTruck, FStockName, FMData.FValue, nNet]);
+
+        if not VerifyManualEventRecord(FID + sFlag_ManualB, nStr) then
+        begin
+          AddManualEventRecord(FID + sFlag_ManualB, FTruck, nStr,
+              sFlag_DepBangFang, sFlag_Solution_YN, sFlag_DepDaTing, True);
+          WriteSysLog(nStr);
+
+          nStr := '[n1]%s毛重超出设定限值,请下磅联系开票员处理后再次过磅';
+          nStr := Format(nStr, [FTruck]);
+          PlayVoice(nStr);
+
+          Exit;
+        end;
+      end;
+      {$ENDIF}
+
+      {$IFDEF TruckType}
+      nNet := GetTruckTypeXzValue(FUIData.FTruck, nHint);
+
+      if (nNet > 0) and (nNet < FUIData.FMData.FValue) then
+      with FUIData do
+      begin
+        nStr := '车辆[ %s ]毛重超出设定车轴限值,详情如下:' + #13#10 +
+                '※.物料名称: [ %s ]' + #13#10 +
+                '※.车轴类型: [ %s ]' + #13#10 +
+                '※.车辆毛重: %.2f吨' + #13#10 +
+                '※.毛重限值: %.2f吨' + #13#10 +
+                '允许过磅,请选是;禁止过磅,请选否.';
+        nStr := Format(nStr, [FTruck, FStockName, nHint, FMData.FValue, nNet]);
+
+        if not VerifyManualEventRecord(FID + sFlag_ManualB, nStr) then
+        begin
+          AddManualEventRecord(FID + sFlag_ManualB, FTruck, nStr,
+              sFlag_DepBangFang, sFlag_Solution_YN, sFlag_DepDaTing, True);
+          WriteSysLog(nStr);
+
+          nStr := '[n1]%s毛重超出设定车轴限值,请下磅联系开票员处理后再次过磅';
           nStr := Format(nStr, [FTruck]);
           PlayVoice(nStr);
 
@@ -1322,6 +1386,34 @@ begin
           Exit;
         end;
 
+        {$IFDEF TruckHZValueMax}
+        if FType = sFlag_San then
+        begin
+          nValSanMax := GetTruckSanMaxLadeValue(FTruck);
+          if (nValSanMax > 0) and FloatRelation(nNet, nValSanMax, rtGreater) then
+          begin
+            nStr := '车辆[ %s ]净重超出设定核载量,详情如下:' + #13#10 +
+                    '※.物料名称: [ %s ]' + #13#10 +
+                    '※.车辆净重: %.2f吨' + #13#10 +
+                    '※.核载量: %.2f吨' + #13#10 +
+                    '允许过磅,请选是;禁止过磅,请选否.';
+            nStr := Format(nStr, [FTruck, FStockName, nNet, nValSanMax]);
+
+            if not VerifyManualEventRecord(FID + sFlag_ManualH, nStr, sFlag_Yes, False) then
+            begin
+              AddManualEventRecord(FID + sFlag_ManualH, FTruck, nStr,
+                  sFlag_DepBangFang, sFlag_Solution_YN, FWarnPEventDept, True);
+              WriteSysLog(nStr);
+
+              nStr := '车辆 %s 净重 %.2f 吨,散装核载量设定 %.2f 吨超出 %.2f 吨,请下磅联系开票员处理后再次过磅';
+              nStr := Format(nStr, [FTruck, nNet, nValSanMax, nNet - nValSanMax]);
+              PlayVoice(nStr);
+
+              Exit;
+            end;
+          end;
+        end;
+        {$ELSE}
         if FType = sFlag_San then
         begin
           nValSanMax := GetSanMaxLadeValue;
@@ -1337,6 +1429,7 @@ begin
             Exit;
           end;
         end;
+        {$ENDIF}
 
         {$IFNDEF CZNF}
         if (FType = sFlag_San) And (FCardUse = sFlag_Sale) then
@@ -1455,7 +1548,7 @@ begin
   with FUIData, gSysParam do
   if nVal > 0 then
   begin
-    nNet := GetTruckEmptyValue(FTruck, FType);
+    nNet := GetTruckEmptyValue(FTruck, FType, FStockNo);
     nVal := nVal * 1000 - nNet * 1000;
 
     if (nNet > 0) and
@@ -1600,7 +1693,7 @@ begin
   with FUIData, gSysParam do
   if (FPData.FValue > 0) and (FMData.FValue > 0) then
   begin
-    nNet := GetTruckEmptyValue(FTruck, FType);
+    nNet := GetTruckEmptyValue(FTruck, FType, FStockNo);
     nVal := FPData.FValue * 1000 - nNet * 1000;
 
     if (nNet > 0) and
@@ -1976,7 +2069,7 @@ procedure TfFrameAutoPoundItem.LEDDisplay(const nStrtext: string);
 var nIdx: Integer;
 begin
   WriteSysLog(Format('LEDDisplay:%s.%s', [FPoundTunnel.FID, nStrtext]));
-  for nIdx := 1 to 1 do
+  for nIdx := 1 to 3 do
   begin
     {$IFDEF MITTruckProber}
     ProberShowTxt(FPoundTunnel.FID, nStrtext);

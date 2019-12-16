@@ -46,4 +46,23 @@ object FormMain: TFormMain
     Left = 40
     Top = 8
   end
+  object gOPCServer: TdOPCServer
+    Active = False
+    ClientName = 'dOPC DA Client'
+    KeepAlive = 0
+    Version = '4.00'
+    Protocol = coCOM
+    Params.Strings = (
+      'xml-user='
+      'xml-pass='
+      'xml-proxy=')
+    OPCGroups = <>
+    OPCGroupDefault.IsActive = True
+    OPCGroupDefault.UpdateRate = 1000
+    OPCGroupDefault.LocaleId = 0
+    OPCGroupDefault.TimeBias = 0
+    ConnectDelay = 300
+    Left = 80
+    Top = 8
+  end
 end

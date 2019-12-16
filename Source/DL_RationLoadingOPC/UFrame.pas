@@ -11,7 +11,7 @@ uses
   ExtCtrls, IdTCPServer, IdContext, IdGlobal, UBusinessConst, ULibFun,
   Menus, cxButtons, UMgrSendCardNo, USysLoger, cxCurrencyEdit, dxSkinsCore,
   dxSkinsDefaultPainters, cxSpinEdit, DateUtils, dOPCIntf, dOPCComn,
-  dOPCDA, dOPC, Activex;
+  dOPCDA, dOPC, Activex, StrUtils, USysConst;
 
 type
   TFrame1 = class(TFrame)
@@ -61,7 +61,6 @@ type
     FCardUsed: string;            //卡片类型
     FUIData: TLadingBillItem;     //界面数据
     FOPCTunnel: PPTOPCItem;       //OPC通道
-    FCard: string;
     FHasDone, FSetValue, FUseTime: Double;
     procedure SetUIData(const nReset: Boolean; const nOnlyData: Boolean = False);
     //设置界面数据
@@ -69,10 +68,12 @@ type
     procedure WriteLog(const nEvent: string);
     procedure OnDatachange(Sender: TObject; ItemList: TdOPCItemList);
     procedure SyncReadValues(const FromCache: boolean);
+    procedure Get_Card_Message(var Message: TMessage); message WM_HAVE_CARD ;
   public
     FrameId:Integer;              //PLC通道
     FIsBusy: Boolean;             //占用标识
     FSysLoger : TSysLoger;
+    FCard: string;
     property OPCTunnel: PPTOPCItem read FOPCTunnel write SetTunnel;
     procedure LoadBillItems(const nCard: string);
     //读取交货单
@@ -84,20 +85,25 @@ implementation
 {$R *.dfm}
 
 uses
-   USysBusiness, USysDB, USysConst, UDataModule, UFormInputbox, UFormCtrl;
+   USysBusiness, USysDB, UDataModule, UFormInputbox, UFormCtrl, main;
+
+procedure TFrame1.Get_Card_Message(var Message: TMessage);
+Begin
+  EditBill.Text := FCard;
+  LoadBillItems(EditBill.Text);
+End ;
 
 //Parm: 磁卡或交货单号
 //Desc: 读取nCard对应的交货单
 procedure TFrame1.LoadBillItems(const nCard: string);
 var
-  nStr: string;
+  nStr,nTruck: string;
   nBills: TLadingBillItems;
   nRet,nHisMValueControl: Boolean;
-  nOPCServer: TdOPCServer;
-  nGroup: TdOPCGroup;
   nIdx: Integer;
   nVal, nPreKD: Double;
   nEvent,nEID:string;
+  nItem : TdOPCItem;
 begin
   if DelayTimer.Enabled then
   begin
@@ -141,13 +147,38 @@ begin
 
   FUIData := nBills[0];
 
-  FHasDone := ReadDoneValue(FUIData.FID, FUseTime);
+  if Assigned(FOPCTunnel.FOptions) And
+       (UpperCase(FOPCTunnel.FOptions.Values['NoHasDone']) = sFlag_Yes) then
+    FHasDone := 0
+  else
+    FHasDone := ReadDoneValue(FUIData.FID, FUseTime);
 
   FSetValue := FUIData.FValue;
+
+  nHisMValueControl := False;
+  if Assigned(FOPCTunnel.FOptions) And
+       (UpperCase(FOPCTunnel.FOptions.Values['TruckHzValueControl']) = sFlag_Yes) then
+    nHisMValueControl := True;
+
+  if nHisMValueControl then
+  begin
+    nVal := GetTruckSanMaxLadeValue(FUIData.FTruck);
+    if (nVal > 0) and (FUIData.FValue > nVal) then//开单量大于系统设定最大量
+    begin
+      EditMaxValue.Text := Format('%.2f', [nVal]);
+      FSetValue := nVal;
+      nEvent := '车辆[ %s ]交货单[ %s ],' +
+                '开单量[ %.2f ]大于核载量[ %.2f ],调整后开单量[ %.2f ].';
+      nEvent := Format(nEvent, [FUIData.FTruck, FUIData.FID,
+                                FUIData.FValue, nVal, nVal]);
+      WriteLog(nEvent);
+    end;
+  end;
 
   nVal := GetSanMaxLadeValue;
   if (nVal > 0) and (FUIData.FValue > nVal) then//开单量大于系统设定最大量
   begin
+    EditMaxValue.Text := Format('%.2f', [nVal]);
     FSetValue := nVal;
     nEvent := '车辆[ %s ]交货单[ %s ],' +
               '开单量[ %.2f ]大于系统设定最大量[ %.2f ],调整后开单量[ %.2f ].';
@@ -203,13 +234,12 @@ begin
         end;
       end;
     end;
-
   end
   else
   begin
     if (FUIData.FValue - nPreKD) > 0 then
     begin
-      FSetValue := FUIData.FValue - nPreKD;
+      FSetValue := FSetValue - nPreKD;
 
       nEvent := '车辆[ %s ]交货单[ %s ],' +
                 '开单量[ %.2f ],预扣量[ %.2f ],调整后装车量[ %.2f ].';
@@ -231,31 +261,60 @@ begin
   end;
 
   EditValue.Text := Format('%.2f', [FHasDone]);
-
   SetUIData(False);
 
-  CoInitialize(nil);
-  nOPCServer := TdOPCServer.Create(nil);
   try
-    nOPCServer.ServerName  := FOPCTunnel.FServer;
-    nOPCServer.ComputerName:= FOPCTunnel.FComputer;
+    FormMain.gOPCServer.OPCGroups[FrameId].OPCItems[0].WriteSync(FSetValue - FHasDone);
 
-    nGroup := nOPCServer.OPCGroups.Add('Group');         // make a new group
-    nGroup.IsActive := False;
+    WriteLog(FOPCTunnel.FID +'发送提货量:'+ FloatToStr(FUIData.FValue - FHasDone));
 
-    nGroup.OPCItems.AddItem(FOPCTunnel.FSetValTag);
+    if Trim(FOPCTunnel.FTruckTag) <> '' then
+    begin
+      nItem := FormMain.gOPCServer.OPCGroups[FrameId].OPCItems.FindOPCItem(FOPCTunnel.FTruckTag);
+      if nItem <> nil then
+      begin
+        nTruck := '';
+        nStr := FUIData.FTruck;
+        for nIdx := 1 to Length(nStr) do
+        begin
+          if IsNumber(nStr[nIdx], False) then
+            nTruck := nTruck + nStr[nIdx];
+        end;
+        if nTruck <> '' then
+        begin
+          nItem.WriteSync(nTruck);
+          WriteLog(FOPCTunnel.FID +'发送车牌号:'+ FUIData.FTruck + '格式化后:' + nTruck);
+        end;
+      end;
+    end;
 
-    nOPCServer.Active := true;
+    if Trim(FOPCTunnel.FStartTag) <> '' then
+    begin
+      for nIdx := 1 to 30 do
+      begin
+        Sleep(100);
+        Application.ProcessMessages;
+      end;
 
-    nGroup.OPCItems[0].WriteSync(FSetValue - FHasDone);
-    WriteLog(FOPCTunnel.FID +'发送提货量:'+ FloatToStr(FSetValue - FHasDone));
+      FormMain.gOPCServer.OPCGroups[FrameId].OPCItems[2].WriteSync(FOPCTunnel.FStartOrder);
+      for nIdx := 1 to 30 do
+      begin
+        Sleep(100);
+        Application.ProcessMessages;
+      end;
+      FormMain.gOPCServer.OPCGroups[FrameId].OPCItems[2].WriteSync(FOPCTunnel.FStopOrder);
+    end;
+
     LineClose(FOPCTunnel.FID, sFlag_No);
     WriteLog(FOPCTunnel.FID +'发送启动命令成功');
     StateTimer.Tag := 0;
-  finally
-    if Assigned(nOPCServer) then
-      nOPCServer.Free;
-    CoUninitialize;                        // !!!!!!!!!!!!!
+  except
+    on E: Exception do
+    begin
+      StopPound;
+      WriteLog(FOPCTunnel.FID +'启动失败,原因为:' + e.Message);
+      ShowLedText(FOPCTunnel.FID, '启动失败,请重新刷卡');
+    end;
   end;
 end;
 
@@ -285,7 +344,7 @@ begin
     EditStockID.Text := FStockName;
     EditCusID.Text := FCusName;
 
-    EditMaxValue.Text := Format('%.2f', [FMData.FValue]);
+    //EditMaxValue.Text := Format('%.2f', [FMData.FValue]);
     EditPValue.Text := Format('%.2f', [FPData.FValue]);
     EditZValue.Text := Format('%.2f', [FValue]);
   end;
@@ -319,9 +378,6 @@ begin
   DelayTimer.Tag := 0;
   DelayTimer.Enabled := True;
 
-  SaveDoneValue(FUIData.FID, StrToFloatDef(EditValue.Text, 0)
-                ,StrToFloatDef(EditUseTime.Text, 0));
-
   FHasDone := 0;
   FUseTime := 0;
   LineClose(FOPCTunnel.FID, sFlag_Yes);
@@ -329,27 +385,15 @@ begin
 
   if Trim(FOPCTunnel.FStopTag) <> '' then
   begin
-    CoInitialize(nil);
-    nOPCServer := TdOPCServer.Create(nil);
-    try
-      nOPCServer.ServerName  := FOPCTunnel.FServer;
-      nOPCServer.ComputerName:= FOPCTunnel.FComputer;
-
-      nGroup := nOPCServer.OPCGroups.Add('Group');         // make a new group
-      nGroup.IsActive := False;
-
-      nGroup.OPCItems.AddItem(FOPCTunnel.FStopTag);
-
-      nOPCServer.Active := true;
-
-      nGroup.OPCItems[0].WriteSync(FOPCTunnel.FStopOrder);
-
-      WriteLog(FOPCTunnel.FID +'发送停止命令成功');
-    finally
-      if Assigned(nOPCServer) then
-        nOPCServer.Free;
-      CoUninitialize;                        // !!!!!!!!!!!!!
+    FormMain.gOPCServer.OPCGroups[FrameId].OPCItems[3].WriteSync(FOPCTunnel.FStartOrder);
+    for nIdx := 1 to 30 do
+    begin
+      Sleep(100);
+      Application.ProcessMessages;
     end;
+    FormMain.gOPCServer.OPCGroups[FrameId].OPCItems[3].WriteSync(FOPCTunnel.FStopOrder);
+
+    WriteLog(FOPCTunnel.FID +'发送停止命令成功');
   end;
 end;
 
@@ -383,27 +427,12 @@ end;
 procedure TFrame1.SyncReadValues(const FromCache: boolean);
 var
   nItemList: TdOPCItemList;
-  nOPCServer: TdOPCServer;
-  nGroup: TdOPCGroup;
 begin
-  CoInitialize(nil);
-  nOPCServer := TdOPCServer.Create(nil);
+  nItemList := TdOPCItemList.create(FormMain.gOPCServer.OPCGroups[FrameId].OPCItems);
   try
-    nOPCServer.ServerName  := FOPCTunnel.FServer;
-    nOPCServer.ComputerName:= FOPCTunnel.FComputer;
-
-    nGroup := nOPCServer.OPCGroups.Add('Group');         // make a new group
-
-    nGroup.OPCItems.AddItem(FOPCTunnel.FImpDataTag);
-
-    if FOPCTunnel.FUseTimeTag <> '' then
-    nGroup.OPCItems.AddItem(FOPCTunnel.FUseTimeTag);
-
-    nOPCServer.Active := true;
-
-    nGroup.SyncRead(nil,FromCache);
+    FormMain.gOPCServer.OPCGroups[FrameId].SyncRead(nil,FromCache);
     //nGroup.ASyncRead(nil);
-    nItemList := TdOPCItemList.create(nGroup.OPCItems);
+    Application.ProcessMessages;
     try
       OnDatachange(self,nItemList);
     except
@@ -411,10 +440,7 @@ begin
     end;
   finally
     if Assigned(nItemList) then
-      nItemList.Free;
-    if Assigned(nOPCServer) then
-      nOPCServer.Free;
-    CoUninitialize;                        // !!!!!!!!!!!!!
+      nItemList.Free;                       // !!!!!!!!!!!!!
   end;
 end;
 
@@ -435,7 +461,11 @@ begin
         nValue := StrToFloat(Itemlist[nIdx].ValueStr) + FHasDone;
         EditValue.Text := Format('%.2f', [nValue]);
         if (Length(Trim(EditBill.Text)) > 0) and (nValue > 0) then
+        begin
+          SaveDoneValue(FUIData.FID, StrToFloatDef(EditValue.Text, 0)
+                ,StrToFloatDef(EditUseTime.Text, 0));
           ShowLedText(FOPCTunnel.FID, '当前累计重量:'+ EditValue.Text);
+        end;
 
         nZValue := StrToFloatDef(editZValue.Text,0);    //票重
 

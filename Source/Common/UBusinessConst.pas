@@ -115,6 +115,7 @@ const
   cBC_GetSQLQueryDispatch     = $0104;   //查询调拨订单
   cBC_SyncDuanDao             = $0105;   //同步短倒
   cBC_SyncHaulBack            = $0106;   //同步回空磅单到磅单
+  cBC_SyncME03Ks              = $0107;   //同步供应到磅单
 
   cBC_GetStationPoundData     = $0115;   //获取车辆称重数据
   cBC_SaveStationPoundData    = $0116;   //保存车辆称重数据
