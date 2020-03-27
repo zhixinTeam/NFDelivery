@@ -108,6 +108,8 @@ type
     FOnPound: Boolean;
     //是否为磅上刷卡
     FMaxPoundValue: Double;
+    FAlivisionCheckTruck: Integer;
+    //图像识别验证车牌次数
     FWarnPEventDept: string;
     FTruckInterval: Integer;
     procedure SetUIData(const nReset: Boolean; const nOnlyData: Boolean = False);
@@ -747,6 +749,12 @@ begin
     FCardTmp := nCard;
     EditBill.Text := nCard;
     LoadBillItems(EditBill.Text);
+
+    {$IFDEF AlivisionInClient}
+    FAlivisionCheckTruck := 0;
+    gVisionManager.SetPoundData(FPoundTunnel.FID, nil, True);
+    //重置单据号
+    {$ENDIF}
   except
     on E: Exception do
     begin
@@ -1743,7 +1751,7 @@ begin
     Exit;
   end;
 
-  nPound.FValStr := FUIData.FID;
+  nPound.FValStr := Format('%s|%s', [FUIData.FID, FUIData.FTruck]);
   gVisionManager.SetPoundData(FPoundTunnel.FID, @nPound);
   //保存单据号
 
@@ -1752,6 +1760,11 @@ begin
           SF('V_Truck', FUIData.FTruck),
           SF('V_Camera', nPound.FTruck),
           SF('V_Date', sField_SQLServer_Now, sfVal),
+
+          SF_IF([SF('V_Match', ''),
+                 SF('V_Match', TruckFuzzyMatch(FUIData.FTruck, nPound.FTruck))],
+                 nPound.FTruck = FUIData.FTruck),
+          //模糊矫正不匹配车牌
 
           SF_IF([SF('V_Status', sFlag_Yes),
                  SF('V_Status', sFlag_No)], nPound.FStateNow = tsNormal)
@@ -1782,6 +1795,10 @@ procedure TfFrameAutoPoundItem.OnPoundData(const nValue: Double);
 var nRet: Boolean;
     nStr: string;
     nInt: Int64;
+
+    {$IFDEF AlivisionInClient}
+    nPound: TPoundItem;
+    {$ENDIF}
 begin
   FLastBT := GetTickCount;
   EditValue.Text := Format('%.2f', [nValue]);
@@ -1837,6 +1854,23 @@ begin
 
   if Length(FBillItems) <= 0 then Exit;
   //退出称重
+
+  {$IFDEF AlivisionInClient}
+  if (FAlivisionCheckTruck < 1) and
+      gVisionManager.GetPoundData(FPoundTunnel.FID, nPound) then
+  begin
+    Inc(FAlivisionCheckTruck);
+    if nPound.FTruck = '' then //图像识别未上报车牌号
+    begin
+      nStr := '看不清车牌,向前移动车辆并关闭前大灯.';
+      PlayVoice(nStr);
+      
+      WriteSysLog(nStr);
+      InitSamples;
+      Exit;
+    end;
+  end;
+  {$ENDIF}
 
   if (FUIData.FCardUse=sFlag_Sale) or (FUIData.FCardUse = sFlag_SaleNew) or
      (FUIData.FCardUse=sFlag_DuanDao) then

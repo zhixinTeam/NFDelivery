@@ -50,7 +50,7 @@ implementation
 uses
   IniFiles, UlibFun, UMgrControl, UMgrPoundTunnels, UFramePoundAutoItem,
   UMgrTruckProbe, UMgrRemoteVoice, UMgrVoiceNet, UDataModule, USysDB,
-  USysGrid, USysLoger, USysConst;
+  USysBusiness, USysGrid, USysLoger, USysConst;
 
 class function TfFramePoundAuto.FrameID: integer;
 begin
@@ -106,6 +106,7 @@ begin
   begin
     gVisionManager := TTruckManager.Create;
     gVisionManager.LoadConfig(gPath + 'AliVision.xml');
+    gVisionManager.EventMode := emMain;
     gVisionManager.OnStatusChangeEvent := DoTruckStatusChange;
   end;
   gVisionManager.StartService;
@@ -263,7 +264,8 @@ end;
 
 //Desc: 图像识别的车辆状态
 procedure TfFramePoundAuto.DoTruckStatusChange(const nPound: PPoundItem);
-var nStr: string;
+var nStr,nID,nTruck: string;
+    nPos: Integer;
 begin
   case nPound.FStateNow of
    tsNewOn   : nStr := Format('新车牌[ %s ]上磅', [nPound.FTruck]);
@@ -279,8 +281,17 @@ begin
 
   if (nPound.FStateNow = tsLeave) and (nPound.FValStr <> '') then //车辆下磅后,尝试补全车牌号
   begin
-    nStr := 'Update %s Set V_Camera=''%s'' Where V_ID=''%s'' And V_Camera=''''';
-    nStr := Format(nStr, [sTable_Alivision, nPound.FTruckPrev, nPound.FValStr]);
+    nTruck := nPound.FValStr;
+    //data: id|truck
+
+    nPos := Pos('|', nTruck);
+    nID := Copy(nTruck, 1, nPos - 1);
+    System.Delete(nTruck, 1, nPos);
+
+    nStr := 'Update %s Set V_Camera=''%s'',V_Match=''%s'' ' +
+            'Where V_ID=''%s'' And V_Camera=''''';
+    nStr := Format(nStr, [sTable_Alivision, nPound.FTruckPrev,
+            TruckFuzzyMatch(nTruck, nPound.FTruckPrev), nID]);
     FDM.ExecuteSQL(nStr);
 
     nPound.FValStr := '';
