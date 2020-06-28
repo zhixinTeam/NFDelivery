@@ -1990,9 +1990,9 @@ begin
     if (FUIData.FType = sFlag_Dai) and (FUIData.FCardUse = sFlag_Sale) then
     begin
       if FUIData.FMData.FValue <= 0 then
-        nStr := GetTruckNO(FUIData.FTruck) + ',皮重称重完毕'
+        nStr := GetTruckNO(FUIData.FTruck) + '皮重称重完毕'
       else
-        nStr := GetTruckNO(FUIData.FTruck) + ',毛重称重完毕';
+        nStr := GetTruckNO(FUIData.FTruck) + '毛重称重完毕';
     end;
 
     if FUIData.FPreTruckP then

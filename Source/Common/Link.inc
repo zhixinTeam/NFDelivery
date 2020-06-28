@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE JINLEINF}
+{$DEFINE SHAOYANGNF}
 //特定系统
 
 {$IFDEF JDNF}
