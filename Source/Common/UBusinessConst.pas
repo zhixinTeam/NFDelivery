@@ -69,7 +69,8 @@ const
 
   cBC_GetPostOrders           = $0044;   //获取岗位采购单
   cBC_SavePostOrders          = $0045;   //保存岗位采购单
-
+  
+  cBC_GetReaderCard           = $0050;   //读卡器有效卡
   cBC_RemoteSnapDisPlay       = $0051;   //抓拍小屏显示
   cBC_GetPoundReaderInfo      = $0052;   //获取磅站读卡器岗位、部门
   cBC_ChangeDispatchMode      = $0053;   //切换调度模式
@@ -90,7 +91,7 @@ const
   cBC_ShowLedTxt              = $0066;   //向led屏幕发送内容
   cBC_GetLimitValue           = $0067;   //获取车辆最大限载值
   cBC_LineClose               = $0068;   //关闭放灰
-
+  cBC_ReadBaseWeight          = $0069;   //读取定量装车数据
   cBC_IsTunnelOK              = $0075;
   cBC_TunnelOC                = $0076;
   cBC_PlayVoice               = $0077;
@@ -103,6 +104,8 @@ const
   cBC_DelWeixinAccount        = $0083;   //删除微信账户
   cBC_GetWeiXinReport         = $0084;   //获取微信报表
   cBC_GetWeiXinQueue          = $0085;   //获取微信报表
+
+  cBC_SaveTruckLine           = $0090;   //保存装车道信息
 
   cBC_GetTruckPValue          = $0091;   //获取车辆预置皮重
   cBC_SaveTruckPValue         = $0092;   //保存车辆预置皮重
@@ -148,6 +151,8 @@ const
 
   cBC_GetUnLodingPlace         = $0139;   //获取卸货地点
   cBC_VerifySanCardUseCount    = $0140;   //校验散装现场刷卡次数
+  cBC_GetSoundCard             = $0141;   //获取装车播报语音卡
+  cBC_VerifyTruckInFact        = $0142;   //进厂物料比对
 
   cBC_WX_VerifPrintCode       = $0501;   //微信：验证喷码信息
   cBC_WX_WaitingForloading    = $0502;   //微信：工厂待装查询
@@ -261,6 +266,7 @@ type
     FLineGroup  : string;         //通道分组
     FPoundStation: string;        //磅站编号
     FPoundSName  : string;        //地磅名称
+    FShip       : string;         //船号
   end;
 
   TLadingBillItems = array of TLadingBillItem;
@@ -475,6 +481,7 @@ begin
         FLineGroup := Values['LineGroup'];
         FPoundStation := Values['PoundStation'];
         FPoundSName   := Values['PoundSName'];
+        FShip   := Values['Ship'];
       end;
 
       Inc(nInt);
@@ -590,6 +597,7 @@ begin
         Values['LineGroup']  := FLineGroup;
         Values['PoundStation']:= FPoundStation;
         Values['PoundSName'] := FPoundSName;
+        Values['Ship']       := FShip;
       end;
 
       nListA.Add(PackerEncodeStr(nListB.Text));

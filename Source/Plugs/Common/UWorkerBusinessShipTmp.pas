@@ -1000,9 +1000,25 @@ begin
 
   if (FIn.FExtParam = sFlag_TruckBFM) or (FIn.FExtParam = sFlag_TruckSH) then
   begin
-    if Assigned(gHardShareData) then
+    {$IFDEF AutoOutByStokNo}
+    nSQL := 'Select D_Value From %s Where D_Name=''AutoOutStock'' and D_Value=''%s''';
+    nSQL := Format(nSQL, [sTable_SysDict, nPound[0].FStockNo]);
+
+    with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+    if RecordCount > 0 then
+    begin
       gHardShareData('TruckOut:' + nPound[0].FCard);
-    //磅房处理自动出厂
+      //磅房处理自动出厂
+      WriteLog('磅房根据物料号处理自动出厂');
+    end;
+    {$ELSE}
+      gHardShareData('TruckOut:' + nPound[0].FCard);
+      //磅房处理自动出厂
+      WriteLog('磅房处理自动出厂');
+    {$ENDIF}
+//    if Assigned(gHardShareData) then
+//      gHardShareData('TruckOut:' + nPound[0].FCard);
+//    //磅房处理自动出厂
   end;
 end;
 

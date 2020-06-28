@@ -60,6 +60,7 @@ uses
   UFrameLineKwControl, UFormLineKwControl,
   UFormAddWater, UFramePoundQueryKs,
   UFrameTruckType, UFormTruckType,
+  UFrameInFactControl, UFormInFactControl,
   UFrameBillHaulBack, UFormBillHaulBack, UFormGetPoundHis
   {$IFDEF PrintChinese},
   UFrameChineseBase, UFormChineseBase, UFrameChineseDict ,UFormChineseDict,

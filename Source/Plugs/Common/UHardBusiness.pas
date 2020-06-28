@@ -42,6 +42,7 @@ function GetCardUsed(const nCard: string; var nCardType: string): Boolean;
 
 procedure MakeTruckShowPreInfo(const nCard: string; nTunnel: string='';nTunnelEx: string='');
 //显示预刷卡信息
+function MakeTruckXieHuo(const nCard,nTunnel,nCardType: string): Boolean;
 procedure MakeTruckAddWater(const nCard: string; nTunnel: string='');
 //散装车加水
 
@@ -55,6 +56,7 @@ procedure SaveGrabCard(const nCard: string; nTunnel: string='');
 //检索并保存抓斗秤工作卡号
 function VerifySnapTruck(const nTruck,nBill,nPos,nDept: string;var nResult: string): Boolean;
 //车牌识别
+function VerifyTruckInFact(const nStockNo, nTunnel: string;var nResult: string): Boolean;
 procedure MakeTruckShowBusinessInfo(const nCard: string; nTunnel: string='';
                                  nReader: string='');
 //车辆信息显示
@@ -74,6 +76,8 @@ procedure WhenTruckLineChanged(const nTruckLine: TList);
 
 function VerifySanCardUseCount(const nLID: string): Boolean;
 //校验散装现场刷卡次数
+function GetSoundPost(const nTunnel, nDefPost: string; var nPost: string): Boolean;
+function ShipTmpReturnG(const nCard: string): Boolean;
 implementation
 
 uses
@@ -543,6 +547,24 @@ begin
   end;
 end;
 
+//Date: 2019-3-10
+//Parm: 提货单号;装车线ID;装车线名称
+//Desc: 更新装车道
+function SaveTruckLine(const nID,nLineID,nLineName: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+    nList: TStrings;
+begin
+  nList := TStringList.Create;
+  try
+    nList.Values['ID'] := nID;
+    nList.Values['LineID'] := nLineID;
+    nList.Values['LineName'] := nLineName;
+    Result := CallBusinessCommand(cBC_SaveTruckLine, nList.Text, '', @nOut);
+  finally
+    nList.Free;
+  end;
+end;
+
 //Date: 2017-10-16
 //Parm: 内容;岗位;业务成功
 //Desc: 播放门岗语音
@@ -583,7 +605,8 @@ begin
     nTitle := cBXDataNull;
   if Trim(nContent) = '' then
     nContent := cBXDataNull;
-  gBXFontCardManager.Display(nTitle, nContent, nTunnel);
+  if Assigned(gBXFontCardManager) then
+    gBXFontCardManager.Display(nTitle, nContent, nTunnel);
 end;
 
 //Date: 2012-4-22
@@ -593,7 +616,7 @@ procedure MakeTruckIn(const nCard,nReader,nPost,nDept: string; const nDB: PDBWor
 var nStr,nTruck,nCardType,nSnapStr,nPos: string;
     nIdx,nInt: Integer;
     nPLine: PLineItem;
-    nRet: Boolean;
+    nRet,nBool: Boolean;
     nPTruck: PTruckItem;
     nTrucks: TLadingBillItems;
 begin
@@ -664,6 +687,20 @@ begin
     Exit;
   end;
 
+  if not VerifyTruckInFact(nTrucks[0].FStockNo,nReader,nSnapStr) then
+  begin
+    nStr := '车辆[ %s ]请去正确进厂通道刷卡进厂[ %s ].';
+    nStr := Format(nStr, [nTrucks[0].FTruck, nSnapStr]);
+
+    WriteHardHelperLog(nStr, sPost_In);
+
+    {$IFDEF RemoteSnap}
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
+    Exit;
+  end;
+  nSnapStr := '';
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
@@ -699,6 +736,21 @@ begin
   MakeGateSound(nStr, nPos, True);
   {$ENDIF}
 
+  {$IFDEF InFactOnlyOne}
+  if nTrucks[0].FStatus = sFlag_TruckIn then
+  begin
+    nStr := '车辆[ %s ]已进厂,不能再次刷卡进厂.';
+    nStr := Format(nStr, [nTrucks[0].FTruck]);
+
+    WriteHardHelperLog(nStr, sPost_In);
+
+    {$IFDEF RemoteSnap}
+    MakeGateSound(nStr, nPos, False);
+    {$ENDIF}
+
+    Exit;
+  end;
+  {$ELSE}
   if nTrucks[0].FStatus = sFlag_TruckIn then
   begin
     if gTruckQueueManager.IsTruckAutoIn(nCardType=sFlag_Sale) then
@@ -723,7 +775,7 @@ begin
 
     Exit;
   end;
-
+  {$ENDIF}
   //----------------------------------------------------------------------------
   if (nCardType <> sFlag_Sale) and (nCardType <> sFlag_SaleNew) then            //非销售业务,不使用队列
   begin
@@ -1142,6 +1194,33 @@ begin
     Exit;
   end;
 
+  {$IFDEF ShipTmpReturnG}
+  WriteHardHelperLog('临时业务出厂吞卡校验:业务类型' + nCardType + '卡类型' +
+                     nTrucks[0].FCardKeep + '当前状态' + nTrucks[0].FStatus);
+  if nCardType = sFlag_ShipTmp then
+  begin
+    if (nTrucks[0].FCardKeep = sFlag_ProvCardG) and
+       ((nTrucks[0].FStatus = sFlag_TruckNone) or (nTrucks[0].FStatus = sFlag_TruckIn)) then
+    begin
+      if ShipTmpReturnG(nCard) then
+      begin
+        nStr := '临时业务固定卡出厂回收磁卡[ %s ]成功.';
+        nStr := Format(nStr, [nCard]);
+        Result := True;
+        //磁卡已无效
+        LEDDisplayNew(nLed, '', nStr);
+        WriteHardHelperLog(nStr, sPost_Out);
+
+        {$IFDEF RemoteSnap}
+        MakeGateSound(nStr, nPos, False);
+        {$ENDIF}
+
+        Exit;
+      end;
+    end;
+  end;
+  {$ENDIF}
+
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
@@ -1391,7 +1470,7 @@ end;
 //Parm: 读头数据
 //Desc: 对nReader读到的卡号做具体动作
 procedure WhenReaderCardArrived(const nReader: THHReaderItem);
-var nStr, nGroup, nMemo, nHYPrinter,nLed: string;
+var nStr, nGroup, nMemo, nHYPrinter,nLed, nCType, nDoor: string;
     nErrNum, nWaitTime: Integer;
     nDBConn: PDBWorker;
     nStart: TDateTime;
@@ -1453,10 +1532,11 @@ begin
         begin
           nHYPrinter := nReader.FOptions.Values['HYPrinter'];
           nLed := nReader.FOptions.Values['Led'];
+          nDoor := nReader.FOptions.Values['Door'];
         end
         else nHYPrinter := '';
         MakeTruckOut(nStr, nReader.FID, nReader.FPrinter, nHYPrinter,
-                     nReader.FPost, nReader.FDept, nReader.FPound, nLed);
+                     nReader.FPost, nReader.FDept, nLed, nDoor);
       end else
 
       if nReader.FType = rtGate then
@@ -1472,9 +1552,26 @@ begin
         end
         else
         begin
-          if nReader.FID <> '' then
-            HardOpenDoor(nReader.FID);
-          //抬杆
+          if (Assigned(nReader.FOptions)) and (nReader.FOptions.Values['YSKTunnel'] <> '') then
+          begin
+            if not GetCardUsed(nStr, nCType) then nCType := sFlag_Sale;
+
+            if (nCType = sFlag_Provide) or (nCType = sFlag_ShipPro) or
+               (nCType = sFlag_ShipTmp) then
+            begin
+              if not MakeTruckXieHuo(nStr, nReader.FOptions.Values['YSKTunnel'], nCType) then
+                Exit;
+              if nReader.FID <> '' then
+                HardOpenDoor(nReader.FID);
+              //抬杆
+            end;
+          end
+          else
+          begin
+            if nReader.FID <> '' then
+              HardOpenDoor(nReader.FID);
+            //抬杆
+          end;
         end;
       end else
 
@@ -1687,6 +1784,31 @@ begin
   //task done
 end;
 
+function PrintBillCodeEx(const nTunnel,nBill: string; var nHint: string): Boolean;
+var nStr: string;
+    nTask: Int64;
+    nOut: TWorkerBusinessCommand;
+begin
+  Result := False;
+  if not (gMultiJSManager.CountEnable and gMultiJSManager.ChainEnable) then
+  begin
+    Result := True;
+    Exit;
+  end;
+  nTask := gTaskMonitor.AddTask('UHardBusiness.PrintBillCode', cTaskTimeoutLong);
+  //to mon
+  
+  if not CallHardwareCommand(cBC_PrintCode, nBill, nTunnel, @nOut) then
+  begin
+    nStr := '向通道[ %s ]发送防违流码失败,描述: %s';
+    nStr := Format(nStr, [nTunnel, nOut.FData]);  
+    WriteNearReaderLog(nStr);
+  end;
+  Result := True;
+  gTaskMonitor.DelTask(nTask, True);
+  //task done
+end;
+
 //Date: 2017-08-13
 //Parm: 交货单号;袋重
 //Desc: 获取交货单可发货袋数
@@ -1765,10 +1887,11 @@ end;
 //Desc: 对在nTunnel的车辆开启计数器
 function TruckStartJS(const nTruck,nTunnel,nBill: string;
   var nHint: string; const nAddJS: Boolean = True): Boolean;
-var nIdx: Integer;
+var nIdx, nInt: Integer;
     nTask: Int64;
     nPLine: PLineItem;
     nPTruck: PTruckItem;
+    nBool: Boolean;
 begin
   with gTruckQueueManager do
   try
@@ -1798,7 +1921,25 @@ begin
       PTruckItem(nPLine.FTrucks[nIdx]).FStarted := False;
     nPTruck.FStarted := True;
 
-    if PrintBillCode(nTunnel, nBill, nHint) and nAddJS then
+    nBool := PrintBillCodeEx(nTunnel, nBill, nHint);
+
+    if not nBool then
+    begin
+      if PrintBillCode(nTunnel, nBill, nHint) and nAddJS then
+      begin
+        nTask := gTaskMonitor.AddTask('UHardBusiness.AddJS', cTaskTimeoutLong);
+        //to mon
+        for nIdx := 0 to 2 do
+        begin
+          WriteHardHelperLog('车辆' + nTruck + '发送袋数' + IntToStr(nIdx));
+          gMultiJSManager.AddJS(nTunnel, nTruck, nBill, nIdx, True);
+          Sleep(100);
+        end;
+        gTaskMonitor.DelTask(nTask);
+      end;
+    end
+    else
+    if nAddJS then
     begin
       nTask := gTaskMonitor.AddTask('UHardBusiness.AddJS', cTaskTimeoutLong);
       //to mon
@@ -1810,7 +1951,12 @@ begin
       nIdx := nPTruck.FDai;
       {$ENDIF}
 
-      gMultiJSManager.AddJS(nTunnel, nTruck, nBill, nIdx, True);
+      for nInt := 0 to 2 do
+      begin
+        WriteHardHelperLog('车辆' + nTruck + '发送袋数' + IntToStr(nIdx));
+        gMultiJSManager.AddJS(nTunnel, nTruck, nBill, nIdx, True);
+        Sleep(100);
+      end;
       gTaskMonitor.DelTask(nTask);
     end;
   finally
@@ -1958,16 +2104,57 @@ begin
   end;
 end;
 
+function ShipTmpReturnG(const nCard: string): Boolean;
+var nSQL: string;
+    nIdx: Integer;
+    nDBConn: PDBWorker;
+begin
+  Result := False;
+
+  nDBConn := nil;
+  with gParamManager.ActiveParam^ do
+  try
+    nDBConn := gDBConnManager.GetConnection(FDB.FID, nIdx);
+    if not Assigned(nDBConn) then
+    begin
+      WriteNearReaderLog('连接HM数据库失败(DBConn Is Null).');
+      Exit;
+    end;
+
+    if not nDBConn.FConn.Connected then
+      nDBConn.FConn.Connected := True;
+    //conn db
+
+    nSQL := 'Update %s Set C_Status=''%s'', C_TruckNo=NULL Where C_Card=''%s''';
+    nSQL := Format(nSQL, [sTable_Card, sFlag_CardIdle, nCard]);
+    WriteHardHelperLog('临时业务固定卡吞卡更新SQL1:' + nSQL);
+    gDBConnManager.WorkerExec(nDBConn, nSQL);
+
+    nSQL := 'Update %s Set O_Pound=NULL, O_Card=NULL, ' +
+            'O_Status=''%s'', O_NextStatus=NULL ' +
+            'Where O_Card=''%s''';
+    nSQL := Format(nSQL, [sTable_CardOther, sFlag_TruckOut,
+            nCard]);
+    WriteHardHelperLog('临时业务固定卡吞卡更新SQL2:' + nSQL);
+    gDBConnManager.WorkerExec(nDBConn, nSQL);
+
+    Result := True;
+  finally
+    gDBConnManager.ReleaseConnection(nDBConn);
+  end;
+end;
+
 //Date: 2018-11-26
 //Parm: 磁卡号;通道号
 //Desc: 对nCard执行卸货操作
-procedure MakeTruckXieHuo(const nCard,nTunnel,nCardType: string);
+function MakeTruckXieHuo(const nCard,nTunnel,nCardType: string): Boolean;
 var nStr: string;
     nIdx: Integer;
     nTrucks: TLadingBillItems;
     nRet, nBool: Boolean;
     nDBConn: PDBWorker;
 begin
+  Result := False;
   {$IFDEF DEBUG}
   WriteNearReaderLog('MakeTruckXieHuo进入.');
   {$ENDIF}
@@ -2143,7 +2330,8 @@ begin
   finally
     gDBConnManager.ReleaseConnection(nDBConn);
   end;
-  
+
+  Result := True;
   if nTrucks[0].FStatus = sFlag_TruckXH then
   begin
     nStr := '散装车辆[ %s ]再次刷卡验收.';
@@ -2459,6 +2647,13 @@ begin
     Exit;
   end;
 
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  with nTrucks[nIdx] do
+  begin
+    if Pos(FID, nPTruck.FHKBills) > 0 then
+      SaveTruckLine(FID, nTunnel, nPLine.FName);
+  end;
+
   if nTunnelPreShow <> '' then
   begin
     MakeTruckShowPreInfoEx(nPTruck, nPLine, nTunnelPreShow);
@@ -2487,7 +2682,8 @@ begin
     //显示与刷卡信息
     {$ENDIF}
 
-    MakeLadingSound(nPTruck, nPLine, sPost_ZT);
+    GetSoundPost(nTunnel, sPost_ZT, nStr);
+    MakeLadingSound(nPTruck, nPLine, nStr);
     //播放语音
 
     {$IFDEF StockPriorityInQueue}
@@ -2516,7 +2712,8 @@ begin
   //显示与刷卡信息
   {$ENDIF}
 
-  MakeLadingSound(nPTruck, nPLine, sPost_ZT);
+  GetSoundPost(nTunnel, sPost_ZT, nStr);
+  MakeLadingSound(nPTruck, nPLine, nStr);
   //播放语音
 
   {$IFDEF StockPriorityInQueue}
@@ -3013,14 +3210,15 @@ begin
     if FIsVIP = sFlag_TypeShip then Continue;
     //船运不检查
     {$ENDIF}
-    if (FStatus = sFlag_TruckFH) or (FNextStatus = sFlag_TruckFH) then Continue;
-    //未装或已装
 
     {$IFDEF AllowMultiM}
     if FStatus = sFlag_TRuckBFM then
       FStatus := sFlag_TruckFH;
     //过重后允许返回
     {$ENDIF}
+
+    if (FStatus = sFlag_TruckFH) or (FNextStatus = sFlag_TruckFH) then Continue;
+    //未装或已装
 
     nStr := '车辆[ %s ]下一状态为:[ %s ],无法放灰.';
     nStr := Format(nStr, [FTruck, TruckStatusToStr(FNextStatus)]);
@@ -3098,6 +3296,7 @@ begin
   for nIdx:=Low(nTrucks) to High(nTrucks) do
   with nTrucks[nIdx] do
   begin
+    WriteHardHelperLog('开始获取提货单' + FID + '批次...');
     if not GetBatCodeByLine(FID,FStockNo,nTunnel) then
       Exit;
   end;
@@ -3124,7 +3323,8 @@ begin
 
     TruckStartFH(nPTruck, nTunnel, nTrucks[0]);
 
-    MakeLadingSound(nPTruck, nPLine, sPost_FH);
+    GetSoundPost(nTunnel, sPost_FH, nStr);
+    MakeLadingSound(nPTruck, nPLine, nStr);
     //播放语音
 
     {$IFDEF FixLoad}
@@ -3149,7 +3349,8 @@ begin
   TruckStartFH(nPTruck, nTunnel, nTrucks[0]);
   //执行放灰
 
-  MakeLadingSound(nPTruck, nPLine, sPost_FH);
+  GetSoundPost(nTunnel, sPost_FH, nStr);
+  MakeLadingSound(nPTruck, nPLine, nStr);
   //播放语音
   {$IFDEF FixLoad}
   WriteNearReaderLog('启动定置装车::'+nTunnel+'@'+nCard);
@@ -4319,6 +4520,13 @@ begin
   end;
 end;
 
+function VerifyTruckInFact(const nStockNo, nTunnel: string;var nResult: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  Result := CallBusinessCommand(cBC_VerifyTruckInFact, nStockNo, nTunnel, @nOut);
+  nResult := nOut.FData;
+end;
+
 //Date: 2018/09/07
 //Parm: 磁卡号;通道编号
 //Desc: 显示车辆业务信息
@@ -4745,6 +4953,18 @@ function VerifySanCardUseCount(const nLID: string): Boolean;
 var nOut: TWorkerBusinessCommand;
 begin
   Result := CallBusinessCommand(cBC_VerifySanCardUseCount, nLID, '', @nOut);
+end;
+
+function GetSoundPost(const nTunnel, nDefPost: string; var nPost: string): Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  nPost := nDefPost;
+  Result := CallBusinessCommand(cBC_GetSoundCard, nTunnel, nDefPost, @nOut);
+
+  if Result then
+       nPost := nOut.FData
+  else gSysLoger.AddLog(TBusinessWorkerManager, '业务对象', nOut.FData);
+  //xxxxx
 end;
 
 end.

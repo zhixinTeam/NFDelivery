@@ -8,7 +8,10 @@ uses
   Dialogs, UFrameBase, ComCtrls, ExtCtrls, Buttons, StdCtrls,
   USelfHelpConst, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, cxTextEdit, cxMaskEdit,
-  cxButtonEdit, cxDropDownEdit, dxGDIPlusClasses, jpeg, cxCheckBox ;
+  cxButtonEdit, cxDropDownEdit, dxGDIPlusClasses, jpeg, cxCheckBox, IdHttp ;
+
+const
+  cHttpTimeOut          = 10;
 
 type
 
@@ -90,6 +93,7 @@ end;
 
 procedure TfFrameSaleCard.LoadNcSaleList(nSTDid, nPassword: string);
 var nCount, i : Integer;
+    nAutoPD: string;
 begin
   FListA.Clear;
 
@@ -100,7 +104,7 @@ begin
     ShowMsg('未能查询到销售订单列表', sHint);
     Exit;
   end;
-
+  nAutoPD := GetPDModelFromDB;
   try
     nCount := FListA.Count;
     SetLength(FSaleOrderItems, nCount);
@@ -123,7 +127,15 @@ begin
 
       FSaleOrderItems[i].FTruck := FListB.Values['Truck'];
       FSaleOrderItems[i].FBm    := FListB.Values['Bm'];
-      FSaleOrderItems[i].FPd    := FListB.Values['ispd'];
+      if nAutoPD = sFlag_Yes then
+      begin
+        if Pos('散',FListB.Values['StockName']) > 0 then
+          FSaleOrderItems[i].FPd := ''
+        else
+          FSaleOrderItems[i].FPd := sFlag_Yes;
+      end
+      else
+        FSaleOrderItems[i].FPd    := FListB.Values['ispd'];
       FSaleOrderItems[i].FWxZhuId    := FListB.Values['wxzhuid'];
       FSaleOrderItems[i].FWxZiId    := FListB.Values['wxziid'];
       FSaleOrderItems[i].FPhy    := FListB.Values['isphy'];
@@ -309,10 +321,13 @@ end;
 
 procedure TfFrameSaleCard.BtnSaveClick(Sender: TObject);
 var nMsg, nStr, nCard, nHint: string;
-    nIdx, nInt: Integer;
+    nIdx, nInt, nNum: Integer;
     nRet, nPrint, nForce: Boolean;
     nTruck: string;
     nHzValue: Double;
+    nIdHttp: TIdHTTP;
+    wParam: TStrings;
+    ReStream: TStringStream;
 begin
   nInt := 0;
   BtnSave.Visible := False;
@@ -379,6 +394,38 @@ begin
         ShowMsg(FSaleOrderItems[nIdx].FTruck + '未启用GPS,请联系管理员', sHint);
         Exit;
       end;
+    end;
+    {$ENDIF}
+
+    {$IFDEF VerifyGPSByPost}
+    nStr := GetGPSUrl(nTruck, nHint);
+
+    if nHint = sFlag_Yes then
+    begin
+      nidHttp := TIdHTTP.Create(nil);
+      nidHttp.ConnectTimeout := cHttpTimeOut * 1000;
+      nidHttp.ReadTimeout := cHttpTimeOut * 1000;
+      nidHttp.Request.Clear;
+      nidHttp.Request.Accept         := 'application/json, text/javascript, */*; q=0.01';
+      nidHttp.Request.AcceptLanguage := 'zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3';
+      nidHttp.Request.ContentType    := 'application/json;Charset=UTF-8';
+      nidHttp.Request.Connection     := 'keep-alive';
+
+      wParam   := TStringList.Create;
+      ReStream := TStringstream.Create('');
+      try
+        nidHttp.Post(nStr, wParam, ReStream);
+        nStr := UTF8Decode(ReStream.DataString);
+        WriteLog('GPS校验出参:' + nStr);
+      finally
+        FreeAndNil(nidHttp);
+        ReStream.Free;
+        wParam.Free;
+      end;
+    end
+    else
+    begin
+      WriteLog('GPS签到功能已关闭');
     end;
     {$ENDIF}
 
@@ -486,8 +533,23 @@ begin
         Exit;
       end;
 
+      nRet := False;
+
       nRet := SaveBillCard(nStr, nCard);
 
+      for nNum := 0 to 2 do
+      begin
+        if GetBillCard(nStr) = nCard then
+        begin
+          nRet := True;
+          Break;
+        end;
+
+        Sleep(200);
+        nRet := False;
+
+        nRet := SaveBillCard(nStr, nCard);
+      end;
       if nRet and nPrint then
         FListC.Add(nStr);
       //SaveWebOrderMatch(nStr,FSaleOrderItems[nIdx].FOrders,sFlag_Sale);
@@ -520,7 +582,7 @@ begin
       {$IFDEF PrintHyOnSaveBill}
       for nIdx := 0 to FListC.Count - 1 do
       begin
-        PrintHuaYanReport(FListC.Strings[nIdx], nMsg, gSysParam.FHYDanPrinter);
+        PrintHuaYanReportWhenSaveBill(FListC.Strings[nIdx], nMsg, gSysParam.FHYDanPrinter);
 
         if nMsg <> '' then
           ShowMsg(nMsg, sHint);

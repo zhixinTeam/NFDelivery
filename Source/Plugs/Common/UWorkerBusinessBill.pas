@@ -551,7 +551,7 @@ begin
   nTruck := FListA.Values['Truck'];
   if not VerifyTruckNO(nTruck, nData) then Exit;
 
-  nStr := 'Select %s as T_Now,T_LastTime,T_NoVerify,T_Valid From %s ' +
+  nStr := 'Select %s as T_Now,* From %s ' +
           'Where T_Truck=''%s''';
   nStr := Format(nStr, [sField_SQLServer_Now, sTable_Truck, nTruck]);
 
@@ -931,6 +931,37 @@ begin
     nData := Format(nData, [nVal]);
     Exit;
   end;
+
+  {$IFDEF TruckType}
+  for nIdx:=Low(FOrderItems) to High(FOrderItems) do
+  begin
+    if FOrderItems[nIdx].FKDValue <= 0 then Continue;
+    //无开单量
+    if FOrderItems[nIdx].FStockType = sFlag_San then
+    begin
+      nStr := 'Select %s as T_Now,* From %s ' +
+              'Where T_Truck=''%s''';
+      nStr := Format(nStr, [sField_SQLServer_Now, sTable_Truck, FListA.Values['Truck']]);
+
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+      begin
+        if RecordCount < 1 then
+        begin
+          nData := '没有车辆[ %s ]的档案,无法开单.';
+          nData := Format(nData, [FListA.Values['Truck']]);
+          Exit;
+        end;
+
+        if FieldByName('T_CzType').AsString = '' then
+        begin
+          nData := '车辆[ %s ]未维护车轴类型,无法开单.';
+          nData := Format(nData, [FListA.Values['Truck']]);
+          Exit;
+        end;
+      end;
+    end;
+  end;
+  {$ENDIF}
 
   Result := True;
   //verify done
@@ -1363,6 +1394,15 @@ begin
 
       FOut.FData := FOut.FData + nOut.FData + ',';
       //combine bill
+
+      nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+      nStr := Format(nStr, [sTable_SysDict, sFlag_CusBmFromDict, FOrderItems[nIdx].FCusID]);
+
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+      if RecordCount > 0 then
+      begin
+        FListA.Values['bm'] := Fields[0].AsString;
+      end;
 
       nStr := MakeSQLByStr([SF('L_ID', nOut.FData),
               SF('L_ZhiKa', FOrderItems[nIdx].FOrder),
@@ -2251,6 +2291,7 @@ begin
       nSQL := 'Update %s Set L_Card=''%s'' Where L_ID In(%s)';
       nSQL := Format(nSQL, [sTable_Bill, FIn.FExtParam, nStr]);
       gDBConnManager.WorkerExec(FDBConn, nSQL);
+      WriteLog('交货单绑定磁卡SQL:' + nSQL);
     end;
 
     nStr := 'Select Count(*) From %s Where C_Card=''%s''';
@@ -2268,6 +2309,7 @@ begin
               SF('C_Date', sField_SQLServer_Now, sfVal)
               ], sTable_Card, '', True);
       gDBConnManager.WorkerExec(FDBConn, nStr);
+      WriteLog('更改磁卡状态SQL:' + nStr);
     end else
     begin
       nStr := Format('C_Card=''%s''', [FIn.FExtParam]);
@@ -2279,6 +2321,7 @@ begin
               SF('C_Date', sField_SQLServer_Now, sfVal)
               ], sTable_Card, nStr, False);
       gDBConnManager.WorkerExec(FDBConn, nStr);
+      WriteLog('更改磁卡状态SQL:' + nStr);
     end;
 
     FDBConn.FConn.CommitTrans;
@@ -3142,6 +3185,17 @@ begin
       //没有称毛重的过磅记录的皮重,等于本次的毛重
     end;
 
+    for nIdx:=Low(nBills) to High(nBills) do
+    with nBills[nIdx] do
+    begin
+      if FYSValid <> sFlag_Yes then Continue;
+      //非空车出厂模式
+
+      nSQL := MakeSQLByStr([SF('L_Value', 0, sfVal)
+              ], sTable_Bill, SF('L_ID', FID), False);
+      FListA.Add(nSQL);
+    end;
+
     nSQL := 'Select P_ID From %s Where P_Bill=''%s'' And P_MValue Is Null';
     nSQL := Format(nSQL, [sTable_PoundLog, nBills[nInt].FID]);
     //未称毛重记录
@@ -3420,6 +3474,24 @@ begin
 
   {$IFDEF SyncSanByBFM}//与SyncDataByBFM互斥
   if FIn.FExtParam = sFlag_TruckBFM then
+  begin
+    FListB.Clear;
+    for nIdx:=Low(nBills) to High(nBills) do
+    with nBills[nIdx] do
+    begin
+      FListB.Add(FID);
+      //交货单列表
+    end;
+
+    if nBills[0].FType = sFlag_San then
+      TWorkerBusinessCommander.CallMe(cBC_SyncME25,
+          FListB.Text, '', @nOut);
+    //同步销售到NC榜单
+  end;
+  {$ENDIF}
+
+  {$IFDEF SyncSanByOut}//与SyncDataByBFM互斥
+  if FIn.FExtParam = sFlag_TruckOut then
   begin
     FListB.Clear;
     for nIdx:=Low(nBills) to High(nBills) do

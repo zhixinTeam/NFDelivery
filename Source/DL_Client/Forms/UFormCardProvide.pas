@@ -49,12 +49,17 @@ type
     dxLayout1Item17: TdxLayoutItem;
     SnapTruck: TcxCheckBox;
     dxLayout1Item18: TdxLayoutItem;
+    EditShip: TcxTextEdit;
+    dxLayout1Item19: TdxLayoutItem;
+    CheckELabel: TcxCheckBox;
+    dxLayout1Item20: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
     procedure ComPort1RxChar(Sender: TObject; Count: Integer);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditCardKeyPress(Sender: TObject; var Key: Char);
     procedure EditTruckKeyPress(Sender: TObject; var Key: Char);
     procedure FormCreate(Sender: TObject);
+    procedure CheckELabelPropertiesChange(Sender: TObject);
   private
     { Private declarations }
     FBuffer: string;
@@ -260,7 +265,7 @@ begin
     if (FBuffer[nIdx+1] <> #$FF) or (FBuffer[nIdx+2] <> #$00) then Continue;
 
     nStr := Copy(FBuffer, nIdx+3, 4);
-    EditCard.Text := ParseCardNO(nStr, True); 
+    EditCard.Text := ParseCardNO(nStr, True);
 
     FBuffer := '';
     Exit;
@@ -320,7 +325,7 @@ begin
     begin
       nStr := '车辆[ %s ]已办理磁卡[ %d ]张,是否办理新卡?';
       nStr := Format(nStr, [EditTruck.Text, Fields[0].AsInteger]);
-      
+
       Result := QueryDlg(nStr, sAsk);
       nHint := '';
     end;
@@ -355,7 +360,12 @@ begin
     Values['Value']     := Trim(EditValue.Text);
 
     Values['Card']      := Trim(EditCard.Text);
+    if CheckELabel.Checked then
+      Values['UseELabel'] := sFlag_Yes
+    else
+      Values['UseELabel'] := sFlag_No;
     Values['Memo']      := Trim(EditMemo.Text);
+    Values['Ship']      := Trim(EditShip.Text);
 
     if EditCardType.Checked then
          Values['CardType']:= sFlag_ProvCardG
@@ -432,6 +442,37 @@ begin
   {$ENDIF}
 end;
 
+procedure TfFormCardProvide.CheckELabelPropertiesChange(Sender: TObject);
+var nStr: string;
+begin
+  if CheckELabel.Checked then
+  begin
+    nStr := 'Select top 1 T_Card,T_CardUse From %s ' +
+            'Where T_Truck=''%s'' Order by R_ID DESC';
+    nStr := Format(nStr, [sTable_Truck, EditTruck.Text]);
+
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount <= 0 then
+      begin
+        ShowMsg('请维护车辆档案并办理电子标签', sHint);
+        Exit;
+      end;
+      if (Fields[0].AsString = '') or (Fields[1].AsString <> sFlag_Yes)  then
+      begin
+        nStr := '车辆[ %s ]未办理电子标签或电子标签未启用';
+        nStr := Format(nStr, [EditTruck.Text]);
+        ShowMsg(nStr, sHint);
+        Exit;
+      end;
+      EditCard.Text := Fields[0].AsString;
+    end;
+  end
+  else
+    EditCard.Clear;
+end;
+
 initialization
   gControlManager.RegCtrl(TfFormCardProvide, TfFormCardProvide.FormID);
+
 end.

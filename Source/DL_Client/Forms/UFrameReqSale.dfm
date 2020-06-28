@@ -18,6 +18,9 @@ inherited fFrameReqSale: TfFrameReqSale
     Top = 202
     Width = 985
     Height = 314
+    inherited cxView1: TcxGridDBTableView
+      OnCustomDrawCell = cxView1CustomDrawCell
+    end
   end
   inherited dxLayout1: TdxLayoutControl
     Width = 985

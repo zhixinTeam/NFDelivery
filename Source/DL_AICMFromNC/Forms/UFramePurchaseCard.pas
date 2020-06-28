@@ -178,7 +178,11 @@ begin
   col.Width := 260;
   col := lvOrders.Columns.Add;
   col.Caption := '供应商名称';
+  {$IFDEF ZJJNF}
+  col.Width := 0;
+  {$ELSE}
   col.Width := 350;
+  {$ENDIF}
   col := lvOrders.Columns.Add;
   col.Caption := '物料名称';
   col.Width := 270;

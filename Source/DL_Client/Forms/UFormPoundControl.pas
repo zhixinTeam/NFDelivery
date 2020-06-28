@@ -95,7 +95,44 @@ var nStr: string;
     nIdx: Integer;
 begin
   LoadPoundStation(EditPoundStation.Properties.Items);
-  LoadPoundStock(EditStock.Properties.Items);
+  EditStock.Properties.Items.Clear;
+  nStr := 'Select M_ID, M_Name From %s  ';
+  nStr := Format(nStr, [sTable_Materails]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      SetLength(gStockItems, RecordCount);
+
+      nIdx := 0;
+      try
+        EditStock.Properties.BeginUpdate;
+
+        First;
+
+        while not Eof do
+        begin
+          if (Fields[0].AsString = '') or (Fields[1].AsString = '') then
+          begin
+            Next;
+            Continue;
+          end;
+          with gStockItems[nIdx] do
+          begin
+            FID := Fields[0].AsString;
+            FName := Fields[1].AsString;
+          end;
+
+          Inc(nIdx);
+          EditStock.Properties.Items.Add(Fields[1].AsString);
+          Next;
+        end;
+      finally
+        EditStock.Properties.EndUpdate;
+      end;
+    end;
+  end;
 
   nStr := 'Select * From %s Where D_Name=''%s''';
   nStr := Format(nStr, [sTable_SysDict, sFlag_PoundControl]);
@@ -123,9 +160,9 @@ begin
       CheckValid.Checked := True;
       Exit;
     end;
-
+    EditStock.Text := FieldByName('D_ParamC').AsString;
     SetCtrlData(EditPoundStation, FieldByName('D_Memo').AsString);
-    SetCtrlData(EditStock, FieldByName('D_ParamC').AsString);
+    EditStock.ItemIndex := EditStock.SelectedItem;
     CheckValid.Checked := FieldByName('D_ParamB').AsString = sFlag_Yes;
   end;
 end;
@@ -177,7 +214,7 @@ begin
 
   nStr := MakeSQLByStr([SF('D_Memo', GetCtrlData(EditPoundStation)),
           SF('D_ParamB', nV),
-          SF('D_Value', GetCtrlData(EditStock)),
+          SF('D_Value', gStockItems[EditStock.ItemIndex].FID),
           SF('D_Name', sFlag_PoundStock),
           SF('D_ParamC', EditStock.Text)
           ], sTable_SysDict, nStr, FTruckID = '');

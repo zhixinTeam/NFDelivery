@@ -186,6 +186,7 @@ ResourceString
   sFlag_OutByPreYs    = 'TruckOutByPreYs';           //验收后自动出厂物料
   sFlag_ForceTruckSanMaxLade= 'ForceTruckSanMaxLade';//车辆散装最大开单量限制
   sFlag_AICMPurMinValue= 'AICMPurMinValue';          //自助机采购订单最小剩余量
+  sFlag_CusBmFromDict = 'CusBmFromDict';             //从DICT获取客户喷码编码
 
   sFlag_AICMPurStock  = 'AICMPurStock';              //自助机允许办卡物料
   sFlag_PrintPur      = 'PrintStockPur';             //需打印品种(采购)
@@ -226,6 +227,9 @@ ResourceString
   sFlag_StockBrandShow= 'StockBrandShow';            //预刷卡品种显示
   sFlag_PoundStation  = 'PoundStation';              //地磅可用磅站,用于指定过磅
   sFlag_OrderFilterH  = 'OrderFilterH';              //工厂订单过滤
+  sFlag_OrderBegin    = 'OrderBegin';                //读取订单日期过滤
+  sFlag_IDField       = 'IDField';                   //自助机身份证字段
+  sFlag_InFactGroup   = 'InFactGroup';               //进厂业务分组
 
   sFlag_InWHouse      = 'Warehouse';                 //库存可发(收)货订单
   sFlag_InWHID        = 'WarehouseID';               //仓库可发(收)货订单
@@ -273,6 +277,8 @@ ResourceString
   sFlag_PValueWuCha   = 'PValueWuCha';               //皮重浮动范围
   sFlag_DaiJudgeTunnel= 'DaiJudgeTunnel';            //袋装禁用队列
   sFlag_SanJudgeTunnel= 'SanJudgeTunnel';            //散装禁用队列
+  sFlag_AutoPD        = 'AutoPD';                    //默认袋装全部允许拼单
+  sFlag_GPSUrl        = 'GPSUrl';                    //GPS配置
 
   sFlag_BusGroup      = 'BusFunction';               //业务编码组
   sFlag_BillNo        = 'Bus_Bill';                  //交货单号
@@ -295,6 +301,11 @@ ResourceString
   sFlag_WXFactory     = 'WXFactoryID';               //微信标识
   sFlag_WXServiceMIT  = 'WXServiceMIT';              //微信工厂服务
   sFlag_WXSrvRemote   = 'WXServiceRemote';           //微信远程服务
+
+  sFlag_ESBSrv        = 'ESBSrv';                    //微信远程服务
+  sFlag_ESBDB         = 'ESBDB';                     //微信远程服务
+  sFlag_ESBLog        = 'ESBLog';                    //微信远程服务
+  sFlag_ESBPass       = 'ESBPass';                   //微信远程服务
 
   sFlag_HYDan         = 'Bus_HYDan';                 //化验单号
   sFlag_HYValue       = 'HYMaxValue';                //化验批次量
@@ -323,7 +334,13 @@ ResourceString
   sFlag_TruckType     = 'TruckType';                 //车轴
   sFlag_BrandBindPack = 'BrandBindPack';             //自助机同品种不同品牌包装类型
   sFlag_WPValueByStock= 'WarnPValueBYStock';         //根据物料校验皮重
-
+  sFlag_EmptyTruckSync= 'EmptyTruckSync';            //空车出厂上传NC
+  sFlag_SoundPost     = 'SoundPost';                 //装车播报语音卡
+  sFlag_InFactStock   = 'InFactStock';               //进厂物料
+  sFlag_InFactControl = 'InFactControlTotal';        //允许进厂物料总控制
+  sFlag_InFactStation = 'InFactStation';             //进厂读卡器
+  sFlag_BillXzSync    = 'BillXzSync';                //桐庐用
+  sFlag_PreLine       = 'PreLine';                   //预排队
   {*数据表*}
   sTable_Group        = 'Sys_Group';                 //用户组
   sTable_User         = 'Sys_User';                  //用户表

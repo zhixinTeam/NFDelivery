@@ -1,6 +1,6 @@
 inherited fFrameQueryCard: TfFrameQueryCard
   Width = 873
-  Height = 750
+  Height = 742
   object LabelTruck: TcxLabel
     Left = 0
     Top = 0
@@ -131,7 +131,7 @@ inherited fFrameQueryCard: TfFrameQueryCard
   end
   object LabelHint: TcxLabel
     Left = 0
-    Top = 580
+    Top = 675
     Align = alClient
     AutoSize = False
     ParentFont = False
@@ -146,9 +146,30 @@ inherited fFrameQueryCard: TfFrameQueryCard
     Properties.Alignment.Vert = taVCenter
     Properties.WordWrap = True
     Transparent = True
-    Height = 170
+    Height = 67
     Width = 873
     AnchorX = 437
-    AnchorY = 665
+    AnchorY = 709
+  end
+  object LabelSNLX: TcxLabel
+    Left = 0
+    Top = 580
+    Align = alTop
+    AutoSize = False
+    Caption = #27700#27877#27969#21521':'
+    ParentFont = False
+    Style.Font.Charset = DEFAULT_CHARSET
+    Style.Font.Color = clWhite
+    Style.Font.Height = -64
+    Style.Font.Name = #23435#20307
+    Style.Font.Style = [fsBold]
+    Style.TextColor = clBlack
+    Style.IsFontAssigned = True
+    Properties.Alignment.Horz = taLeftJustify
+    Properties.Alignment.Vert = taVCenter
+    Transparent = True
+    Height = 95
+    Width = 873
+    AnchorY = 628
   end
 end

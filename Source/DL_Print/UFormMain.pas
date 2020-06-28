@@ -585,7 +585,7 @@ begin
           ' Left Join %s sr on sr.R_SerialNo=sb.L_Seal ' +
           ' Where sb.L_ID = ''%s''';
   nStr := Format(nStr, [sTable_Bill, sTable_StockRecord, nBill]);
-
+  WriteLog('化验单打印:' + nStr);
   with FDM.SQLQuery(nStr, FDM.SqlTemp) do
   begin
     if RecordCount > 0 then
@@ -683,6 +683,10 @@ var nStr,nSR: string;
     nStockNo, nStockName: string;
 begin
   nHint := '';
+  {$IFDEF PrintHeGeZhengByHYDan}
+  WriteLog('开启使用化验单模式打印合格证,不再执行');
+  Exit;
+  {$ENDIF}
   Result := False;
 
   nStr := 'Select L_StockNo, L_StockName from %s b ' +

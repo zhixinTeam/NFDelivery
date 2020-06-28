@@ -39,7 +39,8 @@ uses
   UMgrRemoteVoice, UMgrVoiceNet, UMgrCodePrinter, UMgrLEDDisp, UMgrTTCEM100,
   UMgrRemoteSnap,
   UMgrRFID102{$IFDEF HKVDVR}, UMgrCamera{$ENDIF}, UMgrLEDDispCounter,
-  UJSDoubleChannel, UMgrSendCardNo, UMgrBasisWeight, UMgrBXFontCard;
+  UJSDoubleChannel, UMgrSendCardNo, UMgrBasisWeight, UMgrBXFontCard,
+  uMgrPreQueue, UMgrLEDCardPreQueue;
 
 class function THardwareWorker.ModuleInfo: TPlugModuleInfo;
 begin
@@ -173,6 +174,12 @@ begin
       gBXFontCardManager := TBXFontCardManager.Create;
       gBXFontCardManager.LoadConfig(nCfg + 'BXFontLED.xml');
     end;
+    {$ENDIF}
+
+    {$IFDEF PreQueueLed}
+    nStr := 'PreQueueLED';
+    gPreQueueCardManager.TempDir := nCfg + 'PreQueueTemp\';
+    gPreQueueCardManager.FileName := nCfg + 'PreQueueLED.xml';
     {$ENDIF}
   except
     on E:Exception do
@@ -312,6 +319,13 @@ begin
 
   if Assigned(gBXFontCardManager) then
     gBXFontCardManager.StartService;
+
+  {$IFDEF PreQueueLed}
+  gPreQueueCardManager.StartSender;
+  //led display
+  gTruckPreQueueManager.StartQueue(gParamManager.ActiveParam.FDB.FID);
+  //truck queue
+  {$ENDIF}
 end;
 
 procedure THardwareWorker.AfterStopServer;
@@ -400,6 +414,13 @@ begin
 
   if Assigned(gBXFontCardManager) then
     gBXFontCardManager.StopService;
+
+  {$IFDEF PreQueueLed}
+  gPreQueueCardManager.StopSender;
+  //led
+  gTruckPreQueueManager.StopQueue;
+  //truck queue
+  {$ENDIF}
 end;
 
 end.

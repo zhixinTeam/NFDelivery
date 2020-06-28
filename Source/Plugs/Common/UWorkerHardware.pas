@@ -51,6 +51,8 @@ type
     //切换调度模式
     function PoundCardNo(var nData: string): Boolean;
     //读取磅站卡号
+    function ReaderCardNo(var nData: string): Boolean;
+    //读卡器有效卡号
     function PoundReaderInfo(var nData: string): Boolean;
     //读取磅站读卡器岗位、部门
     function LoadQueue(var nData: string): Boolean;
@@ -247,6 +249,7 @@ begin
   case FIn.FCommand of
    cBC_ChangeDispatchMode   : Result := ChangeDispatchMode(nData);
    cBC_GetPoundCard         : Result := PoundCardNo(nData);
+   cBC_GetReaderCard        : Result := ReaderCardNo(nData);
    cBC_GetPoundReaderInfo   : Result := PoundReaderInfo(nData);
    cBC_GetQueueData         : Result := LoadQueue(nData);
    cBC_SaveCountData        : Result := SaveDaiNum(nData);
@@ -475,7 +478,7 @@ end;
 //Parm: 交货单[FIn.FData];通道号[FIn.FExtParam]
 //Desc: 在指定通道上喷码
 function THardwareCommander.PrintCode(var nData: string): Boolean;
-var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck,nBm,nPCCode,nCusBz,nSnlx: string;
+var nStr,nBill,nCode,nArea,nCusCode,nSeal,nTruck,nBm,nPCCode,nCusBz,nSnlx,nKw: string;
     nPrefixLen, nIDLen: Integer;
     nEvent,nEID,nCusName:string;
     nLDate,nLadeDate: TDateTime;
@@ -513,14 +516,15 @@ begin
     //无提货单配置
 
     {$IFDEF BMPrintCode}
-    nStr := 'Select L_ID,L_Seal,L_CusCode,L_Area,L_Truck,L_Bm,L_Date,L_CusName From %s ' +
+    nStr := 'Select * From %s ' +
             'Where L_ID=''%s''';
     nStr := Format(nStr, [sTable_Bill, FIn.FData]);
     {$ELSE}
     nStr := 'Select * From %s ' +
             ' left join %s on L_CusName = C_Name ' +
+            ' left join %s on D_Value = L_LadeLine ' +
             'Where L_ID=''%s''';
-    nStr := Format(nStr, [sTable_Bill, sTable_Customer, FIn.FData]);
+    nStr := Format(nStr, [sTable_Bill, sTable_Customer, sTable_SysDict, FIn.FData]);
     {$ENDIF}
 
     with gDBConnManager.WorkerQuery(FDBConn, nStr) do
@@ -549,6 +553,10 @@ begin
         nSnlx := FieldByName('L_Snlx').AsString
       else
         nSnlx := '';
+      if Assigned(FindField('D_Memo')) then
+        nKw := FieldByName('D_Memo').AsString
+      else
+        nKw := '';
       {$IFDEF BMPrintCode}
       nBm       := FieldByName('L_Bm').AsString;
       {$ELSE}
@@ -668,11 +676,37 @@ begin
       nCode := nCode + nSeal;
       {$ENDIF}
 
+      {$IFDEF GZNF}
+      nCode := FormatDateTime('YYYYMMDD',nLadeDate) + Copy(nBill, Length(nBill) - 2, 3);
+      nCode := nCode + nCusBz + nSeal;
+      {$ENDIF}
+
       {$IFDEF CDNF}
       nCode := FormatDateTime('YYYYMMDD',nLadeDate) + nSeal + '#';
       if Pos('#', nSnlx) > 0 then
         nCode := nCode + Copy(nSnlx, 1, Pos('#', nSnlx) - 1);
       nCode := nCode + Copy(nTruck, Length(nTruck) - 2, 3);
+      {$ENDIF}
+
+      {$IFDEF ARNF}
+      nCode := nSeal;
+      if Pos('#', nSnlx) > 0 then
+        nCode := nCode + Copy(nSnlx, 1, Pos('#', nSnlx) - 1);
+      {$ENDIF}
+
+      {$IFDEF ZJJNF}
+      if Pos('#', nSnlx) > 0 then
+        nCode := Copy(nSnlx, 1, Pos('#', nSnlx) - 1) + '--'
+      else
+        nCode := '';
+      nCode := nCode + Copy(nBill, nPrefixLen + 1, nIDLen - nPrefixLen);
+      //如果为空,则喷流水号
+      nCode := nCode + nSeal;
+      {$ENDIF}
+
+      {$IFDEF JINLEINF}
+      nCode := FormatDateTime('YYYYMMDD',nLadeDate) + nKw + nSeal +
+         '@2    ' + nSnlx; //换行
       {$ENDIF}
 
       {$IFDEF HSNF}
@@ -1103,6 +1137,23 @@ begin
   else
     gERelayManager.LineClose(nTunnel);
   Result := True;
+end;
+
+//Date: 2018-04-16
+//Parm: 读头标识[FIn.FData];读头类型[FIn.FExtParam]
+//Desc: 读取指定读卡器上的有效卡号
+function THardwareCommander.ReaderCardNo(var nData: string): Boolean;
+begin
+  Result := True;
+  FOut.FData := '';
+  //default
+
+  if FIn.FExtParam = 'RFID102' then
+  begin
+    if Assigned(gHYReaderManager) then
+      FOut.FData := gHYReaderManager.GetLastCard(FIn.FData);
+    //xxxxx
+  end;
 end;
 
 initialization

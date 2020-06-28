@@ -125,6 +125,12 @@ type
     cxTextEdit4: TcxTextEdit;
     Label5: TLabel;
     cxTextEdit5: TcxTextEdit;
+    EditOutDate: TcxDateEdit;
+    dxLayoutControl1Item5: TdxLayoutItem;
+    dxLayoutControl1Group4: TdxLayoutGroup;
+    EditPrintDate: TcxDateEdit;
+    dxLayoutControl1Item6: TdxLayoutItem;
+    dxLayoutControl1Group6: TdxLayoutGroup;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure EditIDPropertiesButtonClick(Sender: TObject;
@@ -294,6 +300,26 @@ end;
 procedure TfFormHYRecord.GetData(Sender: TObject; var nData: string);
 begin
   if Sender = EditDate then nData := DateTime2Str(EditDate.Date);
+  if Sender = EditOutDate then
+  begin
+    try
+      nData := DateTime2Str(EditOutDate.Date);
+      if Pos('0000', nData) > 0 then
+        nData := '1900-01-01';
+    except
+      nData := '1900-01-01';
+    end;
+  end;
+  if Sender = EditPrintDate then
+  begin
+    try
+      nData := DateTime2Str(EditPrintDate.Date);
+      if Pos('0000', nData) > 0 then
+        nData := '1900-01-01';
+    except
+      nData := '1900-01-01';
+    end;
+  end;
 end;
 
 function TfFormHYRecord.SetData(Sender: TObject; const nData: string): Boolean;
@@ -301,6 +327,24 @@ begin
   if Sender = EditDate then
   begin
     EditDate.Date := Str2DateTime(nData);
+    Result := True;
+  end
+  else
+  if Sender = EditOutDate then
+  begin
+    if Pos('1900', nData) > 0 then
+      EditOutDate.Text := ''
+    else
+      EditOutDate.Date := Str2DateTime(nData);
+    Result := True;
+  end
+  else
+  if Sender = EditPrintDate then
+  begin
+    if Pos('1900', nData) > 0 then
+      EditPrintDate.Text := ''
+    else
+      EditPrintDate.Date := Str2DateTime(nData);
     Result := True;
   end else Result := False;
 end;

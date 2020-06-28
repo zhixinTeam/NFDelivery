@@ -209,7 +209,7 @@ function LoadZTLineGroup(const nList: TStrings; const nWhere: string = ''): Bool
 //栈台分组
 function LoadPoundStation(const nList: TStrings; const nWhere: string = ''): Boolean;
 //指定磅站
-
+function LoadInFactStation(const nList: TStrings; const nWhere: string = ''): Boolean;
 function LoadPoundStock(const nList: TStrings; const nWhere: string = ''): Boolean;
 //读取可用地磅物料列表到nList中,包含附加数据
 function LoadLine(const nList: TStrings; const nWhere: string = ''): Boolean;
@@ -317,6 +317,7 @@ function PrintHeGeReport(const nHID: string; const nAsk: Boolean): Boolean;
 //化验单,合格证
 function IsOrderCanLade(nOrderID: string): Boolean;
 //查询此订单是否可以开卡
+function IsOrderUsed(nOrderID: string): Boolean;
 function InitViewData: Boolean;
 function MakeSaleViewData(nID: string; nMValue: Double): Boolean;
 function GetStockType(nBill: string):string;
@@ -386,6 +387,11 @@ function SaveSnapStatus(const nBill: TLadingBillItem; nStatus: string): Boolean;
 function VipTruckForceLine(const nVip,nStockNo,nLID: string): Boolean;
 function GetTruckTypeXzValue(const nTruck: string; var nType: string): Double;
 //获取车轴限值
+function UpdateKCValue(const nLID :string): Boolean;
+function GetDaiIFPound(nBill: TLadingBillItem): string;
+function GetLedStr(const nTruck, nStockNo: String): string;
+function GetReaderCard(const nReader,nType: string): string;
+//获取指定读头的有效卡号
 implementation
 
 //Desc: 记录日志
@@ -469,6 +475,35 @@ begin
   begin
     Result := StringOfChar('*', nLenW-5) + nStr;
     Exit;
+  end;
+end;
+
+function GetLedStr(const nTruck, nStockNo: String): string;
+var nStrTmp, nStockTemp, nStr: string;
+begin
+  nStockTemp := '';
+  nStr := 'Select D_Desc From %s Where D_Name=''%s'' And D_ParamB=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_StockItem, nStockNo]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+  begin
+    nStockTemp:=Fields[0].AsString;
+  end;
+
+  if nStockTemp = '' then
+  begin
+    nStrTmp := '      ' + nTruck;
+    Result := Copy(nStrTmp, Length(nStrTmp)-6 + 1, 6) + '      ';
+  end
+  else
+  begin
+    while Length(nStockTemp) < 6 do
+    begin
+      nStockTemp := ' ' + nStockTemp;
+    end;
+    nStrTmp := '      ' + nTruck;
+    Result := Copy(nStrTmp, Length(nStrTmp)-6 + 1, 6) + nStockTemp;
   end;
 end;
 
@@ -2821,6 +2856,25 @@ begin
   Result := nList.Count > 0;
 end;
 
+//Desc: 读取可用地磅列表到nList中,包含附加数据
+function LoadInFactStation(const nList: TStrings; const nWhere: string = ''): Boolean;
+var nStr,nW: string;
+begin
+  if nWhere = '' then
+       nW := ''
+  else nW := Format(' And (%s)', [nWhere]);
+
+  nStr := 'D_Value=Select D_Value,D_Memo From %s ' +
+          'Where D_Name=''%s'' %s Order By D_ID';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_InFactStation, nW]);
+
+  AdjustStringsItem(nList, True);
+  FDM.FillStringsData(nList, nStr, -1, '.', DSA(['D_Value']));
+
+  AdjustStringsItem(nList, False);
+  Result := nList.Count > 0;
+end;
+
 //Desc: 读取可用地磅物料列表到nList中,包含附加数据
 function LoadPoundStock(const nList: TStrings; const nWhere: string = ''): Boolean;
 var nStr,nW: string;
@@ -3329,6 +3383,23 @@ begin
     if RecordCount >0 then
     begin
       WriteLog('销售订单验证Sql:'+ nStr);
+      Result := False;
+    end;
+  end;
+end;
+
+function IsOrderUsed(nOrderID: string): Boolean;
+var nStr: string;
+begin
+  Result := True;
+  nStr := 'Select L_ID From %s Where L_ZhiKa in (''%s'')';
+  nStr := Format(nStr, [sTable_Bill, nOrderID]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount >0 then
+    begin
+      WriteLog('销售订单使用验证Sql:'+ nStr);
       Result := False;
     end;
   end;
@@ -4996,6 +5067,46 @@ begin
       Result := Fields[0].AsFloat;
     end;
   end;
+end;
+
+function UpdateKCValue(const nLID :string): Boolean;
+var nStr: string;
+begin
+  Result := False;
+  nStr := 'Update %s Set L_Value = 0 Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, nLID]);
+  FDM.ExecuteSQL(nStr);
+  //xxxxx
+end;
+
+function GetDaiIFPound(nBill: TLadingBillItem): string;
+var
+  nStr: string;
+begin
+  Result:=sFlag_Yes;
+
+  if nBill.FType = sFlag_San then
+    Exit;
+    
+  nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_PoundIfDai]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+  begin
+    Result:=Fields[0].AsString;
+  end;
+end;
+
+//Date: 2018-04-16
+//Parm: 读头;类型
+//Desc: 获取nReader上的有效卡号
+function GetReaderCard(const nReader,nType: string): string;
+var nOut: TWorkerBusinessCommand;
+begin
+  if CallBusinessHardware(cBC_GetReaderCard, nReader, nType, @nOut) then
+       Result := Trim(nOut.FData)
+  else Result := '';
 end;
 
 end.

@@ -191,6 +191,22 @@ begin
     Exit;
   end;
 
+  if FTruckID = '' then
+  begin
+    nStr := 'Select * From %s where T_Truck=''%s'' ';
+    nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+    with FDM.QueryTemp(nStr) do
+    begin
+      if RecordCount > 0 then
+      begin
+        ActiveControl := EditTruck;
+        ShowMsg('³µÅÆºÅÂëÒÑ´æÔÚ', sHint);
+        Exit;
+      end;
+    end;
+  end;
+
   {$IFDEF TruckMValueMaxControl}
   if not IsNumber(EditMValueMax.Text, True) then
   begin

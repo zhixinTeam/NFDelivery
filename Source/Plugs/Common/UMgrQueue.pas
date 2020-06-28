@@ -1288,7 +1288,7 @@ begin
         FIndex      := FieldByName('T_Index').AsInteger;
         if FIndex < 1 then FIndex := MaxInt;
 
-        FValue      := FieldByName('T_Value').AsFloat;
+        FValue      := Float2Float(FieldByName('T_Value').AsFloat, cPrecision);
         FNormal     := FieldByName('T_Normal').AsInteger;
         FBuCha      := FieldByName('T_BuCha').AsInteger;
 
@@ -1540,8 +1540,13 @@ begin
 
   if (nTruck.FDai <= 0) and (nLine.FPeerWeight > 0) then
   begin
-    nTruck.FDai := Trunc(nTruck.FValue * 1000 / nLine.FPeerWeight);
+    //WriteLog('车辆' + nTruck.FTruck + '开单量' + FloatToStr(nTruck.FValue));
+    if IsNumber(FloatToStr(nTruck.FValue), False) then
+      nTruck.FDai := Trunc(nTruck.FValue * 1000 / nLine.FPeerWeight)
+    else
+      nTruck.FDai := Round(nTruck.FValue * 1000 / nLine.FPeerWeight);
     //dai number
+    //WriteLog('车辆' + nTruck.FTruck + '袋数' + IntToStr(nTruck.FDai));
   end;
 
   if (nLine.FPeerWeight > 0) and
@@ -1783,8 +1788,13 @@ begin
 
           nTruck.FValue := FValue;
           if nLine.FPeerWeight > 0 then
-            nTruck.FDai := Trunc(FValue * 1000 / nLine.FPeerWeight);
+          begin
+            if IsNumber(FloatToStr(FValue), False) then
+              nTruck.FDai := Trunc(FValue * 1000 / nLine.FPeerWeight)
+            else
+              nTruck.FDai := Round(FValue * 1000 / nLine.FPeerWeight);
           //xxxxx
+          end;
 
           nTruck.FBill  := FBill;
           nTruck.FHKBills := FHKBills;

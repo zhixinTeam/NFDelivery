@@ -167,6 +167,7 @@ function ShowLedText(nTunnel, nStr:string):Boolean;
 //发送led显示内容
 function LineClose(nTunnel, nStatus:string):Boolean;
 //关闭放灰
+function ReadBaseWeight(nTunnel:string;var nInfo: string):Boolean;
 function ReadDoneValue(const nID: string; var nUseTime: Double): Double;
 function SaveDoneValue(const nID: string; nValue, nUseTime: Double): Boolean;
 function ReadTruckHisMValueMax(const nTruck: string): Double;
@@ -1248,6 +1249,18 @@ var nOut: TWorkerBusinessCommand;
 begin
   Result := CallBusinessHardware(cBC_LineClose, nTunnel, nStatus,
             @nOut, False);
+end;
+
+function ReadBaseWeight(nTunnel:string;var nInfo: string):Boolean;
+var nOut: TWorkerBusinessCommand;
+begin
+  nInfo := '';
+  Result := CallBusinessHardware(cBC_ReadBaseWeight, nTunnel, '',
+            @nOut, False);
+  if Result then
+  begin
+    nInfo := PackerDecodeStr(nOut.FData);
+  end;
 end;
 
 function ReadDoneValue(const nID: string;var nUseTime: Double): Double;

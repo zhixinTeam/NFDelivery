@@ -17,6 +17,7 @@ type
     LabelTon: TcxLabel;
     LabelNum: TcxLabel;
     LabelHint: TcxLabel;
+    LabelSNLX: TcxLabel;
   private
     { Private declarations }
     FLastCard: string;
@@ -66,6 +67,16 @@ procedure TfFrameQueryCard.OnCreateFrame;
 begin
   FLastCard := '';
   FLastQuery:= 0;
+  {$IFDEF AICMSmallFont}
+  LabelTruck.Style.Font.Size := 24;
+  LabelBill.Style.Font.Size := 24;
+  LabelOrder.Style.Font.Size := 24;
+  LabelStock.Style.Font.Size := 24;
+  LabelTon.Style.Font.Size := 24;
+  LabelNum.Style.Font.Size := 24;
+  LabelHint.Style.Font.Size := 24;
+  LabelSNLX.Style.Font.Size := 24;
+  {$ENDIF}
   FListA := TStringList.Create;
 end;
 
@@ -79,6 +90,7 @@ var nVal: Double;
     nStr,nStock,nBill,nVip,nLine,nPoundQueue,nTruck, nStockFz, nStockList: string;
     nDate: TDateTime;
     nQueueMax: Integer;
+    nCusName, nStockName, nTon: string;
 begin
   mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0);
   mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0);
@@ -91,6 +103,107 @@ begin
   end;
 
   try
+    {$IFDEF AICMPDSearch}
+    nStr := 'Select * From %s Where L_Card=''%s''';
+    nStr := Format(nStr, [sTable_Bill, nCard]);
+
+    with FDM.SQLQuery(nStr) do
+    begin
+      if RecordCount < 1 then
+      begin
+        LabelHint.Caption := '磁卡号无效';
+        Exit;
+      end;
+
+      if RecordCount = 1 then
+      begin
+        nVal := 0;
+        First;
+
+        while not Eof do
+        begin
+          if FieldByName('L_Value').AsFloat > nVal then
+          begin
+            nBill := FieldByName('L_ID').AsString;
+            nVal := FieldByName('L_Value').AsFloat;
+          end;
+
+          Next;
+        end;
+
+        First;
+        while not Eof do
+        begin
+          if FieldByName('L_ID').AsString = nBill then
+            Break;
+          Next;
+        end;
+
+        nBill  := FieldByName('L_ID').AsString;
+        nVip   := FieldByName('L_IsVip').AsString;
+
+        nTruck := FieldByName('L_Truck').AsString;
+        nStock := FieldByName('L_StockNo').AsString;
+
+        LabelBill.Caption := '交货单号: ' + FieldByName('L_ID').AsString;
+        LabelOrder.Caption := '客户名称: ' + FieldByName('L_CusName').AsString;
+        LabelTruck.Caption := '车牌号码: ' + FieldByName('L_Truck').AsString;
+        LabelStock.Caption := '品种名称: ' + FieldByName('L_StockName').AsString
+                               + '(' + FieldByName('L_StockBrand').AsString + ')';
+        LabelTon.Caption := '提货数量: ' + FieldByName('L_Value').AsString + '吨'
+                               + '(到货地点:' + FieldByName('L_StockArea').AsString + ')';
+        if Assigned(FindField('L_SNLX')) then
+        begin
+          LabelSNLX.Visible := True;
+          LabelSNLX.Caption := '水泥流向: ' + FieldByName('L_SNLX').AsString;
+        end
+        else
+          LabelSNLX.Visible := False;
+      end
+      else
+      begin
+        nVal := 0;
+        First;
+        nBill := '';
+        nCusName := '';
+        nStockName := '';
+        nTon := '';
+        while not Eof do
+        begin
+          nBill  := FieldByName('L_ID').AsString + ',' + nBill ;
+          if Pos(FieldByName('L_CusName').AsString, nCusName) <= 0 then
+          begin
+            nCusName := FieldByName('L_CusName').AsString + ',' + nCusName;
+          end;
+
+          nStockName := FieldByName('L_StockName').AsString
+                               + '(' + FieldByName('L_StockBrand').AsString + ')'
+                               + ',' + nStockName ;
+          nTon := FieldByName('L_Value').AsString + '吨' + ',' + nTon ;
+          Next;
+        end;
+
+        nVip   := FieldByName('L_IsVip').AsString;
+
+        nTruck := FieldByName('L_Truck').AsString;
+        nStock := FieldByName('L_StockNo').AsString;
+
+        LabelBill.Caption := '交货单号: ' + nBill;
+        LabelOrder.Caption := '客户名称: ' + nCusName;
+        LabelTruck.Caption := '车牌号码: ' + FieldByName('L_Truck').AsString;
+        LabelStock.Caption := '品种名称: ' + nStockName;
+        LabelTon.Caption := '提货数量: ' + nTon
+                               + '(到货地点:' + FieldByName('L_StockArea').AsString + ')';
+        if Assigned(FindField('L_SNLX')) then
+        begin
+          LabelSNLX.Visible := True;
+          LabelSNLX.Caption := '水泥流向: ' + FieldByName('L_SNLX').AsString;
+        end
+        else
+          LabelSNLX.Visible := False;
+      end;
+    end;
+    {$ELSE}
     nStr := 'Select * From %s Where L_Card=''%s''';
     nStr := Format(nStr, [sTable_Bill, nCard]);
 
@@ -136,7 +249,15 @@ begin
                              + '(' + FieldByName('L_StockBrand').AsString + ')';
       LabelTon.Caption := '提货数量: ' + FieldByName('L_Value').AsString + '吨'
                              + '(到货地点:' + FieldByName('L_StockArea').AsString + ')';
+      if Assigned(FindField('L_SNLX')) then
+      begin
+        LabelSNLX.Visible := True;
+        LabelSNLX.Caption := '水泥流向: ' + FieldByName('L_SNLX').AsString;
+      end
+      else
+        LabelSNLX.Visible := False;
     end;
+    {$ENDIF}
 
     //--------------------------------------------------------------------------
     nStr := 'Select Count(*) From %s ' +

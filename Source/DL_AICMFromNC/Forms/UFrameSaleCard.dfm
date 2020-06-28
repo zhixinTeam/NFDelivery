@@ -12,7 +12,7 @@ inherited fFrameSaleCard: TfFrameSaleCard
     Color = clWhite
     TabOrder = 0
     object BtnSave: TSpeedButton
-      Left = 387
+      Left = 561
       Top = 17
       Width = 171
       Height = 61
@@ -1532,7 +1532,7 @@ inherited fFrameSaleCard: TfFrameSaleCard
     object PrintHY: TcxCheckBox
       Left = 8
       Top = 12
-      Caption = #20986#21378#25171#21360#21270#39564#21333
+      Caption = #20986#21378#25171#21360#21270#39564#21333'('#21512#26684#35777')'
       ParentFont = False
       Style.Font.Charset = GB2312_CHARSET
       Style.Font.Color = clBlue
@@ -1541,7 +1541,7 @@ inherited fFrameSaleCard: TfFrameSaleCard
       Style.Font.Style = []
       Style.IsFontAssigned = True
       TabOrder = 0
-      Width = 374
+      Width = 539
     end
   end
   object lvOrders: TListView

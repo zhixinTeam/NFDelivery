@@ -180,6 +180,10 @@ begin
             SF('P_SnapTruck',   FListA.Values['SnapTruck']),
             {$ENDIF}
 
+            {$IFDEF ProShip}
+            SF('P_Ship', FListA.Values['Ship']),
+            {$ENDIF}
+
             SF('P_Truck', nTruck),
             SF('P_Status', sFlag_TruckNone),
             SF('P_Man', FIn.FBase.FFrom.FUser),
@@ -190,33 +194,84 @@ begin
     nStr := 'Select Count(*) From %s Where C_Card=''%s''';
     nStr := Format(nStr, [sTable_Card, FListA.Values['Card']]);
 
-    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
-    if Fields[0].AsInteger < 1 then
+
+    if FListA.Values['UseELabel'] = sFlag_Yes then
     begin
-      nStr := MakeSQLByStr([SF('C_Card', FListA.Values['Card']),
-              SF('C_Group', FListA.Values['CardType']),
-              SF('C_Status', sFlag_CardUsed),
-              SF('C_Used', sFlag_ShipPro),
-              SF('C_Freeze', sFlag_No),
-              SF('C_TruckNo', nTruck),
-              SF('C_Man', FIn.FBase.FFrom.FUser),
-              SF('C_Date', sField_SQLServer_Now, sfVal)
-              ], sTable_Card, '', True);
-      gDBConnManager.WorkerExec(FDBConn, nStr);
-    end else
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+      if Fields[0].AsInteger < 1 then
+      begin
+        nStr := MakeSQLByStr([SF('C_Card', FListA.Values['Card']),
+                SF('C_Card2', FListA.Values['Card']),
+                SF('C_Card3', 'H' + FListA.Values['Card']),
+                SF('C_Group', FListA.Values['CardType']),
+                SF('C_Status', sFlag_CardUsed),
+                SF('C_Used', sFlag_ShipPro),
+                SF('C_Freeze', sFlag_No),
+                SF('C_TruckNo', nTruck),
+                SF('C_Man', FIn.FBase.FFrom.FUser),
+                SF('C_Date', sField_SQLServer_Now, sfVal)
+                ], sTable_Card, '', True);
+        gDBConnManager.WorkerExec(FDBConn, nStr);
+      end else
+      begin
+        nStr := Format('C_Card=''%s''', [FListA.Values['Card']]);
+        nStr := MakeSQLByStr([SF('C_Status', sFlag_CardUsed),
+                SF('C_Group', FListA.Values['CardType']),
+                SF('C_Used', sFlag_ShipPro),
+                SF('C_Freeze', sFlag_No),
+                SF('C_TruckNo', nTruck),
+                SF('C_Man', FIn.FBase.FFrom.FUser),
+                SF('C_Date', sField_SQLServer_Now, sfVal)
+                ], sTable_Card, nStr, False);
+        gDBConnManager.WorkerExec(FDBConn, nStr);
+      end;
+      //更新磁卡状态
+    end
+    else
     begin
-      nStr := Format('C_Card=''%s''', [FListA.Values['Card']]);
-      nStr := MakeSQLByStr([SF('C_Status', sFlag_CardUsed),
-              SF('C_Group', FListA.Values['CardType']),
-              SF('C_Used', sFlag_ShipPro),
-              SF('C_Freeze', sFlag_No),
-              SF('C_TruckNo', nTruck),
-              SF('C_Man', FIn.FBase.FFrom.FUser),
-              SF('C_Date', sField_SQLServer_Now, sfVal)
-              ], sTable_Card, nStr, False);
-      gDBConnManager.WorkerExec(FDBConn, nStr);
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+      if Fields[0].AsInteger < 1 then
+      begin
+        nStr := MakeSQLByStr([SF('C_Card', FListA.Values['Card']),
+                SF('C_Group', FListA.Values['CardType']),
+                SF('C_Status', sFlag_CardUsed),
+                SF('C_Used', sFlag_ShipPro),
+                SF('C_Freeze', sFlag_No),
+                SF('C_TruckNo', nTruck),
+                SF('C_Man', FIn.FBase.FFrom.FUser),
+                SF('C_Date', sField_SQLServer_Now, sfVal)
+                ], sTable_Card, '', True);
+        gDBConnManager.WorkerExec(FDBConn, nStr);
+      end else
+      begin
+        nStr := Format('C_Card=''%s''', [FListA.Values['Card']]);
+        nStr := MakeSQLByStr([SF('C_Status', sFlag_CardUsed),
+                SF('C_Group', FListA.Values['CardType']),
+                SF('C_Used', sFlag_ShipPro),
+                SF('C_Freeze', sFlag_No),
+                SF('C_TruckNo', nTruck),
+                SF('C_Man', FIn.FBase.FFrom.FUser),
+                SF('C_Date', sField_SQLServer_Now, sfVal)
+                ], sTable_Card, nStr, False);
+        gDBConnManager.WorkerExec(FDBConn, nStr);
+      end;
+      //更新磁卡状态
     end;
-    //更新磁卡状态
+    {$IFDEF PurQueue}
+    nStr := MakeSQLByStr([
+    SF('T_Truck'   , FListA.Values['Truck']),
+    SF('T_StockNo' , FListA.Values['StockNo']),
+    SF('T_Stock'   , FListA.Values['StockName']),
+    SF('T_Type'    , sFlag_San),
+    SF('T_InTime'  , sField_SQLServer_Now, sfVal),
+    SF('T_Bill'    , FListA.Values['Card']),
+    SF('T_Valid'   , sFlag_Yes),
+    SF('T_Value'   , 50, sfVal),
+    SF('T_VIP'     , 'C'),
+    SF('T_HKBills' , FListA.Values['Card'] + '.')
+    ], sTable_ZTTrucks, '', True);
+      gDBConnManager.WorkerExec(FDBConn, nStr);
+    {$ENDIF}
 
     FDBConn.FConn.CommitTrans;
     FOut.FData := sFlag_Yes;
@@ -373,11 +428,14 @@ begin
 
       FStatus     := FieldByName('P_Status').AsString;
       FNextStatus := FieldByName('P_NextStatus').AsString;
+
+      {$IFNDEF InFactOnlyOne}
       if (FStatus = sFlag_TruckNone) or (FNextStatus = sFlag_TruckIn) then      //原材料不进厂也可刷卡过磅
       begin
         FStatus := sFlag_TruckIn;
         FNextStatus := sFlag_TruckBFP;
       end;
+      {$ENDIF}
 
       with FPData do
       begin
@@ -417,6 +475,9 @@ begin
       FPoundID    := FieldByName('P_Pound').AsString;
       FExtID_2    := FieldByName('P_Order').AsString;
       FMemo       := FieldByName('P_Memo').AsString;
+
+      if Assigned(FindField('P_Ship')) then
+        FShip := FieldByName('P_Ship').AsString;
 
       if Assigned(FindField('P_PoundStation')) then
       begin
@@ -458,7 +519,7 @@ end;
 function TWorkerBusinessShipPro.SavePostProvideItems(var nData: string): Boolean;
 var nSQL,nStr,nYS,nNS,nWT,nPreYs: string;
     nInt, nIdx: Integer;
-    nNet, nVal: Double;
+    nNet, nVal,nMValue,nMValueReal,nMValControl: Double;
     {$IFDEF HardMon}
     nReader: THHReaderItem;
     {$ENDIF}
@@ -553,6 +614,13 @@ begin
             SF('P_NextStatus', sFlag_TruckBFP)
             ], sTable_CardProvide, SF('P_Card', nPound[0].FCard), False);
     FListA.Add(nSQL);
+    {$IFDEF PurQueue}
+    nSQL := 'Update %s Set T_InFact=%s Where T_Truck Like ''%%%s%%''';
+    nSQL := Format(nSQL, [sTable_ZTTrucks, sField_SQLServer_Now,
+            nPound[0].FTruck]);
+    FListA.Add(nSQL);
+    //更新队列车辆进厂状态
+    {$ENDIF}
   end else
 
   //----------------------------------------------------------------------------
@@ -627,6 +695,9 @@ begin
                 SF('P_Status', sFlag_TruckBFP),
                 SF('P_Valid', sFlag_Yes),
                 SF('P_Memo', FMemo),
+                {$IFDEF ProShip}
+                SF('P_Ship', FShip),
+                {$ENDIF}
                 SF('P_PrintNum', 1, sfVal)
                 ], sTable_PoundLog, '', True);
         FListA.Add(nSQL);
@@ -648,6 +719,14 @@ begin
               ], sTable_Truck, SF('T_Truck', FTruck), False);
       FListA.Add(nSQL);
       //更新车辆活动时间
+
+      {$IFDEF PurQueue}
+      nSQL := 'Update %s Set T_PDate=%s Where T_Truck Like ''%%%s%%''';
+      nSQL := Format(nSQL, [sTable_ZTTrucks, sField_SQLServer_Now,
+              nPound[0].FTruck]);
+      FListA.Add(nSQL);
+      //更新队列车辆进厂状态
+      {$ENDIF}
     end;
 
   end else
@@ -900,6 +979,11 @@ begin
             //保存同步信息
           end;
         end;
+        {$IFDEF PurQueue}
+        nSQL := 'Delete from %s Where T_Truck Like ''%%%s%%''';
+        nSQL := Format(nSQL, [sTable_ZTTrucks, nPound[0].FTruck]);
+        FListA.Add(nSQL);
+        {$ENDIF}
       end
       else
       begin
@@ -1143,6 +1227,49 @@ begin
               ], sTable_Truck, SF('T_Truck', FTruck), False);
       FListA.Add(nSQL);
       //更新车辆活动时间
+      {$IFDEF PurQueue}
+      nSQL := 'Delete from %s Where T_Truck Like ''%%%s%%''';
+      nSQL := Format(nSQL, [sTable_ZTTrucks, nPound[0].FTruck]);
+      FListA.Add(nSQL);
+      {$ENDIF}
+
+      {$IFDEF JINLEINF}
+      begin
+        nMValueReal := 0;
+        nMValue := 0;
+        nMValControl := 0;
+
+        nMValueReal := FMData.FValue;
+
+        if nMValueReal > 0 then
+        begin
+          nSQL := 'Select T_CzType, D_ParamA,D_ParamB From %s left join %s on T_CzType = D_Value ' +
+                  ' where D_Name = ''%s'' and T_Truck=''%s'' ';
+          nSQL := Format(nSQL, [sTable_Truck, sTable_SysDict, sFlag_TruckType, FTruck]);
+
+          WriteLog('查询限载重量SQL:' + nSQL);
+          with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
+          if RecordCount > 0 then
+          begin
+            if FieldByName('T_CzType').AsString <> '' then
+            begin
+              nMValControl := Fields[1].AsFloat;
+              nMValue := Fields[2].AsFloat;
+            end;
+          end;
+
+          if (nMValControl > 0) and (nMValue > 0) and (nMValueReal >= nMValControl) then
+          begin
+            nSQL := 'update %s set P_MValue=%.2f, P_MValueReal=%.2f where P_ID=''%s''';
+            nSQL := format(nSQL,[sTable_PoundLog, nMValue, nMValueReal, FPoundID]);
+            WriteLog('更新限载毛重SQL:' + nSQL);
+            WriteLog('磅单[ ' + FPoundID + ' ]毛重调整:实际毛重[ ' + FloatToStr(nMValueReal) + ']' + '--' + '调整为[ '
+                     + FloatToStr(nMValue) + ' ]');
+            FListA.Add(nSQL);
+          end;
+        end;
+      end;
+      {$ENDIF}
     end;
   end else
 

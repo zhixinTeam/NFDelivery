@@ -80,7 +80,7 @@ object fFormHYRecord: TfFormHYRecord
     end
     object wPanel: TPanel
       Left = 23
-      Top = 143
+      Top = 168
       Width = 415
       Height = 262
       Align = alClient
@@ -878,15 +878,31 @@ object fFormHYRecord: TfFormHYRecord
       ParentFont = False
       Properties.Kind = ckDateTime
       TabOrder = 5
-      Width = 155
+      Width = 157
     end
     object EditMan: TcxTextEdit
-      Left = 287
+      Left = 301
       Top = 86
       Hint = 'E.R_Man'
       ParentFont = False
       TabOrder = 6
-      Width = 120
+      Width = 144
+    end
+    object EditOutDate: TcxDateEdit
+      Left = 81
+      Top = 111
+      Hint = 'E.R_OutDate'
+      Properties.Kind = ckDateTime
+      TabOrder = 10
+      Width = 121
+    end
+    object EditPrintDate: TcxDateEdit
+      Left = 301
+      Top = 111
+      Hint = 'E.R_PrintDate'
+      Properties.Kind = ckDateTime
+      TabOrder = 11
+      Width = 121
     end
     object dxLayoutControl1Group_Root: TdxLayoutGroup
       ShowCaption = False
@@ -911,17 +927,39 @@ object fFormHYRecord: TfFormHYRecord
           Hidden = True
           LayoutDirection = ldHorizontal
           ShowBorder = False
-          object dxLayoutControl1Item2: TdxLayoutItem
-            Caption = #21462#26679#26085#26399':'
-            Control = EditDate
-            ControlOptions.ShowBorder = False
+          object dxLayoutControl1Group4: TdxLayoutGroup
+            ShowCaption = False
+            Hidden = True
+            ShowBorder = False
+            object dxLayoutControl1Item2: TdxLayoutItem
+              AutoAligns = [aaVertical]
+              AlignHorz = ahClient
+              Caption = #21462#26679#26085#26399':'
+              Control = EditDate
+              ControlOptions.ShowBorder = False
+            end
+            object dxLayoutControl1Item5: TdxLayoutItem
+              Caption = #20986#21378#26085#26399':'
+              Control = EditOutDate
+              ControlOptions.ShowBorder = False
+            end
           end
-          object dxLayoutControl1Item3: TdxLayoutItem
-            AutoAligns = [aaVertical]
-            AlignHorz = ahClient
-            Caption = #24405#20837#20154':'
-            Control = EditMan
-            ControlOptions.ShowBorder = False
+          object dxLayoutControl1Group6: TdxLayoutGroup
+            ShowCaption = False
+            Hidden = True
+            ShowBorder = False
+            object dxLayoutControl1Item3: TdxLayoutItem
+              AutoAligns = [aaVertical]
+              AlignHorz = ahClient
+              Caption = #24405#20837#20154':'
+              Control = EditMan
+              ControlOptions.ShowBorder = False
+            end
+            object dxLayoutControl1Item6: TdxLayoutItem
+              Caption = #25171#21360#26085#26399':'
+              Control = EditPrintDate
+              ControlOptions.ShowBorder = False
+            end
           end
         end
       end

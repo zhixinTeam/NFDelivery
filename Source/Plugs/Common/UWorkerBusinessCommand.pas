@@ -10,8 +10,12 @@ interface
 uses
   Windows, Classes, Controls, DB, SysUtils, UBusinessWorker, UBusinessPacker,
   UBusinessConst, UMgrDBConn, UMgrParam, ZnMD5, ULibFun, UFormCtrl, USysLoger,
-  USysDB, UMITConst, UBase64, UWorkerClientWebChat, UMgrQueue, StrUtils, DateUtils
+  USysDB, UMITConst, UBase64, UWorkerClientWebChat, UMgrQueue, StrUtils,
+  IdHTTP, uSuperObject, IdSSLOpenSSL, DateUtils
   {$IFDEF HardMon}, UMgrHardHelper, UWorkerHardware{$ENDIF};
+
+const
+  cHttpTimeOut          = 10;
 
 type
 
@@ -94,6 +98,8 @@ type
     //订单列表
     FIn: TWorkerBusinessCommand;
     FOut: TWorkerBusinessCommand;
+    FIdHttp: TIdHTTP;
+    FidSSL : TIdSSLIOHandlerSocketOpenSSL;
   protected
     procedure GetInOutData(var nIn,nOut: PBWDataBase); override;
     function DoDBWork(var nData: string): Boolean; override;
@@ -165,7 +171,10 @@ type
     //获取卸货地点及强制输入卸货地点物料
     function VerifySanCardUseCount(var nData: string): Boolean;
     //获取散装刷卡次数设置及校验
-
+    function GetSoundCard(var nData: string): Boolean;
+    function VerifyStockCanIn(var nData: string): Boolean;
+    function SaveTruckLine(var nData: string): Boolean;
+    //保存车辆通道
     //-------------------由DL向Web商城发起查询----------------------------------
     function SendEventMsg(var nData:string):boolean;
     //发送模板消息
@@ -196,6 +205,7 @@ type
     //-------------------由DL向DL发起查询---------------------------------------
     function DLSaveShopInfo(var nData:string):Boolean;
     //保存同步信息
+    procedure ReQuestInit;
   public
     constructor Create; override;
     destructor destroy; override;
@@ -343,6 +353,15 @@ begin
   FListA := TStringList.Create;
   FListB := TStringList.Create;
   FListC := TStringList.Create;
+
+  FidHttp := TIdHTTP.Create(nil);
+  FidHttp.ConnectTimeout := cHttpTimeOut * 1000;
+  FidHttp.ReadTimeout := cHttpTimeOut * 1000;
+  FidSSL  := TIdSSLIOHandlerSocketOpenSSL.Create(nil);
+  if (FidHttp <> nil) and (FidSSL <> nil) then
+  begin
+    FidHttp.IOHandler := FidSSL;
+  end;
   inherited;
 end;
 
@@ -351,6 +370,7 @@ begin
   FreeAndNil(FListA);
   FreeAndNil(FListB);
   FreeAndNil(FListC);
+  FreeAndNil(FidHttp);
   inherited;
 end;
 
@@ -458,6 +478,7 @@ begin
 
    cBC_GetUnLodingPlace    : Result := GetUnLoadingPlace(nData);
    cBC_VerifySanCardUseCount: Result := VerifySanCardUseCount(nData);
+   cBC_GetSoundCard        : Result := GetSoundCard(nData);
 
    cBC_WebChat_SendEventMsg     :Result := SendEventMsg(nData);                //微信平台接口：发送模板消息
    cBC_WebChat_GetCustomerInfo  :Result := GetCustomerInfo(nData);             //微信平台接口：获取商城账户注册信息
@@ -475,6 +496,8 @@ begin
    cBC_WebChat_DLSaveShopInfo   :Result := DLSaveShopInfo(nData);              //微信平台
    cBC_GetPurchaseList          :Result := GetPurchaseListNC(nData);           //获取采购订单列表
    cBC_GetOrderList             :Result := GetOrderListNC(nData);              //获取销售订单列表
+   cBC_VerifyTruckInFact        :Result := VerifyStockCanIn(nData);
+   cBC_SaveTruckLine            : Result := SaveTruckLine(nData);
    else
     begin
       Result := False;
@@ -1239,11 +1262,23 @@ end;
 //Parm: 查询类型[FIn.FData];查询条件[FIn.FExtParam]
 //Desc: 依据查询条件,构建指定类型订单的SQL查询语句
 function TWorkerBusinessCommander.GetSQLQueryOrder(var nData: string): Boolean;
-var nStr,nType,nPB,nFactNum: string;
+var nStr,nType,nPB,nFactNum,nIDField: string;
     nCorp,nWHGroup,nWHID:string;
 begin
   Result := False;
   FListA.Text := DecodeBase64(FIn.FExtParam);
+
+  nIDField := 't1.vdef8';
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_IDField]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      nIDField := Fields[0].AsString;
+    end;
+  end;
 
   nStr := 'Select D_Value,D_Memo,D_ParamB From %s Where D_Name=''%s''';
   nStr := Format(nStr, [sTable_SysDict, sFlag_OrderInFact]);
@@ -1432,7 +1467,7 @@ begin
   nStr := FListA.Values['SDTID'];
   if nStr <> '' then
   begin
-    FOut.FData := FOut.FData + Format(' And t1.vdef8=''%s''', [nStr]);
+    FOut.FData := FOut.FData + Format(' And ' + nIDField + '=''%s''', [nStr]);
     //按身份证号
   end;
 
@@ -2154,19 +2189,47 @@ end;
 //Parm: 交货单(多个)[FIn.FData]
 //Desc: 同步交货单发货数据到NC计量榜单表中
 function TWorkerBusinessCommander.SyncNC_ME25(var nData: string): Boolean;
-var nStr,nSQL: string;
+var nStr,nSQL,nET, nUrl: string;
     nIdx: Integer;
     nDS: TDataSet;
     nDateMin: TDateTime;
     nWorker: PDBWorker;
     nBills: TLadingBillItems;
     nOut: TWorkerBusinessCommand;
+    BodyJo: ISuperObject;
+    wParam: TStrings;
+    ReStream: TStringStream;
+    nTruckXz: Double;
 begin
   Result := False;
+
+  nET := '';
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_EmptyTruckSync]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    nET := Fields[0].AsString;
+    //xxxxx
+  end;
+
   FListA.Text := FIn.FData;
   nStr := AdjustListStrFormat2(FListA, '''', True, ',', False, False);
 
-  nSQL := 'Select L_ID,L_ZhiKa,L_SaleMan,L_Truck,L_Value,L_PValue,L_PDate,L_IsVIP,' +
+  {$IFDEF JINLEINF}
+  nSQL := 'Select L_ID,L_ZhiKa,L_SaleMan,L_Truck,L_Value,L_PValue,L_PDate,L_IsVIP,L_LadeTime,L_Type,' +
+          'dict.D_Memo As ncKW, '      +    //NC生产线编号
+          'L_PMan,L_MValue,L_MDate,L_MMan,L_OutFact,L_Date,L_Seal,P_ID From $Bill ' +
+          '  Left Join $PLOG On P_Bill=L_ID ' +
+          '  Left Join $Dict dict On D_Value=L_LadeLine ' +
+          '       And dict.D_Name=''$GROUP'' ' +
+          'Where L_ID In ($ID)';
+  nSQL := MacroValue(nSQL, [MI('$BILL', sTable_Bill),
+          MI('$PLOG', sTable_PoundLog), MI('$ID', nStr),
+          MI('$Dict', sTable_SysDict),MI('$GROUP', sFlag_LineKw)]);
+  {$ELSE}
+  nSQL := 'Select L_ID,L_ZhiKa,L_SaleMan,L_Truck,L_Value,L_PValue,L_PDate,L_IsVIP,L_LadeTime,L_Type,' +
           {$IFDEF LineGroup}
           'dict.D_ParamC As ncLineID, '      +    //NC生产线编号
           {$ENDIF}
@@ -2180,6 +2243,7 @@ begin
   nSQL := MacroValue(nSQL, [MI('$BILL', sTable_Bill),
           MI('$PLOG', sTable_PoundLog), MI('$ID', nStr),
           MI('$Dict', sTable_SysDict),MI('$GROUP', sFlag_ZTLineGroup)]);
+  {$ENDIF}
 
   with gDBConnManager.WorkerQuery(FDBConn, nSQL) do
   begin
@@ -2210,6 +2274,9 @@ begin
         FTruck      := FieldByName('L_Truck').AsString;
         FValue      := FieldByName('L_Value').AsFloat;
         FMemo       := FieldByName('L_Seal').AsString;
+
+        if Assigned(FindField('ncKW')) then
+          FShip := FieldByName('ncKW').AsString;
 
         if FListA.IndexOf(FZhiKa) < 0 then
           FListA.Add(FZhiKa);
@@ -2253,12 +2320,21 @@ begin
             FDate := FieldByName('L_OutFact').AsDateTime;
           //xxxxx
 
+          {$IFDEF DaiSyncByZT}//与DayQuickSync互斥
+          if FieldByName('L_Type').AsString = sFlag_Dai then
+          FDate := FieldByName('L_LadeTime').AsDateTime;
+          {$ENDIF}
+
+          {$IFDEF DaiSyncWithNow}
+          FDate := StrToDateTime(FormatDateTime('YYYY-MM-DD HH:MM:SS', Now));
+          {$ELSE}
           if FieldByName('L_IsVip').AsString <> sFlag_TypeShip then
           begin
             if FDate < nDateMin then
               FDate := FieldByName('L_Date').AsDateTime;
             //xxxxx
           end;
+          {$ENDIF}
 
           if FDate < nDateMin then
             FDate := Date();
@@ -2301,6 +2377,7 @@ begin
 
       for nIdx:=Low(nBills) to High(nBills) do
       begin
+        if nET <> sFlag_Yes then
         if FloatRelation(nBills[nIdx].FValue, 0, rtLE) then Continue;
         //发货量为0,不回传磅单
 
@@ -2383,7 +2460,11 @@ begin
                 MakeField(nDS, 'vdef14', 0),
                 MakeField(nDS, 'vdef15', 0),
                 MakeField(nDS, 'vdef16', 0),
+                {$IFDEF JINLEINF}
+                SF('vdef17', nBills[nIdx].FShip),
+                {$ELSE}
                 MakeField(nDS, 'vdef17', 0),
+                {$ENDIF}
                 MakeField(nDS, 'vdef18', 0),
                 MakeField(nDS, 'vdef19', 0),
                 MakeField(nDS, 'vdef2', 0),
@@ -2463,6 +2544,82 @@ begin
   finally
     gDBConnManager.ReleaseConnection(nWorker);
   end;
+
+  {$IFDEF TLXzSync}
+  nUrl := '';
+  nStr := 'Select D_Value From %s Where D_Name=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_BillXzSync]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    nUrl := Fields[0].AsString;
+    //xxxxx
+  end;
+
+  nTruckXz := 0;
+  nStr := 'Select top 1 T_HZValueMax From %s Where T_Truck=''%s'' order by R_ID Desc ';
+  nStr := Format(nStr, [sTable_Truck, nBills[0].FTruck]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    nTruckXz := Fields[0].AsFloat;
+    //xxxxx
+  end;
+
+  wParam   := TStringList.Create;
+  ReStream := TStringstream.Create('');
+  BodyJo   := SO();
+  try
+    for nIdx:=Low(nBills) to High(nBills) do
+    with nBills[nIdx] do
+    begin
+      BodyJo.Clear;
+      BodyJo.S['PLATE_NUMBER'] := FTruck;
+
+      if FMData.FValue <= 0 then
+      begin
+        BodyJo.D['GROSS_WEIGHT'] := FValue;
+        BodyJo.D['TARE_WEIGHT'] := 0;
+      end
+      else
+      begin
+        BodyJo.D['GROSS_WEIGHT'] := FMData.FValue;
+        BodyJo.D['TARE_WEIGHT'] := FPData.FValue;
+      end;
+      BodyJo.D['NET_WEIGHT'] := FValue;
+      BodyJo.S['GROSS_WEIGHT_TIME'] := FormatDateTime('YYYY-MM-DD hh:mm:ss', FMData.FDate);
+      BodyJo.S['TARE_WEIGHT_TIME'] := FormatDateTime('YYYY-MM-DD hh:mm:ss', FPData.FDate);
+      BodyJo.D['LOAD'] := nTruckXz;
+      nStr := BodyJo.AsString;
+      WriteLog('出厂信息同步:' + nStr);
+
+      nStr := PackerEncodeStr(UTF8Encode(nStr));
+
+      wParam.Clear;
+      wParam.Add(nStr);
+
+      //FidHttp参数初始化
+      ReQuestInit;
+      try
+        FidHttp.Post(nUrl, wParam, ReStream);
+      except
+        on e: Exception do
+        begin
+          WriteLog(e.Message);
+        end;
+      end;
+
+      nStr := UTF8Decode(ReStream.DataString);
+      WriteLog(nStr);
+    end;
+  finally
+    ReStream.Free;
+    FIdHttp.Disconnect;
+    wParam.Free;
+  end;
+  {$ENDIF}
 end;
 
 //Date: 2015-01-08
@@ -2533,6 +2690,11 @@ begin
       FValue := Float2Float(FMData.FValue - FPData.FValue - FKZValue,
                 cPrecision, False);
       //供应量
+      if Assigned(FindField('P_YLineName')) then
+        FSeal := FieldByName('P_YLineName').AsString;
+
+      if Assigned(FindField('P_Ship')) then
+        FShip := FieldByName('P_Ship').AsString;
     end;
   end;
 
@@ -2609,7 +2771,11 @@ begin
               SF('pk_poundbill', nBills[nIdx].FPoundID),
               SF('ts', DateTime2Str(nBills[nIdx].FMData.FDate)),
               SF('vbillcode', nBills[nIdx].FPoundID),
-              SF('vdef11', nBills[nIdx].FMemo),                                 //备注;堆场
+              {$IFDEF JINLEINF}
+              SF('vdef11', nBills[nIdx].FSeal),
+              {$ELSE}
+              SF('vdef11', nBills[nIdx].FMemo),
+              {$ENDIF}                                //备注;堆场
               MakeField(nDS, 'vdef1', 0),
               MakeField(nDS, 'vdef10', 0),
               MakeField(nDS, 'vdef12', 0),
@@ -2628,7 +2794,11 @@ begin
               MakeField(nDS, 'vdef6', 0),
               MakeField(nDS, 'vdef7', 0),
               MakeField(nDS, 'vdef8', 0),
+              {$IFDEF ProShip}
+              SF('vdef9', nBills[nIdx].FShip),
+              {$ELSE}
               MakeField(nDS, 'vdef9', 0),
+              {$ENDIF}
               SF('vsourcebillcode', FieldByName('vbillcode').AsString),
               SF('wayofpoundcorrent', '1')
               ], 'meam_poundbill', '', True);
@@ -2678,8 +2848,11 @@ begin
       nWorker.FConn.BeginTrans;
       try
         for nIdx:=0 to FListA.Count - 1 do
+        begin
+          WriteLog('同步磅单sql:' + FListA[nIdx]);
           gDBConnManager.WorkerExec(nWorker, FListA[nIdx]);
         //xxxxx
+        end;
 
         nWorker.FConn.CommitTrans;
         Result := True;
@@ -3888,7 +4061,7 @@ begin
 end;
 
 function TWorkerBusinessCommander.GetPurchaseListNC(var nData:string):Boolean;
-var nSQL: string;
+var nSQL, nStr: string;
     nVal: Double;
     nIdx: Integer;
     nWorker: PDBWorker;
@@ -3900,6 +4073,23 @@ begin
   FListA.Values['NoDate'] := sFlag_Yes;
   FListA.Values['AICMID'] := FIn.FData;
   FListA.Values['order']  := 'invcode';
+
+  try
+    nStr := 'Select D_Value From %s Where D_Name=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_OrderBegin]);
+
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    begin
+      if RecordCount > 0 then
+      begin
+        FListA.Values['NoDate'] := '';
+        FListA.Values['DateStart'] := FormatDateTime('YYYY-MM-DD',IncDay(Now, 0 - Fields[0].AsInteger));
+        FListA.Values['DateEnd'] := FormatDateTime('YYYY-MM-DD',IncDay(Now, 1));
+      end;
+    end;
+  except
+  end;
+
   if not CallMe(cBC_GetSQLQueryOrder, '201', PackerEncodeStr(FListA.Text), @nOut) then
   begin
     nData := 'GetOrderList获取NC采购订单语句失败';
@@ -5125,7 +5315,7 @@ var nStr,nP,nUBrand,nUBatchAuto, nUBatcode, nType, nLineGroup, nBatStockNo: stri
     var nSQL, nTmp: string;
     begin
       nSQL := 'Select *,%s as ServerNow From %s Where B_Stock=''%s'' ' +
-              'And B_Type=''%s'' And B_Kw=''%s''';
+              'And B_Type=''%s'' And B_Kw=''%s'' and B_Valid <> ''N''';
       nSQL := Format(nSQL, [sField_SQLServer_Now,sTable_Batcode,nBatStockNo,
                             nBtype, nKw]);
 
@@ -5272,10 +5462,10 @@ begin
     FOut.FExtParam := '';
 
     nStr := 'Select *,%s as ServerNow From %s Where B_Stock=''%s'' ' +
-            'And B_Type=''%s'' And B_Kw=''%s''';
+            'And B_Type=''%s'' And B_Kw=''%s'' and B_Valid <> ''N'' ';
     nStr := Format(nStr, [sField_SQLServer_Now,sTable_Batcode,nBatStockNo,
                           nType, nKw]);
-
+    WriteLog('现场刷卡查询批次sql:'+nStr);
     with gDBConnManager.WorkerQuery(FDBConn, nStr) do
     begin
       if RecordCount < 1 then
@@ -5587,6 +5777,115 @@ begin
   gDBConnManager.WorkerExec(FDBConn, nStr);
   
   Result := True;
+end;
+
+//Desc: 获取装车语音卡
+function TWorkerBusinessCommander.GetSoundCard(var nData: string): Boolean;
+var nStr: string;
+begin
+  Result := True;
+  FOut.FData := FIn.FExtParam;
+
+  nStr := 'Select D_Value From %s Where D_Memo=''%s'' and D_Name=''%s'' ';
+  nStr := Format(nStr, [sTable_SysDict, FIn.FData, sFlag_SoundPost]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      FOut.FData := Fields[0].AsString;
+    end;
+  end;
+end;
+
+function TWorkerBusinessCommander.VerifyStockCanIn(
+  var nData: string): Boolean;
+var nStr, nStockNo, nTunnel: string;
+begin
+  Result := False;
+  FOut.FData := '';
+  nStockNo := Trim(FIn.FData);
+  nTunnel  := Trim(FIn.FExtParam);
+  if (Trim(nStockNo) = '') or (Trim(nTunnel) = '') then
+  begin
+    Result := True;
+    Exit;
+  end;
+
+  nStr := 'Select D_Memo From %s Where D_Name=''%s'' ' +
+          ' and D_Value=''%s'' and D_Memo=''%s'' and D_ParamB=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_InFactStock, nStockNo, nTunnel, sFlag_Yes]);
+  WriteLog('查询进厂控制1sql:' + nStr);
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount > 0 then//符合
+    begin
+      Result := True;
+      Exit;
+    end;
+  end;
+  
+  nStr := 'Select D_Memo From %s Where D_Name=''%s'' and D_Value=''%s'' and D_ParamB=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_InFactStock, nStockNo, sFlag_Yes]);
+  WriteLog('查询进厂控制2sql:' + nStr);
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  begin
+    if RecordCount <= 0 then//不限制
+    begin
+      Result := True;
+      Exit;
+    end;
+
+    First;
+
+    while not Eof do
+    begin
+      FOut.FData := FOut.FData + Fields[0].AsString + ',';
+      Next;
+    end;
+    if Copy(FOut.FData, Length(FOut.FData), 1) = ',' then
+      System.Delete(FOut.FData, Length(FOut.FData), 1);
+  end;
+end;
+
+function TWorkerBusinessCommander.SaveTruckLine(var nData: string): Boolean;
+var nStr: string;
+begin
+  Result := False;
+
+  if FIn.FData = '' then
+    Exit;
+
+  FListA.Clear;
+
+  FListA.Text := FIn.FData;
+
+  if FListA.Values['ID'] = '' then
+    Exit;
+
+  nStr := 'Update %s Set L_LadeLine=''%s'',L_LineName=''%s'' Where L_ID=''%s''';
+  nStr := Format(nStr, [sTable_Bill, FListA.Values['LineID'],
+                                     FListA.Values['LineName'],
+                                     FListA.Values['ID']]);
+
+  gDBConnManager.WorkerExec(FDBConn, nStr);
+
+  nStr := 'Update %s Set T_Line=''%s'' Where T_Bill=''%s''';
+  nStr := Format(nStr, [sTable_ZTTrucks, FListA.Values['LineID'],
+          FListA.Values['ID']]);
+  //xxxxx
+  gDBConnManager.WorkerExec(FDBConn, nStr);
+  Result := True;
+end;
+
+procedure TWorkerBusinessCommander.ReQuestInit;
+begin
+  FidHttp.Request.Clear;
+  FidHttp.Request.Accept         := 'application/json, text/javascript, */*; q=0.01';
+  FidHttp.Request.AcceptLanguage := 'zh-cn,zh;q=0.8,en-us;q=0.5,en;q=0.3';
+  FidHttp.Request.ContentType    := 'application/json;Charset=UTF-8';
+  FidHttp.Request.Connection     := 'keep-alive';
+  FIdHttp.HandleRedirects        := True;
 end;
 
 initialization

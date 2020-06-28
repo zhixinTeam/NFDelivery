@@ -112,6 +112,7 @@ type
     //图像识别验证车牌次数
     FWarnPEventDept: string;
     FTruckInterval: Integer;
+    FCardUsed: string;
     procedure SetUIData(const nReset: Boolean; const nOnlyData: Boolean = False);
     //界面数据
     procedure SetImageStatus(const nImage: TImage; const nOff: Boolean);
@@ -474,6 +475,28 @@ begin
     end;
   end;
 
+  for nIdx:=Low(nBills) to High(nBills) do
+  with nBills[nIdx] do
+  begin
+    if GetDaiIFPound(nBills[nIdx]) = sFlag_No then
+    begin
+      if FStatus = sFlag_TruckNone then
+      begin
+        nVoice := '车辆 %s 无需过磅,应该去 %s ';
+        nVoice := Format(nVoice, [FTruck, TruckStatusToStr(sFlag_TruckZT)]);
+      end
+      else
+      begin
+        nVoice := '车辆 %s 无需过磅,应该去 %s ';
+        nVoice := Format(nVoice, [FTruck, TruckStatusToStr(sFlag_TruckOut)]);
+      end;
+
+      PlayVoice(nVoice);
+      WriteSysLog(nVoice);
+      Exit;
+    end;
+  end;
+
   if (nBills[0].FPoundStation <> '') and
      (nBills[0].FPoundStation <> FPoundTunnel.FID) then
   begin
@@ -549,7 +572,7 @@ begin
   nInt := 0;
 
   nCardUsed := GetCardUsed(nCard);
-
+  FCardUsed := nCardUsed;
   for nIdx:=Low(nBills) to High(nBills) do
   with nBills[nIdx] do
   begin
@@ -1957,6 +1980,12 @@ begin
     {$IFDEF HSNF}
     nStr := GetTruckNO(FUIData.FTruck) + ',请下磅';
     {$ENDIF}
+
+    {$IFDEF BFLedEx}
+    if FUIData.FCardUse = sFlag_Sale then
+    nStr := GetLedStr(FUIData.FTruck, FUIData.FStockNo) + '重量  ' + GetValue(nValue);
+    {$ENDIF}
+
     {$IFDEF DaiNoWeight}
     if (FUIData.FType = sFlag_Dai) and (FUIData.FCardUse = sFlag_Sale) then
     begin
@@ -1976,7 +2005,11 @@ begin
     end;
     {$ENDIF}
     LEDDisplay(nStr);
-    
+    {$IFDEF PoundVocieValue}
+    nStr := '车辆[n1]%s重量[n2]%.2f吨,请下磅';
+    nStr := Format(nStr, [FUIData.FTruck, nValue]);
+    PlayVoice(nStr);
+    {$ENDIF}
     TimerDelay.Enabled := True;
   end else Timer_SaveFail.Enabled := True;
 
@@ -2014,6 +2047,7 @@ begin
 end;
 
 procedure TfFrameAutoPoundItem.TimerDelayTimer(Sender: TObject);
+var nStr: string;
 begin
   try
     TimerDelay.Enabled := False;
@@ -2021,9 +2055,35 @@ begin
     FDoneEmptyPoundInit := GetTickCount;
     WriteLog(Format('对车辆[ %s ]称重完毕.', [FUIData.FTruck]));
 
+    {$IFDEF PoundVocieValue}
+    if (FCardUsed = sFlag_Sale) and (FUIData.FType = sFlag_San) and
+       ((FUIData.FNextStatus = sFlag_TruckBFM) or
+         (FUIData.FNextStatus = sFlag_TruckOut)) then
+    begin
+      nStr := '车辆[n1]%s毛重[n2]%.2f吨[p500]净重[n2]%.2f吨,请下磅';
+      nStr := Format(nStr, [FUIData.FTruck,
+              Float2Float(FUIData.FMData.FValue, 1000),
+              Float2Float(FUIData.FMData.FValue - FUIData.FPData.FValue, 1000)]);
+      PlayVoice(nStr);
+    end
+    else
+    if (FCardUsed = sFlag_Sale) and (FUIData.FType = sFlag_San) and
+       (FUIData.FNextStatus = sFlag_TruckBFP) then
+    begin
+      nStr := '车辆[n1]%s皮重[n2]%.2f吨,请下磅';
+      nStr := Format(nStr, [FUIData.FTruck,
+              Float2Float(FUIData.FPData.FValue, 1000)]);
+      PlayVoice(nStr);
+    end
+    else
+    begin
+      PlayVoice(#9 + FUIData.FTruck);
+      //播放语音
+    end;
+    {$ELSE}
     PlayVoice(#9 + FUIData.FTruck);
     //播放语音
-
+    {$ENDIF}
     FLastCard := FCardTmp;
     Timer2.Enabled := True;
 

@@ -62,6 +62,7 @@ type
     FUIData: TLadingBillItem;     //界面数据
     FOPCTunnel: PPTOPCItem;       //OPC通道
     FHasDone, FSetValue, FUseTime: Double;
+    FDataLarge: Double;//放大倍数
     procedure SetUIData(const nReset: Boolean; const nOnlyData: Boolean = False);
     //设置界面数据
     procedure SetTunnel(const Value: PPTOPCItem);
@@ -100,11 +101,17 @@ var
   nStr,nTruck: string;
   nBills: TLadingBillItems;
   nRet,nHisMValueControl: Boolean;
-  nIdx: Integer;
+  nIdx,nSendValue: Integer;
   nVal, nPreKD: Double;
   nEvent,nEID:string;
   nItem : TdOPCItem;
 begin
+  if Assigned(FOPCTunnel.FOptions) And
+       (UpperCase(FOPCTunnel.FOptions.Values['SendToPlc']) = sFlag_Yes) then
+  begin
+    WriteLog('非OPC启动,退出操作');
+    Exit;
+  end;
   if DelayTimer.Enabled then
   begin
     nStr := '请勿频繁刷卡';
@@ -113,6 +120,13 @@ begin
     ShowLedText(FOPCTunnel.FID, nStr);
     SetUIData(True);
     Exit;
+  end;
+  FDataLarge := 1;
+
+  if Assigned(FOPCTunnel.FOptions) And
+       (IsNumber(FOPCTunnel.FOptions.Values['DataLarge'], True)) then
+  begin
+    FDataLarge := StrToFloat(FOPCTunnel.FOptions.Values['DataLarge']);
   end;
 
   if Assigned(FOPCTunnel.FOptions) And
@@ -264,10 +278,19 @@ begin
   SetUIData(False);
 
   try
-    FormMain.gOPCServer.OPCGroups[FrameId].OPCItems[0].WriteSync(FSetValue - FHasDone);
+    if FDataLarge > 0 then
+    begin
+      nSendValue := Round((FSetValue - FHasDone)/ FDataLarge);
+      FormMain.gOPCServer.OPCGroups[FrameId].OPCItems[0].WriteSync(nSendValue);
 
-    WriteLog(FOPCTunnel.FID +'发送提货量:'+ FloatToStr(FUIData.FValue - FHasDone));
+      WriteLog(FOPCTunnel.FID +'发送提货量:'+ IntToStr(nSendValue));
+    end
+    else
+    begin
+      FormMain.gOPCServer.OPCGroups[FrameId].OPCItems[0].WriteSync(FSetValue - FHasDone);
 
+      WriteLog(FOPCTunnel.FID +'发送提货量:'+ FloatToStr(FUIData.FValue - FHasDone));
+    end;
     if Trim(FOPCTunnel.FTruckTag) <> '' then
     begin
       nItem := FormMain.gOPCServer.OPCGroups[FrameId].OPCItems.FindOPCItem(FOPCTunnel.FTruckTag);
@@ -371,6 +394,12 @@ var
   nGroup: TdOPCGroup;
   nIdx: Integer;
 begin
+  if Assigned(FOPCTunnel.FOptions) And
+       (UpperCase(FOPCTunnel.FOptions.Values['SendToPlc']) = sFlag_Yes) then
+  begin
+    WriteLog('非OPC启动,退出操作');
+    Exit;
+  end;
   if DelayTimer.Enabled then
   begin
     Exit;
@@ -458,7 +487,7 @@ begin
       WriteLog(FOPCTunnel.FImpDataTag+':'+Itemlist[nIdx].ValueStr);
       if IsNumber(Itemlist[nIdx].ValueStr, True) then
       begin
-        nValue := StrToFloat(Itemlist[nIdx].ValueStr) + FHasDone;
+        nValue := (StrToFloat(Itemlist[nIdx].ValueStr) + FHasDone) * FDataLarge;
         EditValue.Text := Format('%.2f', [nValue]);
         if (Length(Trim(EditBill.Text)) > 0) and (nValue > 0) then
         begin
@@ -490,15 +519,70 @@ begin
 end;
 
 procedure TFrame1.StateTimerTimer(Sender: TObject);
+var nInfo: string;
+    nList: TStrings;
+    nItem : TdOPCItem;
 begin
   StateTimer.Enabled := False;
   StateTimer.Tag := StateTimer.Tag + 1;
-  try
-    SyncReadValues(False);
-  except
-    on E: Exception do
-    begin
-      WriteLog('通道' + fOPCTunnel.FID + '读取累计数据失败,原因:' + e.Message);
+  if Assigned(FOPCTunnel.FOptions) And
+       (UpperCase(FOPCTunnel.FOptions.Values['SendToPlc']) = sFlag_Yes) then
+  begin
+    try
+      WriteLog('读取库底计量');
+      if not ReadBaseWeight(FOPCTunnel.FID, nInfo) then
+      begin
+        StateTimer.Enabled := True;
+        Exit;
+      end;
+      WriteLog('库底计量:' + nInfo);
+      nList := TStringList.Create;
+      try
+        nList.Text := nInfo;
+        EditBill.Text := nList.Values['Bill'];
+        editPValue.Text := nList.Values['PValue'];
+        EditValue.Text := nList.Values['ValueMax'];
+        editZValue.Text := nList.Values['Value'];
+
+        if EditBill.Text <> '' then
+        begin
+          FormMain.gOPCServer.OPCGroups[FrameId].OPCItems[0].WriteSync(editZValue.Text);
+
+          WriteLog(FOPCTunnel.FID +'发送提货量:'+ editZValue.Text);
+
+          FormMain.gOPCServer.OPCGroups[FrameId].OPCItems[1].WriteSync(EditValue.Text);
+
+          WriteLog(FOPCTunnel.FID +'发送地磅重量:'+ EditValue.Text);
+
+          if Trim(FOPCTunnel.FTruckTag) <> '' then
+          begin
+            nItem := FormMain.gOPCServer.OPCGroups[FrameId].OPCItems.FindOPCItem(FOPCTunnel.FTruckTag);
+            if nItem <> nil then
+            begin
+              nItem.WriteSync(editPValue.Text);
+              WriteLog(FOPCTunnel.FID +'发送皮重:'+ editPValue.Text);
+            end;
+          end;
+        end;
+      finally
+        nList.Free;
+      end;
+    except
+      on E: Exception do
+      begin
+        WriteLog(e.Message);
+      end;
+    end;
+  end
+  else
+  begin
+    try
+      SyncReadValues(False);
+    except
+      on E: Exception do
+      begin
+        WriteLog('通道' + fOPCTunnel.FID + '读取累计数据失败,原因:' + e.Message);
+      end;
     end;
   end;
   StateTimer.Enabled := True;

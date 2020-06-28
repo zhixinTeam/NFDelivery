@@ -120,6 +120,7 @@ inherited fFormTruck: TfFormTruck
     object EditType: TcxComboBox [14]
       Left = 81
       Top = 211
+      ParentFont = False
       Properties.DropDownListStyle = lsEditFixedList
       TabOrder = 7
       Width = 121

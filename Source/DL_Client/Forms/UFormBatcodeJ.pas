@@ -199,7 +199,7 @@ begin
   {$ELSE}
   dxLayout1Item22.Visible := False;
   EditLineGroup.Text := '';
-  dxLayout1Item23.Visible := False;
+  //dxLayout1Item23.Visible := False;
 
   if FUseBrand then
   begin
@@ -219,7 +219,7 @@ begin
   begin
     dxLayout1Item24.Visible := False;
     EditBrand.Text := '';
-    dxLayout1Item23.Visible := False;
+    //dxLayout1Item23.Visible := False;
   end;
   {$ENDIF}
 
@@ -271,6 +271,7 @@ begin
         nStr := FieldByName('B_BrandGroup').AsString;
         SetCtrlData(EditBrand, nStr);
       end;
+      ChkValid.Checked := FieldByName('B_Valid').AsString = sFlag_Yes;
       {$ENDIF}
       {$IFDEF BatCodeByLine}
       EditKw.Text := FieldByName('B_Kw').AsString;
@@ -406,13 +407,9 @@ begin
        nN := sFlag_Yes
   else nN := sFlag_No;
 
-  {$IFDEF AutoGetLineGroup}
   if ChkValid.Checked then
        nV := sFlag_Yes
   else nV := sFlag_No;
-  {$ELSE}
-  nV := sFlag_Yes;
-  {$ENDIF}
 
   if FRecordID = '' then
        nStr := ''
@@ -436,6 +433,7 @@ begin
             SF('B_LastDate', sField_SQLServer_Now, sfVal),
             SF('B_BrandGroup', GetCtrlData(EditBrand)),
             SF('B_Batcode', EditBatcode.Text),
+            SF('B_Valid', nV),
             SF('B_Type', GetCtrlData(EditType))
             ], sTable_Batcode, nStr, FRecordID = '');
   end
@@ -458,8 +456,8 @@ begin
             {$IFDEF AutoGetLineGroup}
             SF('B_LineGroup', GetCtrlData(EditLineGroup)),
             SF('B_BrandGroup', GetCtrlData(EditBrand)),
-            SF('B_Valid', nV),
             {$ENDIF}
+            SF('B_Valid', nV),
             {$IFDEF BatCodeByLine}
             SF('B_Kw', EditKw.Text),
             {$ENDIF}

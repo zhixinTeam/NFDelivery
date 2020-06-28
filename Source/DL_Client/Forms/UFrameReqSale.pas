@@ -40,6 +40,9 @@ type
     procedure EditDatePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnAddClick(Sender: TObject);
+    procedure cxView1CustomDrawCell(Sender: TcxCustomGridTableView;
+      ACanvas: TcxCanvas; AViewInfo: TcxGridTableDataCellViewInfo;
+      var ADone: Boolean);
   private
     { Private declarations }
   protected
@@ -50,6 +53,8 @@ type
     procedure OnDestroyFrame; override;
     function InitFormDataSQL(const nWhere: string): string; override;
     {*查询SQL*}
+    function GetVal(const nRow: Integer; const nField: string): string;
+    //获取指定字段
   public
     { Public declarations }
     class function FrameID: integer; override;
@@ -120,7 +125,7 @@ begin
     EditTruck.Text := Trim(EditTruck.Text);
     if EditTruck.Text = '' then Exit;
 
-    FWhere := Format('cvehicle Like ''%%%s%%''', [EditTruck.Text]);
+    FWhere := Format('t2.cvehicle Like ''%%%s%%''', [EditTruck.Text]);
     FListA.Text := 'Filter=' + EncodeBase64(FWhere);
     InitFormData('');
   end else
@@ -153,6 +158,15 @@ begin
     ShowMsg('订单正在使用,无法开单', sHint);
     Exit;
   end;
+  {$ELSE}
+    {$IFDEF OrderUsedOne}
+    if Trim(SQLQuery.FieldByName('cvehicle').AsString) <> '' then//车牌号为空默认为大订单
+    if not IsOrderUsed(SQLQuery.FieldByName('PK_MEAMBILL').AsString) then
+    begin
+      ShowMsg('订单已使用,无法开单', sHint);
+      Exit;
+    end;
+    {$ENDIF}
   {$ENDIF}
 
   with nOrder,SQLQuery do
@@ -191,6 +205,42 @@ begin
 
   nP.FParamA := BuildOrderInfo(nOrder);
   CreateBaseFormItem(cFI_FormMakeBill, PopedomItem, @nP);
+end;
+
+procedure TfFrameReqSale.cxView1CustomDrawCell(
+  Sender: TcxCustomGridTableView; ACanvas: TcxCanvas;
+  AViewInfo: TcxGridTableDataCellViewInfo; var ADone: Boolean);
+begin
+  inherited;
+  {$IFDEF JudgeOrder}
+  if Trim(AViewInfo.GridRecord.Values[TcxGridDBTableView(Sender).GetColumnByFieldName('cvehicle').Index]) <> '' then//车牌号为空默认为大订单
+  if not IsOrderCanLade(AViewInfo.GridRecord.Values[TcxGridDBTableView(Sender).GetColumnByFieldName('PK_MEAMBILL').Index]) then
+  begin
+    ACanvas.Canvas.Font.Color := clRed;
+  end;
+  {$ELSE}
+    {$IFDEF OrderUsedOne}
+    if Trim(AViewInfo.GridRecord.Values[TcxGridDBTableView(Sender).GetColumnByFieldName('cvehicle').Index]) <> '' then//车牌号为空默认为大订单
+    if not IsOrderUsed(AViewInfo.GridRecord.Values[TcxGridDBTableView(Sender).GetColumnByFieldName('PK_MEAMBILL').Index]) then
+    begin
+      ACanvas.Canvas.Font.Color := clRed;
+    end;
+    {$ENDIF}
+  {$ENDIF}
+end;
+
+//Desc: 获取nRow行nField字段的内容
+function TfFrameReqSale.GetVal(const nRow: Integer;
+ const nField: string): string;
+var nVal: Variant;
+begin
+  nVal := cxView1.ViewData.Rows[nRow].Values[
+            cxView1.GetColumnByFieldName(nField).Index];
+  //xxxxx
+
+  if VarIsNull(nVal) then
+       Result := ''
+  else Result := nVal;
 end;
 
 initialization

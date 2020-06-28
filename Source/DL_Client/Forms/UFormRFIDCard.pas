@@ -10,21 +10,29 @@ uses
   Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
   UFormBase, UFormNormal, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, ExtCtrls, cxCheckBox,
-  cxTextEdit, dxLayoutControl, StdCtrls, cxGraphics;
+  cxTextEdit, dxLayoutControl, StdCtrls, cxGraphics, cxMaskEdit,
+  cxDropDownEdit, cxLabel, cxButtonEdit;
 
 type
   TfFormRFIDCard = class(TfFormNormal)
     tmrReadCard: TTimer;
     edtTruck: TcxTextEdit;
     dxLayout1Item6: TdxLayoutItem;
-    edtRFIDCard: TcxTextEdit;
-    dxLayout1Item3: TdxLayoutItem;
     chkValue: TcxCheckBox;
     dxLayout1Item4: TdxLayoutItem;
+    cxLabel1: TcxLabel;
+    dxLayout1Item5: TdxLayoutItem;
+    EditReaders: TcxComboBox;
+    dxLayout1Item7: TdxLayoutItem;
+    edtRFIDCard: TcxButtonEdit;
+    dxLayout1Item8: TdxLayoutItem;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure BtnOKClick(Sender: TObject);
     procedure edtRFIDCardKeyPress(Sender: TObject; var Key: Char);
     procedure tmrReadCardTimer(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure edtRFIDCardPropertiesButtonClick(Sender: TObject;
+      AButtonIndex: Integer);
   private
     { Private declarations }
     FParam: PFormCommandParam;
@@ -46,7 +54,7 @@ implementation
 
 uses
   IniFiles, UMgrRFID102_Head, USmallFunc, ULibFun, UMgrControl, USysDB,
-  USysLoger, USysConst;
+  USysLoger, USysConst, USysBusiness;
 
 type
   TReaderType = (ptT800, pt8142);
@@ -63,8 +71,15 @@ type
     FCheckMode: Integer;
   end;
 
+  TRemoteItem = record
+    FReader: string;
+    FPosition: string;
+  end;
+  TRemoteItems = array of TRemoteItem;
+
 var
   gReaderItem: TReaderItem;
+  gRemoteItems: TRemoteItems;
   //全局使用
 
 const
@@ -94,8 +109,9 @@ begin
     FParam := nParam;
     InitFormData;
     if not ActionComPort(False) then Exit;
-    
-    tmrReadCard.Enabled := True;
+
+    if gReaderItem.FPort > -1 then
+      tmrReadCard.Enabled := True;
     chkValue.Checked := FParam.FParamC = sFlag_Yes;
 
     FParam.FCommand := cCmd_ModalResult;
@@ -117,10 +133,17 @@ begin
   edtRFIDCard.Text := FParam.FParamB;
 end;
 
+procedure TfFormRFIDCard.FormCreate(Sender: TObject);
+begin
+  LoadFormConfig(Self);
+end;
+
 procedure TfFormRFIDCard.FormClose(Sender: TObject;
   var Action: TCloseAction);
 begin
   inherited;
+  SaveFormConfig(Self);
+  
   ActionComPort(True);
   tmrReadCard.Enabled := False;
 end;
@@ -198,6 +221,7 @@ function TfFormRFIDCard.ActionComPort(const nStop: Boolean):Boolean;
 var nStr: string;
     nInt: Integer;
     nIni: TIniFile;
+    nList: TStrings;
 begin
   Result := False;
   if nStop then
@@ -206,13 +230,43 @@ begin
     Exit;
   end;
 
+  nList := nil;
   nIni := TIniFile.Create(gPath + 'RFIDReader.Ini');
   with gReaderItem do
   try
+    nList := TStringList.Create;
+    nIni.ReadSection('Readers', nList);
+
+    SetLength(gRemoteItems, nList.Count+1);
+    with gRemoteItems[0] do
+    begin
+      FReader := '';
+      FPosition := '';
+    end;
+
+    EditReaders.Properties.Items.Clear;
+    for nInt:=0 to nList.Count-1 do
+    with gRemoteItems[nInt+1] do
+    begin
+      FReader := nList[nInt];
+      FPosition := nIni.ReadString('Readers', nList[nInt], '未知');
+    end;
+
+    for nInt:=Low(gRemoteItems) to High(gRemoteItems) do
+     with gRemoteItems[nInt] do
+      EditReaders.Properties.Items.Add(FPosition);
+    //xxxxx
+
+    FPort := nIni.ReadInteger('Param', 'Port', -1);
+    if FPort < 0 then
+    begin
+      Result := True;
+      Exit;
+    end;
+
     nInt := nIni.ReadInteger('Param', 'Type', 1);
     FType := TReaderType(nInt - 1);
 
-    FPort := nIni.ReadInteger('Param', 'Port', 0);
     FBaud := nIni.ReadInteger('Param', 'Rate', 5);
     FDataBit := nIni.ReadInteger('Param', 'DataBit', 8);
     FStopBit := nIni.ReadInteger('Param', 'StopBit', 0);
@@ -220,6 +274,7 @@ begin
     FReadIndex := nIni.ReadInteger('Param', 'Index', -1);
     FCheckMode := nIni.ReadInteger('Param', 'CheckMode', 0);
   finally
+    nList.Free;
     nIni.Free;
   end;
 
@@ -262,6 +317,23 @@ begin
   Result := '';
   for nIdx := 1 to Length(nBinStr) do
     Result := Result + IntToHex(ord(nBinStr[nIdx]), 2);
+end;
+
+procedure TfFormRFIDCard.edtRFIDCardPropertiesButtonClick(Sender: TObject;
+  AButtonIndex: Integer);
+var nStr: string;
+begin
+  if EditReaders.ItemIndex < 1 then
+  begin
+    EditReaders.SetFocus;
+    ShowMsg('请选择设备位置', sHint); Exit;
+  end;
+
+  nStr := gRemoteItems[EditReaders.ItemIndex].FReader;
+  nStr := GetReaderCard(nStr, 'RFID102');
+  if nStr <> '' then
+       edtRFIDCard.Text := nStr
+  else ShowMsg('未读取到有效卡号', sHint);
 end;
 
 initialization

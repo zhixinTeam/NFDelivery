@@ -104,6 +104,7 @@ const
   cFI_FrameLineKwControl= $0164;                     //装车线库位控制
   cFI_FrameStockMatch   = $0165;                     //品种分组
   cFI_FrameTruckType    = $0166;                     //车辆类型
+  cFI_FrameInFactControl= $0167;                     //进厂物料控制
 
   cFI_FormMemo          = $1000;                     //备注窗口
   cFI_FormBackup        = $1001;                     //数据备份
@@ -199,6 +200,7 @@ const
   cFI_FormAddWater      = $1210;                     //车辆加水
   cFI_FormStockMatch    = $1211;                     //品种分组
   cFI_FormTruckType     = $1212;                     //车辆类型
+  cFI_FormInFactControl = $1213;                     //进厂物料控制
   {*Command*}
   cCmd_RefreshData      = $0002;                     //刷新数据
   cCmd_ViewSysLog       = $0003;                     //系统日志
@@ -437,6 +439,7 @@ begin
   AddMenuModuleItem('MAIN_M11', cFI_FramePoundControl);
   AddMenuModuleItem('MAIN_M12', cFI_FrameLineKwControl);
   AddMenuModuleItem('MAIN_M13', cFI_FrameStockMatch);
+  AddMenuModuleItem('MAIN_M14', cFI_FrameInFactControl);
 
   AddMenuModuleItem('MAIN_N01', cFI_FrameCardProvide);
   AddMenuModuleItem('MAIN_N02', cFI_FormCardProvide, mtForm);
