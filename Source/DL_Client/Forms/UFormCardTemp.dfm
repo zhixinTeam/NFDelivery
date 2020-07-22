@@ -67,6 +67,7 @@ inherited fFormCardTemp: TfFormCardTemp
       Left = 81
       Top = 61
       ParentFont = False
+      Properties.ReadOnly = True
       TabOrder = 1
       Width = 121
     end
@@ -89,6 +90,7 @@ inherited fFormCardTemp: TfFormCardTemp
       Left = 81
       Top = 136
       ParentFont = False
+      Properties.ReadOnly = True
       TabOrder = 4
       Width = 121
     end

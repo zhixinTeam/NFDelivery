@@ -250,7 +250,7 @@ begin
 end;
 
 procedure TfFormCardProvide.ComPort1RxChar(Sender: TObject; Count: Integer);
-var nStr: string;
+var nStr,nCard: string;
     nIdx,nLen: Integer;
 begin
   ComPort1.ReadStr(nStr, Count);
@@ -265,7 +265,10 @@ begin
     if (FBuffer[nIdx+1] <> #$FF) or (FBuffer[nIdx+2] <> #$00) then Continue;
 
     nStr := Copy(FBuffer, nIdx+3, 4);
-    EditCard.Text := ParseCardNO(nStr, True);
+    if not HasDriverCard(EditTruck.Text, nCard) then
+      EditCard.Text := ParseCardNO(nStr, True)
+    else
+      EditCard.Text := nCard;
 
     FBuffer := '';
     Exit;
@@ -417,7 +420,8 @@ end;
 
 procedure TfFormCardProvide.EditTruckKeyPress(Sender: TObject;
   var Key: Char);
-var nP: TFormCommandParam;  
+var nP: TFormCommandParam;
+    nCard: string;
 begin
   inherited;
   if (Sender = EditTruck) and (Key = Char(VK_SPACE)) then
@@ -429,6 +433,9 @@ begin
 
     EditTruck.Text := nP.FParamB;
     EditTruck.SelectAll;
+
+    if HasDriverCard(EditTruck.Text, nCard) then
+      EditCard.Text := nCard;
   end;
 end;
 

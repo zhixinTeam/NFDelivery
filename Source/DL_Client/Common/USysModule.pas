@@ -61,7 +61,8 @@ uses
   UFormAddWater, UFramePoundQueryKs,
   UFrameTruckType, UFormTruckType,
   UFrameInFactControl, UFormInFactControl,
-  UFrameBillHaulBack, UFormBillHaulBack, UFormGetPoundHis
+  UFrameBillHaulBack, UFormBillHaulBack, UFormGetPoundHis,
+  UFormTruckCard
   {$IFDEF PrintChinese},
   UFrameChineseBase, UFormChineseBase, UFrameChineseDict ,UFormChineseDict,
   UFormGetAreaTo

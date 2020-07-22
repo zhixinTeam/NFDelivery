@@ -73,6 +73,7 @@ const
   cFI_FrameStockRecord  = $0071;                     //检验记录
   cFI_FrameStockHuaYan  = $0072;                     //开化验单
   cFI_FrameStockHY_Each = $0073;                     //随车开单
+  cFI_FormTruckCard     = $0074;                     //司机卡
 
   cFI_FrameProvider     = $0102;                     //供应
   cFI_FrameProvideLog   = $0105;                     //供应日志

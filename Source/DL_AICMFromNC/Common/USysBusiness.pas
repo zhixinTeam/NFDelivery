@@ -137,6 +137,7 @@ function GetStockPackStyleEx(const nStockID,nBrand: string): string;
 function GetPDModelFromDB: string;
 function GetGPSUrl(const nTruck: string; var nHint: string): string;
 function GetBillCard(const nLID: string): string;
+function HasDriverCard(const nTruck: string; var nCard: string): Boolean;
 implementation
 
 //Desc: 记录日志
@@ -1508,6 +1509,15 @@ begin
       WriteLog('GPS校验:请求参数' + Result);
     end;
   end;
+
+  if nHint = sFlag_Yes then
+  begin
+    if not IsTruckGPSValid(nTruck) then
+    begin
+      nHint := sFlag_No;
+      Exit;
+    end;
+  end;
 end;
 
 function GetBillCard(const nLID: string): string;
@@ -1523,6 +1533,25 @@ begin
   begin
     Result := Fields[0].AsString;
   end;
+end;
+
+function HasDriverCard(const nTruck: string; var nCard: string): Boolean;
+var nStr: string;
+begin
+  Result := False;
+  nCard := '';
+
+  nStr := 'Select * From %s Where T_Truck=''%s''';
+  nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+  with FDM.SQLQuery(nStr) do
+  if RecordCount > 0 then
+  begin
+    if Assigned(FindField('T_DriverCard')) then
+      nCard := FieldByName('T_DriverCard').AsString;
+    //xxxxx
+  end;
+  Result := nCard <> '';
 end;
 
 end.

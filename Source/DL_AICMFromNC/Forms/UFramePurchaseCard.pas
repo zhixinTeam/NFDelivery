@@ -283,7 +283,7 @@ end;
 procedure TfFramePurchaseCard.btnSaveClick(Sender: TObject);
 var nMsg, nStr, nCard, nHint: string;
     nIdx: Integer;
-    nRet, nPrint: Boolean;
+    nRet, nPrint, nDriverCard: Boolean;
 begin
   if (FPurchaseItem.FOrder_Id='')or(Trim(edt_TruckNo.Text)='')then  //or(StrToFloatDef(Trim(edt_Value.Text), 0)=0)
   begin
@@ -328,7 +328,9 @@ begin
 //    ShowMsg(nMsg, sHint);
 //    Exit;
 //  end;
+  nDriverCard := HasDriverCard(edt_TruckNo.Text, nCard);
 
+  if not nDriverCard then
   for nIdx:=0 to 3 do
   begin
     nCard := gDispenserManager.GetCardNo(gSysParam.FTTCEK720ID, nHint, False);
@@ -409,6 +411,7 @@ begin
     Exit;
   end;
 
+  if not nDriverCard then
   nRet := gDispenserManager.SendCardOut(gSysParam.FTTCEK720ID, nHint);
   //发卡
 
@@ -437,6 +440,7 @@ begin
     end;
   end
   else begin
+    if not nDriverCard then
     gDispenserManager.RecoveryCard(gSysParam.FTTCEK720ID, nHint);
 
     nMsg := '订单[ %s ],卡号[ %s ]关联订单失败,请到开票窗口重新关联.';

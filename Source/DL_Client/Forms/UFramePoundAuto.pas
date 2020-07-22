@@ -106,7 +106,7 @@ begin
   begin
     gVisionManager := TTruckManager.Create;
     gVisionManager.LoadConfig(gPath + 'AliVision.xml');
-    gVisionManager.EventMode := emMain;
+    //gVisionManager.EventMode := emMain;
     gVisionManager.OnStatusChangeEvent := DoTruckStatusChange;
   end;
   gVisionManager.StartService;

@@ -75,6 +75,7 @@ type
     FIsBusy: Boolean;             //占用标识
     FSysLoger : TSysLoger;
     FCard: string;
+    FLastValue,FControl : Double;
     property OPCTunnel: PPTOPCItem read FOPCTunnel write SetTunnel;
     procedure LoadBillItems(const nCard: string);
     //读取交货单
@@ -487,6 +488,18 @@ begin
       WriteLog(FOPCTunnel.FImpDataTag+':'+Itemlist[nIdx].ValueStr);
       if IsNumber(Itemlist[nIdx].ValueStr, True) then
       begin
+        WriteLog('当前已装量' + Itemlist[nIdx].ValueStr + '上次已装量' + FloatToStr(FLastValue));
+        if FLastValue <= 0  then
+          FLastValue := StrToFloat(Itemlist[nIdx].ValueStr)
+        else
+        begin
+          if Abs(StrToFloat(Itemlist[nIdx].ValueStr) - FLastValue) < FControl then
+          begin
+            WriteLog('累计量变化小于' + FloatToStr(FControl) + ',不做处理');
+            Continue;
+          end;
+          FLastValue := StrToFloat(Itemlist[nIdx].ValueStr);
+        end;
         nValue := (StrToFloat(Itemlist[nIdx].ValueStr) + FHasDone) * FDataLarge;
         EditValue.Text := Format('%.2f', [nValue]);
         if (Length(Trim(EditBill.Text)) > 0) and (nValue > 0) then

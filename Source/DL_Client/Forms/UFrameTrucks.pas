@@ -40,6 +40,9 @@ type
     ChkSnap: TcxCheckBox;
     dxLayout1Item5: TdxLayoutItem;
     N12: TMenuItem;
+    N13: TMenuItem;
+    N14: TMenuItem;
+    N15: TMenuItem;
     procedure EditNamePropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnAddClick(Sender: TObject);
@@ -56,6 +59,8 @@ type
     procedure N10Click(Sender: TObject);
     procedure N11Click(Sender: TObject);
     procedure N12Click(Sender: TObject);
+    procedure N14Click(Sender: TObject);
+    procedure N15Click(Sender: TObject);
   private
     { Private declarations }
   protected
@@ -428,6 +433,65 @@ begin
     fFlags := FOF_ALLOWUNDO+FOF_NOCONFIRMATION+FOF_NOERRORUI;
   end;
   Result := (SHFileOperation(f) = 0);
+end;
+
+procedure TfFrameTrucks.N14Click(Sender: TObject);
+var
+  nP: TFormCommandParam;
+  nStr: string;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    nStr := Trim(SQLQuery.FieldByName('T_DriverCard').AsString);
+    if nStr <> '' then
+    begin
+      ShowMsg('该车已经绑定过磁卡,请勿重复绑定.',sHint);
+      Exit;
+    end;
+    
+    //nP.FCommand := cCmd_EditData;
+    nP.FParamA := SQLQuery.FieldByName('T_Truck').AsString;
+    CreateBaseFormItem(cFI_FormTruckCard, '', @nP);
+
+    if (nP.FCommand = cCmd_ModalResult) and (nP.FParamA = mrOK) then
+    begin
+      InitFormData(FWhere);
+    end;
+  end;
+end;
+
+procedure TfFrameTrucks.N15Click(Sender: TObject);
+var
+  nStr, nSQL, nTruck: string;
+  nList: TStrings;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    nTruck := Trim(SQLQuery.FieldByName('T_Truck').AsString);
+    nStr := Trim(SQLQuery.FieldByName('T_DriverCard').AsString);
+
+    if nStr = '' then exit;
+    if not QueryDlg('确定要取消车辆 ['+nTruck+'] 的关联的长期卡吗？', sAsk) then Exit;
+
+    try
+      FDM.ADOConn.BeginTrans;
+
+      nSQL := 'update %s set T_DriverCard=''%s'' where t_truck=''%s''';
+      nSQL := Format(nSQL,[sTable_Truck,'',nTruck]);
+      FDM.ExecuteSQL(nSQL);
+
+      FDM.ADOConn.CommitTrans;
+
+      nStr := '取消车辆 [ '+ nTruck +' ]与磁卡[ '+nStr+' ]的关联';
+      FDM.WriteSysLog(sFlag_TruckItem,nTruck,nStr);
+      ShowMsg(nStr, sHint);
+
+      InitFormData(FWhere);
+    except
+      FDM.ADOConn.RollbackTrans;
+      ShowMsg('取消关联失败.', sHint);
+    end;
+  end;
 end;
 
 initialization

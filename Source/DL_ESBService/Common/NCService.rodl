@@ -1,0 +1,57 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Library Name="NCService" Namespace="微信-NC平台接口" UID="{D8AC5B06-795A-4BE8-A852-D360405ED62D}" Version="3.0">
+<Services>
+<Service Name="ItfZxtoNcData" UID="{356BC10A-1F13-4E61-8F82-A379AFD212FC}">
+<CustomAttributes>
+<location Value="http://10.1.104.231/uapws/service/nc.itf.zx.salepreorder.ItfZxtoNcData" />
+<type Value="SOAP" />
+<remap_operationsaveordertime Value="urn:operationSaveorderTime" />
+</CustomAttributes>
+<Interfaces>
+<Interface Name="Default" UID="{F4CB678A-846F-4E66-989F-28196624CC96}">
+<Operations>
+<Operation Name="operationSaveorderTime" UID="{A7EAB547-5F62-48DF-8D13-1ED21583A79B}">
+<CustomAttributes>
+<soapinputmessagenamespace Value="http://salepreorder.zx.itf.nc/ItfZxtoNcData" />
+<use Value="literal" />
+<action Value="urn:operationSaveorderTime" />
+<type Value="SOAP" />
+<outputchildrennamespace Value="*" />
+<soapinputnameoverride Value="operationSaveorderTime" />
+<inputchildrennamespace Value="*" />
+<style Value="document" />
+<soapoutputmessagenamespace Value="http://salepreorder.zx.itf.nc/ItfZxtoNcData" />
+</CustomAttributes>
+<Parameters>
+<Parameter Name="return" DataType="WideString" Flag="Result">
+<CustomAttributes>
+<nillable Value="1" />
+<soapname Value="return" />
+</CustomAttributes>
+</Parameter>
+<Parameter Name="string" DataType="WideString" Flag="In" >
+<CustomAttributes>
+<nillable Value="1" />
+<soapname Value="string" />
+</CustomAttributes>
+</Parameter>
+<Parameter Name="string1" DataType="WideString" Flag="In" >
+<CustomAttributes>
+<nillable Value="1" />
+<soapname Value="string1" />
+</CustomAttributes>
+</Parameter>
+</Parameters>
+</Operation>
+</Operations>
+</Interface>
+</Interfaces>
+</Service>
+</Services>
+<Structs>
+</Structs>
+<Enums>
+</Enums>
+<Arrays>
+</Arrays>
+</Library>

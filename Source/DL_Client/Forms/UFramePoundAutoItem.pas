@@ -1567,6 +1567,39 @@ begin
   end;
   {$ENDIF}
 
+  {$IFDEF PurTruckType}
+  if FUIData.FPData.FValue < FUIData.FMData.FValue then
+    nVal := FUIData.FMData.FValue
+  else
+    nVal := FUIData.FPData.FValue;
+  nNet := GetTruckTypeXzValue(FUIData.FTruck, nHint);
+
+  if (nNet > 0) and (nNet < nVal) then
+  with FUIData do
+  begin
+    nStr := '车辆[ %s ]毛重超出设定车轴限值,详情如下:' + #13#10 +
+            '※.物料名称: [ %s ]' + #13#10 +
+            '※.车轴类型: [ %s ]' + #13#10 +
+            '※.车辆毛重: %.2f吨' + #13#10 +
+            '※.毛重限值: %.2f吨' + #13#10 +
+            '允许过磅,请选是;禁止过磅,请选否.';
+    nStr := Format(nStr, [FTruck, FStockName, nHint, nVal, nNet]);
+
+    if not VerifyManualEventRecord(FID + sFlag_ManualB, nStr) then
+    begin
+      AddManualEventRecord(FID + sFlag_ManualB, FTruck, nStr,
+          sFlag_DepBangFang, sFlag_Solution_YN, sFlag_DepDaTing, True);
+      WriteSysLog(nStr);
+
+      nStr := '[n1]%s毛重超出设定车轴限值,请下磅联系开票员处理后再次过磅';
+      nStr := Format(nStr, [FTruck]);
+      PlayVoice(nStr);
+
+      Exit;
+    end;
+  end;
+  {$ENDIF}
+
   if (FUIData.FPData.FValue > 0) and (FUIData.FMData.FValue > 0) then
   begin
     nVal := FUIData.FPData.FValue - FUIData.FMData.FValue;

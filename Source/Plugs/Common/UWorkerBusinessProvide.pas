@@ -1038,6 +1038,26 @@ begin
       //净重
       {$ENDIF}
 
+      nStr := 'Select D_Status From %s Where D_ID=''%s''';
+      nStr := Format(nStr, [sTable_ProvDtl, FExtID_1]);
+
+      with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+      if RecordCount > 0 then
+      begin
+        if Fields[0].AsString = sFlag_TruckOut then
+        begin
+          nData := '单据[ %s ]已出厂';
+          nData := Format(nData, [FExtID_1]);
+          Exit;
+        end;
+        if Fields[0].AsString = sFlag_TruckBFM then
+        begin
+          nData := '单据[ %s ]已过毛重';
+          nData := Format(nData, [FExtID_1]);
+          Exit;
+        end;
+      end;
+
       nStr := SF('P_Order', FExtID_1);
       //where
       nSQL := MakeSQLByStr([

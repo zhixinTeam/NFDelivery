@@ -78,6 +78,7 @@ function VerifySanCardUseCount(const nLID: string): Boolean;
 //校验散装现场刷卡次数
 function GetSoundPost(const nTunnel, nDefPost: string; var nPost: string): Boolean;
 function ShipTmpReturnG(const nCard: string): Boolean;
+function HasDriverCard(const nTruck: string; var nCard: string): Boolean;
 implementation
 
 uses
@@ -1314,7 +1315,7 @@ begin
   if (nTrucks[0].FCardKeep = sFlag_Yes) or
      (nTrucks[0].FCardKeep = sFlag_ProvCardG) then Exit;
     //长期卡,不吞卡
-
+    if HasDriverCard(nTrucks[0].FTruck, nStr) then Exit;
     Result := True;
     Exit;
   end;
@@ -1356,7 +1357,7 @@ begin
   if (nTrucks[0].FCardKeep = sFlag_Yes) or
      (nTrucks[0].FCardKeep = sFlag_ProvCardG) then Exit;
   //长期卡,不吞卡
-
+  if HasDriverCard(nTrucks[0].FTruck, nStr) then Exit;
   Result := True;
 end;
 
@@ -2144,6 +2145,43 @@ begin
   end;
 end;
 
+function HasDriverCard(const nTruck: string; var nCard: string): Boolean;
+var nStr: string;
+    nIdx: Integer;
+    nDBConn: PDBWorker;
+begin
+  Result := False;
+  nCard := '';
+  nDBConn := nil;
+  with gParamManager.ActiveParam^ do
+  try
+    nDBConn := gDBConnManager.GetConnection(FDB.FID, nIdx);
+    if not Assigned(nDBConn) then
+    begin
+      WriteNearReaderLog('连接HM数据库失败(DBConn Is Null).');
+      Exit;
+    end;
+
+    if not nDBConn.FConn.Connected then
+      nDBConn.FConn.Connected := True;
+    //conn db
+
+    nStr := 'Select * From %s Where T_Truck=''%s''';
+    nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+    with gDBConnManager.WorkerQuery(nDBConn, nStr) do
+    if RecordCount > 0 then
+    begin
+      if Assigned(FindField('T_DriverCard')) then
+        nCard := FieldByName('T_DriverCard').AsString;
+      //xxxxx
+    end;
+    Result := nCard <> '';
+  finally
+    gDBConnManager.ReleaseConnection(nDBConn);
+  end;
+end;
+
 //Date: 2018-11-26
 //Parm: 磁卡号;通道号
 //Desc: 对nCard执行卸货操作
@@ -2453,14 +2491,15 @@ end;
 //Date: 2012-4-24
 //Parm: 磁卡号;通道号
 //Desc: 对nCard执行袋装装车操作
-procedure MakeTruckLadingDai(const nCard: string; nTunnel: string;nTunnelPreShow: string='');
+procedure MakeTruckLadingDai(const nCard: string; nTunnel: string;nTunnelPreShow: string='';
+                             nTunnelHc: string='');
 var nStr: string;
     nBool: Boolean;
     nIdx,nInt: Integer;
     nPLine: PLineItem;
     nPTruck: PTruckItem;
     nTrucks: TLadingBillItems;
-    nCType: string;
+    nCType, nPost: string;
 
     function IsJSRun: Boolean;
     begin
@@ -2472,6 +2511,19 @@ var nStr: string;
       begin
         nStr := '通道[ %s ]装车中,业务无效.';
         nStr := Format(nStr, [nTunnel]);
+        WriteNearReaderLog(nStr);
+      end;
+    end;
+    function IsJSRunHc: Boolean;
+    begin
+      Result := False;
+      if nTunnelHc = '' then Exit;
+      Result := gMultiJSManager.IsJSRun(nTunnelHc);
+
+      if Result then
+      begin
+        nStr := '通道[ %s ]装车中,业务无效.';
+        nStr := Format(nStr, [nTunnelHc]);
         WriteNearReaderLog(nStr);
       end;
     end;
@@ -2493,6 +2545,12 @@ begin
 
   if IsJSRun then Exit;
   //tunnel is busy
+
+  if nTunnelHc <> '' then
+  begin
+    if IsJSRunHc then Exit;
+    //tunnel is busy
+  end;
 
   if not GetLadingBills(nCard, sFlag_TruckZT, nTrucks) then
   begin
@@ -2551,7 +2609,8 @@ begin
       nStr := nTrucks[0].FTruck + '请排队等候'
     else
       nStr := nTrucks[0].FTruck + '请换道装车';
-    gNetVoiceHelper.PlayVoice(nStr, sPost_ZT);
+    GetSoundPost(nTunnel, sPost_ZT, nPost);
+    gNetVoiceHelper.PlayVoice(nStr, nPost);
 
     Exit;
   end; //检查通道
@@ -3159,7 +3218,7 @@ var nStr: string;
     nPTruck: PTruckItem;
     nTrucks: TLadingBillItems;
     nBool: Boolean;
-    nCType: string;
+    nCType, nPost: string;
 begin
   {$IFDEF DEBUG}
   WriteNearReaderLog('MakeTruckLadingSan进入.');
@@ -3274,8 +3333,8 @@ begin
       nStr := nTrucks[0].FTruck + '请排队等候'
     else
       nStr := nTrucks[0].FTruck + '请换库装车';
-
-    gNetVoiceHelper.PlayVoice(nStr, sPost_FH);
+    GetSoundPost(nTunnel, sPost_FH, nPost);
+    gNetVoiceHelper.PlayVoice(nStr, nPost);
 
     Exit;
   end; //检查通道
@@ -3374,6 +3433,15 @@ begin
   {$IFDEF DEBUG}
   WriteNearReaderLog('MakeTruckWeightFirst进入.');
   {$ENDIF}
+
+  if not IsJudgeValid(nTunnel, sFlag_San) then
+  begin
+    nStr := '通道关闭,禁止刷卡';
+
+    gERelayManager.ShowTxt(nTunnel, nStr);
+    WriteHardHelperLog(nStr);
+    Exit;
+  end;
 
   if not GetLadingBills(nCard, sFlag_TruckFH, nTrucks) then
   begin
@@ -3477,6 +3545,10 @@ begin
     ShowLEDHint(nTunnel, nStr, nTrucks[0].FTruck);
   end;
 
+  GetSoundPost(nTunnel, sPost_FH, nStr);
+  MakeLadingSound(nPTruck, nPLine, nStr);
+  //播放语音
+
   {$IFDEF BasisWeight}
   if nTrucks[0].FStatus = sFlag_TruckBFP then
   if not SaveLadingBills(sFlag_TruckFH, nTrucks) then
@@ -3541,7 +3613,8 @@ begin
     {$ELSE}
     if Assigned(nHost.FOptions) then
     begin
-      MakeTruckLadingDai(nCard, nHost.FTunnel, nHost.FOptions.Values['TunnelPreShow']);
+      MakeTruckLadingDai(nCard, nHost.FTunnel, nHost.FOptions.Values['TunnelPreShow'],
+                         nHost.FOptions.Values['TunnelHc']);
     end
     else
       MakeTruckLadingDai(nCard, nHost.FTunnel);

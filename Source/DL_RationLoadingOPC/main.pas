@@ -96,7 +96,14 @@ begin
         Parent := wPanel;
 
         FrameId := nIdx;
+        FLastValue := 0;
+        FControl := 0.01;
 
+        if Assigned(nT.FOptions) And
+             (IsNumber(nT.FOptions.Values['ClearLjByStartControl'], True)) then
+        begin
+          FControl := StrToFloat(nT.FOptions.Values['ClearLjByStartControl']);
+        end;
         GroupBox1.Caption := nT.FName;
         OPCTunnel := nT;
         if gOPCServer.ServerName = '' then

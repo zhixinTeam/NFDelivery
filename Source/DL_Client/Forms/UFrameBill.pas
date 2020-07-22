@@ -58,6 +58,8 @@ type
     N14: TMenuItem;
     N15: TMenuItem;
     N16: TMenuItem;
+    N17: TMenuItem;
+    N18: TMenuItem;
     procedure EditIDPropertiesButtonClick(Sender: TObject;
       AButtonIndex: Integer);
     procedure BtnDelClick(Sender: TObject);
@@ -75,6 +77,7 @@ type
     procedure N13Click(Sender: TObject);
     procedure N15Click(Sender: TObject);
     procedure N16Click(Sender: TObject);
+    procedure N18Click(Sender: TObject);
   protected
     FStart,FEnd: TDate;
     //时间区间
@@ -566,6 +569,35 @@ begin
     FDM.ExecuteSQL(nStr);
     InitFormData(FWhere);
     ShowMsg('备注修改成功', sHint);
+  end;
+end;
+
+procedure TfFrameBill.N18Click(Sender: TObject);
+var nStr,nTruck: string;
+begin
+  if cxView1.DataController.GetSelectedCount > 0 then
+  begin
+    nStr := SQLQuery.FieldByName('L_HasDone').AsString;
+    nTruck := nStr;
+    if not ShowInputBox('请输入新的备注:', '修改', nTruck, 80) then Exit;
+
+    if (nTruck = '') or (nStr = nTruck) then Exit;
+    //无效或一致
+
+    if not IsNumber(nTruck, True) then
+    begin
+      ShowMsg('请输入有效数字', sHint);
+      Exit;
+    end;
+
+    nStr := 'Update %s Set L_HasDone=%s Where R_ID=%s';
+    nStr := Format(nStr, [sTable_Bill, nTruck,
+            SQLQuery.FieldByName('R_ID').AsString]);
+    //xxxxx
+
+    FDM.ExecuteSQL(nStr);
+    InitFormData(FWhere);
+    ShowMsg('已装量修改成功', sHint);
   end;
 end;
 

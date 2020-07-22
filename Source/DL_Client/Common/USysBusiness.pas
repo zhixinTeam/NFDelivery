@@ -392,6 +392,7 @@ function GetDaiIFPound(nBill: TLadingBillItem): string;
 function GetLedStr(const nTruck, nStockNo: String): string;
 function GetReaderCard(const nReader,nType: string): string;
 //获取指定读头的有效卡号
+function HasDriverCard(const nTruck: string; var nCard: string): Boolean;
 implementation
 
 //Desc: 记录日志
@@ -5109,4 +5110,22 @@ begin
   else Result := '';
 end;
 
+function HasDriverCard(const nTruck: string; var nCard: string): Boolean;
+var nStr: string;
+begin
+  Result := False;
+  nCard := '';
+
+  nStr := 'Select * From %s Where T_Truck=''%s''';
+  nStr := Format(nStr, [sTable_Truck, nTruck]);
+
+  with FDM.QueryTemp(nStr) do
+  if RecordCount > 0 then
+  begin
+    if Assigned(FindField('T_DriverCard')) then
+      nCard := FieldByName('T_DriverCard').AsString;
+    //xxxxx
+  end;
+  Result := nCard <> '';
+end;
 end.

@@ -8,7 +8,8 @@ uses
   Dialogs, UFrameBase, ComCtrls, ExtCtrls, Buttons, StdCtrls,
   USelfHelpConst, cxGraphics, cxControls, cxLookAndFeels,
   cxLookAndFeelPainters, cxContainer, cxEdit, cxTextEdit, cxMaskEdit,
-  cxButtonEdit, cxDropDownEdit, dxGDIPlusClasses, jpeg, cxCheckBox, IdHttp ;
+  cxButtonEdit, cxDropDownEdit, dxGDIPlusClasses, jpeg, cxCheckBox, IdHttp,
+  uSuperObject;
 
 const
   cHttpTimeOut          = 10;
@@ -322,15 +323,18 @@ end;
 procedure TfFrameSaleCard.BtnSaveClick(Sender: TObject);
 var nMsg, nStr, nCard, nHint: string;
     nIdx, nInt, nNum: Integer;
-    nRet, nPrint, nForce: Boolean;
+    nRet, nPrint, nForce, nDriverCard: Boolean;
     nTruck: string;
     nHzValue: Double;
     nIdHttp: TIdHTTP;
     wParam: TStrings;
     ReStream: TStringStream;
+    ReJo, OneJo : ISuperObject;
+    ArrsJa: TSuperArray;
 begin
   nInt := 0;
   BtnSave.Visible := False;
+  nDriverCard := HasDriverCard(nTruck, nCard);
   for nIdx := Low(FSaleOrderItems) to High(FSaleOrderItems) do
   begin
     if FSaleOrderItems[nIdx].FSelect then
@@ -417,6 +421,36 @@ begin
         nidHttp.Post(nStr, wParam, ReStream);
         nStr := UTF8Decode(ReStream.DataString);
         WriteLog('GPS校验出参:' + nStr);
+
+        ReJo := SO(nStr);
+        if ReJo = nil then Exit;
+
+        if ReJo.I['resultCode'] <> 200 then
+        begin
+          ArrsJa := ReJo['data'].AsArray;
+          for nIdx := 0 to ArrsJa.Length - 1 do
+          begin
+            OneJo := SO(ArrsJa[nIdx].AsString);
+            nStr := OneJo.S['info'];
+            Break;
+          end;
+          ShowMsg('车辆' + nTruck + 'GPS校验失败:[ ' + nStr + ' ]', sHint);
+          Exit;
+        end
+        else
+        begin
+          ArrsJa := ReJo['data'].AsArray;
+          for nIdx := 0 to ArrsJa.Length - 1 do
+          begin
+            OneJo := SO(ArrsJa[nIdx].AsString);
+            if not OneJo.B['inFence'] then
+            begin
+              nStr := OneJo.S['info'];
+              ShowMsg('车辆' + nTruck + 'GPS校验失败:[ ' + nStr + ' ]', sHint);
+              Exit;
+            end;
+          end;
+        end;
       finally
         FreeAndNil(nidHttp);
         ReStream.Free;
@@ -444,15 +478,17 @@ begin
     end;
     {$ENDIF}
 
-    for nIdx:=0 to 3 do
+    if not nDriverCard then
     begin
-      nCard := gDispenserManager.GetCardNo(gSysParam.FTTCEK720ID, nHint, False);
-      if nCard <> '' then
-        Break;
-      Sleep(500);
+      for nIdx:=0 to 3 do
+      begin
+        nCard := gDispenserManager.GetCardNo(gSysParam.FTTCEK720ID, nHint, False);
+        if nCard <> '' then
+          Break;
+        Sleep(500);
+      end;
+      //连续三次读卡,成功则退出。
     end;
-    //连续三次读卡,成功则退出。
-
     if nCard = '' then
     begin
       nMsg := '卡箱异常,请查看是否有卡.';
@@ -462,13 +498,16 @@ begin
 
     WriteLog('读取到卡片: ' + nCard);
     //解析卡片
-    if not IsCardValid(nCard) then
+    if not nDriverCard then
     begin
-      gDispenserManager.RecoveryCard(gSysParam.FTTCEK720ID, nHint);
-      nMsg := '卡号' + nCard + '非法,回收中,请稍后重新取卡';
-      WriteLog(nMsg);
-      ShowMsg(nMsg, sWarn);
-      Exit;
+      if not IsCardValid(nCard) then
+      begin
+        gDispenserManager.RecoveryCard(gSysParam.FTTCEK720ID, nHint);
+        nMsg := '卡号' + nCard + '非法,回收中,请稍后重新取卡';
+        WriteLog(nMsg);
+        ShowMsg(nMsg, sWarn);
+        Exit;
+      end;
     end;
 
     nStr := GetCardUsed(nCard);
@@ -562,6 +601,7 @@ begin
       Exit;
     end;
 
+    if not nDriverCard then
     nRet := gDispenserManager.SendCardOut(gSysParam.FTTCEK720ID, nHint);
     //发卡
 
@@ -591,6 +631,7 @@ begin
       {$ENDIF}
     end
     else begin
+      if not nDriverCard then
       gDispenserManager.RecoveryCard(gSysParam.FTTCEK720ID, nHint);
 
       nMsg := '卡号[ %s ]关联订单失败,请到开票窗口重新关联.';

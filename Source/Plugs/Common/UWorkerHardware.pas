@@ -709,6 +709,10 @@ begin
          '@2    ' + nSnlx; //换行
       {$ENDIF}
 
+      {$IFDEF SHAOYANGNF}
+      nCode := FormatDateTime('YYYYMMDD',nLadeDate) + nSeal + nSnlx;
+      {$ENDIF}
+
       {$IFDEF HSNF}
       //黄山喷码规则：中文编码(vdef9)+日期+水泥批次号
       if Length(nBm) = 4 then

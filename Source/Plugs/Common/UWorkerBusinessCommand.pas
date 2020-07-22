@@ -1457,6 +1457,13 @@ begin
     //按客户编号
   end;
 
+  nStr := FListA.Values['Customer'];
+  if nStr <> '' then
+  begin
+    FOut.FData := FOut.FData + Format(' And t_cb.custname=''%s''', [nStr]);
+    //按客户编号
+  end;
+
   nStr := FListA.Values['StockNo'];
   if nStr <> '' then
   begin

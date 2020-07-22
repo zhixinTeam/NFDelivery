@@ -381,7 +381,7 @@ end;
 //Desc: 保存
 procedure TfFormBill.BtnOKClick(Sender: TObject);
 var nPrint: Boolean;
-    nStr: string;
+    nStr, nCard: string;
 begin
   if not IsDataValid then Exit;
   //check valid
@@ -482,8 +482,13 @@ begin
   VipTruckForceLine(GetCtrlData(EditType), FOrder.FStockID, FBills);
 
   if FBuDanFlag <> sFlag_Yes then
-    SetBillCard(FBills, EditTruck.Text, True);
-  //办理磁卡
+  begin
+    if HasDriverCard(EditTruck.Text, nCard) then
+      SaveBillCard(FBills, nCard)
+    else
+      SetBillCard(FBills, EditTruck.Text, True);
+    //办理磁卡
+  end;
 
   if nPrint then
     PrintBillReport(FBills, True);
