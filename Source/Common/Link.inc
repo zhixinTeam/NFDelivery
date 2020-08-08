@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE SHAOYANGNF}
+{$DEFINE XKNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -328,6 +328,12 @@
   //自助机开单GPS校验
   {$DEFINE WarnPValue}
   //皮重预警
+  {$DEFINE FixLoad}
+  //转子秤定制装车
+  {$DEFINE FixLoadNoControlValue}
+  //转子秤定制装车(不控制开单量)
+  {$DEFINE TruckTypeOnlyPound}
+  //车轴类型(只在地磅校验)
 {$ENDIF}
 //三明南方
 
@@ -915,6 +921,8 @@
   //保存订单编号
   {$DEFINE MValueMaxControlTotal}
   //毛重上限总控制
+  {$DEFINE TruckTypeOnlyPound}
+  //车轴类型(只在地磅校验)
 {$ENDIF}
 
 //常山
@@ -2229,7 +2237,7 @@
   //车轴类型
   {$DEFINE ProShip}
   //采购船号
-  {$DEFINE PurQueue}
+  {.$DEFINE PurQueue}
   //采购船号
   {$DEFINE DaiSyncByZT}
   //包装刷卡推单
@@ -2255,6 +2263,8 @@
   //开单打印化验单
   {$DEFINE ShipTmpReturnG}
   //临时业务固定卡出厂回收
+  {$DEFINE AskUnLoad}
+  //询问是否输入卸货地点
 {$ENDIF}
 
 //邵阳南方

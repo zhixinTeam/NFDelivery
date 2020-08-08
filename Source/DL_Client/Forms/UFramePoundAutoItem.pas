@@ -2283,7 +2283,8 @@ begin
     for nIdx:= 0 to 5 do
     begin
       Sleep(500);  Application.ProcessMessages;
-      if StrToFloatDef(Trim(EditValue.Text), -1) > FPoundTunnel.FPort.FMinValue then
+      if (StrToFloatDef(Trim(EditValue.Text), -1) > FPoundTunnel.FPort.FMinValue)
+        or (StrToFloatDef(Trim(EditValue.Text), -1) < -1) then
       begin
         Result:= False;
         nHint := '检查地磅：地磅称重重量 %s ,不能进行称重作业';

@@ -4,6 +4,7 @@
 *******************************************************************************}
 unit UFormCardProvide;
 
+{$I Link.inc}
 interface
 
 uses
@@ -53,6 +54,8 @@ type
     dxLayout1Item19: TdxLayoutItem;
     CheckELabel: TcxCheckBox;
     dxLayout1Item20: TdxLayoutItem;
+    EditYLineName: TcxComboBox;
+    dxLayout1Item21: TdxLayoutItem;
     procedure BtnOKClick(Sender: TObject);
     procedure ComPort1RxChar(Sender: TObject; Count: Integer);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
@@ -175,6 +178,7 @@ begin
 end;
 
 procedure TfFormCardProvide.InitFormData;
+var nStr: string;
 begin
   if nOrderData = '' then Exit;
   //无订单数据
@@ -188,6 +192,35 @@ begin
 
     EditOrder.Text := FOrders;
     EditOValue.Text:= FloatToStr(FValue);
+  end;
+
+  EditYLineName.Properties.Items.Clear;
+  nStr := 'Select D_Value From %s where D_Name =''%s'' ';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_UnLodingPlace]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount > 0 then
+    begin
+      try
+        EditYLineName.Properties.BeginUpdate;
+
+        First;
+
+        while not Eof do
+        begin
+          if Fields[0].AsString = '' then
+          begin
+            Next;
+            Continue;
+          end;
+          EditYLineName.Properties.Items.Add(Fields[0].AsString);
+          Next;
+        end;
+      finally
+        EditYLineName.Properties.EndUpdate;
+      end;
+    end;
   end;
 
   LoadPoundStation(EditPoundStation.Properties.Items);
@@ -342,6 +375,11 @@ var nID, nStr: string;
 begin
   if not IsDataValid then Exit;
 
+  {$IFDEF AskUnLoad}
+  if EditYLineName.Text = '' then
+  if not QueryDlg('是否需要输入卸货地点?',sAsk) then Exit;
+  {$ENDIF}
+
   LoadSysDictItem(sFlag_PrintPur, FListB);
   //需打印品种
   nPrint := FListB.IndexOf(FOrderItem.FStockID) >= 0;
@@ -388,7 +426,7 @@ begin
     
     Values['PoundStation'] := GetCtrlData(EditPoundStation);
     Values['PoundName']    := EditPoundStation.Text;
-
+    Values['UnLoad']    := EditYLineName.Text;
     if SnapTruck.Checked  then
          Values['SnapTruck'] := sFlag_Yes
     else Values['SnapTruck'] := sFlag_No;

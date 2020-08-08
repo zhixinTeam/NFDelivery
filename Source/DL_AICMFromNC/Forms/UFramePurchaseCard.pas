@@ -34,6 +34,8 @@ type
     FListA, FListB, FListC: TStrings;
     FPurOrderItems : array of stMallPurchaseItem; //订单数组
     FPurchaseItem : stMallPurchaseItem;
+    FLastQuery: Int64;
+    //上次查询
   private
     procedure InitOrderInfo;
     procedure LoadNcPurchaseList;
@@ -74,6 +76,7 @@ end;
 procedure TfFramePurchaseCard.OnCreateFrame;
 var nStr: string;
 begin
+  FLastQuery:= 0;
   DoubleBuffered := True;
   FListA := TStringList.Create;
   FListB := TStringList.Create;
@@ -285,6 +288,11 @@ var nMsg, nStr, nCard, nHint: string;
     nIdx: Integer;
     nRet, nPrint, nDriverCard: Boolean;
 begin
+  if GetTickCount - FLastQuery < 5 * 1000 then
+  begin
+    ShowMsg('请不要频繁操作', sHint);
+    Exit;
+  end;
   if (FPurchaseItem.FOrder_Id='')or(Trim(edt_TruckNo.Text)='')then  //or(StrToFloatDef(Trim(edt_Value.Text), 0)=0)
   begin
     ShowMsg('请填写车牌号信息', sHint);
@@ -362,7 +370,8 @@ begin
   if (nStr = sFlag_Sale) or (nStr = sFlag_SaleNew) then
     LogoutBillCard(nCard);
   //销售业务注销卡片,其它业务则无需注销
-
+  FLastQuery := GetTickCount;
+  
   LoadSysDictItem(sFlag_PrintPur, FListB);
   //需打印品种
   nPrint := FListB.IndexOf(FPurchaseItem.FGoodsID) >= 0;

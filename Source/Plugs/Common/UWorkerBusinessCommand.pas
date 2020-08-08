@@ -206,6 +206,9 @@ type
     function DLSaveShopInfo(var nData:string):Boolean;
     //保存同步信息
     procedure ReQuestInit;
+    procedure SaveHyDanEvent(const nStockno,nEvent,
+          nFrom,nSolution,nDepartment: string);
+    //生成化验单推送事件
   public
     constructor Create; override;
     destructor destroy; override;
@@ -991,6 +994,10 @@ begin
       begin
         nData := '物料[ %s.%s ]未配置批次号规则或规则未启用.';
         nData := Format(nData, [FIn.FData, nType]);
+        SaveHyDanEvent(FIn.FData,nData,
+                         sFlag_DepDaTing,sFlag_Solution_OK,sFlag_DepDaTing);
+        SaveHyDanEvent(FIn.FData,nData,
+                         sFlag_DepDaTing,sFlag_Solution_OK,'化验室');
         Exit;
       end;
 
@@ -1131,6 +1138,14 @@ begin
       end;
     end;
 
+    if FOut.FBase.FErrCode = sFlag_ForceHint then
+    begin
+      SaveHyDanEvent(FIn.FData,nStr,
+                       sFlag_DepDaTing,sFlag_Solution_OK,sFlag_DepDaTing);
+      SaveHyDanEvent(FIn.FData,nStr,
+                       sFlag_DepDaTing,sFlag_Solution_OK,'化验室');
+    end;
+
     if FOut.FData = '' then
       FOut.FData := NewBatCode(nType);
     //xxxxx
@@ -1153,6 +1168,10 @@ begin
     begin
       nData := '物料[ %s ]批次不存在.';
       nData := Format(nData, [FIn.FData]);
+      SaveHyDanEvent(FIn.FData,nData,
+                       sFlag_DepDaTing,sFlag_Solution_OK,sFlag_DepDaTing);
+      SaveHyDanEvent(FIn.FData,nData,
+                       sFlag_DepDaTing,sFlag_Solution_OK,'化验室');
       Exit;
     end;
 
@@ -1231,6 +1250,10 @@ begin
     begin
       nData := '满足条件的物料[ %s.%s ]批次不存在.';
       nData := Format(nData, [FIn.FData, FListA.Values['Brand']]);
+      SaveHyDanEvent(FIn.FData,nData,
+                         sFlag_DepDaTing,sFlag_Solution_OK,sFlag_DepDaTing);
+      SaveHyDanEvent(FIn.FData,nData,
+                         sFlag_DepDaTing,sFlag_Solution_OK,'化验室');
       Exit;
     end;
 
@@ -1244,6 +1267,14 @@ begin
       FOut.FBase.FErrCode := sFlag_ForceHint;
       FOut.FBase.FErrDesc := nStr;
       OutuseCode(nBatchNew);
+    end;
+
+    if FOut.FBase.FErrCode = sFlag_ForceHint then
+    begin
+      SaveHyDanEvent(FIn.FData,nStr,
+                       sFlag_DepDaTing,sFlag_Solution_OK,sFlag_DepDaTing);
+      SaveHyDanEvent(FIn.FData,nStr,
+                       sFlag_DepDaTing,sFlag_Solution_OK,'化验室');
     end;
 
     nStr := 'Update %s Set D_LastDate=null Where D_Valid=''%s'' ' +
@@ -4621,6 +4652,8 @@ begin
        nStr := FListA.Values['DLID']
   else nStr := AdjustListStrFormat(FListA.Values['DLID'], '''', True, ',', False);
 
+  if nStr = '' then Exit;
+
   if FListA.Values['MType'] = sFlag_Sale then
   begin
     nSQL := 'Select * From %s Where L_ID In (%s)';
@@ -5893,6 +5926,37 @@ begin
   FidHttp.Request.ContentType    := 'application/json;Charset=UTF-8';
   FidHttp.Request.Connection     := 'keep-alive';
   FIdHttp.HandleRedirects        := True;
+end;
+
+procedure TWorkerBusinessCommander.SaveHyDanEvent(const nStockno,nEvent,
+          nFrom,nSolution,nDepartment: string);
+var
+  nStr:string;
+  nEID:string;
+begin
+  try
+    nEID := nStockno + FormatDateTime('YYYYMMDD',Now);
+    nStr := 'Delete From %s Where E_ID=''%s''';
+    nStr := Format(nStr, [sTable_ManualEvent, nEID]);
+
+    gDBConnManager.WorkerExec(FDBConn, nStr);
+
+    nStr := MakeSQLByStr([
+        SF('E_ID', nEID),
+        SF('E_Key', ''),
+        SF('E_From', nFrom),
+        SF('E_Event', nEvent),
+        SF('E_Solution', nSolution),
+        SF('E_Departmen', nDepartment),
+        SF('E_Date', sField_SQLServer_Now, sfVal)
+        ], sTable_ManualEvent, '', True);
+    gDBConnManager.WorkerExec(FDBConn, nStr);
+  except
+    on E: Exception do
+    begin
+      WriteLog(e.message);
+    end;
+  end;
 end;
 
 initialization

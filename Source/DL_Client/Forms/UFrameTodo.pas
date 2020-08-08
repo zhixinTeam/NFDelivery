@@ -80,7 +80,7 @@ end;
 function TfFrameTodo.InitFormDataSQL(const nWhere: string): string;
 begin
   EditDate.Text := Format('%s жа %s', [Date2Str(FStart), Date2Str(FEnd)]);
-  Result := 'Select * From $ME ';
+  Result := 'Select *, REPLACE(REPLACE([E_Event], CHAR(10), ''''), CHAR(13), '''') as E_EventEx From $ME ';
 
   if nWhere = '' then
        Result := Result + 'Where (E_Date>=''$S'' and E_Date <''$E'')'

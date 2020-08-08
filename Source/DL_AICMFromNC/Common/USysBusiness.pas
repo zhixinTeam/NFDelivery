@@ -138,6 +138,7 @@ function GetPDModelFromDB: string;
 function GetGPSUrl(const nTruck: string; var nHint: string): string;
 function GetBillCard(const nLID: string): string;
 function HasDriverCard(const nTruck: string; var nCard: string): Boolean;
+function IFHasSaleOrder(const nOrder: string): Boolean;
 implementation
 
 //Desc: ¼ÇÂ¼ÈÕÖ¾
@@ -1395,6 +1396,20 @@ begin
 
   nStr :='select L_ID from %s where L_Status <> ''%s'' and L_Truck =''%s'' ';
   nStr := Format(nStr, [sTable_Bill, sFlag_TruckOut, nTruck]);
+  with FDM.SQLQuery(nStr) do
+  if RecordCount > 0 then
+  begin
+    Result := True;
+  end;
+end;
+
+function IFHasSaleOrder(const nOrder: string): Boolean;
+var nStr: string;
+begin
+  Result := False;
+
+  nStr :='select L_ID from %s where L_ZhiKa =''%s'' ';
+  nStr := Format(nStr, [sTable_Bill, nOrder]);
   with FDM.SQLQuery(nStr) do
   if RecordCount > 0 then
   begin

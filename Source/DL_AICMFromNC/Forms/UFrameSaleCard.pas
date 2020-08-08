@@ -28,6 +28,8 @@ type
     FListA, FListB, FListC, FListD: TStrings;
     FSaleOrderItems : array of TOrderInfoItem; //订单数组
     FSaleOrderItem : TOrderInfoItem;
+    FLastQuery: Int64;
+    //上次查询
   private
     procedure LoadNcSaleList(nSTDid, nPassword: string);
     procedure InitListView;
@@ -70,6 +72,7 @@ end;
 
 procedure TfFrameSaleCard.OnCreateFrame;
 begin
+  FLastQuery:= 0;
   {$IFDEF PrintHYEach}
   PrintHY.Checked := False;
   PrintHY.Visible := True;
@@ -332,6 +335,11 @@ var nMsg, nStr, nCard, nHint: string;
     ReJo, OneJo : ISuperObject;
     ArrsJa: TSuperArray;
 begin
+  if GetTickCount - FLastQuery < 5 * 1000 then
+  begin
+    ShowMsg('请不要频繁操作', sHint);
+    Exit;
+  end;
   nInt := 0;
   BtnSave.Visible := False;
   nDriverCard := HasDriverCard(nTruck, nCard);
@@ -341,6 +349,12 @@ begin
     begin
       Inc(nInt);
       nTruck := FSaleOrderItems[nIdx].FTruck;
+
+      if IFHasSaleOrder(FSaleOrderItems[nIdx].FOrders) then
+      begin
+        ShowMsg('订单已使用,无法开单,请联系管理员',sHint);
+        Exit;
+      end;
 
       {$IFDEF BusinessOnly}
       if not IsPurTruckReady(nTruck, nHint) then
@@ -514,7 +528,7 @@ begin
     if (nStr = sFlag_Sale) or (nStr = sFlag_SaleNew) then
       LogoutBillCard(nCard);
     //销售业务注销卡片,其它业务则无需注销
-
+    FLastQuery := GetTickCount;
     FListC.Clear;
 
     nInt := 0;

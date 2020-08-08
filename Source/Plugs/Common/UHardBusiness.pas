@@ -3429,6 +3429,7 @@ var nStr: string;
     nPTruck: PTruckItem;
     nTrucks: TLadingBillItems;
     nPT: PPTTunnelItem;
+    nBool: Boolean;
 begin
   {$IFDEF DEBUG}
   WriteNearReaderLog('MakeTruckWeightFirst进入.');
@@ -3506,6 +3507,18 @@ begin
     end;
   end;
 
+  {$IFDEF SanForceQueue}
+  nBool := True;
+  for nIdx:=Low(nTrucks) to High(nTrucks) do
+  begin
+    nBool := nTrucks[nIdx].FNextStatus = sFlag_TruckFH;
+    //未装车,检查排队顺序
+    if not nBool then Break;
+  end;
+  {$ELSE}
+  nBool := False;
+  {$ENDIF}
+
   WriteNearReaderLog('通道' + nTunnel +'当前业务:' + nPound.FBill +
                      '新刷卡:' + nTrucks[0].FID);
 
@@ -3520,7 +3533,7 @@ begin
     end;
   end;
 
-  if not IsTruckInQueue(nTrucks[0].FTruck, nTunnel, False, nStr,
+  if not IsTruckInQueue(nTrucks[0].FTruck, nTunnel, nBool, nStr,
          nPTruck, nPLine, sFlag_San) then
   begin
     WriteNearReaderLog(nStr);

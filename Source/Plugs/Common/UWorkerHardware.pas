@@ -619,6 +619,10 @@ begin
         nSeal := Copy(nSeal, 1, Pos('-', nSeal) - 1);
       nSeal := StringReplace(nSeal,FormatDateTime('YYYY',Now),'',[rfReplaceAll]);
       nSeal := Trim(nSeal);
+      if nPCCode = '' then
+      nCode := '@6' + nSeal + FormatDateTime('YYYY',Now)
+                 + Copy(nBill, nPrefixLen + 3, 4)
+      else
       nCode := nPCCode + nSeal + FormatDateTime('YYYY',Now)
                  + Copy(nBill, nPrefixLen + 3, 4) ;
       {$ENDIF}

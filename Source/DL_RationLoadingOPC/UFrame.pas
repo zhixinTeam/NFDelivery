@@ -405,8 +405,13 @@ begin
   begin
     Exit;
   end;
-  DelayTimer.Tag := 0;
-  DelayTimer.Enabled := True;
+
+  if Assigned(FOPCTunnel.FOptions) And
+       (UpperCase(FOPCTunnel.FOptions.Values['NoHasDone']) <> sFlag_Yes) then
+  begin
+    DelayTimer.Tag := 0;
+    DelayTimer.Enabled := True;
+  end;
 
   FHasDone := 0;
   FUseTime := 0;

@@ -183,7 +183,9 @@ begin
             {$IFDEF ProShip}
             SF('P_Ship', FListA.Values['Ship']),
             {$ENDIF}
-
+            {$IFDEF AskUnLoad}
+            SF('P_YLineName', FListA.Values['UnLoad']),
+            {$ENDIF}
             SF('P_Truck', nTruck),
             SF('P_Status', sFlag_TruckNone),
             SF('P_Man', FIn.FBase.FFrom.FUser),
@@ -479,6 +481,9 @@ begin
       if Assigned(FindField('P_Ship')) then
         FShip := FieldByName('P_Ship').AsString;
 
+      if Assigned(FindField('P_YLineName')) then
+        FSeal := FieldByName('P_YLineName').AsString;
+
       if Assigned(FindField('P_PoundStation')) then
       begin
         FPoundStation := FieldByName('P_PoundStation').AsString;
@@ -698,6 +703,7 @@ begin
                 {$IFDEF ProShip}
                 SF('P_Ship', FShip),
                 {$ENDIF}
+                SF('P_YLineName', FSeal),    //±£´æÅú´ÎºÅ
                 SF('P_PrintNum', 1, sfVal)
                 ], sTable_PoundLog, '', True);
         FListA.Add(nSQL);

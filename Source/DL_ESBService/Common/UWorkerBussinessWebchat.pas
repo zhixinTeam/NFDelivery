@@ -979,14 +979,15 @@ var nStr, nSql: string;
     nDBConn: PDBWorker;
     nIdx, nQue, nLineCount:Integer;
     nNetWeight:Double;
-    nWxZhuId, nWxZiId, nCreateTime, nInTime, nOutTime, nType, nStockNo, nTruck: string;
+    nWxZhuId, nWxZiId, nCreateTime, nInTime, nOutTime, nType, nStockNo, nTruck,nRealOutTime: string;
     nSeal, nPDate, nMDate, nLadeTime, nPID, nQueueMsg,nCompany,nOrder: string;
-    nDaiQuickSync: Boolean;
+    nDaiQuickSync,nDaiSyncByZT: Boolean;
 begin
   Result := False;
   FListA.Text := PackerDecodeStr(FIn.FData);
   nNetWeight := 0;
   nDaiQuickSync := False;
+  nDaiSyncByZT := False;
   nDBConn := nil;
 
   with gParamManager.ActiveParam^ do
@@ -1006,6 +1007,14 @@ begin
       begin
         if RecordCount > 0 then
          nDaiQuickSync := Fields[0].AsString = sFlag_Yes;
+      end;
+
+      nSql := 'select D_Value from %s where D_Name=''DaiSyncByZT''';
+      nSql := Format(nSql,[sTable_SysDict]);
+      with gDBConnManager.WorkerQuery(nDBConn, nSql) do
+      begin
+        if RecordCount > 0 then
+         nDaiSyncByZT := Fields[0].AsString = sFlag_Yes;
       end;
 
       //œ˙ €æª÷ÿ
@@ -1031,9 +1040,23 @@ begin
           if FieldByName('L_InTime').AsString <> '' then
           nInTime := DateTime2Str(IncHour(FieldByName('L_InTime').AsDateTime, -8));
 
+
           if FieldByName('L_OutFact').AsString <> '' then
-          nOutTime := DateTime2Str(IncHour(FieldByName('L_OutFact').AsDateTime, -8));
+          begin
+            nRealOutTime := DateTime2Str(IncHour(FieldByName('L_OutFact').AsDateTime, -8));
+            nOutTime := Date2Str(FieldByName('L_OutFact').AsDateTime);
+          end;
           nType := FieldByName('L_Type').AsString;
+
+          if nDaiSyncByZT and (nType = sFlag_Dai) then
+          begin
+            if FieldByName('L_LadeTime').AsString <> '' then
+            begin
+              nRealOutTime := DateTime2Str(IncHour(FieldByName('L_LadeTime').AsDateTime, -8));
+              nOutTime := Date2Str(FieldByName('L_LadeTime').AsDateTime);
+            end;
+          end;
+
           nStockNo := FieldByName('L_StockNo').AsString;
           nTruck := FieldByName('L_Truck').AsString;
 
@@ -1134,7 +1157,7 @@ begin
     else
     begin
       if nMDate = '' then
-        nMDate := nOutTime;
+        nMDate := nRealOutTime;
 
       if nMDate = '' then
         nMDate := nCreateTime;
@@ -1173,7 +1196,7 @@ begin
         +'''msgtype'':''%s'','
         +'''vbillno'':''%s''}'
         +'"}';
-    nStr := Format(nStr,[nOutTime, nQueueMsg,
+    nStr := Format(nStr,[nRealOutTime, nQueueMsg,
                          '',
                          nOutTime, nNetWeight, nSeal, nPID,
                          nPDate, nMDate, nLadeTime, nInTime,

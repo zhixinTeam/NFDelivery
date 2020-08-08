@@ -59,6 +59,7 @@ type
     FCompany: string;       //公司ID
     FSpecialCus: string;    //是否为特殊客户
     FSnlx: string;          //水泥流向
+    FTruck: string;         //车牌号
   end;
 
   TOrderItems = array of TOrderItem;
@@ -847,7 +848,7 @@ begin
 
           FSaleID := '001';
           FSaleName := FieldByName('VBILLTYPE').AsString;
-
+          FTruck:= FieldByName('cvehicle').AsString;
           FAreaTo := FieldByName('vdef2').AsString;
           FAreaToName := FieldByName('docname').AsString;
           //区域流向
@@ -925,6 +926,13 @@ begin
 
     nVal := Float2Float(nVal - nDec, cPrecision, True);
     //开单剩余量
+
+    if FOrderItems[nIdx].FTruck <> '' then
+    begin
+      WriteLog('订单' + FOrderItems[nIdx].FOrder + '车牌号' + FOrderItems[nIdx].FTruck
+               + '为一车一单,不再校验订单量...'  );
+      nVal := 0;
+    end;
   end;
 
   if nVal > 0 then
