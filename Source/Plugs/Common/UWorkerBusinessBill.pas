@@ -400,15 +400,31 @@ end;
 //Desc: 车辆进厂后在指定时间内必须开单,过期无效
 function TWorkerBusinessBills.GetInBillInterval: Integer;
 var nStr: string;
+    nBegTime, nEndTime: TDateTime;
 begin
   Result := 0;
-  nStr := 'Select D_Value From %s Where D_Name=''%s'' And D_Memo=''%s''';
+  nStr := 'Select * From %s Where D_Name=''%s'' And D_Memo=''%s''';
   nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_InAndBill]);
 
   with gDBConnManager.WorkerQuery(FDBConn, nStr) do
   if RecordCount > 0 then
   begin
-    Result := Fields[0].AsInteger;
+    if Assigned(FindField('D_ParamB')) and Assigned(FindField('D_ParamC')) then
+    begin
+      if (FieldByName('D_ParamB').AsString <> '') and (FieldByName('D_ParamC').AsString <> '') then
+      begin
+        nBegTime := Str2DateTime(FormatDateTime('YYYY-MM-DD', Now) + ' ' + FieldByName('D_ParamB').AsString);
+        nEndTime := Str2DateTime(FormatDateTime('YYYY-MM-DD', Now) + ' ' + FieldByName('D_ParamC').AsString);
+        WriteLog('车辆签到功能运行起始时间:' + DateTime2Str(nBegTime) + '结束时间:' + DateTime2Str(nEndTime));
+
+        if (Now < nBegTime) or (Now > nEndTime) then
+        begin
+          Result := 0;
+          Exit;
+        end;
+      end;
+    end;
+    Result := FieldByName('D_Value').AsInteger;
   end;
 end;
 
@@ -1438,6 +1454,9 @@ begin
               SF('L_StockName', FOrderItems[nIdx].FStockName),
               SF('L_PackStyle', FListA.Values['Pack']),
               SF('L_Value', FOrderItems[nIdx].FKDValue, sfVal),
+              {$IFDEF SaveKDValue}
+              SF('L_PreValue', FOrderItems[nIdx].FKDValue, sfVal),
+              {$ENDIF}
               SF('L_Price', 0, sfVal),
 
               {$IFDEF PrintHYEach}
@@ -2647,6 +2666,9 @@ begin
         FPoundStation := FieldByName('L_PoundStation').AsString;
         FPoundSName   := FieldByName('L_PoundName').AsString;
       end;
+
+      if Assigned(FindField('L_PreValue')) then
+        FPreValue    := FieldByName('L_PreValue').AsFloat;
 
       FPData.FValue := FieldByName('L_PValue').AsFloat;
       FMData.FValue := FieldByName('L_MValue').AsFloat;

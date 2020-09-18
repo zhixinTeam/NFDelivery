@@ -2586,7 +2586,7 @@ begin
     if IsJSRun then Exit;
   end;
 
-  if not IsJudgeValid(nTunnel, sFlag_San) then
+  if not IsJudgeValid(nTunnel, sFlag_Dai) then
     Exit;
 
   {$IFDEF DaiForceQueue}

@@ -113,7 +113,7 @@ begin
 end;
 
 function TWorkerBusinessShipPro.SaveCardProvide(var nData: string): Boolean;
-var nStr, nTruck: string;
+var nStr, nTruck, nPost: string;
     nOut: TWorkerBusinessCommand;
     nHint : string;
 begin
@@ -281,6 +281,39 @@ begin
   except
     FDBConn.FConn.RollbackTrans;
     raise;
+  end;
+
+  nStr := 'Select D_Value From %s ' +
+          'Where D_Name=''%s'' and D_Memo=''%s''';
+  nStr := Format(nStr, [sTable_SysDict, sFlag_SysParam, sFlag_OrderCardID]);
+
+  with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+  if RecordCount > 0 then
+  begin
+    nPost := Fields[0].AsString;
+  end;
+
+  if nPost <> '' then
+  begin
+    nStr := 'Select D_Value From %s ' +
+            'Where D_Name=''%s'' and D_Memo=''%s''';
+    nStr := Format(nStr, [sTable_SysDict, sFlag_NoPlayVoiceStock, FListA.Values['StockNo']]);
+
+    with gDBConnManager.WorkerQuery(FDBConn, nStr) do
+    if RecordCount <= 0 then
+    begin
+      if Fields[0].AsString = sFlag_Yes then
+      begin
+        nStr := '原材料' + FListA.Values['StockName'] + '供应商' +
+                FListA.Values['ProviderName'] + '矿点' +
+                FListA.Values['Origin'] + '已开卡';
+
+        FListC.Values['Card'] := nPost;
+        FListC.Values['Text'] := #9 + FListA.Values['Truck'] + #9 + nStr;
+        FListC.Values['Content'] := '';
+        THardwareCommander.CallMe(cBC_PlayVoice, PackerEncodeStr(FListC.Text), '', @nOut);
+      end;
+    end;
   end;
 
   {$IFDEF HardMon}

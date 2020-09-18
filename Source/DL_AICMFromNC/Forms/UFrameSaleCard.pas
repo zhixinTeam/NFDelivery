@@ -382,7 +382,7 @@ begin
       end
       else
       begin
-        if gSysParam.FAICMPDCount <= 1 then
+        //if gSysParam.FAICMPDCount <= 1 then
         begin
           if IFHasBill(nTruck) then
           begin

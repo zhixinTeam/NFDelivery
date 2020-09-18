@@ -108,7 +108,7 @@ type
     FOnPound: Boolean;
     //是否为磅上刷卡
     FMaxPoundValue: Double;
-    FAlivisionCheckTruck: Integer;
+    FAlivisionCheckTruck,FCheckCount: Integer;
     //图像识别验证车牌次数
     FWarnPEventDept: string;
     FTruckInterval: Integer;
@@ -302,6 +302,7 @@ begin
     if Values['WarnPEventDept'] <> '' then
     FWarnPEventDept := Values['WarnPEventDept'];
     FTruckInterval := StrToInt64Def(Values['TruckInterval'], 20);
+    FCheckCount := StrToInt64Def(Values['CheckCount'], 3);
   end;
 end;
 
@@ -567,6 +568,17 @@ begin
     SetUIData(True);
     Exit;
   end;
+
+  {$IFDEF PTimeControl}
+  if not VerifyPTime(FUIData.FStockNo, nHint) then
+  begin
+    nStr := '车辆[ %s ],物料[ %s ]当前时间不能过磅';
+    nStr := Format(nStr, [nBills[0].FTruck, nBills[0].FStockName]);
+    PlayVoice(nStr);
+    SetUIData(True);
+    Exit;
+  end;
+  {$ENDIF}
 
   nHint := '';
   nInt := 0;
@@ -1406,6 +1418,18 @@ begin
           end;
         end;
 
+        {$IFDEF SaveKDValue}
+        if (FType = sFlag_San) and FloatRelation(nNet, FPreValue, rtGreater) and
+           GetPoundSanWuChaStop(FStockNo) then
+        begin
+          nStr := '车辆 %s 净重 %.2f 吨超出开单量 %.2f 吨,请去现场卸货';
+          nStr := Format(nStr, [FTruck, nNet, nNet - FPreValue]);
+          PlayVoice(nStr);
+
+          WriteSysLog(nStr);
+          Exit;
+        end;
+        {$ELSE}
         if (FType = sFlag_San) and FloatRelation(nNet, FValue, rtGreater) and
            GetPoundSanWuChaStop(FStockNo) then
         begin
@@ -1416,6 +1440,7 @@ begin
           WriteSysLog(nStr);
           Exit;
         end;
+        {$ENDIF}
 
         {$IFDEF TruckHZValueMax}
         if FType = sFlag_San then
@@ -1463,6 +1488,7 @@ begin
         {$ENDIF}
 
         {$IFNDEF CZNF}
+        {$IFNDEF SaveKDValue}
         if (FType = sFlag_San) And (FCardUse = sFlag_Sale) then
         begin
           if nVal > 0 then
@@ -1487,6 +1513,7 @@ begin
             {$ENDIF}
           end;
         end;
+        {$ENDIF}
         {$ENDIF}
       end;
     end
@@ -1912,13 +1939,13 @@ begin
   //退出称重
 
   {$IFDEF AlivisionInClient}
-  if (FAlivisionCheckTruck < 1) and
+  if (FAlivisionCheckTruck < FCheckCount) and
       gVisionManager.GetPoundData(FPoundTunnel.FID, nPound) then
   begin
     Inc(FAlivisionCheckTruck);
     if nPound.FTruck = '' then //图像识别未上报车牌号
     begin
-      nStr := '看不清车牌,向前移动车辆并关闭前大灯.';
+      nStr := '看不清车牌,请向前移动车辆并关闭前大灯.';
       PlayVoice(nStr);
       
       WriteSysLog(nStr);
@@ -2110,8 +2137,10 @@ begin
     end
     else
     begin
-      PlayVoice(#9 + FUIData.FTruck);
-      //播放语音
+      nStr := '车辆[n1]%s重量[n2]%.2f吨,请下磅';
+      nStr := Format(nStr, [FUIData.FTruck,
+              Float2Float(StrToFloat(EditValue.Text), 1000)]);
+      PlayVoice(nStr);
     end;
     {$ELSE}
     PlayVoice(#9 + FUIData.FTruck);

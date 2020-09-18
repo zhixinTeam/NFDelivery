@@ -393,6 +393,7 @@ function GetLedStr(const nTruck, nStockNo: String): string;
 function GetReaderCard(const nReader,nType: string): string;
 //获取指定读头的有效卡号
 function HasDriverCard(const nTruck: string; var nCard: string): Boolean;
+function VerifyPTime(const nStockNo: string; var nHint: string): Boolean;
 implementation
 
 //Desc: 记录日志
@@ -5128,4 +5129,52 @@ begin
   end;
   Result := nCard <> '';
 end;
+
+function VerifyPTime(const nStockNo: string; var nHint: string): Boolean;
+var nStr: string;
+    nBDate, nEDate: string;
+begin
+  Result := True;
+  nHint := '';
+  nStr := 'Select * From %s Where X_StockName=''%s''';
+  nStr := Format(nStr, [sTable_PTimeControl, sFlag_PTimeControlTotal]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount <= 0 then
+      Exit;
+    WriteLog('原材料进厂时间总控制:' + FieldByName('X_Valid').AsString);
+    if FieldByName('X_Valid').AsString <> sFlag_Yes then
+      Exit;
+  end;
+
+  nStr := 'Select * From %s Where X_StockNo=''%s'' and X_Valid=''%s''';
+  nStr := Format(nStr, [sTable_PTimeControl, nStockNo, sFlag_Yes]);
+
+  with FDM.QueryTemp(nStr) do
+  begin
+    if RecordCount <= 0 then
+    begin
+      WriteLog('原材料'+ nStockNo + '未配置限定规则或规则未启用');
+      Exit;
+    end;
+    WriteLog('原材料进厂时间控制:' + FieldByName('X_BeginTime').AsString
+            + '-->' + FieldByName('X_EndTime').AsString);
+    nBDate := FormatDateTime('YYYY-MM-DD', Now) + ' ' + FieldByName('X_BeginTime').AsString;
+    nEDate := FormatDateTime('YYYY-MM-DD', Now) + ' ' + FieldByName('X_EndTime').AsString;
+
+    try
+      if (Now < StrToDateTime(nBDate)) or (Now > StrToDateTime(nEDate)) then
+      begin
+        nHint := '原材料'+ nStockNo
+                 + '允许办卡时间段:' + FieldByName('X_BeginTime').AsString
+                 + '-->' + FieldByName('X_EndTime').AsString + '当前时间无法过磅';
+        WriteLog(nHint);
+        Result := False;
+      end;
+    except
+    end;
+  end;
+end;
+
 end.

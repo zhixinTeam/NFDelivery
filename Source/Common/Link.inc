@@ -50,7 +50,7 @@
 {.$DEFINE COMMON}
 //通用版本
 
-{$DEFINE XKNF}
+{$DEFINE ZJJNF}
 //特定系统
 
 {$IFDEF JDNF}
@@ -467,7 +467,7 @@
   //启用阿里图像识别
   {$DEFINE WarnPValue}
   //皮重预警
-  {$DEFINE SanAutoHD}
+  {.$DEFINE SanAutoHD}
   //散装自动合单
   {$DEFINE BusinessOnly}
   //业务唯一
@@ -2727,4 +2727,162 @@
   //========推单开关=========
   {.$DEFINE PurTruckType}
   //采购车轴类型
+{$ENDIF}
+
+//隆回南方
+{$IFDEF LONGHUINF}
+  {$DEFINE AutoSan}
+  //散装允许自动过磅
+  {$DEFINE HYRFID201}
+  //华益读头
+  {$DEFINE AppAtTaskBar}
+  //状态栏显示
+  {$DEFINE RFIDOPENDOOR}
+  //电子标签读卡器打开道闸
+  {$DEFINE BatchVerifyValue}
+  //批次控制发货量
+  {$DEFINE MITTruckProber}
+  //中间件控制车检
+  {.$DEFINE TruckProberEx}
+  //车检光栅状态判断扩展(此开关启用时建议同时启用MITTruckProber开关)
+  {$DEFINE MultiReplay}
+  //计数器应答模式
+  {$DEFINE CardProvide}
+  //采用复磅模式
+  {$DEFINE ORDERVALUE}
+  //显示订单量
+  {$DEFINE DaiStepWuCha}
+  //包装阶梯误差
+  {.$DEFINE DaiForceQueue}
+  //包装发货强制队列
+  {.$DEFINE SanForceQueue}
+  //散装发货强制队列
+  {$DEFINE AllowMultiM}
+  //散装允许多次过重车
+  {$DEFINE JSTruck}
+  //格式化计数器车牌
+  {.$DEFINE JudgeOrder}
+  //验证订单是否出厂
+  {$DEFINE SaleAICMFromNC}
+  //销售自助办卡
+  {$DEFINE PurAICMFromNC}
+  //采购自助办卡
+  {.$DEFINE LEDShowTruckEx}
+  //大屏显示格式化车牌
+  {.$DEFINE OneTruckMulCard}
+  //一车多卡
+  {.$DEFINE FilterTunnel}
+  //过滤无关通道
+  {.$DEFINE AutoGetLineGroup}
+  //自动获取装车线分组
+  {.$DEFINE NoPointLine}
+  //开单不强制指定装车线(此开关为AutoGetLineGroup下子开关)
+  {$DEFINE PrepareShowTruck}
+  //预刷卡显示车牌
+  {$DEFINE PreShowEx}
+  //预刷卡特殊显示
+  {.$DEFINE PrepareShowOnLading}
+  //刷卡装车时控制预刷卡(不使用预刷卡读卡器)
+  {$DEFINE PrintChinese}
+  //汉字喷码支持
+  {.$DEFINE ManuPack}
+  //人工选择包装类型
+  {.$DEFINE HKVDVR}
+  //服务器抓拍
+  {$DEFINE FORCEOPENDOOR}
+  //强制抬杆
+  {$DEFINE InfoConfirm}
+  //刷卡信息确认
+  {$DEFINE PrintHYEach}
+  //随车开化验单
+  {$DEFINE PrintHuaYanDan}
+  //打印化验单
+  {$DEFINE PrintHeGeZheng}
+  //打印合格证
+  {$DEFINE DaiNoWeight}
+  //包装不报重量
+  {.$DEFINE VerifyHYRecord}
+  //化验记录不存在无法开单
+  {$DEFINE PrePTruckYs}
+  //采购预制皮重车辆验收
+  {$DEFINE SaveOrderNo}
+  //保存订单编号
+  {.$DEFINE DaiNoPrint}
+  //包装出厂不打印
+  {$DEFINE ValueLimit}
+  //限制开单上限
+  {.$DEFINE PTruckCount}
+  //限制原材料车辆数量
+  {$DEFINE PTimeControl}
+  //限制原材料入厂时间
+  {.$DEFINE GetReportByBrand}
+  //化验单模板按品牌区分
+  {.$DEFINE AICMNoVerifyTruck}
+  //自助开单不校验车牌号
+  {$DEFINE WarnPValue}
+  //皮重预警
+  {.$DEFINE FixLoad}
+  //转子秤定制装车
+  {.$DEFINE SanCardUseCount}
+  //散装现场刷卡次数
+  {.$DEFINE FixLoadNoControlValue}
+  //转子秤定制装车(不控制开单量)
+  {$DEFINE YanShouByCard}
+  //刷卡验收并进行连锁控制
+  {$DEFINE YanShouOnlyShow}
+  //刷卡验收只通过网口小屏显示信息(此开关为YanShouByCard下子开关)
+  {$DEFINE YanShouTunnelByDict}
+  //刷卡验收通道从DICT获取(此开关为YanShouByCard下子开关)
+  {$DEFINE LedNew}
+  //网口小屏新驱动
+  {.$DEFINE BasisWeightWithPM}
+  //库底计量: 定量装车时过皮毛中
+  {.$DEFINE BasisWeight}
+  //库底计量: 定量装车
+  {$DEFINE SNLX}
+  //水泥流向
+  {$DEFINE TruckType}
+  //车轴类型
+  {$DEFINE TruckTypeOnlyPound}
+  //车轴类型(只在地磅校验)
+  {$DEFINE ProShip}
+  //采购船号
+  {.$DEFINE PurQueue}
+  //采购船号
+  {$DEFINE BFLedEx}
+  //过磅小屏增加品种缩写
+  {.$DEFINE InFactOnlyOne}
+  //只允许进厂一次
+  {$DEFINE RemoteSnap}
+  //车牌识别
+  {$DEFINE OrderUsedOne}
+  //销售订单只使用一次
+  {.$DEFINE BatCodeByLine}
+  //现场获取批次
+  {$DEFINE AutoOutByStokNo}
+  //根据物料号虚拟出厂
+  {$DEFINE PoundVocieValue}
+  //过磅成功播报重量
+  {$DEFINE AICMSmallFont}
+  //自助机小字体
+  {.$DEFINE PrintHyOnSaveBill}
+  //开单打印化验单
+  {$DEFINE ShipTmpReturnG}
+  //临时业务固定卡出厂回收
+  //========推单开关=========全部不启用为出厂推单，启用任意开关需注意避免数据重复推送
+  {.$DEFINE DaiQuickSync}
+  //包装开单及推单
+  {.$DEFINE DaiSyncByZT}
+  //包装刷卡推单
+  {.$DEFINE SyncSanByOut}
+  //出厂推单(散装)
+  {.$DEFINE SyncSanByBFM}
+  //过毛推单(散装)
+  {.$DEFINE SyncDataByBFM}
+  //称完毛重即推单
+  //========推单开关=========
+  {.$DEFINE PurTruckType}
+  //采购车轴类型
+  {$DEFINE SaveKDValue}
+  //保存开单量
 {$ENDIF}

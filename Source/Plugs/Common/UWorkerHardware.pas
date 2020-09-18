@@ -714,7 +714,7 @@ begin
       {$ENDIF}
 
       {$IFDEF SHAOYANGNF}
-      nCode := FormatDateTime('YYYYMMDD',nLadeDate) + nSeal + nSnlx;
+      nCode := FormatDateTime('YYYYMMDD',nLadeDate) + nSeal;
       {$ENDIF}
 
       {$IFDEF HSNF}

@@ -87,6 +87,7 @@ const
   cBC_JSGetStatus             = $0063;
   cBC_SaveCountData           = $0064;   //保存计数结果
   cBC_RemoteExecSQL           = $0065;
+  cBC_JSGetJSRun              = $0046;
 
   cBC_ShowLedTxt              = $0066;   //向led屏幕发送内容
   cBC_GetLimitValue           = $0067;   //获取车辆最大限载值
@@ -110,6 +111,7 @@ const
   cBC_GetTruckPValue          = $0091;   //获取车辆预置皮重
   cBC_SaveTruckPValue         = $0092;   //保存车辆预置皮重
   cBC_GetPoundBaseValue       = $0093;   //获取地磅表头跳动基数
+  cBC_PrintCodeEx             = $0094;
 
   cBC_SyncME25                = $0100;   //同步发货单到榜单
   cBC_SyncME03                = $0101;   //同步供应到磅单
@@ -225,7 +227,7 @@ type
     FStockName  : string;          //品种名称
     FValue      : Double;          //提货量
     FPrice      : Double;          //提货单价
-
+    FPreValue   : Double;          //提货量
     FIsVIP      : string;          //通道类型
     FStatus     : string;          //当前状态
     FNextStatus : string;          //下一状态
@@ -455,6 +457,11 @@ begin
              FValue := StrToFloat(nStr)
         else FValue := 0;
 
+        nStr := Trim(Values['PreValue']);
+        if (nStr <> '') and IsNumber(nStr, True) then
+             FPreValue := StrToFloat(nStr)
+        else FPreValue := 0;
+
         nStr := Trim(Values['Price']);
         if (nStr <> '') and IsNumber(nStr, True) then
              FPrice := StrToFloat(nStr)
@@ -527,6 +534,7 @@ begin
         Values['StockName']  := FStockName;
         Values['Value']      := FloatToStr(FValue);
         Values['Price']      := FloatToStr(FPrice);
+        Values['PreValue']   := FloatToStr(FPreValue);
 
         Values['Card']       := FCard;
         Values['CType']      := FCardUse;

@@ -562,7 +562,7 @@ begin
 
   nStr := 'Select D_Value From %s Where D_Name=''%s'' and D_Memo = ''%s'' %s order by D_ID desc';
   nStr := Format(nStr, [sTable_SysDict, sFlag_ReportFileMap, nStock, nWhere]);
-
+  WriteLog('查询化验单模板sql' + nStr);
   with FDM.SQLQuery(nStr, FDM.SqlTemp) do
   begin
     if RecordCount > 0 then
@@ -655,7 +655,7 @@ begin
 
   if (nReport = '') or (not FDR.LoadReportFile(nReport)) then
   begin
-    nHint := '无法正确加载报表文件: ' + nReport;
+    nHint := '无法正确加载化验单报表文件: ' + nReport;
     Exit;
   end;
 
@@ -764,7 +764,7 @@ begin
   nStr := gPath + 'Report\HeGeZheng.fr3';
   if not FDR.LoadReportFile(nStr) then
   begin
-    nHint := '无法正确加载报表文件: ' + nStr;
+    nHint := '无法正确加载合格证报表文件: ' + nStr;
     Exit;
   end;
 

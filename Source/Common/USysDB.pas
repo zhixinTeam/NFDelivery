@@ -280,6 +280,9 @@ ResourceString
   sFlag_AutoPD        = 'AutoPD';                    //默认袋装全部允许拼单
   sFlag_GPSUrl        = 'GPSUrl';                    //GPS配置
 
+  sFlag_OrderCardID   = 'OrderCardID';               //原材料开单语音播报
+  sFlag_NoPlayVoiceStock= 'NoPlayVoiceStock';        //原材料无需语音播报物料
+
   sFlag_BusGroup      = 'BusFunction';               //业务编码组
   sFlag_BillNo        = 'Bus_Bill';                  //交货单号
   sFlag_PoundID       = 'Bus_Pound';                 //称重记录
